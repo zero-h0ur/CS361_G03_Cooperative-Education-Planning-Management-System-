@@ -119,8 +119,10 @@ a {
 
 /* ================= HERO SECTION ================= */
 .hero-section {
-  padding: 60px 0 80px;
-  background: linear-gradient(180deg, #EFF6FF 0%, rgba(248, 250, 252, 0) 100%);
+  padding: 60px 0 0;
+  background-color: #F0F4FE;
+  border-bottom: 1px solid #E2E8F0;
+  overflow: hidden;
 }
 
 .hero-grid {
@@ -227,93 +229,221 @@ a {
 .hero-image-wrapper {
   display: flex;
   justify-content: center;
+  align-items: flex-end;
 }
 
 .hero-image-box {
   position: relative;
-  width: 320px;
-  height: 380px;
+  width: 100%;
+  max-width: 550px; /* Much larger */
+  margin-bottom: -20px; /* Slight push down to ensure clean cut */
 }
 
 .hero-image-box .bg-frame {
-  position: absolute;
-  inset: 0;
-  border: 2px solid #C7D2FE;
-  border-radius: 24px;
-  transform: rotate(6deg);
+  display: none;
 }
 
 .hero-image-box img {
   position: relative;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 24px;
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+  height: auto;
+  object-fit: contain;
+  border-radius: 0;
+  box-shadow: none;
   z-index: 2;
+  display: block;
 }
 
-/* ================= BANNER ================= */
-.announcement-section {
-  margin: 40px auto 70px;
+/* ================= NEW BANNER ================= */
+.announcement-section-new {
+  margin: 40px auto;
 }
-
-.announcement-heading {
-  text-align: center;
-  color: #EF4444;
-  font-size: 26px;
-  font-weight: 800;
-  margin-bottom: 24px;
-}
-
-.banner-card {
-  background: linear-gradient(135deg, #0F3E68 0%, #1E3A8A 100%);
-  border-radius: 24px;
+.banner-card-new {
+  display: flex;
+  background: #FFF;
+  border-radius: 16px;
   overflow: hidden;
-  color: #FFF;
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  border: 1px solid #E2E8F0;
+  align-items: center;
+}
+.banner-img-new {
+  flex: 1.5;
+}
+.banner-img-new img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+.banner-content-new {
+  flex: 1;
+  padding: 30px;
+}
+.announcement-heading-red {
+  color: #DC2626;
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+.announcement-desc {
+  color: #475569;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
-.banner-content {
-  padding: 48px;
+/* ================= TIMELINE ================= */
+.timeline-section {
+  margin: 60px auto 80px;
+  text-align: center;
+}
+.timeline-heading {
+  font-size: 32px;
+  font-weight: 800;
+  color: #1E293B;
+  margin-bottom: 50px;
+}
+
+.timeline-heading span {
+  color: var(--secondary);
+}
+
+.timeline-container {
+  position: relative;
+  max-width: 800px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 12px;
+  gap: 40px;
+}
+.timeline-line {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #94A3B8;
+  transform: translateX(-50%);
+}
+.timeline-item {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+.timeline-item.left {
+  justify-content: flex-start;
+}
+.timeline-item.right {
+  justify-content: flex-end;
+}
+.timeline-content {
+  width: 45%;
+}
+.timeline-box {
+  background: #FFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  text-align: left;
+  position: relative;
+}
+.timeline-item.left .timeline-box::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -10px;
+  transform: translateY(-50%);
+  border-width: 10px 0 10px 10px;
+  border-style: solid;
+  border-color: transparent transparent transparent #FFF;
+  filter: drop-shadow(2px 0px 1px rgba(0,0,0,0.05));
+}
+.timeline-item.right .timeline-box::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -10px;
+  transform: translateY(-50%);
+  border-width: 10px 10px 10px 0;
+  border-style: solid;
+  border-color: transparent #FFF transparent transparent;
+  filter: drop-shadow(-2px 0px 1px rgba(0,0,0,0.05));
 }
 
-.banner-tag {
-  background: rgba(255, 255, 255, 0.2);
-  font-size: 11px;
+.timeline-circle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  background: #FFF;
+  border: 2px solid #94A3B8;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: #1E293B;
+  text-align: center;
+  line-height: 1.2;
+  z-index: 2;
+}
+.timeline-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+.timeline-box-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 4px;
+}
+.timeline-box-header p {
+  font-size: 14px;
+  color: #64748B;
+}
+.timeline-icon {
+  font-size: 40px;
+}
+.timeline-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+}
+.timeline-tags {
+  display: flex;
+  gap: 8px;
+}
+.tag-pill {
   padding: 4px 12px;
   border-radius: 20px;
-  width: max-content;
-  letter-spacing: 1px;
-}
-
-.banner-title {
-  font-size: 28px;
-  font-weight: 700;
-}
-
-.banner-date {
-  color: #FDE047;
+  font-size: 12px;
   font-weight: 600;
-  font-size: 15px;
 }
-
-.banner-desc {
-  font-size: 13px;
-  color: #E2E8F0;
+.tag-green {
+  background: #ECFDF5;
+  color: #059669;
 }
-
-.banner-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+.tag-lightgreen {
+  background: #FEF9C3;
+  color: #854D0E;
+}
+.btn-detail {
+  background: #4B48E5;
+  color: #FFF;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
 }
 
 /* ================= DIRECTORY & JOBS ================= */
@@ -322,16 +452,6 @@ a {
   justify-content: space-between;
   align-items: flex-end;
   margin-bottom: 24px;
-}
-
-.sub-tag {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.sub-tag span {
-  color: var(--secondary);
 }
 
 .section-title {
