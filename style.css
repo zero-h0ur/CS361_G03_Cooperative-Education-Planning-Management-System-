@@ -1165,18 +1165,6 @@ a {
   font-size: 14px;
 }
 
-.directory-demo-label {
-  flex: 0 0 auto;
-  margin-bottom: 10px;
-  padding: 7px 11px;
-  color: #6a5310;
-  background: #fff6d8;
-  border: 1px solid #f2d987;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
 .directory-result-status {
   min-height: 21px;
   margin: -24px 0 14px;
@@ -1231,74 +1219,19 @@ a {
   box-shadow: 0 6px 12px rgba(27, 32, 52, 0.13);
 }
 
-.partner-logo svg {
-  width: 52px;
-  height: 52px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.partner-logo img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  padding: 7px;
+  object-fit: contain;
 }
 
-.partner-logo-scb {
-  color: #f7b237;
-  background: linear-gradient(145deg, #4f237e, #35125d);
-  border-color: #44206b;
+.partner-logo-agoda-image img {
+  padding: 0;
+  transform: scale(2.3);
+  transform-origin: center;
 }
-
-.partner-logo-scb svg {
-  width: 57px;
-  height: 57px;
-  stroke-width: 3.2;
-}
-
-.partner-logo-central {
-  flex-direction: column;
-  color: #222;
-  font-family: Arial, sans-serif;
-  font-size: 11px;
-  line-height: 1;
-  letter-spacing: 0.03em;
-}
-
-.partner-logo-central strong {
-  margin-top: 3px;
-  color: #bb1c28;
-  font-size: 12px;
-}
-
-.partner-logo-techx {
-  color: #fff;
-  background: linear-gradient(145deg, #49737e, #2f5661);
-  border-color: #496d77;
-}
-
-.partner-logo-r {
-  color: #fff;
-  background: linear-gradient(145deg, #d95142, #aa2423);
-  border-color: #b63730;
-  font-family: Georgia, serif;
-  font-size: 46px;
-  font-weight: 700;
-  font-style: italic;
-}
-
-.partner-logo-ptt,
-.partner-logo-ais,
-.partner-logo-kbtg,
-.partner-logo-agoda {
-  color: #fff;
-  border: 0;
-  font-family: 'Inter', sans-serif;
-  font-size: 17px;
-  font-weight: 800;
-}
-
-.partner-logo-ptt { background: linear-gradient(145deg, #176bb3, #17467f); }
-.partner-logo-ais { background: linear-gradient(145deg, #9ebe23, #658e17); }
-.partner-logo-kbtg { background: linear-gradient(145deg, #238c5b, #11673f); font-size: 15px; }
-.partner-logo-agoda { background: linear-gradient(145deg, #726eea, #4844be); font-size: 34px; }
 
 .partner-info {
   min-width: 0;
@@ -1589,11 +1522,6 @@ a {
     height: 64px;
   }
 
-  .partner-logo svg {
-    width: 44px;
-    height: 44px;
-  }
-
   .partner-info h2 {
     font-size: 17px;
     white-space: normal;
@@ -1627,5 +1555,170 @@ a {
   .directory-page *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ================= FAQ PAGE ================= */
+.faq-hero {
+  padding: 60px 0;
+  background-color: #F8FAFC;
+  background-image: url("data:image/svg+xml,%3Csvg width='160' height='277.128' viewBox='0 0 80 138.564' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%23E2E8F0' stroke-width='1.5' fill='none'%3E%3Cpath d='M0 138.564 L80 92.376 L80 0' /%3E%3Cpath d='M0 46.188 L80 0' /%3E%3Cpath d='M0 46.188 L40 69.282 L40 138.564' /%3E%3Cpath d='M80 92.376 L40 69.282' /%3E%3C/g%3E%3C/svg%3E");
+  background-size: 160px;
+  border-bottom: 1px solid #E2E8F0;
+  text-align: center;
+}
+
+.faq-hero h2 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 24px;
+}
+
+.faq-search-box {
+  max-width: 600px;
+  margin: 0 auto;
+  background: #FFF;
+  border: 1px solid #4B48E5;
+  border-radius: 8px;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.faq-search-box > i {
+  display: flex;
+  align-items: center;
+}
+
+.faq-search-box input {
+  flex: 1;
+  border: none;
+  padding: 16px 0;
+  font-family: inherit;
+  font-size: 15px;
+  outline: none;
+}
+
+.btn-faq-search {
+  background-color: #4B48E5;
+  color: white;
+  border: none;
+  padding: 0 24px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-faq-search:hover {
+  background-color: #3730A3;
+}
+
+.faq-container {
+  padding: 50px 24px;
+}
+
+.faq-section-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1E293B;
+  margin-bottom: 24px;
+}
+
+.faq-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  align-items: start;
+}
+
+.faq-questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.faq-item {
+  background: #FFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.faq-item:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.faq-item.active {
+  border-color: #4B48E5;
+  border-top: 3px solid #4B48E5;
+  background-color: #F8FAFC;
+}
+
+.faq-item-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.faq-item.active .faq-item-text {
+  color: #4B48E5;
+}
+
+.faq-item i {
+  color: #94A3B8;
+  font-size: 14px;
+}
+
+.faq-item.active i {
+  color: #4B48E5;
+}
+
+.faq-answer-display {
+  background: #FFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 40px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+  min-height: 300px;
+}
+
+#answer-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 20px;
+}
+
+#answer-content {
+  font-size: 15px;
+  color: #475569;
+  line-height: 1.7;
+}
+
+#answer-content ol, #answer-content ul {
+  padding-left: 20px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+#answer-content li {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+  .faq-grid {
+    grid-template-columns: 1fr;
   }
 }
