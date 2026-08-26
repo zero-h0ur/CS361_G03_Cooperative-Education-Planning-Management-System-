@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ทำเนียบพันธมิตรสถานประกอบการสำหรับโครงการสหกิจศึกษา COOP-EDU">
+  <title>ทำเนียบพันธมิตรสถานประกอบการ | COOP-EDU</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="company-directory.js" defer></script>
+</head>
+<body class="directory-page">
+  <header class="directory-site-header">
+    <div class="container directory-header-inner">
+      <a class="directory-brand" href="index.html" aria-label="COOP-EDU หน้าแรก">
+        <span class="directory-brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img">
+            <path d="M12 5.2 13.9 10l4.9 2-4.9 2-1.9 4.8L10.1 14l-4.9-2 4.9-2L12 5.2Z"/>
+          </svg>
+        </span>
+        <span>COOP-EDU</span>
+      </a>
+
+      <nav class="directory-primary-nav" aria-label="เมนูหลัก">
+        <a href="index.html">หน้าหลัก</a>
+        <a href="company-directory.html" class="active" aria-current="page">สถานประกอบการ</a>
+        <a href="#directory-footer">ดาวน์โหลด</a>
+      </nav>
+
+      <label class="directory-search" for="companySearch">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m20 20-4.4-4.4m2.4-4.1a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"/>
+        </svg>
+        <input id="companySearch" type="search" placeholder="ค้นหาสถานที่ฝึกงาน, สาขาวิชา" autocomplete="off">
+      </label>
+
+      <div class="directory-auth" aria-label="ระบบสมาชิกพร้อมใช้งานในเวอร์ชันถัดไป">
+        <button type="button" class="directory-login" disabled title="พร้อมใช้งานใน V3">Login</button>
+        <button type="button" class="directory-signup" disabled title="พร้อมใช้งานใน V3">Sign Up</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="directory-main">
+    <div class="container">
+      <div class="directory-heading-row">
+        <div>
+          <p class="directory-eyebrow">COOP-EDU PARTNERS</p>
+          <h1>ทำเนียบพันธมิตรสถานประกอบการ</h1>
+          <span class="directory-title-stroke" aria-hidden="true"></span>
+          <p class="directory-intro">ค้นหาและสำรวจสถานประกอบการที่เปิดรับนักศึกษาสหกิจศึกษา</p>
+        </div>
+        <span class="directory-demo-label">ข้อมูลตัวอย่างสำหรับ V1</span>
+      </div>
+
+      <p id="searchResultStatus" class="directory-result-status" aria-live="polite"></p>
+
+      <section id="companyList" class="partner-grid" aria-label="รายชื่อพันธมิตรสถานประกอบการ">
+        <article class="partner-card" data-company="TechX Solution กรุงเทพ วิศวกรซอฟต์แวร์">
+          <div class="partner-logo partner-logo-building" aria-hidden="true">
+            <svg viewBox="0 0 64 64">
+              <path d="M15 54V20h24v34M39 30h10v24M10 54h44M22 27h5m5 0h1m-11 8h5m5 0h1m-11 8h5m5 0h1m12-6h1m-1 7h1"/>
+            </svg>
+          </div>
+          <div class="partner-info">
+            <h2>TechX Solution</h2>
+            <div class="partner-tags">
+              <span class="partner-tag tag-location">กรุงเทพฯ</span>
+              <span class="partner-tag tag-field">วิศวกรซอฟต์แวร์</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="partner-card" data-company="ธนาคารไทยพาณิชย์ SCB กรุงเทพ วิศวกรซอฟต์แวร์">
+          <div class="partner-logo partner-logo-scb" aria-hidden="true">
+            <svg viewBox="0 0 64 64">
+              <path d="M32 12 47 25 42 49H22l-5-24 15-13Z"/>
+              <path d="M25 29c2-5 12-5 14 0-1 8-13 8-14 0Z"/>
+            </svg>
+          </div>
+          <div class="partner-info">
+            <h2>ธนาคารไทยพาณิชย์</h2>
+            <div class="partner-tags">
+              <span class="partner-tag tag-location">กรุงเทพฯ</span>
+              <span class="partner-tag tag-field">วิศวกรซอฟต์แวร์</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="partner-card" data-company="ธนาคารไทยพาณิชย์ SCB กรุงเทพ นักวิเคราะห์ข้อมูล">
+          <div class="partner-logo partner-logo-building" aria-hidden="true">
+            <svg viewBox="0 0 64 64">
+              <path d="M15 54V20h24v34M39 30h10v24M10 54h44M22 27h5m5 0h1m-11 8h5m5 0h1m-11 8h5m5 0h1m12-6h1m-1 7h1"/>
+            </svg>
+          </div>
+          <div class="partner-info">
+            <h2>ธนาคารไทยพาณิชย์</h2>
+            <div class="partner-tags">
+              <span class="partner-tag tag-location">กรุงเทพฯ</span>
+              <span class="partner-tag tag-field">นักวิเคราะห์ข้อมูล</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="partner-card" data-company="Central Retail กรุงเทพ วิศวกรซอฟต์แวร์">
+          <div class="partner-logo partner-logo-central" aria-hidden="true">
+            <span>CENTRAL</span>
+            <strong>RETAIL</strong>
+          </div>
+          <div class="partner-info">
+            <h2>Central Retail</h2>
+            <div class="partner-tags">
+              <span class="partner-tag tag-location">กรุงเทพฯ</span>
+              <span class="partner-tag tag-field">วิศวกรซอฟต์แวร์</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="partner-card" data-company="TechX Solution กรุงเทพ วิศวกรระบบคลาวด์">
+          <div class="partner-logo partner-logo-techx" aria-hidden="true">
+            <svg viewBox="0 0 64 64">
+              <path d="M15 54V20h24v34M39 30h10v24M10 54h44M22 27h5m5 0h1m-11 8h5m5 0h1m-11 8h5m5 0h1m12-6h1m-1 7h1"/>
+            </svg>
+          </div>
+          <div class="partner-info">
+            <h2>TechX Solution</h2>
+            <div class="partner-tags">
+              <span class="partner-tag tag-location">กรุงเทพฯ</span>
+              <span class="partner-tag tag-field">วิศวกรระบบคลาวด์</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="partner-card" data-company="Central Retail กรุงเทพ UX UI Designer">
+          <div class="partner-logo partner-logo-building" aria-hidden="true">
+            <svg viewBox="0 0 64 64">
+              <path d="M15 54V20h24v34M39 30h10v24M10 54h44M22 27h5m5 0h1m-11 8h5m5 0h1m-11 8h5m5 0h1m12-6h1m-1 7h1"/>
+            </svg>
+          </div>
+          <div class="partner-info">
+            <h2>Central Retail</h2>
+            <div class="partner-tags">
+              <span class="partner-tag tag-location">กรุงเทพฯ</span>
+              <span class="partner-tag tag-field">UX/UI Designer</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="partner-card" data-company="TechX Solution กรุงเทพ Cyber Security">
+          <div class="partner-logo partner-logo-building" aria-hidden="true">
+            <svg viewBox="0 0 64 64">
+              <path d="M15 54V20h24v34M39 30h10v24M10 54h44M22 27h5m5 0h1m-11 8h5m5 0h1m-11 8h5m5 0h1m12-6h1m-1 7h1"/>
+            </svg>
+          </div>
+          <div class="partner-info">
+            <h2>TechX Solution</h2>
+            <div class="partner-tags">
+              <span class="partner-tag tag-location">กรุงเทพฯ</span>
+              <span class="partner-tag tag-field">Cyber Security</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="partner-card" data-company="Central Retail กรุงเทพ Business Analyst">
+          <div class="partner-logo partner-logo-r" aria-hidden="true">R</div>
+          <div class="partner-info">
+            <h2>Central Retail</h2>
+            <div class="partner-tags">
+              <span class="partner-tag tag-location">กรุงเทพฯ</span>
+              <span class="partner-tag tag-field">Business Analyst</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="partner-card partner-card-extra" data-company="PTT PCL กรุงเทพ วิศวกรข้อมูล" hidden>
+          <div class="partner-logo partner-logo-ptt" aria-hidden="true">PTT</div>
+          <div class="partner-info">
+            <h2>PTT PCL</h2>
+            <div class="partner-tags">
+              <span class="partner-tag tag-location">กรุงเทพฯ</span>
+              <span class="partner-tag tag-field">วิศวกรข้อมูล</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="partner-card partner-card-extra" data-company="AIS กรุงเทพ Mobile Developer" hidden>
+          <div class="partner-logo partner-logo-ais" aria-hidden="true">AIS</div>
+          <div class="partner-info">
+            <h2>AIS</h2>
+            <div class="partner-tags">
+              <span class="partner-tag tag-location">กรุงเทพฯ</span>
+              <span class="partner-tag tag-field">Mobile Developer</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="partner-card partner-card-extra" data-company="KBTG ปากเกร็ด Software Tester" hidden>
+          <div class="partner-logo partner-logo-kbtg" aria-hidden="true">KBTG</div>
+          <div class="partner-info">
+            <h2>KBTG</h2>
+            <div class="partner-tags">
+              <span class="partner-tag tag-location">ปากเกร็ด</span>
+              <span class="partner-tag tag-field">Software Tester</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="partner-card partner-card-extra" data-company="Agoda กรุงเทพ UX Researcher" hidden>
+          <div class="partner-logo partner-logo-agoda" aria-hidden="true">A</div>
+          <div class="partner-info">
+            <h2>Agoda</h2>
+            <div class="partner-tags">
+              <span class="partner-tag tag-location">กรุงเทพฯ</span>
+              <span class="partner-tag tag-field">UX Researcher</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <div class="directory-load-more-wrap">
+        <button id="loadMoreCompanies" class="directory-load-more" type="button" aria-controls="companyList" aria-expanded="false">
+          ดูเพิ่มเติม
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <footer id="directory-footer" class="directory-footer">
+    <div class="container directory-footer-grid">
+      <div class="directory-footer-about">
+        <a class="directory-brand directory-footer-brand" href="index.html">
+          <span class="directory-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 5.2 13.9 10l4.9 2-4.9 2-1.9 4.8L10.1 14l-4.9-2 4.9-2L12 5.2Z"/></svg>
+          </span>
+          <span>COOP-EDU</span>
+        </a>
+        <p>ศูนย์รวมข้อมูลสำหรับนักศึกษาสหกิจศึกษา เพื่อเตรียมความพร้อมก่อนก้าวสู่การทำงานจริง</p>
+      </div>
+
+      <div class="directory-footer-column">
+        <h2>เกี่ยวกับ</h2>
+        <a href="index.html">หน้าหลัก</a>
+        <a href="company-directory.html">สถานประกอบการ</a>
+        <a href="#directory-footer">เงื่อนไขการใช้งาน</a>
+      </div>
+
+      <div class="directory-footer-column">
+        <h2>ข้อมูลสหกิจ</h2>
+        <a href="index.html">คู่มือเตรียมตัว</a>
+        <a href="index.html">กำหนดการ</a>
+        <a href="index.html">ติดต่อเรา</a>
+      </div>
+
+      <div class="directory-newsletter">
+        <h2>รับข่าวสารสำคัญ</h2>
+        <p>ติดตามประกาศและข่าวสารสหกิจศึกษาผ่านช่องทางของสาขาวิชา</p>
+        <div class="directory-newsletter-box" aria-label="ระบบรับข่าวสารพร้อมใช้งานในเวอร์ชันถัดไป">
+          <input type="email" placeholder="Email address" aria-label="อีเมล" disabled>
+          <button type="button" disabled>Sign Up</button>
+        </div>
+      </div>
+    </div>
+    <div class="container directory-footer-bottom">
+      <p>ต้นแบบระบบ COOP-EDU สำหรับรายวิชา CS361</p>
+      <p>V1 · Information</p>
+    </div>
+  </footer>
+</body>
+</html>
