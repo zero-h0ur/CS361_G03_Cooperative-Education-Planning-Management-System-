@@ -59,7 +59,7 @@
           <div class="search-input-group">
             <i class="fa-solid fa-location-dot"></i>
             <select>
-              <option value="">สาขา, กรุงเทพมหานคร</option>
+              
               <option value="bkk">กรุงเทพมหานคร</option>
               <option value="nonthaburi">นนทบุรี</option>
               <option value="pathum">ปทุมธานี</option>
@@ -144,7 +144,7 @@
                <div class="timeline-tags">
                  <span class="tag-pill tag-green">Application</span>
                </div>
-               <button class="btn-detail">เลืออกสถานที่</button>
+               <button class="btn-detail">เลือกสถานที่</button>
              </div>
           </div>
         </div>
@@ -177,7 +177,7 @@
   </section>
 
   <!-- Company Directory -->
-  <section class="container">
+  <section id="company-directory-preview" class="container">
     <div class="section-header">
       <h2 class="section-title">รายชื่อสถานประกอบการ</h2>
       <a href="company-directory.html" class="see-all-link">ดูทั้งหมด <i class="fa-solid fa-arrow-right"></i></a>
@@ -188,14 +188,14 @@
       <!-- Card 1 -->
       <div class="company-card" onclick="openModal(1)">
         <div class="card-top">
-          <div class="company-logo">W2</div>
+          <div class="company-logo company-logo-agoda"><img src="resources/images/agoda.jpg" alt="โลโก้ Agoda"></div>
           <span class="badge-tag badge-blue">Full Time</span>
         </div>
-        <h4 class="company-name">Company 1</h4>
-        <p class="company-location">สถานที่ตั้ง • Paris, France</p>
-        <p class="company-desc">ประชาสัมพันธ์รับสมัครนักศึกษาเข้าร่วมปฏิบัติงาน...</p>
+        <h4 class="company-name">Agoda</h4>
+        <p class="company-location">Agoda • กรุงเทพฯ</p>
+        <p class="company-desc">เปิดรับนักศึกษาร่วมพัฒนาประสบการณ์ด้านเทคโนโลยีการท่องเที่ยว...</p>
         <div class="category-tags">
-          <span class="cat-badge cat-marketing">Marketing</span>
+          <span class="cat-badge cat-tech">Technology</span>
           <span class="cat-badge cat-design">Design</span>
         </div>
       </div>
@@ -203,70 +203,72 @@
       <!-- Card 2 -->
       <div class="company-card" onclick="openModal(2)">
         <div class="card-top">
-          <div class="company-logo" style="background: #F1F5F9; color: #0F172A; font-family: serif; font-style: italic;">R</div>
+          <div class="company-logo"><img src="resources/images/g-able.png" alt="โลโก้ G-Able"></div>
           <span class="badge-tag badge-blue">Full Time</span>
         </div>
-        <h4 class="company-name">Email Marketing</h4>
-        <p class="company-location">Revolut • Madrid, Spain</p>
-        <p class="company-desc">Revolut is looking for Email Marketing to help them lead...</p>
+        <h4 class="company-name">G-Able</h4>
+        <p class="company-location">G-Able • กรุงเทพฯ</p>
+        <p class="company-desc">เปิดโอกาสให้นักศึกษาเรียนรู้การพัฒนาซอฟต์แวร์ระดับองค์กร...</p>
         <div class="category-tags">
-          <span class="cat-badge cat-marketing">Marketing</span>
-          <span class="cat-badge cat-design">Design</span>
+          <span class="cat-badge cat-software">Software</span>
+          <span class="cat-badge cat-tech">Technology</span>
         </div>
       </div>
 
       <!-- Card 3 -->
       <div class="company-card" onclick="openModal(3)">
         <div class="card-top">
-          <div class="company-logo" style="color: #FACC15;"><i class="fa-solid fa-shapes"></i></div>
+          <div class="company-logo"><img src="resources/images/gosoft.png" alt="โลโก้ Gosoft"></div>
           <span class="badge-tag badge-blue">Full Time</span>
         </div>
-        <h4 class="company-name">Company 3</h4>
-        <p class="company-location">Pitch • Berlin, Germany</p>
-        <p class="company-desc">Pitch is looking for Customer Manager to join marketing team...</p>
+        <h4 class="company-name">Gosoft</h4>
+        <p class="company-location">Gosoft • กรุงเทพฯ</p>
+        <p class="company-desc">ร่วมพัฒนาระบบดิจิทัลและวิเคราะห์ข้อมูลสำหรับธุรกิจค้าปลีก...</p>
         <div class="category-tags">
-          <span class="cat-badge cat-marketing">Marketing</span>
+          <span class="cat-badge cat-software">Software</span>
+          <span class="cat-badge cat-business">Business</span>
         </div>
       </div>
 
       <!-- Card 4 -->
       <div class="company-card" onclick="openModal(4)">
         <div class="card-top">
-          <div class="company-logo" style="font-size: 10px;">BLINK</div>
+          <div class="company-logo"><img src="resources/images/huawei.jpg" alt="โลโก้ Huawei"></div>
           <span class="badge-tag badge-blue">Full Time</span>
         </div>
-        <h4 class="company-name">Company 4</h4>
-        <p class="company-location">Blinkist • Granada, Spain</p>
-        <p class="company-desc">Blinkist is looking for Visual Designer to help them desi...</p>
+        <h4 class="company-name">Huawei</h4>
+        <p class="company-location">Huawei • กรุงเทพฯ</p>
+        <p class="company-desc">เรียนรู้เทคโนโลยีเครือข่าย คลาวด์ และโซลูชันดิจิทัลระดับสากล...</p>
         <div class="category-tags">
-          <span class="cat-badge cat-design">Design</span>
+          <span class="cat-badge cat-tech">Technology</span>
+          <span class="cat-badge cat-software">Software</span>
         </div>
       </div>
 
       <!-- Card 5 -->
       <div class="company-card" onclick="openModal(5)">
         <div class="card-top">
-          <div class="company-logo" style="background: #0284C7;"><i class="fa-solid fa-cloud"></i></div>
+          <div class="company-logo"><img src="resources/images/KBTG.jpg" alt="โลโก้ KBTG"></div>
           <span class="badge-tag badge-blue">Full Time</span>
         </div>
-        <h4 class="company-name">Company 5</h4>
-        <p class="company-location">ClassPass • Manchester, UK</p>
-        <p class="company-desc">ClassPass is looking for Product Designer to help us...</p>
+        <h4 class="company-name">KBTG</h4>
+        <p class="company-location">KBTG • ปากเกร็ด</p>
+        <p class="company-desc">ร่วมสร้างนวัตกรรมทางการเงินและระบบคลาวด์กับทีมเทคโนโลยี...</p>
         <div class="category-tags">
           <span class="cat-badge cat-software">Software</span>
-          <span class="cat-badge cat-design">Design</span>
+          <span class="cat-badge cat-tech">Technology</span>
         </div>
       </div>
 
       <!-- Card 6 -->
       <div class="company-card" onclick="openModal(6)">
         <div class="card-top">
-          <div class="company-logo" style="background: #0D9488; font-size: 11px;">Canva</div>
+          <div class="company-logo"><img src="resources/images/krungsri.jpg" alt="โลโก้ Krungsri"></div>
           <span class="badge-tag badge-blue">Full Time</span>
         </div>
-        <h4 class="company-name">Company 6</h4>
-        <p class="company-location">Canva • Ontario, Canada</p>
-        <p class="company-desc">Canva is looking for Lead Engineer to help develop n...</p>
+        <h4 class="company-name">Krungsri</h4>
+        <p class="company-location">Krungsri • กรุงเทพฯ</p>
+        <p class="company-desc">พัฒนาประสบการณ์ดิจิทัลและผลิตภัณฑ์ทางการเงินสำหรับลูกค้า...</p>
         <div class="category-tags">
           <span class="cat-badge cat-design">Design</span>
           <span class="cat-badge cat-business">Business</span>
@@ -276,27 +278,29 @@
       <!-- Card 7 -->
       <div class="company-card" onclick="openModal(7)">
         <div class="card-top">
-          <div class="company-logo" style="background: #F1F5F9; color: #0F172A;"><i class="fa-solid fa-shield-halved"></i></div>
+          <div class="company-logo"><img src="resources/images/nectec.png" alt="โลโก้ NECTEC"></div>
           <span class="badge-tag badge-blue">Full Time</span>
         </div>
-        <h4 class="company-name">Company 7</h4>
-        <p class="company-location">GoDaddy • Marseille, France</p>
-        <p class="company-desc">GoDaddy is looking for Brand Strategist to join the team...</p>
+        <h4 class="company-name">NECTEC</h4>
+        <p class="company-location">NECTEC • ปทุมธานี</p>
+        <p class="company-desc">ร่วมวิจัยและพัฒนาเทคโนโลยีดิจิทัล ความมั่นคงปลอดภัย และ AI...</p>
         <div class="category-tags">
-          <span class="cat-badge cat-marketing">Marketing</span>
+          <span class="cat-badge cat-tech">Technology</span>
+          <span class="cat-badge cat-software">Research</span>
         </div>
       </div>
 
       <!-- Card 8 -->
       <div class="company-card" onclick="openModal(8)">
         <div class="card-top">
-          <div class="company-logo" style="background: #0EA5E9;"><i class="fa-brands fa-twitter"></i></div>
+          <div class="company-logo"><img src="resources/images/PTT.png" alt="โลโก้ PTT Group"></div>
           <span class="badge-tag badge-blue">Full Time</span>
         </div>
-        <h4 class="company-name">Company 8</h4>
-        <p class="company-location">Twitter • San Diego, US</p>
-        <p class="company-desc">Twitter is looking for Data Analyst to help team deal...</p>
+        <h4 class="company-name">PTT Group</h4>
+        <p class="company-location">PTT Group • กรุงเทพฯ</p>
+        <p class="company-desc">ร่วมวิเคราะห์ข้อมูลและพัฒนาโซลูชันสำหรับธุรกิจพลังงาน...</p>
         <div class="category-tags">
+          <span class="cat-badge cat-business">Business</span>
           <span class="cat-badge cat-tech">Technology</span>
         </div>
       </div>
@@ -383,65 +387,80 @@
     // ข้อมูลจำลองของแต่ละสถานประกอบการ
     const companiesData = {
       1: {
-        name: "Company 1",
-        location: "Paris, France",
-        logoHtml: "W2",
-        logoBg: "#0F172A",
+        name: "Agoda",
+        location: "กรุงเทพฯ",
+        logoHtml: '<img class="agoda-logo-img" src="resources/images/agoda.jpg" alt="โลโก้ Agoda">',
+        logoBg: "#FFFFFF",
         desc: "เปิดรับสมัครนักศึกษาเข้าร่วมทีมพัฒนาผลิตภัณฑ์ดิจิทัลและแคมเปญการตลาด ได้ปฏิบัติงานจริงร่วมกับทีมผู้เชี่ยวชาญระดับสากล พร้อมรับคำปรึกษาแบบตัวต่อตัวตลอดระยะเวลาฝึกงาน"
       },
       2: {
-        name: "Revolut (Email Marketing)",
-        location: "Madrid, Spain",
-        logoHtml: "R",
-        logoBg: "#F1F5F9",
+        name: "G-Able",
+        location: "กรุงเทพฯ",
+        logoHtml: '<img src="resources/images/g-able.png" alt="โลโก้ G-Able">',
+        logoBg: "#FFFFFF",
         logoColor: "#0F172A",
         desc: "Revolut กำลังมองหานักศึกษาฝึกงานตำแหน่ง Email Marketing เพื่อช่วยวางแผน ทำแคมเปญ และวิเคราะห์ข้อมูลผู้ใช้งานเพื่อส่งมอบประสบการณ์ทางการเงินที่ดีที่สุด"
       },
       3: {
-        name: "Pitch (Customer Manager)",
-        location: "Berlin, Germany",
-        logoHtml: '<i class="fa-solid fa-shapes"></i>',
-        logoBg: "#0F172A",
+        name: "Gosoft",
+        location: "กรุงเทพฯ",
+        logoHtml: '<img src="resources/images/gosoft.png" alt="โลโก้ Gosoft">',
+        logoBg: "#FFFFFF",
         logoColor: "#FACC15",
         desc: "ร่วมงานกับ Pitch เพื่อดูแลลูกค้าสัมพันธ์ วางกลยุทธ์การสื่อสาร และประสานงานทีมการตลาดเพื่อขยายฐานผู้ใช้งาน Presentation Platform ทั่วโลก"
       },
       4: {
-        name: "Blinkist (Visual Designer)",
-        location: "Granada, Spain",
-        logoHtml: "BLINK",
-        logoBg: "#000",
+        name: "Huawei",
+        location: "กรุงเทพฯ",
+        logoHtml: '<img src="resources/images/huawei.jpg" alt="โลโก้ Huawei">',
+        logoBg: "#FFFFFF",
         desc: "Blinkist เปิดรับ Visual Designer ร่วมสร้างสรรค์กราฟิก สื่อประชาสัมพันธ์ และ UI Components ให้กับแอปพลิเคชันสรุปหนังสือยอดนิยม"
       },
       5: {
-        name: "ClassPass (Product Designer)",
-        location: "Manchester, UK",
-        logoHtml: '<i class="fa-solid fa-cloud"></i>',
-        logoBg: "#0284C7",
+        name: "KBTG",
+        location: "ปากเกร็ด",
+        logoHtml: '<img src="resources/images/KBTG.jpg" alt="โลโก้ KBTG">',
+        logoBg: "#FFFFFF",
         desc: "ฝึกออกแบบ User Journey, Wireframe และ Prototype สำหรับแพลตฟอร์มฟิตเนสและไลฟ์สไตล์ระดับโลก"
       },
       6: {
-        name: "Canva (Lead Engineer Trainee)",
-        location: "Ontario, Canada",
-        logoHtml: "Canva",
-        logoBg: "#0D9488",
+        name: "Krungsri",
+        location: "กรุงเทพฯ",
+        logoHtml: '<img src="resources/images/krungsri.jpg" alt="โลโก้ Krungsri">',
+        logoBg: "#FFFFFF",
         desc: "เปิดรับนักศึกษาที่มีความสนใจด้าน Web Architecture, Frontend/Backend เข้ามาร่วมพัฒนาระบบ Graphic Editor ที่มีผู้ใช้กว่า 100 ล้านคน"
       },
       7: {
-        name: "GoDaddy (Brand Strategist)",
-        location: "Marseille, France",
-        logoHtml: '<i class="fa-solid fa-shield-halved"></i>',
-        logoBg: "#F1F5F9",
+        name: "NECTEC",
+        location: "ปทุมธานี",
+        logoHtml: '<img src="resources/images/nectec.png" alt="โลโก้ NECTEC">',
+        logoBg: "#FFFFFF",
         logoColor: "#0F172A",
         desc: "ร่วมวิเคราะห์ตลาด สร้างภาพลักษณ์แบรนด์ และจัดกิจกรรมทางการตลาดเพื่อส่งเสริมผู้ประกอบการธุรกิจขนาดเล็ก"
       },
       8: {
-        name: "Twitter (Data Analyst)",
-        location: "San Diego, US",
-        logoHtml: '<i class="fa-brands fa-twitter"></i>',
-        logoBg: "#0EA5E9",
+        name: "PTT Group",
+        location: "กรุงเทพฯ",
+        logoHtml: '<img src="resources/images/PTT.png" alt="โลโก้ PTT Group">',
+        logoBg: "#FFFFFF",
         desc: "วิเคราะห์ Insight และพฤติกรรมการใช้งานแพลตฟอร์ม โซเชียลมีเดีย พร้อมจัดทำ Dashboard นำเสนอต่อทีมผู้บริหาร"
       }
     };
+
+    const companyDescriptions = {
+      1: "ร่วมพัฒนาผลิตภัณฑ์และประสบการณ์ดิจิทัลสำหรับแพลตฟอร์มการท่องเที่ยวระดับโลก",
+      2: "เรียนรู้การพัฒนาซอฟต์แวร์ โครงสร้างพื้นฐาน และโซลูชันดิจิทัลระดับองค์กร",
+      3: "ร่วมพัฒนาระบบดิจิทัลและวิเคราะห์ข้อมูลเพื่อสนับสนุนธุรกิจค้าปลีก",
+      4: "เรียนรู้เทคโนโลยีเครือข่าย คลาวด์ และโซลูชันดิจิทัลร่วมกับทีมวิศวกร",
+      5: "ร่วมสร้างนวัตกรรมทางการเงิน ระบบคลาวด์ และผลิตภัณฑ์ดิจิทัลกับทีมเทคโนโลยี",
+      6: "พัฒนาประสบการณ์ผู้ใช้และผลิตภัณฑ์ดิจิทัลสำหรับบริการทางการเงิน",
+      7: "ร่วมวิจัยและพัฒนาเทคโนโลยีดิจิทัล ความมั่นคงปลอดภัย และปัญญาประดิษฐ์",
+      8: "ร่วมวิเคราะห์ข้อมูลและพัฒนาโซลูชันดิจิทัลสำหรับธุรกิจพลังงาน"
+    };
+
+    Object.entries(companyDescriptions).forEach(([id, description]) => {
+      companiesData[id].desc = description;
+    });
 
     // ฟังก์ชันเปิด Modal
     function openModal(id) {
