@@ -1,41 +1,36 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="ทำเนียบพันธมิตรสถานประกอบการสำหรับโครงการสหกิจศึกษา COOP-EDU">
-  <title>ทำเนียบพันธมิตรสถานประกอบการ | COOP-EDU</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CO-ED ระบบข้อมูลสหกิจศึกษา</title>
+
+  <link rel="icon" href="resources/images/logomini.png" type="image/png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
   <script src="company-directory.js" defer></script>
 </head>
 <body class="directory-page">
-  <header class="directory-site-header">
-    <div class="container directory-header-inner">
-      <a class="directory-brand" href="index.html" aria-label="COOP-EDU หน้าแรก">
-        <span class="directory-brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" role="img">
-            <path d="M12 5.2 13.9 10l4.9 2-4.9 2-1.9 4.8L10.1 14l-4.9-2 4.9-2L12 5.2Z"/>
-          </svg>
-        </span>
-        <span>CO-ED</span>
-      </a>
 
-      <nav class="nav-links">
-        <a href="./index.html">หน้าแรก</a>
-        <a href="#">ข้อกำหนดสหกิจและขั้นตอน</a>
-        <a href="#">คำถามที่พบบ่อย</a>
-      </nav>
+  <!-- Navigation -->
+  <header class="header">
+    <div class="container header-container">
+      <div style="display: flex; align-items: center;">
+        <a href="index.html" class="logo">
+          <img src="resources/images/logo.png" alt="logo" class="nav-logo">
+        </a>
+        <nav class="nav-links">
+          <a href="index.html">หน้าแรก</a>
+          <a href="requirements.html">ข้อกำหนดสหกิจและขั้นตอน</a>
+          <a href="company-directory.html">รายชื่อสถานประกอบการ</a>
+          <a href="faq.html">คำถามที่พบบ่อย</a>
+        </nav>
+      </div>
 
-      <label class="directory-search" for="companySearch">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="m20 20-4.4-4.4m2.4-4.1a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"/>
-        </svg>
-        <input id="companySearch" type="search" placeholder="ค้นหาสถานที่ฝึกงาน, สาขาวิชา" autocomplete="off">
-      </label>
-
-      <div class="directory-auth" aria-label="ระบบสมาชิกพร้อมใช้งานในเวอร์ชันถัดไป">
-        <button type="button" class="directory-login" disabled title="พร้อมใช้งานใน V3">Login</button>
-        <button type="button" class="directory-signup" disabled title="พร้อมใช้งานใน V3">Sign Up</button>
+    
+      <div class="auth-buttons">
+        <a href="#" class="btn-login">Login</a>
+        <a href="#" class="btn-signup">Sign Up</a>
       </div>
     </div>
   </header>
@@ -44,12 +39,19 @@
     <div class="container">
       <div class="directory-heading-row">
         <div>
-          <p class="directory-eyebrow">COOP-EDU PARTNERS</p>
-          <h1>ทำเนียบพันธมิตรสถานประกอบการ</h1>
+          <p class="directory-eyebrow">CO-ED PARTNERS</p>
+          <h1>รายชื่อสถานประกอบการ</h1>
           <span class="directory-title-stroke" aria-hidden="true"></span>
           <p class="directory-intro">ค้นหาและสำรวจสถานประกอบการที่เปิดรับนักศึกษาสหกิจศึกษา</p>
         </div>
       </div>
+
+      <label class="directory-search" for="companySearch">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m20 20-4.4-4.4m2.4-4.1a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"/>
+        </svg>
+        <input id="companySearch" type="search" placeholder="ค้นหาสถานที่ฝึกงาน, สาขาวิชา" autocomplete="off">
+      </label>
 
       <p id="searchResultStatus" class="directory-result-status" aria-live="polite"></p>
 
@@ -232,44 +234,48 @@
     </div>
   </main>
 
-  <footer id="directory-footer" class="directory-footer">
-    <div class="container directory-footer-grid">
-      <div class="directory-footer-about">
-        <a class="directory-brand directory-footer-brand" href="index.html">
-          <span class="directory-brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 5.2 13.9 10l4.9 2-4.9 2-1.9 4.8L10.1 14l-4.9-2 4.9-2L12 5.2Z"/></svg>
-          </span>
-          <span>COOP-EDU</span>
-        </a>
-        <p>ศูนย์รวมข้อมูลสำหรับนักศึกษาสหกิจศึกษา เพื่อเตรียมความพร้อมก่อนก้าวสู่การทำงานจริง</p>
-      </div>
-
-      <div class="directory-footer-column">
-        <h2>เกี่ยวกับ</h2>
-        <a href="index.html">หน้าหลัก</a>
-        <a href="company-directory.html">สถานประกอบการ</a>
-        <a href="#directory-footer">เงื่อนไขการใช้งาน</a>
-      </div>
-
-      <div class="directory-footer-column">
-        <h2>ข้อมูลสหกิจ</h2>
-        <a href="index.html">คู่มือเตรียมตัว</a>
-        <a href="index.html">กำหนดการ</a>
-        <a href="index.html">ติดต่อเรา</a>
-      </div>
-
-      <div class="directory-newsletter">
-        <h2>รับข่าวสารสำคัญ</h2>
-        <p>ติดตามประกาศและข่าวสารสหกิจศึกษาผ่านช่องทางของสาขาวิชา</p>
-        <div class="directory-newsletter-box" aria-label="ระบบรับข่าวสารพร้อมใช้งานในเวอร์ชันถัดไป">
-          <input type="email" placeholder="Email address" aria-label="อีเมล" disabled>
-          <button type="button" disabled>Sign Up</button>
+<footer class="footer">
+    <div class="container footer-grid">
+      <div>
+        <div class="footer-logo">
+          <i class="fa-solid fa-graduation-cap"></i>
+          <span>CO-ED</span>
         </div>
+        <p style="max-width: 280px; line-height: 1.6;">
+          ระบบสารสนเทศเพื่อการจัดการข้อมูลสหกิจศึกษา ช่วยให้นักศึกษาเตรียมความพร้อมสู่การทำงานจริงได้อย่างมีประสิทธิภาพ
+        </p>
+      </div>
+
+      <div class="footer-column">
+        <h5>เกี่ยวกับเรา</h5>
+        <ul>
+          <li><a href="#">หน้าแรก</a></li>
+          <li><a href="#">ข้อกำหนดสหกิจและขั้นตอน</a></li>
+          <li><a href="#">รายชื่อสถานประกอบการ</a></li>
+          <li><a href="#">คำถามที่พบบ่อย</a></li>
+          <li><a href="#">นโยบายความเป็นส่วนตัว</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <h5>แหล่งข้อมูล</h5>
+        <ul>
+          <li><a href="#">คู่มือการใช้งานระบบ</a></li>
+          <li><a href="#">ประกาศและข่าวสาร</a></li>
+          <li><a href="#">เอกสารดาวน์โหลด</a></li>
+          <li><a href="#">ติดต่อสำนักงานสหกิจฯ</a></li>
+        </ul>
       </div>
     </div>
-    <div class="container directory-footer-bottom">
-      <p>ต้นแบบระบบ COOP-EDU สำหรับรายวิชา CS361</p>
-      <p>V1 · Information</p>
+
+    <div class="container footer-bottom">
+      <p>© 2026 CO-ED Cooperative Education. All rights reserved.</p>
+      <div class="social-links">
+        <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
+        <a href="#"><i class="fa-brands fa-youtube"></i></a>
+        <a href="#"><i class="fa-brands fa-line"></i></a>
+        <a href="#"><i class="fa-solid fa-envelope"></i></a>
+      </div>
     </div>
   </footer>
 </body>
