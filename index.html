@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>COOP-EDU - ระบบข้อมูลสหกิจศึกษา</title>
+  <title>CO-ED ระบบข้อมูลสหกิจศึกษา</title>
   
+  <link rel="icon" href="resources/images/logomini.png" type="image/png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -14,13 +15,14 @@
   <header class="header">
     <div class="container header-container">
       <div style="display: flex; align-items: center;">
-        <a href="#" class="logo">
+        <a href="index.html" class="logo">
           <img src="resources/images/logo.png" alt="logo" class="nav-logo">
         </a>
         <nav class="nav-links">
-          <a href="#">หน้าแรก</a>
-          <a href="#">ข้อกำหนดสหกิจและขั้นตอน</a>
-          <a href="#">คำถามที่พบบ่อย</a>
+          <a href="index.html">หน้าแรก</a>
+          <a href="requirements.html">ข้อกำหนดสหกิจและขั้นตอน</a>
+          <a href="company-directory.html">รายชื่อสถานประกอบการ</a>
+          <a href="faq.html">คำถามที่พบบ่อย</a>
         </nav>
       </div>
 
@@ -39,8 +41,9 @@
           ระบบข้อมูล<br>
           <span class="hero-highlight">
             สหกิจศึกษา
-            <svg class="underline-svg" height="8" viewBox="0 0 200 8" fill="none">
-              <path d="M1 5.5C50 1.5 150 1.5 199 5.5" stroke="#38BDF8" stroke-width="4" stroke-linecap="round"/>
+            <svg class="underline-svg" height="32" viewBox="0 0 200 24" fill="none" style="position: absolute; bottom: -16px; left: -10%; width: 120%;">
+              <path d="M5 10 Q 100 6 195 10" stroke="#0EA5E9" stroke-width="5" stroke-linecap="round"/>
+              <path d="M25 19 Q 100 15 175 19" stroke="#0EA5E9" stroke-width="5" stroke-linecap="round"/>
             </svg>
           </span>
         </h1>
@@ -104,15 +107,15 @@
           <div class="timeline-box">
              <div class="timeline-box-header">
                 <div>
-                  <h3>ตารางสอบปลายภาค</h3>
-                  <p>ตรวจสอบตารางสอบสำหรับภาคการศึกษานี้.</p>
+                  <h3>ปฐมนิเทศนักศึกษาสหกิจศึกษา</h3>
+                  <p>นักศึกษาเข้ารับฟังการชี้แจงรายละเอียดและข้อกำหนดการปฏิบัติงาน</p>
                 </div>
-                <div class="timeline-icon">🗓️</div>
+                <div class="timeline-icon">📢</div>
              </div>
              <div class="timeline-footer">
                <div class="timeline-tags">
-                 <span class="tag-pill tag-green">Full-Time</span>
-                 <span class="tag-pill tag-lightgreen">Design</span>
+                 <span class="tag-pill tag-green">Mandatory</span>
+                 <span class="tag-pill tag-lightgreen">All Students</span>
                </div>
                <button class="btn-detail">ดูรายละเอียด</button>
              </div>
@@ -131,18 +134,17 @@
         <div class="timeline-content">
           <div class="timeline-box">
              <div class="timeline-box-header">
-                <div class="timeline-icon">🎓</div>
+                <div class="timeline-icon">🏢</div>
                 <div>
-                  <h3>เปิดรับสมัครทุนการศึกษา</h3>
-                  <p>ยื่นใบสมัครสำหรับทุนประจำภาคการศึกษาถัดไป.</p>
+                  <h3>ยื่นเลือกสถานประกอบการ</h3>
+                  <p>เปิดระบบให้นักศึกษายื่นความจำนงและเลือกสถานประกอบการ</p>
                 </div>
              </div>
              <div class="timeline-footer">
                <div class="timeline-tags">
-                 <span class="tag-pill tag-green">Full-Time</span>
-                 <span class="tag-pill tag-lightgreen">Design</span>
+                 <span class="tag-pill tag-green">Application</span>
                </div>
-               <button class="btn-detail">สมัครทุน</button>
+               <button class="btn-detail">เลืออกสถานที่</button>
              </div>
           </div>
         </div>
@@ -154,17 +156,16 @@
           <div class="timeline-box">
              <div class="timeline-box-header">
                 <div>
-                  <h3>สิ้นสุดระยะเวลาถอนวิชา</h3>
-                  <p>วันสุดท้ายที่จะสามารถถอนวิชาเรียนได้ตามกำหนด.</p>
+                  <h3>ประกาศผลและทำหนังสือส่งตัว</h3>
+                  <p>ประกาศรายชื่อผู้ผ่านการคัดเลือกและจัดทำหนังสือส่งตัวให้สถานประกอบการ</p>
                 </div>
-                <div class="timeline-icon">⏱️</div>
+                <div class="timeline-icon">📄</div>
              </div>
              <div class="timeline-footer">
                <div class="timeline-tags">
-                 <span class="tag-pill tag-green">Full-Time</span>
-                 <span class="tag-pill tag-lightgreen">Design</span>
+                 <span class="tag-pill tag-green">Announcement</span>
                </div>
-               <button class="btn-detail">ถอนวิชา</button>
+               <button class="btn-detail">ตรวจสอบรายชื่อ</button>
              </div>
           </div>
         </div>
@@ -178,8 +179,8 @@
   <!-- Company Directory -->
   <section class="container">
     <div class="section-header">
-      <h2 class="section-title">Company Directory</h2>
-      <a href="company-directory.html" class="see-all-link">Show all company <i class="fa-solid fa-arrow-right"></i></a>
+      <h2 class="section-title">รายชื่อสถานประกอบการ</h2>
+      <a href="company-directory.html" class="see-all-link">ดูทั้งหมด <i class="fa-solid fa-arrow-right"></i></a>
     </div>
 
     <!-- เมื่อกดการ์ด จะเรียก openModal พร้อมส่ง ID บริษัท -->
@@ -302,49 +303,47 @@
     </div>
   </section>
 
-  <!-- Footer -->
   <footer class="footer">
     <div class="container footer-grid">
       <div>
         <div class="footer-logo">
-          <i class="fa-solid fa-asterisk"></i>
-          <span>JobHuntly</span>
+          <i class="fa-solid fa-graduation-cap"></i>
+          <span>CO-ED</span>
         </div>
         <p style="max-width: 280px; line-height: 1.6;">
-          Great platform for the job seeker that passionate about startups. Find your dream job easier.
+          ระบบสารสนเทศเพื่อการจัดการข้อมูลสหกิจศึกษา ช่วยให้นักศึกษาเตรียมความพร้อมสู่การทำงานจริงได้อย่างมีประสิทธิภาพ
         </p>
       </div>
 
       <div class="footer-column">
-        <h5>About</h5>
+        <h5>เกี่ยวกับเรา</h5>
         <ul>
-          <li><a href="#">Companies</a></li>
-          <li><a href="#">Pricing</a></li>
-          <li><a href="#">Terms</a></li>
-          <li><a href="#">Advice</a></li>
-          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">หน้าแรก</a></li>
+          <li><a href="#">ข้อกำหนดสหกิจและขั้นตอน</a></li>
+          <li><a href="#">รายชื่อสถานประกอบการ</a></li>
+          <li><a href="#">คำถามที่พบบ่อย</a></li>
+          <li><a href="#">นโยบายความเป็นส่วนตัว</a></li>
         </ul>
       </div>
 
       <div class="footer-column">
-        <h5>Resources</h5>
+        <h5>แหล่งข้อมูล</h5>
         <ul>
-          <li><a href="#">Help Docs</a></li>
-          <li><a href="#">Guide</a></li>
-          <li><a href="#">Updates</a></li>
-          <li><a href="#">Contact Us</a></li>
+          <li><a href="#">คู่มือการใช้งานระบบ</a></li>
+          <li><a href="#">ประกาศและข่าวสาร</a></li>
+          <li><a href="#">เอกสารดาวน์โหลด</a></li>
+          <li><a href="#">ติดต่อสำนักงานสหกิจฯ</a></li>
         </ul>
       </div>
     </div>
 
     <div class="container footer-bottom">
-      <p>2021 @ JobHuntly. All rights reserved.</p>
+      <p>© 2026 CO-ED Cooperative Education. All rights reserved.</p>
       <div class="social-links">
         <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
-        <a href="#"><i class="fa-brands fa-instagram"></i></a>
-        <a href="#"><i class="fa-brands fa-dribbble"></i></a>
-        <a href="#"><i class="fa-brands fa-linkedin-in"></i></a>
-        <a href="#"><i class="fa-brands fa-twitter"></i></a>
+        <a href="#"><i class="fa-brands fa-youtube"></i></a>
+        <a href="#"><i class="fa-brands fa-line"></i></a>
+        <a href="#"><i class="fa-solid fa-envelope"></i></a>
       </div>
     </div>
   </footer>

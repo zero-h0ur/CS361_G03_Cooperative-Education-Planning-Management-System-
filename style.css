@@ -76,7 +76,7 @@ a {
 }
 
 .nav-links a {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--text-muted);
   transition: color 0.2s;
@@ -119,8 +119,10 @@ a {
 
 /* ================= HERO SECTION ================= */
 .hero-section {
-  padding: 20px 0 0;
-  background-color: #F0F4FE;
+  padding: 60px 0 0;
+  background-color: #F8FAFC;
+  background-image: url("data:image/svg+xml,%3Csvg width='160' height='277.128' viewBox='0 0 80 138.564' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%23E2E8F0' stroke-width='1.5' fill='none'%3E%3Cpath d='M0 138.564 L80 92.376 L80 0' /%3E%3Cpath d='M0 46.188 L80 0' /%3E%3Cpath d='M0 46.188 L40 69.282 L40 138.564' /%3E%3Cpath d='M80 92.376 L40 69.282' /%3E%3C/g%3E%3C/svg%3E");
+  background-size: 160px;
   border-bottom: 1px solid #E2E8F0;
   overflow: hidden;
 }
@@ -130,6 +132,10 @@ a {
   grid-template-columns: 1.2fr 0.8fr;
   gap: 48px;
   align-items: center;
+}
+
+.hero-grid > div:first-child {
+  transform: translateY(-105px);
 }
 
 .hero-title {
