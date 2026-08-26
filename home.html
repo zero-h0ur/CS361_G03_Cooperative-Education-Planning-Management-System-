@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COOP-EDU - ระบบข้อมูลสหกิจศึกษา</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Prompt & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style>
+    body {
+      font-family: 'Prompt', 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-[#F8FAFC] text-slate-800 antialiased">
+
+  <!-- ================= TOP NAVIGATION ================= -->
+  <header class="w-full bg-white/90 backdrop-blur border-b border-slate-100 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <!-- Logo -->
+      <div class="flex items-center gap-8">
+        <a href="#" class="flex items-center gap-2 text-2xl font-bold text-[#4B48E5]">
+          <i class="fa-solid fa-asterisk"></i>
+          <span class="tracking-tight text-slate-900">COOP-EDU</span>
+        </a>
+        <!-- Nav Links -->
+        <nav class="hidden md:flex items-center gap-6 text-sm text-slate-600 font-medium">
+          <a href="#" class="hover:text-[#4B48E5] transition">เกี่ยวกับ</a>
+          <a href="#" class="hover:text-[#4B48E5] transition">จัดหางานสหกิจฯ</a>
+          <a href="#" class="hover:text-[#4B48E5] transition">สถิติ</a>
+        </nav>
+      </div>
+
+      <!-- Auth Buttons -->
+      <div class="flex items-center gap-4 text-sm font-medium">
+        <a href="#" class="text-[#4B48E5] hover:underline px-3 py-2">Login</a>
+        <a href="#" class="bg-[#4B48E5] hover:bg-indigo-700 text-white px-5 py-2.5 rounded-md transition shadow-sm">Sign Up</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= HERO SECTION ================= -->
+  <section class="relative overflow-hidden pt-12 pb-20 bg-gradient-to-b from-blue-50/40 via-transparent to-transparent">
+    <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+      
+      <!-- Hero Left: Text & Search -->
+      <div class="lg:col-span-7 space-y-6">
+        <div class="space-y-2">
+          <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 leading-tight">
+            ระบบข้อมูล<br>
+            <span class="text-[#2563EB] relative inline-block">
+              สหกิจศึกษา
+              <!-- Hand-drawn line decoration underneath -->
+              <svg class="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 200 8" fill="none">
+                <path d="M1 5.5C50 1.5 150 1.5 199 5.5" stroke="#38BDF8" stroke-width="4" stroke-linecap="round"/>
+              </svg>
+            </span>
+          </h1>
+          <p class="text-slate-500 text-sm md:text-base pt-3 max-w-lg leading-relaxed">
+            ศูนย์รวมข้อมูลขั้นตอน กำหนดการ และสถานประกอบการ เพื่อเตรียมความพร้อมสู่การปฏิบัติงานจริง
+          </p>
+        </div>
+
+        <!-- Search Box Bar -->
+        <div class="bg-white p-3 rounded-xl shadow-lg border border-slate-100 flex flex-col md:flex-row items-center gap-3">
+          <div class="flex items-center gap-3 px-3 py-2 w-full md:w-1/2 border-b md:border-b-0 md:border-r border-slate-200">
+            <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+            <input type="text" placeholder="ตำแหน่งงาน..." class="w-full text-sm outline-none text-slate-700 placeholder-slate-400" />
+          </div>
+          <div class="flex items-center gap-3 px-3 py-2 w-full md:w-1/2">
+            <i class="fa-solid fa-location-dot text-slate-400"></i>
+            <select class="w-full text-sm outline-none text-slate-700 bg-transparent cursor-pointer">
+              <option value="">สาขา, กรุงเทพมหานคร</option>
+              <option value="bkk">กรุงเทพมหานคร</option>
+              <option value="nonthaburi">นนทบุรี</option>
+              <option value="pathum">ปทุมธานี</option>
+            </select>
+          </div>
+          <button class="w-full md:w-auto px-6 py-3 bg-[#4B48E5] hover:bg-indigo-700 text-white text-sm font-medium rounded-lg whitespace-nowrap transition">
+            ค้นหาตำแหน่งงาน
+          </button>
+        </div>
+
+        <!-- Popular Tags -->
+        <div class="text-xs text-slate-400">
+          <span class="text-slate-500">คำค้นยอดนิยม :</span> UI Designer, UX Researcher, Android, Admin
+        </div>
+      </div>
+
+      <!-- Hero Right: Profile Image -->
+      <div class="lg:col-span-5 flex justify-center relative">
+        <div class="relative w-80 h-96 md:w-96 md:h-[450px]">
+          <!-- Abstract Background Border Shape -->
+          <div class="absolute inset-0 border-2 border-indigo-200 rounded-3xl transform rotate-6"></div>
+          <img 
+            src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=800&q=80" 
+            alt="Hero Student" 
+            class="relative z-10 w-full h-full object-cover rounded-3xl shadow-xl"
+          />
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= BANNER ANNOUNCEMENT ================= -->
+  <section class="max-w-5xl mx-auto px-6 my-10">
+    <h2 class="text-center text-red-500 font-bold text-2xl mb-6">ประกาศสำคัญ!!!</h2>
+    <div class="bg-gradient-to-r from-cyan-900 via-sky-800 to-indigo-900 rounded-3xl overflow-hidden shadow-xl text-white relative flex flex-col md:flex-row items-center">
+      <div class="p-8 md:p-12 space-y-4 max-w-xl z-10">
+        <span class="bg-white/20 text-xs px-3 py-1 rounded-full uppercase tracking-wider">COOP EDU</span>
+        <h3 class="text-2xl md:text-3xl font-bold">เปิดรับสมัครสหกิจศึกษา</h3>
+        <p class="text-amber-300 font-medium">ช่วงเวลารับสมัคร: 1 ม.ค. 2570 - 30 เม.ย. 2570</p>
+        <p class="text-xs text-slate-200">ได้โอกาสฝึกงานและปฏิบัติงานจริงกับองค์กรชั้นนำ</p>
+      </div>
+      <div class="w-full md:w-1/2 h-64 md:h-full">
+        <img 
+          src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80" 
+          alt="Announcement" 
+          class="w-full h-full object-cover object-center"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COMPANY DIRECTORY ================= -->
+  <section class="max-w-7xl mx-auto px-6 py-12">
+    <div class="mb-4">
+      <h3 class="text-xl font-bold text-slate-800">กำหนดการที่ <span class="text-[#2563EB]">กำลังจะมาถึง</span></h3>
+    </div>
+    
+    <div class="flex items-center justify-between mb-8">
+      <h2 class="text-2xl font-bold text-slate-900">Company Directory</h2>
+      <a href="#" class="text-sm font-semibold text-[#4B48E5] hover:underline flex items-center gap-1">
+        Show all company <i class="fa-solid fa-arrow-right text-xs"></i>
+      </a>
+    </div>
+
+    <!-- 4x2 Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      
+      <!-- Card Template Item -->
+      <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition">
+        <div class="flex items-start justify-between">
+          <div class="w-12 h-12 bg-slate-900 text-white rounded-lg flex items-center justify-center font-bold">W2</div>
+          <span class="text-xs font-semibold text-[#4B48E5] border border-[#4B48E5]/20 bg-indigo-50/50 px-2.5 py-1 rounded">Full Time</span>
+        </div>
+        <h4 class="font-bold text-slate-900 mt-4">Company 1</h4>
+        <p class="text-xs text-slate-400 mt-1">สถานที่ตั้ง • Paris, France</p>
+        <p class="text-xs text-slate-500 mt-2 line-clamp-2">ประชาสัมพันธ์รับสมัครนักศึกษาเข้าร่วมปฏิบัติงาน...</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <span class="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-200">Marketing</span>
+          <span class="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded border border-emerald-200">Design</span>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition">
+        <div class="flex items-start justify-between">
+          <div class="w-12 h-12 bg-slate-100 text-slate-900 font-serif italic text-2xl rounded-lg flex items-center justify-center font-bold">R</div>
+          <span class="text-xs font-semibold text-[#4B48E5] border border-[#4B48E5]/20 bg-indigo-50/50 px-2.5 py-1 rounded">Full Time</span>
+        </div>
+        <h4 class="font-bold text-slate-900 mt-4">Email Marketing</h4>
+        <p class="text-xs text-slate-400 mt-1">Revolut • Madrid, Spain</p>
+        <p class="text-xs text-slate-500 mt-2 line-clamp-2">Revolut is looking for Email Marketing to help them lead...</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <span class="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-200">Marketing</span>
+          <span class="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded border border-emerald-200">Design</span>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition">
+        <div class="flex items-start justify-between">
+          <div class="w-12 h-12 bg-slate-900 text-yellow-400 rounded-lg flex items-center justify-center text-xl"><i class="fa-solid fa-shapes"></i></div>
+          <span class="text-xs font-semibold text-[#4B48E5] border border-[#4B48E5]/20 bg-indigo-50/50 px-2.5 py-1 rounded">Full Time</span>
+        </div>
+        <h4 class="font-bold text-slate-900 mt-4">Company 3</h4>
+        <p class="text-xs text-slate-400 mt-1">Pitch • Berlin, Germany</p>
+        <p class="text-xs text-slate-500 mt-2 line-clamp-2">Pitch is looking for Customer Manager to join marketing t...</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <span class="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-200">Marketing</span>
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition">
+        <div class="flex items-start justify-between">
+          <div class="w-12 h-12 bg-black text-white text-xs rounded-lg flex items-center justify-center font-bold">BLINK</div>
+          <span class="text-xs font-semibold text-[#4B48E5] border border-[#4B48E5]/20 bg-indigo-50/50 px-2.5 py-1 rounded">Full Time</span>
+        </div>
+        <h4 class="font-bold text-slate-900 mt-4">Company 4</h4>
+        <p class="text-xs text-slate-400 mt-1">Blinkist • Granada, Spain</p>
+        <p class="text-xs text-slate-500 mt-2 line-clamp-2">Blinkist is looking for Visual Designer to help them desi...</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <span class="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded border border-emerald-200">Design</span>
+        </div>
+      </div>
+
+      <!-- Card 5 -->
+      <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition">
+        <div class="flex items-start justify-between">
+          <div class="w-12 h-12 bg-sky-500 text-white text-xl rounded-lg flex items-center justify-center"><i class="fa-solid fa-cloud"></i></div>
+          <span class="text-xs font-semibold text-[#4B48E5] border border-[#4B48E5]/20 bg-indigo-50/50 px-2.5 py-1 rounded">Full Time</span>
+        </div>
+        <h4 class="font-bold text-slate-900 mt-4">Company 5</h4>
+        <p class="text-xs text-slate-400 mt-1">ClassPass • Manchester, UK</p>
+        <p class="text-xs text-slate-500 mt-2 line-clamp-2">ClassPass is looking for Product Designer to help us...</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <span class="text-[10px] bg-sky-50 text-sky-600 px-2 py-0.5 rounded border border-sky-200">Software</span>
+          <span class="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded border border-emerald-200">Design</span>
+        </div>
+      </div>
+
+      <!-- Card 6 -->
+      <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition">
+        <div class="flex items-start justify-between">
+          <div class="w-12 h-12 bg-teal-500 text-white rounded-lg flex items-center justify-center font-bold text-xs">Canva</div>
+          <span class="text-xs font-semibold text-[#4B48E5] border border-[#4B48E5]/20 bg-indigo-50/50 px-2.5 py-1 rounded">Full Time</span>
+        </div>
+        <h4 class="font-bold text-slate-900 mt-4">Company 6</h4>
+        <p class="text-xs text-slate-400 mt-1">Canva • Ontario, Canada</p>
+        <p class="text-xs text-slate-500 mt-2 line-clamp-2">Canva is looking for Lead Engineer to help develop n...</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <span class="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded border border-emerald-200">Design</span>
+          <span class="text-[10px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded border border-purple-200">Business</span>
+        </div>
+      </div>
+
+      <!-- Card 7 -->
+      <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition">
+        <div class="flex items-start justify-between">
+          <div class="w-12 h-12 bg-slate-100 text-slate-800 rounded-lg flex items-center justify-center text-xl"><i class="fa-solid fa-shield-halved"></i></div>
+          <span class="text-xs font-semibold text-[#4B48E5] border border-[#4B48E5]/20 bg-indigo-50/50 px-2.5 py-1 rounded">Full Time</span>
+        </div>
+        <h4 class="font-bold text-slate-900 mt-4">Company 7</h4>
+        <p class="text-xs text-slate-400 mt-1">GoDaddy • Marseille, France</p>
+        <p class="text-xs text-slate-500 mt-2 line-clamp-2">GoDaddy is looking for Brand Strategist to join the team...</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <span class="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-200">Marketing</span>
+        </div>
+      </div>
+
+      <!-- Card 8 -->
+      <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition">
+        <div class="flex items-start justify-between">
+          <div class="w-12 h-12 bg-sky-400 text-white rounded-lg flex items-center justify-center text-xl"><i class="fa-brands fa-twitter"></i></div>
+          <span class="text-xs font-semibold text-[#4B48E5] border border-[#4B48E5]/20 bg-indigo-50/50 px-2.5 py-1 rounded">Full Time</span>
+        </div>
+        <h4 class="font-bold text-slate-900 mt-4">Company 8</h4>
+        <p class="text-xs text-slate-400 mt-1">Twitter • San Diego, US</p>
+        <p class="text-xs text-slate-500 mt-2 line-clamp-2">Twitter is looking for Data Analyst to help team deal...</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <span class="text-[10px] bg-rose-50 text-rose-600 px-2 py-0.5 rounded border border-rose-200">Technology</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= LATEST JOBS OPEN ================= -->
+  <section class="max-w-7xl mx-auto px-6 py-12">
+    <div class="flex items-center justify-between mb-8">
+      <h2 class="text-3xl font-extrabold text-slate-900">
+        Latest <span class="text-[#2563EB]">jobs open</span>
+      </h2>
+      <a href="#" class="text-sm font-semibold text-[#4B48E5] hover:underline flex items-center gap-1">
+        Show all jobs <i class="fa-solid fa-arrow-right text-xs"></i>
+      </a>
+    </div>
+
+    <!-- 2-Column Job List -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      
+      <!-- Row 1 -->
+      <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-layer-group"></i></div>
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm">Social Media Assistant</h4>
+            <p class="text-xs text-slate-400">Nomad • Paris, France</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">Full Time</span>
+          <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">Marketing</span>
+          <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">Design</span>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-cyan-100 text-cyan-600 rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-network-wired"></i></div>
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm">Social Media Assistant</h4>
+            <p class="text-xs text-slate-400">Netlify • Paris, France</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">Full Time</span>
+          <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">Marketing</span>
+          <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">Design</span>
+        </div>
+      </div>
+
+      <!-- Row 2 -->
+      <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-brands fa-dropbox"></i></div>
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm">Brand Designer</h4>
+            <p class="text-xs text-slate-400">Dropbox • San Francisco, USA</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">Full Time</span>
+          <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">Marketing</span>
+          <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">Design</span>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-blue-500 text-white rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-cloud"></i></div>
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm">Brand Designer</h4>
+            <p class="text-xs text-slate-400">Maze • San Francisco, USA</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">Full Time</span>
+          <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">Marketing</span>
+          <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">Design</span>
+        </div>
+      </div>
+
+      <!-- Row 3 -->
+      <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-cyan-400 text-white rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-cubes"></i></div>
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm">Interactive Developer</h4>
+            <p class="text-xs text-slate-400">Terraform • Hamburg, Germany</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">Full Time</span>
+          <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">Marketing</span>
+          <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">Design</span>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-teal-500 text-white rounded-xl flex items-center justify-center text-xl font-bold">U</div>
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm">Interactive Developer</h4>
+            <p class="text-xs text-slate-400">Udacity • Hamburg, Germany</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">Full Time</span>
+          <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">Marketing</span>
+          <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">Design</span>
+        </div>
+      </div>
+
+      <!-- Row 4 -->
+      <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-red-400 text-white rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-rectangle-list"></i></div>
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm">HR Manager</h4>
+            <p class="text-xs text-slate-400">Packer • Lucern, Switzerland</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">Full Time</span>
+          <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">Marketing</span>
+          <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">Design</span>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center text-xl font-bold">W</div>
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm">HR Manager</h4>
+            <p class="text-xs text-slate-400">Webflow • Lucern, Switzerland</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">Full Time</span>
+          <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">Marketing</span>
+          <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">Design</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="bg-[#181B28] text-slate-400 text-xs mt-20 pt-16 pb-12">
+    <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-5 gap-10">
+      
+      <!-- Brand Description -->
+      <div class="md:col-span-2 space-y-4">
+        <div class="flex items-center gap-2 text-xl font-bold text-white">
+          <i class="fa-solid fa-asterisk text-[#4B48E5]"></i>
+          <span>JobHuntly</span>
+        </div>
+        <p class="text-slate-400 max-w-sm leading-relaxed">
+          Great platform for the job seeker that passionate about startups. Find your dream job easier.
+        </p>
+      </div>
+
+      <!-- About Links -->
+      <div class="space-y-3">
+        <h5 class="text-white font-semibold text-sm">About</h5>
+        <ul class="space-y-2">
+          <li><a href="#" class="hover:text-white transition">Companies</a></li>
+          <li><a href="#" class="hover:text-white transition">Pricing</a></li>
+          <li><a href="#" class="hover:text-white transition">Terms</a></li>
+          <li><a href="#" class="hover:text-white transition">Advice</a></li>
+          <li><a href="#" class="hover:text-white transition">Privacy Policy</a></li>
+        </ul>
+      </div>
+
+      <!-- Resources Links -->
+      <div class="space-y-3">
+        <h5 class="text-white font-semibold text-sm">Resources</h5>
+        <ul class="space-y-2">
+          <li><a href="#" class="hover:text-white transition">Help Docs</a></li>
+          <li><a href="#" class="hover:text-white transition">Guide</a></li>
+          <li><a href="#" class="hover:text-white transition">Updates</a></li>
+          <li><a href="#" class="hover:text-white transition">Contact Us</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Bottom Bar -->
+    <div class="max-w-7xl mx-auto px-6 mt-16 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p>2021 @ JobHuntly. All rights reserved.</p>
+      <div class="flex gap-4 text-base">
+        <a href="#" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 hover:text-white transition"><i class="fa-brands fa-facebook-f"></i></a>
+        <a href="#" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 hover:text-white transition"><i class="fa-brands fa-instagram"></i></a>
+        <a href="#" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 hover:text-white transition"><i class="fa-brands fa-dribbble"></i></a>
+        <a href="#" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 hover:text-white transition"><i class="fa-brands fa-linkedin-in"></i></a>
+        <a href="#" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 hover:text-white transition"><i class="fa-brands fa-twitter"></i></a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
