@@ -5,15 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>COOP-EDU - ระบบข้อมูลสหกิจศึกษา</title>
   
-  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  
-  <!-- Custom CSS File -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- ================= TOP NAVIGATION ================= -->
+  <!-- Navigation -->
   <header class="header">
     <div class="container header-container">
       <div style="display: flex; align-items: center;">
@@ -35,7 +32,7 @@
     </div>
   </header>
 
-  <!-- ================= HERO SECTION ================= -->
+  <!-- Hero Section -->
   <section class="hero-section">
     <div class="container hero-grid">
       <div>
@@ -52,7 +49,6 @@
           ศูนย์รวมข้อมูลขั้นตอน กำหนดการ และสถานประกอบการ เพื่อเตรียมความพร้อมสู่การปฏิบัติงานจริง
         </p>
 
-        <!-- Search Box -->
         <div class="search-box">
           <div class="search-input-group">
             <i class="fa-solid fa-magnifying-glass"></i>
@@ -75,7 +71,6 @@
         </div>
       </div>
 
-      <!-- Hero Image -->
       <div class="hero-image-wrapper">
         <div class="hero-image-box">
           <div class="bg-frame"></div>
@@ -85,7 +80,7 @@
     </div>
   </section>
 
-  <!-- ================= BANNER ANNOUNCEMENT ================= -->
+  <!-- Announcement Banner -->
   <section class="container announcement-section">
     <h2 class="announcement-heading">ประกาศสำคัญ!!!</h2>
     <div class="banner-card">
@@ -101,7 +96,7 @@
     </div>
   </section>
 
-  <!-- ================= COMPANY DIRECTORY ================= -->
+  <!-- Company Directory -->
   <section class="container">
     <p class="sub-tag">กำหนดการที่ <span>กำลังจะมาถึง</span></p>
     <div class="section-header">
@@ -109,9 +104,10 @@
       <a href="#" class="see-all-link">Show all company <i class="fa-solid fa-arrow-right"></i></a>
     </div>
 
+    <!-- เมื่อกดการ์ด จะเรียก openModal พร้อมส่ง ID บริษัท -->
     <div class="directory-grid">
       <!-- Card 1 -->
-      <div class="company-card">
+      <div class="company-card" onclick="openModal(1)">
         <div class="card-top">
           <div class="company-logo">W2</div>
           <span class="badge-tag badge-blue">Full Time</span>
@@ -126,7 +122,7 @@
       </div>
 
       <!-- Card 2 -->
-      <div class="company-card">
+      <div class="company-card" onclick="openModal(2)">
         <div class="card-top">
           <div class="company-logo" style="background: #F1F5F9; color: #0F172A; font-family: serif; font-style: italic;">R</div>
           <span class="badge-tag badge-blue">Full Time</span>
@@ -141,7 +137,7 @@
       </div>
 
       <!-- Card 3 -->
-      <div class="company-card">
+      <div class="company-card" onclick="openModal(3)">
         <div class="card-top">
           <div class="company-logo" style="color: #FACC15;"><i class="fa-solid fa-shapes"></i></div>
           <span class="badge-tag badge-blue">Full Time</span>
@@ -155,7 +151,7 @@
       </div>
 
       <!-- Card 4 -->
-      <div class="company-card">
+      <div class="company-card" onclick="openModal(4)">
         <div class="card-top">
           <div class="company-logo" style="font-size: 10px;">BLINK</div>
           <span class="badge-tag badge-blue">Full Time</span>
@@ -169,7 +165,7 @@
       </div>
 
       <!-- Card 5 -->
-      <div class="company-card">
+      <div class="company-card" onclick="openModal(5)">
         <div class="card-top">
           <div class="company-logo" style="background: #0284C7;"><i class="fa-solid fa-cloud"></i></div>
           <span class="badge-tag badge-blue">Full Time</span>
@@ -184,7 +180,7 @@
       </div>
 
       <!-- Card 6 -->
-      <div class="company-card">
+      <div class="company-card" onclick="openModal(6)">
         <div class="card-top">
           <div class="company-logo" style="background: #0D9488; font-size: 11px;">Canva</div>
           <span class="badge-tag badge-blue">Full Time</span>
@@ -199,7 +195,7 @@
       </div>
 
       <!-- Card 7 -->
-      <div class="company-card">
+      <div class="company-card" onclick="openModal(7)">
         <div class="card-top">
           <div class="company-logo" style="background: #F1F5F9; color: #0F172A;"><i class="fa-solid fa-shield-halved"></i></div>
           <span class="badge-tag badge-blue">Full Time</span>
@@ -213,7 +209,7 @@
       </div>
 
       <!-- Card 8 -->
-      <div class="company-card">
+      <div class="company-card" onclick="openModal(8)">
         <div class="card-top">
           <div class="company-logo" style="background: #0EA5E9;"><i class="fa-brands fa-twitter"></i></div>
           <span class="badge-tag badge-blue">Full Time</span>
@@ -228,81 +224,7 @@
     </div>
   </section>
 
-  <!-- ================= LATEST JOBS OPEN ================= -->
-  <section class="container">
-    <div class="section-header">
-      <h2 class="section-title">Latest <span>jobs open</span></h2>
-      <a href="#" class="see-all-link">Show all jobs <i class="fa-solid fa-arrow-right"></i></a>
-    </div>
-
-    <div class="jobs-grid">
-      <!-- Item 1 -->
-      <div class="job-card">
-        <div class="job-info">
-          <div class="job-icon" style="background: #D1FAE5; color: #059669;"><i class="fa-solid fa-layer-group"></i></div>
-          <div>
-            <h4 class="job-title">Social Media Assistant</h4>
-            <p class="job-sub">Nomad • Paris, France</p>
-          </div>
-        </div>
-        <div class="job-badges">
-          <span class="pill-badge pill-green">Full Time</span>
-          <span class="pill-badge pill-amber">Marketing</span>
-          <span class="pill-badge pill-purple">Design</span>
-        </div>
-      </div>
-
-      <!-- Item 2 -->
-      <div class="job-card">
-        <div class="job-info">
-          <div class="job-icon" style="background: #CFFAFE; color: #0891B2;"><i class="fa-solid fa-network-wired"></i></div>
-          <div>
-            <h4 class="job-title">Social Media Assistant</h4>
-            <p class="job-sub">Netlify • Paris, France</p>
-          </div>
-        </div>
-        <div class="job-badges">
-          <span class="pill-badge pill-green">Full Time</span>
-          <span class="pill-badge pill-amber">Marketing</span>
-          <span class="pill-badge pill-purple">Design</span>
-        </div>
-      </div>
-
-      <!-- Item 3 -->
-      <div class="job-card">
-        <div class="job-info">
-          <div class="job-icon" style="background: #2563EB; color: #FFF;"><i class="fa-brands fa-dropbox"></i></div>
-          <div>
-            <h4 class="job-title">Brand Designer</h4>
-            <p class="job-sub">Dropbox • San Francisco, USA</p>
-          </div>
-        </div>
-        <div class="job-badges">
-          <span class="pill-badge pill-green">Full Time</span>
-          <span class="pill-badge pill-amber">Marketing</span>
-          <span class="pill-badge pill-purple">Design</span>
-        </div>
-      </div>
-
-      <!-- Item 4 -->
-      <div class="job-card">
-        <div class="job-info">
-          <div class="job-icon" style="background: #3B82F6; color: #FFF;"><i class="fa-solid fa-cloud"></i></div>
-          <div>
-            <h4 class="job-title">Brand Designer</h4>
-            <p class="job-sub">Maze • San Francisco, USA</p>
-          </div>
-        </div>
-        <div class="job-badges">
-          <span class="pill-badge pill-green">Full Time</span>
-          <span class="pill-badge pill-amber">Marketing</span>
-          <span class="pill-badge pill-purple">Design</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================= FOOTER ================= -->
+  <!-- Footer -->
   <footer class="footer">
     <div class="container footer-grid">
       <div>
@@ -335,6 +257,15 @@
           <li><a href="#">Contact Us</a></li>
         </ul>
       </div>
+
+      <div class="footer-column">
+        <h5>Get job notifications</h5>
+        <p>The latest job news, articles, sent to your inbox weekly.</p>
+        <form class="subscribe-form" onsubmit="event.preventDefault();">
+          <input type="email" placeholder="Email Address" required />
+          <button type="submit" class="btn-sub">Subscribe</button>
+        </form>
+      </div>
     </div>
 
     <div class="container footer-bottom">
@@ -349,5 +280,129 @@
     </div>
   </footer>
 
+  <!-- ================= POPUP MODAL ================= -->
+  <div id="companyModal" class="modal-overlay" onclick="handleBackdropClick(event)">
+    <div class="modal-container">
+      <button class="modal-close-btn" onclick="closeModal()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="modal-header">
+        <div id="modalLogo" class="modal-logo"></div>
+        <div class="modal-title-area">
+          <h3 id="modalName">ชื่อสถานประกอบการ</h3>
+          <p id="modalLocation">สถานที่ตั้ง</p>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <h4>ลักษณะงาน / รายละเอียดโครงการ</h4>
+        <p id="modalDescription">รายละเอียดของงาน...</p>
+        
+        <h4 style="margin-top: 16px;">คุณสมบัติเบื้องต้น</h4>
+        <p id="modalReq">• เป็นนักศึกษาชั้นปีที่ 3-4 สาขาที่เกี่ยวข้อง<br>• มีความกระตือรือร้นและพร้อมเรียนรู้สิ่งใหม่</p>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeModal()">ปิดหน้าต่าง</button>
+        <button class="btn-signup" onclick="alert('ระบบบันทึกการสมัครเรียบร้อยแล้ว')">ยื่นสมัครสหกิจ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= JAVASCRIPT ================= -->
+  <script>
+    // ข้อมูลจำลองของแต่ละสถานประกอบการ
+    const companiesData = {
+      1: {
+        name: "Company 1",
+        location: "Paris, France",
+        logoHtml: "W2",
+        logoBg: "#0F172A",
+        desc: "เปิดรับสมัครนักศึกษาเข้าร่วมทีมพัฒนาผลิตภัณฑ์ดิจิทัลและแคมเปญการตลาด ได้ปฏิบัติงานจริงร่วมกับทีมผู้เชี่ยวชาญระดับสากล พร้อมรับคำปรึกษาแบบตัวต่อตัวตลอดระยะเวลาฝึกงาน"
+      },
+      2: {
+        name: "Revolut (Email Marketing)",
+        location: "Madrid, Spain",
+        logoHtml: "R",
+        logoBg: "#F1F5F9",
+        logoColor: "#0F172A",
+        desc: "Revolut กำลังมองหานักศึกษาฝึกงานตำแหน่ง Email Marketing เพื่อช่วยวางแผน ทำแคมเปญ และวิเคราะห์ข้อมูลผู้ใช้งานเพื่อส่งมอบประสบการณ์ทางการเงินที่ดีที่สุด"
+      },
+      3: {
+        name: "Pitch (Customer Manager)",
+        location: "Berlin, Germany",
+        logoHtml: '<i class="fa-solid fa-shapes"></i>',
+        logoBg: "#0F172A",
+        logoColor: "#FACC15",
+        desc: "ร่วมงานกับ Pitch เพื่อดูแลลูกค้าสัมพันธ์ วางกลยุทธ์การสื่อสาร และประสานงานทีมการตลาดเพื่อขยายฐานผู้ใช้งาน Presentation Platform ทั่วโลก"
+      },
+      4: {
+        name: "Blinkist (Visual Designer)",
+        location: "Granada, Spain",
+        logoHtml: "BLINK",
+        logoBg: "#000",
+        desc: "Blinkist เปิดรับ Visual Designer ร่วมสร้างสรรค์กราฟิก สื่อประชาสัมพันธ์ และ UI Components ให้กับแอปพลิเคชันสรุปหนังสือยอดนิยม"
+      },
+      5: {
+        name: "ClassPass (Product Designer)",
+        location: "Manchester, UK",
+        logoHtml: '<i class="fa-solid fa-cloud"></i>',
+        logoBg: "#0284C7",
+        desc: "ฝึกออกแบบ User Journey, Wireframe และ Prototype สำหรับแพลตฟอร์มฟิตเนสและไลฟ์สไตล์ระดับโลก"
+      },
+      6: {
+        name: "Canva (Lead Engineer Trainee)",
+        location: "Ontario, Canada",
+        logoHtml: "Canva",
+        logoBg: "#0D9488",
+        desc: "เปิดรับนักศึกษาที่มีความสนใจด้าน Web Architecture, Frontend/Backend เข้ามาร่วมพัฒนาระบบ Graphic Editor ที่มีผู้ใช้กว่า 100 ล้านคน"
+      },
+      7: {
+        name: "GoDaddy (Brand Strategist)",
+        location: "Marseille, France",
+        logoHtml: '<i class="fa-solid fa-shield-halved"></i>',
+        logoBg: "#F1F5F9",
+        logoColor: "#0F172A",
+        desc: "ร่วมวิเคราะห์ตลาด สร้างภาพลักษณ์แบรนด์ และจัดกิจกรรมทางการตลาดเพื่อส่งเสริมผู้ประกอบการธุรกิจขนาดเล็ก"
+      },
+      8: {
+        name: "Twitter (Data Analyst)",
+        location: "San Diego, US",
+        logoHtml: '<i class="fa-brands fa-twitter"></i>',
+        logoBg: "#0EA5E9",
+        desc: "วิเคราะห์ Insight และพฤติกรรมการใช้งานแพลตฟอร์ม โซเชียลมีเดีย พร้อมจัดทำ Dashboard นำเสนอต่อทีมผู้บริหาร"
+      }
+    };
+
+    // ฟังก์ชันเปิด Modal
+    function openModal(id) {
+      const data = companiesData[id];
+      if (!data) return;
+
+      document.getElementById('modalName').innerText = data.name;
+      document.getElementById('modalLocation').innerText = `สถานที่ตั้ง • ${data.location}`;
+      document.getElementById('modalDescription').innerText = data.desc;
+
+      const logoEl = document.getElementById('modalLogo');
+      logoEl.innerHTML = data.logoHtml;
+      logoEl.style.backgroundColor = data.logoBg || '#0F172A';
+      logoEl.style.color = data.logoColor || '#FFF';
+
+      document.getElementById('companyModal').classList.add('active');
+    }
+
+    // ฟังก์ชันปิด Modal
+    function closeModal() {
+      document.getElementById('companyModal').classList.remove('active');
+    }
+
+    // ปิดเมื่อคลิกพื้นที่ด้านนอกกล่องสีขาว
+    function handleBackdropClick(event) {
+      if (event.target.id === 'companyModal') {
+        closeModal();
+      }
+    }
+  </script>
 </body>
 </html>
