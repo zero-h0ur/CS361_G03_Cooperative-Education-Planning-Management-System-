@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAQ - COOP-EDU</title>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="header">
+    <div class="container header-container">
+      <div style="display: flex; align-items: center;">
+        <a href="index.html" class="logo">
+          <img src="resources/images/logo.png" alt="logo" class="nav-logo">
+        </a>
+        <nav class="nav-links">
+          <a href="index.html">หน้าแรก</a>
+          <a href="requirements.html">ข้อกำหนดสหกิจและขั้นตอน</a>
+          <a href="company-directory.html">รายชื่อสถานประกอบการ</a>
+          <a href="faq.html">คำถามที่พบบ่อย</a>
+        </nav>
+      </div>
+
+      <div class="auth-buttons">
+        <a href="#" class="btn-login">Login</a>
+        <a href="#" class="btn-signup">Sign Up</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- FAQ Header (styled like the right image) -->
+  <section class="faq-hero">
+     <h2>คำถามที่พบบ่อย (FAQ)</h2>
+     <div class="faq-search-box">
+       <i class="fa-solid fa-magnifying-glass" style="color: #64748B; padding: 0 16px;"></i>
+       <input type="text" placeholder="ค้นหาหัวข้อคำถามที่คุณต้องการ...">
+       <button class="btn-faq-search"><i class="fa-solid fa-magnifying-glass"></i></button>
+     </div>
+  </section>
+  
+  <!-- FAQ Content Section (Master-Detail layout) -->
+  <section class="container faq-container">
+    <h3 class="faq-section-title">การสมัครและเตรียมตัว (Apply & Prepare)</h3>
+    <div class="faq-grid">
+      <!-- Left side: Questions List -->
+      <div class="faq-questions-list">
+         <div class="faq-item active" onclick="showAnswer('q1')">
+           <span class="faq-item-text">ขั้นตอนการสมัครสหกิจศึกษาเป็นอย่างไร?</span>
+           <i class="fa-solid fa-chevron-right"></i>
+         </div>
+         <div class="faq-item" onclick="showAnswer('q2')">
+           <span class="faq-item-text">ต้องเตรียมเอกสารอะไรบ้างในการยื่นสมัคร?</span>
+           <i class="fa-solid fa-chevron-right"></i>
+         </div>
+         <div class="faq-item" onclick="showAnswer('q3')">
+           <span class="faq-item-text">เกรดเฉลี่ย (GPAX) ขั้นต่ำในการออกสหกิจศึกษาคือเท่าไหร่?</span>
+           <i class="fa-solid fa-chevron-right"></i>
+         </div>
+         <div class="faq-item" onclick="showAnswer('q4')">
+           <span class="faq-item-text">สามารถหาที่ฝึกงานเองนอกเหนือจากที่กำหนดได้หรือไม่?</span>
+           <i class="fa-solid fa-chevron-right"></i>
+         </div>
+         <div class="faq-item" onclick="showAnswer('q5')">
+           <span class="faq-item-text">ตารางเวลาและกิจกรรมที่ต้องส่งมีอะไรบ้าง?</span>
+           <i class="fa-solid fa-chevron-right"></i>
+         </div>
+      </div>
+      
+      <!-- Right side: Answer Display -->
+      <div class="faq-answer-display">
+         <h3 id="answer-title">ขั้นตอนการสมัครสหกิจศึกษาเป็นอย่างไร?</h3>
+         <div id="answer-content">
+            <p>การสมัครสหกิจศึกษามีขั้นตอนหลักๆ ดังนี้ครับ:</p>
+            <ol>
+              <li><strong>ตรวจสอบคุณสมบัติ:</strong> ตรวจสอบเกรดเฉลี่ยและรายวิชาบังคับที่ผ่านแล้ว</li>
+              <li><strong>เลือกตำแหน่งงาน:</strong> ค้นหาและเลือกสถานประกอบการผ่านระบบ CO-ED (เลือกได้สูงสุด 3 อันดับ)</li>
+              <li><strong>เตรียมและยื่นเอกสาร:</strong> จัดทำ Resume, Transcript และ Portfolio เพื่ออัปโหลดเข้าระบบ</li>
+              <li><strong>รอประกาศผลและสัมภาษณ์:</strong> สถานประกอบการพิจารณาและนัดสัมภาษณ์</li>
+              <li><strong>ยืนยันสิทธิ์:</strong> เมื่อผ่านการคัดเลือก ให้กดยืนยันสิทธิ์ในระบบ</li>
+            </ol>
+            <p>กรุณาดำเนินการทุกขั้นตอนให้เสร็จสิ้นก่อนวันปิดรับสมัครในแต่ละรอบครับ</p>
+         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div>
+        <div class="footer-logo">
+          <i class="fa-solid fa-graduation-cap"></i>
+          <span>CO-ED</span>
+        </div>
+        <p style="max-width: 280px; line-height: 1.6;">
+          ระบบสารสนเทศเพื่อการจัดการข้อมูลสหกิจศึกษา ช่วยให้นักศึกษาเตรียมความพร้อมสู่การทำงานจริงได้อย่างมีประสิทธิภาพ
+        </p>
+      </div>
+
+      <div class="footer-column">
+        <h5>เกี่ยวกับเรา</h5>
+        <ul>
+          <li><a href="index.html">หน้าแรก</a></li>
+          <li><a href="#">ข้อกำหนดสหกิจและขั้นตอน</a></li>
+          <li><a href="#">รายชื่อสถานประกอบการ</a></li>
+          <li><a href="faq.html">คำถามที่พบบ่อย</a></li>
+          <li><a href="#">นโยบายความเป็นส่วนตัว</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <h5>แหล่งข้อมูล</h5>
+        <ul>
+          <li><a href="#">คู่มือการใช้งานระบบ</a></li>
+          <li><a href="#">ประกาศและข่าวสาร</a></li>
+          <li><a href="#">เอกสารดาวน์โหลด</a></li>
+          <li><a href="#">ติดต่อสำนักงานสหกิจฯ</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="container footer-bottom">
+      <p>© 2024 CO-ED Cooperative Education. All rights reserved.</p>
+      <div class="social-links">
+        <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
+        <a href="#"><i class="fa-brands fa-youtube"></i></a>
+        <a href="#"><i class="fa-brands fa-line"></i></a>
+        <a href="#"><i class="fa-solid fa-envelope"></i></a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const faqData = {
+      q1: {
+        title: "ขั้นตอนการสมัครสหกิจศึกษาเป็นอย่างไร?",
+        content: `<p>การสมัครสหกิจศึกษามีขั้นตอนหลักๆ ดังนี้ครับ:</p>
+          <ol>
+            <li><strong>ตรวจสอบคุณสมบัติ:</strong> ตรวจสอบเกรดเฉลี่ยและรายวิชาบังคับที่ผ่านแล้ว</li>
+            <li><strong>เลือกตำแหน่งงาน:</strong> ค้นหาและเลือกสถานประกอบการผ่านระบบ CO-ED (เลือกได้สูงสุด 3 อันดับ)</li>
+            <li><strong>เตรียมและยื่นเอกสาร:</strong> จัดทำ Resume, Transcript และ Portfolio เพื่ออัปโหลดเข้าระบบ</li>
+            <li><strong>รอประกาศผลและสัมภาษณ์:</strong> สถานประกอบการพิจารณาและนัดสัมภาษณ์</li>
+            <li><strong>ยืนยันสิทธิ์:</strong> เมื่อผ่านการคัดเลือก ให้กดยืนยันสิทธิ์ในระบบ</li>
+          </ol>
+          <p>กรุณาดำเนินการทุกขั้นตอนให้เสร็จสิ้นก่อนวันปิดรับสมัครในแต่ละรอบครับ</p>`
+      },
+      q2: {
+        title: "ต้องเตรียมเอกสารอะไรบ้างในการยื่นสมัคร?",
+        content: `<p>เอกสารสำคัญที่นักศึกษาต้องเตรียมสำหรับการยื่นสมัคร ได้แก่:</p>
+          <ul>
+            <li>Resume (ประวัติส่วนตัว) ฉบับภาษาไทยหรือภาษาอังกฤษ</li>
+            <li>ใบแสดงผลการเรียน (Transcript) ฉบับล่าสุด</li>
+            <li>Portfolio แฟ้มสะสมผลงาน (ถ้ามี)</li>
+            <li>สำเนาบัตรประชาชน และสำเนาทะเบียนบ้าน</li>
+          </ul>
+          <p>ทั้งนี้ บางสถานประกอบการอาจมีข้อกำหนดเอกสารเพิ่มเติม โปรดตรวจสอบรายละเอียดของแต่ละบริษัทในหน้า Company Directory</p>`
+      },
+      q3: {
+        title: "เกรดเฉลี่ย (GPAX) ขั้นต่ำในการออกสหกิจศึกษาคือเท่าไหร่?",
+        content: `<p>ตามระเบียบของมหาวิทยาลัย นักศึกษาที่จะออกปฏิบัติงานสหกิจศึกษาได้ ต้องมีคุณสมบัติดังนี้:</p>
+          <ul>
+            <li>มีคะแนนเฉลี่ยสะสม (GPAX) ไม่ต่ำกว่า 2.00</li>
+            <li>สอบผ่านรายวิชาเตรียมความพร้อมสหกิจศึกษา (Pre-Coop)</li>
+            <li>ลงทะเบียนเรียนผ่านรายวิชาบังคับตามที่หลักสูตรกำหนด</li>
+          </ul>`
+      },
+      q4: {
+        title: "สามารถหาที่ฝึกงานเองนอกเหนือจากที่กำหนดได้หรือไม่?",
+        content: `<p><strong>สามารถทำได้ครับ</strong> แต่นักศึกษาจะต้องยื่นแบบฟอร์ม "เสนอชื่อสถานประกอบการ" ให้กับทางศูนย์สหกิจศึกษาพิจารณาก่อน โดยต้องดำเนินการล่วงหน้าอย่างน้อย 1 เดือนก่อนวันปิดรับสมัคร เพื่อให้เจ้าหน้าที่ตรวจสอบความเหมาะสมของลักษณะงานและความปลอดภัยครับ</p>`
+      },
+      q5: {
+        title: "ตารางเวลาและกิจกรรมที่ต้องส่งมีอะไรบ้าง?",
+        content: `<p>ในระหว่างการออกปฏิบัติงาน นักศึกษาจะต้องส่งรายงานตามกำหนดการดังนี้:</p>
+          <ol>
+            <li><strong>แบบแจ้งแผนปฏิบัติงาน:</strong> ภายในสัปดาห์ที่ 2 ของการทำงาน</li>
+            <li><strong>รายงานความก้าวหน้า (รายสัปดาห์):</strong> ส่งทุกวันศุกร์ของสัปดาห์</li>
+            <li><strong>ร่างรายงานฉบับสมบูรณ์:</strong> ภายในสัปดาห์ที่ 12</li>
+            <li><strong>นำเสนอผลงาน:</strong> หลังสิ้นสุดการปฏิบัติงาน (ตามวันเวลาที่คณะกำหนด)</li>
+          </ol>`
+      }
+    };
+
+    function showAnswer(id) {
+      // Update active class
+      document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('active'));
+      document.querySelector(`[onclick="showAnswer('${id}')"]`).classList.add('active');
+
+      // Update content
+      const data = faqData[id];
+      if(data) {
+        document.getElementById('answer-title').innerHTML = data.title;
+        document.getElementById('answer-content').innerHTML = data.content;
+      }
+    }
+  </script>
+</body>
+</html>
+
