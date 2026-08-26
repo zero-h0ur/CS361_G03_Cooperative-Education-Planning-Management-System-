@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COOP-EDU - ระบบข้อมูลสหกิจศึกษา</title>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <!-- Custom CSS File -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ================= TOP NAVIGATION ================= -->
+  <header class="header">
+    <div class="container header-container">
+      <div style="display: flex; align-items: center;">
+        <a href="#" class="logo">
+          <i class="fa-solid fa-asterisk"></i>
+          <span>COOP-EDU</span>
+        </a>
+        <nav class="nav-links">
+          <a href="#">เกี่ยวกับ</a>
+          <a href="#">จัดหางานสหกิจฯ</a>
+          <a href="#">สถิติ</a>
+        </nav>
+      </div>
+
+      <div class="auth-buttons">
+        <a href="#" class="btn-login">Login</a>
+        <a href="#" class="btn-signup">Sign Up</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= HERO SECTION ================= -->
+  <section class="hero-section">
+    <div class="container hero-grid">
+      <div>
+        <h1 class="hero-title">
+          ระบบข้อมูล<br>
+          <span class="hero-highlight">
+            สหกิจศึกษา
+            <svg class="underline-svg" height="8" viewBox="0 0 200 8" fill="none">
+              <path d="M1 5.5C50 1.5 150 1.5 199 5.5" stroke="#38BDF8" stroke-width="4" stroke-linecap="round"/>
+            </svg>
+          </span>
+        </h1>
+        <p class="hero-subtitle">
+          ศูนย์รวมข้อมูลขั้นตอน กำหนดการ และสถานประกอบการ เพื่อเตรียมความพร้อมสู่การปฏิบัติงานจริง
+        </p>
+
+        <!-- Search Box -->
+        <div class="search-box">
+          <div class="search-input-group">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" placeholder="ตำแหน่งงาน..." />
+          </div>
+          <div class="search-input-group">
+            <i class="fa-solid fa-location-dot"></i>
+            <select>
+              <option value="">สาขา, กรุงเทพมหานคร</option>
+              <option value="bkk">กรุงเทพมหานคร</option>
+              <option value="nonthaburi">นนทบุรี</option>
+              <option value="pathum">ปทุมธานี</option>
+            </select>
+          </div>
+          <button class="btn-search">ค้นหาตำแหน่งงาน</button>
+        </div>
+
+        <div class="popular-tags">
+          <span>คำค้นยอดนิยม :</span> UI Designer, UX Researcher, Android, Admin
+        </div>
+      </div>
+
+      <!-- Hero Image -->
+      <div class="hero-image-wrapper">
+        <div class="hero-image-box">
+          <div class="bg-frame"></div>
+          <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=800&q=80" alt="Student" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= BANNER ANNOUNCEMENT ================= -->
+  <section class="container announcement-section">
+    <h2 class="announcement-heading">ประกาศสำคัญ!!!</h2>
+    <div class="banner-card">
+      <div class="banner-content">
+        <span class="banner-tag">COOP EDU</span>
+        <h3 class="banner-title">เปิดรับสมัครสหกิจศึกษา</h3>
+        <p class="banner-date">ช่วงเวลารับสมัคร: 1 ม.ค. 2570 - 30 เม.ย. 2570</p>
+        <p class="banner-desc">ได้โอกาสฝึกงานและปฏิบัติงานจริงกับองค์กรชั้นนำ</p>
+      </div>
+      <div class="banner-img">
+        <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80" alt="Meeting" />
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COMPANY DIRECTORY ================= -->
+  <section class="container">
+    <p class="sub-tag">กำหนดการที่ <span>กำลังจะมาถึง</span></p>
+    <div class="section-header">
+      <h2 class="section-title">Company Directory</h2>
+      <a href="#" class="see-all-link">Show all company <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+
+    <div class="directory-grid">
+      <!-- Card 1 -->
+      <div class="company-card">
+        <div class="card-top">
+          <div class="company-logo">W2</div>
+          <span class="badge-tag badge-blue">Full Time</span>
+        </div>
+        <h4 class="company-name">Company 1</h4>
+        <p class="company-location">สถานที่ตั้ง • Paris, France</p>
+        <p class="company-desc">ประชาสัมพันธ์รับสมัครนักศึกษาเข้าร่วมปฏิบัติงาน...</p>
+        <div class="category-tags">
+          <span class="cat-badge cat-marketing">Marketing</span>
+          <span class="cat-badge cat-design">Design</span>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="company-card">
+        <div class="card-top">
+          <div class="company-logo" style="background: #F1F5F9; color: #0F172A; font-family: serif; font-style: italic;">R</div>
+          <span class="badge-tag badge-blue">Full Time</span>
+        </div>
+        <h4 class="company-name">Email Marketing</h4>
+        <p class="company-location">Revolut • Madrid, Spain</p>
+        <p class="company-desc">Revolut is looking for Email Marketing to help them lead...</p>
+        <div class="category-tags">
+          <span class="cat-badge cat-marketing">Marketing</span>
+          <span class="cat-badge cat-design">Design</span>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="company-card">
+        <div class="card-top">
+          <div class="company-logo" style="color: #FACC15;"><i class="fa-solid fa-shapes"></i></div>
+          <span class="badge-tag badge-blue">Full Time</span>
+        </div>
+        <h4 class="company-name">Company 3</h4>
+        <p class="company-location">Pitch • Berlin, Germany</p>
+        <p class="company-desc">Pitch is looking for Customer Manager to join marketing team...</p>
+        <div class="category-tags">
+          <span class="cat-badge cat-marketing">Marketing</span>
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="company-card">
+        <div class="card-top">
+          <div class="company-logo" style="font-size: 10px;">BLINK</div>
+          <span class="badge-tag badge-blue">Full Time</span>
+        </div>
+        <h4 class="company-name">Company 4</h4>
+        <p class="company-location">Blinkist • Granada, Spain</p>
+        <p class="company-desc">Blinkist is looking for Visual Designer to help them desi...</p>
+        <div class="category-tags">
+          <span class="cat-badge cat-design">Design</span>
+        </div>
+      </div>
+
+      <!-- Card 5 -->
+      <div class="company-card">
+        <div class="card-top">
+          <div class="company-logo" style="background: #0284C7;"><i class="fa-solid fa-cloud"></i></div>
+          <span class="badge-tag badge-blue">Full Time</span>
+        </div>
+        <h4 class="company-name">Company 5</h4>
+        <p class="company-location">ClassPass • Manchester, UK</p>
+        <p class="company-desc">ClassPass is looking for Product Designer to help us...</p>
+        <div class="category-tags">
+          <span class="cat-badge cat-software">Software</span>
+          <span class="cat-badge cat-design">Design</span>
+        </div>
+      </div>
+
+      <!-- Card 6 -->
+      <div class="company-card">
+        <div class="card-top">
+          <div class="company-logo" style="background: #0D9488; font-size: 11px;">Canva</div>
+          <span class="badge-tag badge-blue">Full Time</span>
+        </div>
+        <h4 class="company-name">Company 6</h4>
+        <p class="company-location">Canva • Ontario, Canada</p>
+        <p class="company-desc">Canva is looking for Lead Engineer to help develop n...</p>
+        <div class="category-tags">
+          <span class="cat-badge cat-design">Design</span>
+          <span class="cat-badge cat-business">Business</span>
+        </div>
+      </div>
+
+      <!-- Card 7 -->
+      <div class="company-card">
+        <div class="card-top">
+          <div class="company-logo" style="background: #F1F5F9; color: #0F172A;"><i class="fa-solid fa-shield-halved"></i></div>
+          <span class="badge-tag badge-blue">Full Time</span>
+        </div>
+        <h4 class="company-name">Company 7</h4>
+        <p class="company-location">GoDaddy • Marseille, France</p>
+        <p class="company-desc">GoDaddy is looking for Brand Strategist to join the team...</p>
+        <div class="category-tags">
+          <span class="cat-badge cat-marketing">Marketing</span>
+        </div>
+      </div>
+
+      <!-- Card 8 -->
+      <div class="company-card">
+        <div class="card-top">
+          <div class="company-logo" style="background: #0EA5E9;"><i class="fa-brands fa-twitter"></i></div>
+          <span class="badge-tag badge-blue">Full Time</span>
+        </div>
+        <h4 class="company-name">Company 8</h4>
+        <p class="company-location">Twitter • San Diego, US</p>
+        <p class="company-desc">Twitter is looking for Data Analyst to help team deal...</p>
+        <div class="category-tags">
+          <span class="cat-badge cat-tech">Technology</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= LATEST JOBS OPEN ================= -->
+  <section class="container">
+    <div class="section-header">
+      <h2 class="section-title">Latest <span>jobs open</span></h2>
+      <a href="#" class="see-all-link">Show all jobs <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+
+    <div class="jobs-grid">
+      <!-- Item 1 -->
+      <div class="job-card">
+        <div class="job-info">
+          <div class="job-icon" style="background: #D1FAE5; color: #059669;"><i class="fa-solid fa-layer-group"></i></div>
+          <div>
+            <h4 class="job-title">Social Media Assistant</h4>
+            <p class="job-sub">Nomad • Paris, France</p>
+          </div>
+        </div>
+        <div class="job-badges">
+          <span class="pill-badge pill-green">Full Time</span>
+          <span class="pill-badge pill-amber">Marketing</span>
+          <span class="pill-badge pill-purple">Design</span>
+        </div>
+      </div>
+
+      <!-- Item 2 -->
+      <div class="job-card">
+        <div class="job-info">
+          <div class="job-icon" style="background: #CFFAFE; color: #0891B2;"><i class="fa-solid fa-network-wired"></i></div>
+          <div>
+            <h4 class="job-title">Social Media Assistant</h4>
+            <p class="job-sub">Netlify • Paris, France</p>
+          </div>
+        </div>
+        <div class="job-badges">
+          <span class="pill-badge pill-green">Full Time</span>
+          <span class="pill-badge pill-amber">Marketing</span>
+          <span class="pill-badge pill-purple">Design</span>
+        </div>
+      </div>
+
+      <!-- Item 3 -->
+      <div class="job-card">
+        <div class="job-info">
+          <div class="job-icon" style="background: #2563EB; color: #FFF;"><i class="fa-brands fa-dropbox"></i></div>
+          <div>
+            <h4 class="job-title">Brand Designer</h4>
+            <p class="job-sub">Dropbox • San Francisco, USA</p>
+          </div>
+        </div>
+        <div class="job-badges">
+          <span class="pill-badge pill-green">Full Time</span>
+          <span class="pill-badge pill-amber">Marketing</span>
+          <span class="pill-badge pill-purple">Design</span>
+        </div>
+      </div>
+
+      <!-- Item 4 -->
+      <div class="job-card">
+        <div class="job-info">
+          <div class="job-icon" style="background: #3B82F6; color: #FFF;"><i class="fa-solid fa-cloud"></i></div>
+          <div>
+            <h4 class="job-title">Brand Designer</h4>
+            <p class="job-sub">Maze • San Francisco, USA</p>
+          </div>
+        </div>
+        <div class="job-badges">
+          <span class="pill-badge pill-green">Full Time</span>
+          <span class="pill-badge pill-amber">Marketing</span>
+          <span class="pill-badge pill-purple">Design</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div>
+        <div class="footer-logo">
+          <i class="fa-solid fa-asterisk"></i>
+          <span>JobHuntly</span>
+        </div>
+        <p style="max-width: 280px; line-height: 1.6;">
+          Great platform for the job seeker that passionate about startups. Find your dream job easier.
+        </p>
+      </div>
+
+      <div class="footer-column">
+        <h5>About</h5>
+        <ul>
+          <li><a href="#">Companies</a></li>
+          <li><a href="#">Pricing</a></li>
+          <li><a href="#">Terms</a></li>
+          <li><a href="#">Advice</a></li>
+          <li><a href="#">Privacy Policy</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <h5>Resources</h5>
+        <ul>
+          <li><a href="#">Help Docs</a></li>
+          <li><a href="#">Guide</a></li>
+          <li><a href="#">Updates</a></li>
+          <li><a href="#">Contact Us</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <h5>Get job notifications</h5>
+        <p>The latest job news, articles, sent to your inbox weekly.</p>
+        <form class="subscribe-form" onsubmit="event.preventDefault();">
+          <input type="email" placeholder="Email Address" required />
+          <button type="submit" class="btn-sub">Subscribe</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="container footer-bottom">
+      <p>2021 @ JobHuntly. All rights reserved.</p>
+      <div class="social-links">
+        <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
+        <a href="#"><i class="fa-brands fa-instagram"></i></a>
+        <a href="#"><i class="fa-brands fa-dribbble"></i></a>
+        <a href="#"><i class="fa-brands fa-linkedin-in"></i></a>
+        <a href="#"><i class="fa-brands fa-twitter"></i></a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
