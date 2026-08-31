@@ -2159,7 +2159,7 @@ a {
     overflow-x: auto;
     padding: 0 24px 13px;
     color: var(--text-muted);
-    font-size: 13px;
+    font-size: 16px;
     white-space: nowrap;
     scrollbar-width: none;
   }
@@ -2445,5 +2445,32 @@ a {
     border-width: 10px 10px 10px 0 !important;
     border-color: transparent #FFF transparent transparent !important;
     filter: drop-shadow(-2px 0px 1px rgba(0,0,0,0.05)) !important;
+  }
+}
+@media (max-width: 992px) {
+  .hero-title {
+    font-size: 52px !important;
+  }
+}
+@media (max-width: 992px) {
+  .hero-grid {
+    text-align: center;
+  }
+  .hero-subtitle {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+@media (max-width: 700px) {
+  .auth-buttons {
+    display: flex !important;
+    gap: 8px !important;
+  }
+  .btn-signup {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+  }
+  .btn-login {
+    font-size: 12px !important;
   }
 }
