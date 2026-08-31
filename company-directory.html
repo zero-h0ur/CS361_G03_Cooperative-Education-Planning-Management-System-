@@ -10,29 +10,36 @@
   <link rel="stylesheet" href="style.css" />
   <script src="company-directory.js" defer></script>
 </head>
-<body class="directory-page">
+<body class="requirements-page directory-page">
 
-  <!-- Navigation -->
+  <!-- Header Navigation มาตรฐาน -->
   <header class="header">
     <div class="container header-container">
-      <div style="display: flex; align-items: center;">
-        <a href="index.html" class="logo">
-          <img src="resources/images/logo.png" alt="logo" class="nav-logo">
+      <div class="header-main-group">
+        <a href="index.html" class="logo" aria-label="CO-ED หน้าแรก">
+          <img src="resources/images/logo.png" alt="CO-ED" class="nav-logo" />
         </a>
-        <nav class="nav-links">
+        <nav class="nav-links" aria-label="เมนูหลัก">
           <a href="index.html">หน้าแรก</a>
           <a href="requirements.html">ข้อกำหนดสหกิจและขั้นตอน</a>
-          <a href="company-directory.html">รายชื่อสถานประกอบการ</a>
+          <a href="company-directory.html" class="active" aria-current="page">รายชื่อสถานประกอบการ</a>
           <a href="faq.html">คำถามที่พบบ่อย</a>
         </nav>
       </div>
 
-    
       <div class="auth-buttons">
         <a href="#" class="btn-login">Login</a>
         <a href="#" class="btn-signup">Sign Up</a>
       </div>
     </div>
+    
+    <!-- Mobile Navigation Bar -->
+    <nav class="mobile-nav-links" aria-label="เมนูหลักสำหรับหน้าจอขนาดเล็ก">
+      <a href="index.html">หน้าแรก</a>
+      <a href="requirements.html">ข้อกำหนดและขั้นตอน</a>
+      <a href="company-directory.html" class="active" aria-current="page">สถานประกอบการ</a>
+      <a href="faq.html">คำถามที่พบบ่อย</a>
+    </nav>
   </header>
 
   
