@@ -41,10 +41,10 @@
   <!-- FAQ Header (styled like the right image) -->
   <section class="faq-hero">
      <h2>คำถามที่พบบ่อย (FAQ)</h2>
-     <div class="faq-search-box">
+     <div class="faq-search-box" style="position: relative;">
        <i class="fa-solid fa-magnifying-glass" style="color: #64748B; padding: 0 16px;"></i>
-       <input type="text" placeholder="ค้นหาหัวข้อคำถามที่คุณต้องการ...">
-       <button class="btn-faq-search"><i class="fa-solid fa-magnifying-glass"></i></button>
+       <input type="text" id="faq-search-input" placeholder="ค้นหาหัวข้อคำถามที่คุณต้องการ...">
+       <i class="fa-solid fa-xmark" id="faq-clear-search" style="display: none; cursor: pointer; color: #94A3B8; padding: 0 16px;"></i>
      </div>
   </section>
   
@@ -72,6 +72,14 @@
          </div>
          <div class="faq-item" onclick="showAnswer('q5')">
            <span class="faq-item-text">ตารางเวลาและกิจกรรมที่ต้องส่งมีอะไรบ้าง?</span>
+           <i class="fa-solid fa-chevron-right"></i>
+         </div>
+         <div class="faq-item extra-faq" style="display: none;" onclick="showAnswer('q6')">
+           <span class="faq-item-text">ระหว่างสหกิจศึกษาสามารถลงทะเบียนเรียนวิชาอื่นได้หรือไม่?</span>
+           <i class="fa-solid fa-chevron-right"></i>
+         </div>
+         <div class="faq-item extra-faq" style="display: none;" onclick="showAnswer('q7')">
+           <span class="faq-item-text">ถ้าสถานประกอบการไม่มีค่าตอบแทนให้ จะยังสามารถไปฝึกได้หรือไม่?</span>
            <i class="fa-solid fa-chevron-right"></i>
          </div>
       </div>
@@ -227,13 +235,24 @@
             <li><strong>ร่างรายงานฉบับสมบูรณ์:</strong> ภายในสัปดาห์ที่ 12</li>
             <li><strong>นำเสนอผลงาน:</strong> หลังสิ้นสุดการปฏิบัติงาน (ตามวันเวลาที่คณะกำหนด)</li>
           </ol>`
+      },
+      q6: {
+        title: "ระหว่างสหกิจศึกษาสามารถลงทะเบียนเรียนวิชาอื่นได้หรือไม่?",
+        content: `<p><strong>ไม่อนุญาตครับ</strong> เนื่องจากสหกิจศึกษาเป็นการปฏิบัติงานเต็มเวลา (Full-time) ณ สถานประกอบการตลอดภาคการศึกษา นักศึกษาจึงไม่สามารถลงทะเบียนเรียนวิชาอื่นควบคู่ไปด้วยได้ ยกเว้นกรณีที่เป็นวิชาเรียนนอกเวลาหรือเสาร์-อาทิตย์ ซึ่งต้องได้รับความเห็นชอบจากอาจารย์ที่ปรึกษาและสถานประกอบการก่อนครับ</p>`
+      },
+      q7: {
+        title: "ถ้าสถานประกอบการไม่มีค่าตอบแทนให้ จะยังสามารถไปฝึกได้หรือไม่?",
+        content: `<p><strong>สามารถทำได้ครับ</strong> มหาวิทยาลัยไม่ได้บังคับว่าสถานประกอบการจะต้องมีค่าตอบแทนให้เสมอไป ขึ้นอยู่กับการตัดสินใจและความสมัครใจของนักศึกษาในการเลือกสถานประกอบการนั้นๆ ครับ แต่แนะนำให้พิจารณาถึงค่าใช้จ่ายในการเดินทางและที่พักประกอบด้วยครับ</p>`
       }
     };
 
     function showAnswer(id) {
       // Update active class
       document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('active'));
-      document.querySelector(`[onclick="showAnswer('${id}')"]`).classList.add('active');
+      const activeItem = document.querySelector(`[onclick="showAnswer('${id}')"]`);
+      if (activeItem) {
+        activeItem.classList.add('active');
+      }
 
       // Update content
       const data = faqData[id];
@@ -242,6 +261,53 @@
         document.getElementById('answer-content').innerHTML = data.content;
       }
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchInput = document.getElementById('faq-search-input');
+      const clearBtn = document.getElementById('faq-clear-search');
+      const faqItems = document.querySelectorAll('.faq-item');
+      
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          const term = e.target.value.toLowerCase().trim();
+          
+          if (clearBtn) {
+            clearBtn.style.display = term.length > 0 ? 'flex' : 'none';
+          }
+          
+          let hasMatch = false;
+          
+          faqItems.forEach(item => {
+            const questionText = item.querySelector('.faq-item-text').textContent.toLowerCase();
+            const itemId = item.getAttribute('onclick').match(/'(.*?)'/)[1];
+            const answerText = faqData[itemId] ? faqData[itemId].content.toLowerCase() : '';
+            
+            const isExtra = item.classList.contains('extra-faq');
+            
+            if (term === "") {
+              item.style.display = isExtra ? 'none' : 'flex';
+              hasMatch = true;
+            } else {
+              if (questionText.includes(term) || answerText.includes(term)) {
+                item.style.display = 'flex';
+                hasMatch = true;
+              } else {
+                item.style.display = 'none';
+              }
+            }
+          });
+        });
+      }
+
+      if (clearBtn && searchInput) {
+        clearBtn.addEventListener('click', () => {
+          searchInput.value = '';
+          searchInput.dispatchEvent(new Event('input'));
+          searchInput.focus();
+        });
+        clearBtn.style.alignItems = 'center';
+      }
+    });
   </script>
 </body>
 </html>
