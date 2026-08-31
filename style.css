@@ -2149,3 +2149,108 @@ a {
   max-width: 280px;
   line-height: 1.6;
 }
+
+@media (max-width: 992px) {
+  .requirements-page .mobile-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    overflow-x: auto;
+    padding: 0 24px 13px;
+    color: var(--text-muted);
+    font-size: 13px;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+
+  .requirements-page .mobile-nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .requirements-page .mobile-nav-links a.active {
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  .quick-access-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-access-card {
+    min-height: 270px;
+  }
+
+  .source-status {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+
+@media (max-width: 700px) {
+  .requirements-page .header-container {
+    height: 68px;
+  }
+
+  .requirements-page .nav-logo {
+    height: 42px;
+  }
+
+  .requirements-page .auth-buttons {
+    display: none;
+  }
+
+  .requirements-hero {
+    padding: 56px 0 52px;
+  }
+
+  .requirements-hero h1 {
+    font-size: 42px;
+  }
+
+  .requirements-lead {
+    font-size: 15px;
+  }
+
+  .requirements-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .requirements-section-heading > p {
+    text-align: left;
+  }
+
+  .quick-access-grid,
+  .validation-grid,
+  .document-grid,
+  .preparation-list {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-access-card {
+    min-height: 0;
+  }
+
+  .detail-card-heading {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .requirements-detail-card,
+  .source-status {
+    padding: 24px 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .requirements-page {
+    scroll-behavior: auto;
+  }
+
+  .requirements-page *,
+  .requirements-page *::before,
+  .requirements-page *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
