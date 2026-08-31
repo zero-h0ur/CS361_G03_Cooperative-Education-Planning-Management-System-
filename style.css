@@ -773,6 +773,9 @@ a {
   .hero-grid > div:first-child {
     transform: none !important;
   }
+  .hero-image-wrapper {
+    display: none;
+  }
 }
 
 @media (max-width: 600px) {
@@ -2404,9 +2407,6 @@ a {
   }
   .hero-grid > div:first-child {
     transform: none !important;
-  }
-  .hero-image-wrapper {
-    display: none;
   }
   .banner-card-new {
     flex-direction: column;
