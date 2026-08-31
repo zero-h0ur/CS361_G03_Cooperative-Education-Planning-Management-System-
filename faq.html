@@ -41,10 +41,10 @@
   <!-- FAQ Header (styled like the right image) -->
   <section class="faq-hero">
      <h2>คำถามที่พบบ่อย (FAQ)</h2>
-     <div class="faq-search-box">
+     <div class="faq-search-box" style="position: relative;">
        <i class="fa-solid fa-magnifying-glass" style="color: #64748B; padding: 0 16px;"></i>
-       <input type="text" placeholder="ค้นหาหัวข้อคำถามที่คุณต้องการ...">
-       <button class="btn-faq-search"><i class="fa-solid fa-magnifying-glass"></i></button>
+       <input type="text" id="faq-search-input" placeholder="ค้นหาหัวข้อคำถามที่คุณต้องการ...">
+       <i class="fa-solid fa-xmark" id="faq-clear-search" style="display: none; cursor: pointer; color: #94A3B8; padding: 0 16px;"></i>
      </div>
   </section>
   
@@ -63,7 +63,7 @@
            <i class="fa-solid fa-chevron-right"></i>
          </div>
          <div class="faq-item" onclick="showAnswer('q3')">
-           <span class="faq-item-text">เกรดเฉลี่ย (GPAX) ขั้นต่ำในการออกสหกิจศึกษาคือเท่าไหร่?</span>
+           <span class="faq-item-text">เกณฑ์รับสมัครเข้าแผนสหกิจศึกษา ปีการศึกษา 2568 มีอะไรบ้าง?</span>
            <i class="fa-solid fa-chevron-right"></i>
          </div>
          <div class="faq-item" onclick="showAnswer('q4')">
@@ -72,6 +72,14 @@
          </div>
          <div class="faq-item" onclick="showAnswer('q5')">
            <span class="faq-item-text">ตารางเวลาและกิจกรรมที่ต้องส่งมีอะไรบ้าง?</span>
+           <i class="fa-solid fa-chevron-right"></i>
+         </div>
+         <div class="faq-item extra-faq" style="display: none;" onclick="showAnswer('q6')">
+           <span class="faq-item-text">ระหว่างสหกิจศึกษาสามารถลงทะเบียนเรียนวิชาอื่นได้หรือไม่?</span>
+           <i class="fa-solid fa-chevron-right"></i>
+         </div>
+         <div class="faq-item extra-faq" style="display: none;" onclick="showAnswer('q7')">
+           <span class="faq-item-text">ถ้าสถานประกอบการไม่มีค่าตอบแทนให้ จะยังสามารถไปฝึกได้หรือไม่?</span>
            <i class="fa-solid fa-chevron-right"></i>
          </div>
       </div>
@@ -206,13 +214,40 @@
           <p>ทั้งนี้ บางสถานประกอบการอาจมีข้อกำหนดเอกสารเพิ่มเติม โปรดตรวจสอบรายละเอียดของแต่ละบริษัทในหน้า Company Directory</p>`
       },
       q3: {
-        title: "เกรดเฉลี่ย (GPAX) ขั้นต่ำในการออกสหกิจศึกษาคือเท่าไหร่?",
-        content: `<p>ตามระเบียบของมหาวิทยาลัย นักศึกษาที่จะออกปฏิบัติงานสหกิจศึกษาได้ ต้องมีคุณสมบัติดังนี้:</p>
-          <ul>
-            <li>มีคะแนนเฉลี่ยสะสม (GPAX) ไม่ต่ำกว่า 2.00</li>
-            <li>สอบผ่านรายวิชาเตรียมความพร้อมสหกิจศึกษา (Pre-Coop)</li>
-            <li>ลงทะเบียนเรียนผ่านรายวิชาบังคับตามที่หลักสูตรกำหนด</li>
-          </ul>`
+        title: "เกณฑ์รับสมัครเข้าแผนสหกิจศึกษา ปีการศึกษา 2568 มีอะไรบ้าง?",
+        content: `
+          <ol style="margin-left: 20px; line-height: 1.6; margin-bottom: 24px;">
+            <li style="margin-bottom: 12px;">เป็นนักศึกษาสาขาวิชาวิทยาการคอมพิวเตอร์ คณะวิทยาศาสตร์ฯ ม.ธรรมศาสตร์</li>
+            <li style="margin-bottom: 12px;">เคยศึกษาวิชา ดังนี้
+              <ul style="margin-left: 24px; margin-top: 8px; list-style-type: disc;">
+                <li style="margin-bottom: 6px;"><strong>หลักสูตร 61</strong> เคยศึกษา วิชา คพ.101, คพ.102, คพ.111, (คพ.213 หรือ 216), คพ.251 และ คพ.264 โดยที่เกรดเฉลี่ยของรายวิชากลุ่มนี้ไม่ต่ำกว่า 2.5</li>
+                <li style="margin-bottom: 6px;"><strong>หลักสูตร 66</strong> เคยศึกษา วิชา คพ.100, คพ.101, คพ.102, คพ.111, (คพ.213 หรือ 216), คพ.251 และ คพ.261 โดยที่เกรดเฉลี่ยของรายวิชากลุ่มนี้ไม่ต่ำกว่า 2.5</li>
+              </ul>
+            </li>
+            <li style="margin-bottom: 12px;">กำลังศึกษา หรือเคยศึกษาวิชา ดังนี้
+              <ul style="margin-left: 24px; margin-top: 8px; list-style-type: disc;">
+                <li style="margin-bottom: 6px;"><strong>หลักสูตร 61</strong> กำลังศึกษา หรือเคยศึกษาวิชา คพ.384 และ วิชา (คพ.266 หรือ 322 หรือ 348)</li>
+                <li style="margin-bottom: 6px;"><strong>หลักสูตร 66</strong> กำลังศึกษา หรือเคยศึกษาวิชา คพ.180 และ วิชา (คพ.262 หรือ 331 หรือ 240)</li>
+              </ul>
+            </li>
+            <li style="margin-bottom: 12px;">รับทราบว่าจะต้องสอบได้วิชา ดังนี้ ก่อนออกไปปฏิบัติงานจริง ณ สถานประกอบการ
+              <ul style="margin-left: 24px; margin-top: 8px; list-style-type: disc;">
+                <li style="margin-bottom: 6px;"><strong>หลักสูตร 61</strong> จะต้องสอบได้วิชา คพ.302</li>
+                <li style="margin-bottom: 6px;"><strong>หลักสูตร 66</strong> จะต้องสอบได้วิชา คพ.301</li>
+              </ul>
+            </li>
+            <li style="margin-bottom: 12px;">มีผลการเรียนเฉลี่ยสะสม (GPA) เมื่อสิ้นภาคการศึกษาสุดท้ายก่อนสมัครเข้าเป็นนักศึกษาสหกิจศึกษา ไม่ต่ำกว่า 2.75</li>
+            <li style="margin-bottom: 12px;">มีความประพฤติเรียบร้อย ไม่เคยถูกลงโทษทางวินัยนักศึกษา</li>
+            <li style="margin-bottom: 12px;">รับทราบเกณฑ์และลงนามยอมรับว่าจะปฏิบัติตามเงื่อนไขและกระบวนการสหกิจศึกษาอย่างครบถ้วน</li>
+          </ol>
+          <div style="background-color: #F8FAFC; padding: 20px; border-left: 4px solid #4B48E5; border-radius: 4px;">
+            <p style="color: #334155; font-size: 0.95rem; margin-bottom: 12px; line-height: 1.6;">
+              <strong>*** หมายเหตุสำคัญ:</strong> นักศึกษาที่ผ่านคุณสมบัติข้างต้นมีสิทธิในการสมัครเพื่อคัดเลือกเข้าแผนสหกิจฯ เท่านั้น และจะไม่พิจารณานักศึกษาที่ไม่สามารถตรวจสอบได้ว่ามีคุณสมบัติครบถ้วน การคัดเลือกนักศึกษาเข้าแผนสหกิจฯ จะทำโดยคณะกรรมการบริหารสหกิจฯ ของสาขาวิชาฯ จำนวนของนักศึกษาที่ได้รับการคัดเลือกขึ้นอยู่กับคุณสมบัติของนักศึกษา และภาระงานของอาจารย์ในสาขาวิชาฯ ผลการคัดเลือกจากคณะกรรมการบริหารสหกิจฯ ถือเป็นที่สิ้นสุด ***
+            </p>
+            <p style="color: #64748B; font-size: 0.85rem; font-style: italic; margin: 0;">
+              หมายเหตุ : ข้อสงวนสิทธิ์ในการเปลี่ยนแปลงข้อมูลตามความเหมาะสำหรับการจัดการโครงการสหกิจศึกษาในแต่ละปีการศึกษา โดยไม่แจ้งล่วงหน้า
+            </p>
+          </div>`
       },
       q4: {
         title: "สามารถหาที่ฝึกงานเองนอกเหนือจากที่กำหนดได้หรือไม่?",
@@ -227,13 +262,24 @@
             <li><strong>ร่างรายงานฉบับสมบูรณ์:</strong> ภายในสัปดาห์ที่ 12</li>
             <li><strong>นำเสนอผลงาน:</strong> หลังสิ้นสุดการปฏิบัติงาน (ตามวันเวลาที่คณะกำหนด)</li>
           </ol>`
+      },
+      q6: {
+        title: "ระหว่างสหกิจศึกษาสามารถลงทะเบียนเรียนวิชาอื่นได้หรือไม่?",
+        content: `<p><strong>ไม่อนุญาตครับ</strong> เนื่องจากสหกิจศึกษาเป็นการปฏิบัติงานเต็มเวลา (Full-time) ณ สถานประกอบการตลอดภาคการศึกษา นักศึกษาจึงไม่สามารถลงทะเบียนเรียนวิชาอื่นควบคู่ไปด้วยได้ ยกเว้นกรณีที่เป็นวิชาเรียนนอกเวลาหรือเสาร์-อาทิตย์ ซึ่งต้องได้รับความเห็นชอบจากอาจารย์ที่ปรึกษาและสถานประกอบการก่อนครับ</p>`
+      },
+      q7: {
+        title: "ถ้าสถานประกอบการไม่มีค่าตอบแทนให้ จะยังสามารถไปฝึกได้หรือไม่?",
+        content: `<p><strong>สามารถทำได้ครับ</strong> มหาวิทยาลัยไม่ได้บังคับว่าสถานประกอบการจะต้องมีค่าตอบแทนให้เสมอไป ขึ้นอยู่กับการตัดสินใจและความสมัครใจของนักศึกษาในการเลือกสถานประกอบการนั้นๆ ครับ แต่แนะนำให้พิจารณาถึงค่าใช้จ่ายในการเดินทางและที่พักประกอบด้วยครับ</p>`
       }
     };
 
     function showAnswer(id) {
       // Update active class
       document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('active'));
-      document.querySelector(`[onclick="showAnswer('${id}')"]`).classList.add('active');
+      const activeItem = document.querySelector(`[onclick="showAnswer('${id}')"]`);
+      if (activeItem) {
+        activeItem.classList.add('active');
+      }
 
       // Update content
       const data = faqData[id];
@@ -242,6 +288,53 @@
         document.getElementById('answer-content').innerHTML = data.content;
       }
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchInput = document.getElementById('faq-search-input');
+      const clearBtn = document.getElementById('faq-clear-search');
+      const faqItems = document.querySelectorAll('.faq-item');
+      
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          const term = e.target.value.toLowerCase().trim();
+          
+          if (clearBtn) {
+            clearBtn.style.display = term.length > 0 ? 'flex' : 'none';
+          }
+          
+          let hasMatch = false;
+          
+          faqItems.forEach(item => {
+            const questionText = item.querySelector('.faq-item-text').textContent.toLowerCase();
+            const itemId = item.getAttribute('onclick').match(/'(.*?)'/)[1];
+            const answerText = faqData[itemId] ? faqData[itemId].content.toLowerCase() : '';
+            
+            const isExtra = item.classList.contains('extra-faq');
+            
+            if (term === "") {
+              item.style.display = isExtra ? 'none' : 'flex';
+              hasMatch = true;
+            } else {
+              if (questionText.includes(term) || answerText.includes(term)) {
+                item.style.display = 'flex';
+                hasMatch = true;
+              } else {
+                item.style.display = 'none';
+              }
+            }
+          });
+        });
+      }
+
+      if (clearBtn && searchInput) {
+        clearBtn.addEventListener('click', () => {
+          searchInput.value = '';
+          searchInput.dispatchEvent(new Event('input'));
+          searchInput.focus();
+        });
+        clearBtn.style.alignItems = 'center';
+      }
+    });
   </script>
 </body>
 </html>
