@@ -1168,7 +1168,7 @@ a {
 
 .directory-result-status {
   min-height: 21px;
-  margin: -24px 0 14px;
+  margin: 0 0 8px 4px;
   color: #616a7d;
   font-size: 13px;
 }
@@ -2629,4 +2629,7 @@ a {
   .btn-login {
     font-size: 12px !important;
   }
+}
+.directory-search {
+  margin-bottom: 28px !important;
 }
