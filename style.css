@@ -1979,6 +1979,141 @@ a {
   line-height: 1.75;
 }
 
+.academic-year-badge {
+  justify-self: end;
+  padding: 8px 13px;
+  color: #3730a3;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.eligibility-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  counter-reset: eligibility;
+  list-style: none;
+}
+
+.eligibility-list > li {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 16px;
+  padding: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  counter-increment: eligibility;
+}
+
+.eligibility-list > li::before {
+  content: counter(eligibility);
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--primary);
+  border-radius: 50%;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.eligibility-list h3 {
+  margin: 1px 0 7px;
+  color: #1e293b;
+  font-size: 17px;
+}
+
+.eligibility-list p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.curriculum-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.curriculum-card {
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+}
+
+.curriculum-card h4 {
+  display: inline-flex;
+  margin: 0 0 7px;
+  padding: 4px 9px;
+  color: #4338ca;
+  background: #eef2ff;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.curriculum-grid.compact .curriculum-card {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.eligibility-highlight {
+  color: #b45309;
+  white-space: nowrap;
+}
+
+.eligibility-selection-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  margin-top: 20px;
+  padding: 18px;
+  color: #334155;
+  background: #eef6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+}
+
+.eligibility-selection-note i {
+  margin-top: 4px;
+  color: #2563eb;
+  font-size: 18px;
+}
+
+.eligibility-selection-note p,
+.eligibility-disclaimer,
+.eligibility-source {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.eligibility-disclaimer {
+  margin-top: 14px;
+  padding: 14px 16px;
+  color: #6b4f16;
+  background: #fffbeb;
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+}
+
+.eligibility-source {
+  margin-top: 15px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-align: right;
+}
+
 .validation-grid,
 .document-grid {
   display: grid;
@@ -2221,6 +2356,7 @@ a {
 
   .quick-access-grid,
   .validation-grid,
+  .curriculum-grid,
   .document-grid,
   .preparation-list {
     grid-template-columns: 1fr;
@@ -2233,6 +2369,26 @@ a {
   .detail-card-heading {
     grid-template-columns: auto minmax(0, 1fr);
     align-items: start;
+  }
+
+  .academic-year-badge {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .eligibility-list > li {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .eligibility-list > li::before {
+    width: 36px;
+    height: 36px;
+  }
+
+  .eligibility-source {
+    text-align: left;
   }
 
   .requirements-detail-card,
