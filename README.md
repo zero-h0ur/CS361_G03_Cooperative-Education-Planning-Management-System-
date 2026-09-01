@@ -227,10 +227,10 @@ python3 -m http.server 8000
 
 ## Team Members
 
-- Paponpat Meevon
-- Purinat Wanthanathanya
-- รณกฤต วรลักษณ์ภักดี
-- Nustapark Krai
+- นายปพนพัชร์ มีวน 6709650458
+- นายภูริณัฐ วรรธนะธัญญา 6709650565
+- นายรณกฤต วรลักษณ์ภักดี 6709650607
+- นายณัษฐภาคย์ ไกรวิชญ์ชนาพร 6709650334
 
 ## Contribution Workflow
 
