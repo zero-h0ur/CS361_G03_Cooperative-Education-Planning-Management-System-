@@ -77,22 +77,25 @@ V1 ช่วยให้ผู้ใช้ดำเนินตาม Core User 
 
 ## Current Architecture
 
-> เพิ่ม Architecture Diagram ที่แสดงเฉพาะ Component ซึ่งใช้งานจริงใน Version 1 ที่นี่
+[![แผนภาพสถาปัตยกรรมของระบบ CO-ED Version 1](docs/architecture/G03-V1-architecture.png)](docs/architecture/G03-V1-architecture.png)
+
+V1 เป็น Static Website ที่ให้บริการผ่าน AWS Amplify Hosting ผู้ใช้เปิดหน้าเว็บผ่าน HTTPS และการค้นหาหรือกรองข้อมูลทำงานภายใน Browser โดยไม่มี Login, Backend API, Lambda หรือ Database
 
 ### Components
 
 | Component | Service / Technology | Responsibility |
 | --- | --- | --- |
-| Client | _ระบุภายหลัง_ | _ระบุภายหลัง_ |
-| Hosting | _ระบุภายหลัง_ | _ระบุภายหลัง_ |
-| Source and Deployment | _ระบุภายหลัง_ | _ระบุภายหลัง_ |
-| Data and External Sources | _ระบุภายหลัง_ | _ระบุภายหลัง_ |
+| Client | Web Browser | ขอและแสดงผลหน้าเว็บ รวมถึงค้นหาและกรองข้อมูลด้วย JavaScript ภายใน Browser |
+| Hosting | AWS Amplify Hosting | ให้บริการไฟล์ HTML, CSS, JavaScript และรูปภาพผ่าน HTTPS และ Global CDN ที่ทำงานบน CloudFront |
+| Source and Deployment | GitHub และ AWS Amplify | เก็บ Source code และ Deploy อัตโนมัติเมื่อ Pull Request ได้รับอนุมัติและ Merge เข้า `main` |
+| Data and External Sources | Static content และแหล่งข้อมูลของมหาวิทยาลัย | ทีมตรวจสอบข้อมูลจากประกาศ ข้อกำหนด กำหนดการ และรายการเอกสารก่อนปรับปรุงเนื้อหาใน Repository |
 
 ### Data Flow
 
-1. _ระบุ Request Flow จากผู้ใช้เข้าสู่ระบบ_
-2. _ระบุการส่งและประมวลผลข้อมูลภายในระบบ_
-3. _ระบุ Deployment Flow จาก Source code ไปยังระบบที่ให้บริการ_
+1. ทีมตรวจสอบข้อมูลจากแหล่งข้อมูลของมหาวิทยาลัยและปรับปรุง Static content ใน Feature Branch
+2. เมื่อ Pull Request ได้รับอนุมัติและ Merge เข้า `main` ระบบ Amplify จะ Build และ Deploy เว็บไซต์อัตโนมัติ
+3. Browser ส่ง HTTPS request ไปยัง Amplify เพื่อขอหน้าเว็บและไฟล์ Static
+4. Amplify ส่ง HTML, CSS, JavaScript และรูปภาพกลับมา จากนั้น Browser แสดงผลและประมวลผลการค้นหาหรือกรองข้อมูลฝั่ง Client
 
 ## Design Decision and Trade-off
 
@@ -137,6 +140,9 @@ V1 ช่วยให้ผู้ใช้ดำเนินตาม Core User 
 ├── faq.html                   # คำถามที่พบบ่อยและการค้นหา
 ├── style.css                  # รูปแบบและ Responsive layout
 ├── resources/images/          # รูปภาพและโลโก้ที่ใช้ในเว็บไซต์
+├── docs/
+│   └── architecture/
+│       └── G03-V1-architecture.png  # Architecture Diagram ของ V1
 ├── CONTRIBUTING.md            # Branch, Commit, PR และ Merge workflow
 └── README.md
 ```
