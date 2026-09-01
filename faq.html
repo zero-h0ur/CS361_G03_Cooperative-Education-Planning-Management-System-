@@ -38,7 +38,7 @@
   </nav>
 </header>
 
-  <!-- FAQ Header (styled like the right image) -->
+  <!-- FAQ Header  -->
   <section class="faq-hero">
      <h2>คำถามที่พบบ่อย (FAQ)</h2>
      <div class="faq-search-box" style="position: relative;">
@@ -48,7 +48,7 @@
      </div>
   </section>
   
-  <!-- FAQ Content Section (Master-Detail layout) -->
+  <!-- FAQ Content Section  -->
   <section class="container faq-container">
     <h3 class="faq-section-title">การสมัครและเตรียมตัว (Apply & Prepare)</h3>
     <div class="faq-grid">
@@ -189,6 +189,7 @@
   </footer>
 
   <script>
+    // ข้อมูลคำตอบคำถามที่พบบ่อย
     const faqData = {
       q1: {
         title: "ขั้นตอนการสมัครสหกิจศึกษาเป็นอย่างไร?",
@@ -273,15 +274,16 @@
       }
     };
 
+    // ฟังก์ชั่นสำหรับแสดงคำตอบของคำถามที่เลือก
     function showAnswer(id) {
-      // Update active class
-      document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('active'));
-      const activeItem = document.querySelector(`[onclick="showAnswer('${id}')"]`);
+      // Update active class คือจะไปลบคลาส active ของทุกคำถามก่อน แล้วเพิ่มคลาส active ให้กับคำถามที่ถูกเลือก
+      document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('active')); 
+      const activeItem = document.querySelector(`[onclick="showAnswer('${id}')"]`); //เลือกคำถามที่ถูกคลิกโดยจะส่ง id ของคำถามไปด้วย
       if (activeItem) {
         activeItem.classList.add('active');
       }
 
-      // Update content
+      // Update content ดึงข้อมูลคำตอบจาก faqData ตาม id ของคำถามที่ถูกเลือก และอัปเดต title และ content ในส่วนของคำตอบ
       const data = faqData[id];
       if(data) {
         document.getElementById('answer-title').innerHTML = data.title;
@@ -289,36 +291,41 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    // ฟังก์ชั่นสำหรับค้นหาคำถามที่ตรงกับคำค้นหา
+    document.addEventListener('DOMContentLoaded', () => { //รอให้เว็บโหลดเสร็จสมบูรณ์ก่อนแล้วค่อยทำงาน
       const searchInput = document.getElementById('faq-search-input');
       const clearBtn = document.getElementById('faq-clear-search');
       const faqItems = document.querySelectorAll('.faq-item');
       
+      // ตอนพิมพ์ในช่องค้นหา จะทำการกรองคำถามที่ตรงกับคำค้นหาโดยการตัดช่องว่างและเปลี่ยนเป็นตัวพิมพ์เล็กเพื่อตรวจสอบความตรงกันของคำถามและคำตอบ
       if (searchInput) {
         searchInput.addEventListener('input', (e) => {
           const term = e.target.value.toLowerCase().trim();
           
+          // ถ้าข้อความค้นหามีคำค้นหา จะให้ปุ่มล้างข้อความแสดงขึ้น ถ้าไม่มีคำค้นหา ปุ่มล้างข้อความจะถูกซ่อน
           if (clearBtn) {
             clearBtn.style.display = term.length > 0 ? 'flex' : 'none';
           }
           
+          // ตรวจสอบว่ามีคำถามที่ตรงกับคำค้นหาหรือไม่
           let hasMatch = false;
           
+          // กรองคำถามที่ตรงกับคำค้นหา
           faqItems.forEach(item => {
             const questionText = item.querySelector('.faq-item-text').textContent.toLowerCase();
-            const itemId = item.getAttribute('onclick').match(/'(.*?)'/)[1];
+            const itemId = item.getAttribute('onclick').match(/'(.*?)'/)[1]; // ดึง id ของคำถามจาก attribute onclick
             const answerText = faqData[itemId] ? faqData[itemId].content.toLowerCase() : '';
             
-            const isExtra = item.classList.contains('extra-faq');
+            const isExtra = item.classList.contains('extra-faq'); // ตรวจสอบว่าคำถามนี้เป็นคำถามเพิ่มเติมหรือไม่
             
-            if (term === "") {
+            if (term === "") { // ถ้าไม่มีคำค้นหา ให้แสดงคำถามทั้งหมด ยกเว้นคำถามเพิ่มเติม
               item.style.display = isExtra ? 'none' : 'flex';
               hasMatch = true;
-            } else {
+            } else { // ถ้ามีคำค้นหา ให้แสดงเฉพาะคำถามที่ตรงกับคำค้นหา
               if (questionText.includes(term) || answerText.includes(term)) {
                 item.style.display = 'flex';
                 hasMatch = true;
-              } else {
+              } else { // ถ้าไม่ตรงกับคำค้นหา ให้ซ่อนคำถามนั้น
                 item.style.display = 'none';
               }
             }
