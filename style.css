@@ -1173,6 +1173,15 @@ a {
   font-size: 13px;
 }
 
+.directory-result-status[data-state="compute"] {
+  color: #166534;
+  font-weight: 500;
+}
+
+.directory-result-status[data-state="error"] {
+  color: #b91c1c;
+}
+
 .partner-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1310,6 +1319,12 @@ a {
   background: #3733a8;
   box-shadow: 0 10px 20px rgba(70, 66, 194, 0.25);
   transform: translateY(-1px);
+}
+
+.directory-load-more:disabled {
+  cursor: wait;
+  opacity: 0.65;
+  transform: none;
 }
 
 .directory-load-more:focus-visible {
