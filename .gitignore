@@ -3,3 +3,8 @@
 
 # macOS system files
 .DS_Store
+
+# Local Node.js compute prototype
+node_modules/
+.env
+npm-debug.log*
