@@ -1730,6 +1730,7 @@ a {
   background: #f8fafc;
 }
 
+/* แสดงลิงก์ข้ามเมนูเมื่อผู้ใช้กด Tab เพื่อช่วยการใช้งานด้วยคีย์บอร์ด */
 .skip-link {
   position: fixed;
   top: 10px;
@@ -1761,6 +1762,7 @@ a {
   display: none;
 }
 
+/* ส่วนหัวของหน้า ใช้พื้นหลังลายเดียวกับภาพรวมของเว็บไซต์ */
 .requirements-hero {
   padding: 76px 0 70px;
   overflow: hidden;
@@ -1821,6 +1823,7 @@ a {
   line-height: 1.8;
 }
 
+/* การ์ดลัด 4 ใบสำหรับเลื่อนไปยังรายละเอียดแต่ละหัวข้อ */
 .quick-access-section {
   padding-top: 68px;
   padding-bottom: 72px;
@@ -1926,6 +1929,7 @@ a {
   color: var(--text-light);
 }
 
+/* การ์ดรายละเอียดใช้ scroll margin เพื่อไม่ให้หัวข้อถูกเมนูด้านบนบัง */
 .requirements-details {
   padding: 72px 0 84px;
   background: #eef2f7;
@@ -1982,6 +1986,7 @@ a {
   line-height: 1.75;
 }
 
+/* เกณฑ์สมัครและตารางเปรียบเทียบรายวิชาของแต่ละหลักสูตร */
 .academic-year-badge {
   justify-self: end;
   padding: 8px 13px;
@@ -2165,6 +2170,7 @@ a {
   line-height: 1.65;
 }
 
+/* เส้นและหมายเลขแสดงลำดับขั้นตอนการเตรียมสหกิจศึกษา */
 .guideline-steps {
   position: relative;
   display: flex;
@@ -2210,6 +2216,7 @@ a {
   font-size: 16px;
 }
 
+/* หมวดเอกสารแสดงสามคอลัมน์บนหน้าจอขนาดใหญ่ */
 .document-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -2232,6 +2239,7 @@ a {
   font-size: 16px;
 }
 
+/* รายการคำแนะนำจัดสองคอลัมน์และลดเป็นหนึ่งคอลัมน์บนมือถือ */
 .preparation-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2261,6 +2269,7 @@ a {
   font-size: 11px;
 }
 
+/* กล่องเตือนให้ตรวจสอบประกาศและแหล่งข้อมูลทางการก่อนดำเนินการ */
 .source-status {
   display: grid;
   grid-template-columns: 0.8fr 1.2fr;
@@ -2286,6 +2295,7 @@ a {
   line-height: 1.6;
 }
 
+/* Tablet: ลดการ์ดลัดเหลือสองคอลัมน์และแสดงเมนูแบบเลื่อนแนวนอน */
 @media (max-width: 992px) {
   .mobile-nav-links {
     display: flex;
@@ -2322,6 +2332,7 @@ a {
   }
 }
 
+/* Mobile: ทุกชุดข้อมูลเรียงเป็นคอลัมน์เดียวเพื่อให้อ่านง่าย */
 @media (max-width: 700px) {
  .header-container {
     height: 68px;
@@ -2400,6 +2411,7 @@ a {
   }
 }
 
+/* ลด animation ตามการตั้งค่าการเคลื่อนไหวของอุปกรณ์ผู้ใช้ */
 @media (prefers-reduced-motion: reduce) {
   .requirements-page {
     scroll-behavior: auto;
