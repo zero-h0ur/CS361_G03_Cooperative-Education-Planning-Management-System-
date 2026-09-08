@@ -13,6 +13,7 @@
 <body class="requirements-page">
   <a class="skip-link" href="#main-content">ข้ามไปยังเนื้อหาหลัก</a>
 
+  <!-- เมนูหลักใช้โครงเดียวกับหน้าอื่น โดยระบุหน้าปัจจุบันด้วย aria-current -->
   <header class="header">
     <div class="container header-container">
       <div class="header-main-group">
@@ -41,6 +42,7 @@
   </header>
 
   <main id="main-content">
+    <!-- ส่วนแนะนำหน้าข้อกำหนดและกลุ่มผู้ใช้งานหลัก -->
     <section class="requirements-hero">
       <div class="container requirements-hero-inner">
         <h1>ขั้นตอนและข้อกำหนด<br /><span>สหกิจศึกษา</span></h1>
@@ -50,6 +52,7 @@
       </div>
     </section>
 
+    <!-- การ์ดลัดเชื่อมไปยัง id ของแต่ละหัวข้อภายในหน้าเดียวกัน -->
     <section class="container quick-access-section" aria-labelledby="quick-access-title">
       <div class="requirements-section-heading">
         <div>
@@ -102,8 +105,10 @@
       </div>
     </section>
 
+    <!-- รายละเอียดแบ่งเป็น 4 หัวข้อ เพื่อให้เข้าถึงผ่านลิงก์ลัดและ Footer ได้ -->
     <section class="requirements-details">
       <div class="container requirements-detail-list">
+        <!-- เกณฑ์สมัครแยกข้อมูลของหลักสูตร 61 และ 66 เพื่อให้เปรียบเทียบได้ง่าย -->
         <article class="requirements-detail-card" id="qualifications">
           <div class="detail-card-heading">
             <span class="detail-number">01</span>
@@ -203,6 +208,7 @@
           <p class="eligibility-source">สาขาวิชาวิทยาการคอมพิวเตอร์ คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยธรรมศาสตร์ ศูนย์รังสิต</p>
         </article>
 
+        <!-- ลำดับการเตรียมตัวตั้งแต่ตรวจสอบคุณสมบัติจนถึงติดตามประกาศ -->
         <article class="requirements-detail-card" id="guidelines">
           <div class="detail-card-heading">
             <span class="detail-number">02</span>
@@ -221,6 +227,7 @@
           </ol>
         </article>
 
+        <!-- จัดเอกสารเป็นหมวดเพื่อช่วยให้นักศึกษาตรวจสอบความครบถ้วน -->
         <article class="requirements-detail-card" id="documents">
           <div class="detail-card-heading">
             <span class="detail-number">03</span>
@@ -249,6 +256,7 @@
           </div>
         </article>
 
+        <!-- แนวทางทั่วไปก่อนสมัคร โดยยังต้องยึดประกาศทางการเป็นหลัก -->
         <article class="requirements-detail-card" id="preparation">
           <div class="detail-card-heading">
             <span class="detail-number">04</span>
@@ -267,6 +275,7 @@
           </ul>
         </article>
 
+        <!-- แจ้งให้ตรวจสอบข้อมูลล่าสุด เพราะเกณฑ์และกำหนดการเปลี่ยนแปลงได้ -->
         <aside class="source-status" aria-labelledby="source-status-title">
           <div>
             <p class="section-kicker">ข้อมูลสำคัญ</p>
@@ -278,6 +287,7 @@
     </section>
   </main>
 
+  <!-- Footer เชื่อมทั้งหน้าหลักของเว็บไซต์และหัวข้อภายในหน้านี้ -->
   <footer class="footer">
     <div class="container footer-grid">
       <div>
