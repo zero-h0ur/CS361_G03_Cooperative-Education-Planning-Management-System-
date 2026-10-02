@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CO-ED V2: ระบบข้อมูลและแผนสหกิจศึกษาแบบพลวัต (Dynamic Data)</title>
+  <link rel="icon" href="resources/images/logomini.png" type="image/png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="v2-page">
+  <a class="skip-link" href="#v2-main-content">ข้ามไปยังเนื้อหาหลัก</a>
+
+  <!-- Navigation Header -->
+  <header class="header">
+    <div class="container header-container">
+      <div class="header-main-group">
+        <a href="index.html" class="logo" aria-label="CO-ED หน้าแรก">
+          <img src="resources/images/logo.png" alt="CO-ED" class="nav-logo" />
+        </a>
+        <nav class="nav-links" aria-label="เมนูหลัก">
+          <a href="index.html">หน้าแรก</a>
+          <a href="requirements.html">ข้อกำหนดสหกิจและขั้นตอน</a>
+          <a href="company-directory.html">สถานประกอบการ </a>
+          <a href="dynamic-data.html" class="active" aria-current="page">ระบบข้อมูลสหกิจ</a>
+          <a href="faq.html">คำถามที่พบบ่อย</a>
+        </nav>
+      </div>
+
+      <div class="auth-buttons">
+        <button type="button" class="btn-new-plan-header" id="btnOpenNewPlanHeader">
+          <i class="fa-solid fa-plus"></i> ยื่นแผนสหกิจ
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Bar -->
+    <nav class="mobile-nav-links" aria-label="เมนูหลักสำหรับหน้าจอขนาดเล็ก">
+      <a href="index.html">หน้าแรก</a>
+      <a href="requirements.html">ข้อกำหนด</a>
+      <a href="company-directory.html">สถานประกอบการ</a>
+      <a href="dynamic-data.html" class="active" aria-current="page">ระบบ V2</a>
+      <a href="faq.html">คำถามที่พบบ่อย</a>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main id="v2-main-content" class="v2-main">
+    
+    <!-- Hero Banner with System Mode Indicator -->
+    <section class="v2-hero">
+      <div class="container">
+        <div class="v2-hero-header">
+          <div>
+            <div class="v2-version-tag">
+              <span class="v2-pill"><i class="fa-solid fa-database"></i> CO-ED VERSION 2</span>
+              <span id="connectionBadge" class="connection-status-badge api-mode">
+                <span class="status-dot"></span> <span id="connectionText">เชื่อมต่อ Compute API สำเร็จ</span>
+              </span>
+            </div>
+            <h1 class="v2-title">ระบบข้อมูลและแผนสหกิจศึกษาแบบพลวัต</h1>
+            <p class="v2-subtitle">
+              จัดการและสืบค้นข้อมูลนักศึกษา สถานประกอบการ ตำแหน่งงาน/โครงการ รอบเวลา และแผนสหกิจศึกษาอย่างเป็นระบบ พร้อมรองรับการค้นหา กรอง และเรียกดูตามเงื่อนไข
+            </p>
+          </div>
+          <div class="v2-hero-actions">
+            <button type="button" class="btn-primary-action" id="btnOpenNewPlanModal">
+              <i class="fa-solid fa-file-circle-plus"></i> เสนอแผนสหกิจใหม่
+            </button>
+            <button type="button" class="btn-secondary-action" id="btnRefreshData" title="รีเฟรชข้อมูล">
+              <i class="fa-solid fa-arrows-rotate"></i> รีเฟรชข้อมูล
+            </button>
+          </div>
+        </div>
+
+        <!-- 5 Key System Metrics Dashboard -->
+        <div class="v2-stats-grid" id="statsDashboard" aria-label="สถิติภาพรวมระบบสหกิจศึกษา">
+          <div class="v2-stat-card stat-clickable" data-jump-tab="view-students" title="คลิกเพื่อไปยังแท็บข้อมูลนักศึกษาและตรวจสอบสิทธิ์">
+            <div class="stat-icon-wrapper icon-student">
+              <i class="fa-solid fa-user-graduate"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">นักศึกษาในระบบ <i class="fa-solid fa-arrow-right" style="font-size: 10px; margin-left: 2px;"></i></p>
+              <h2 class="stat-number" id="statStudentsTotal">15 คน</h2>
+              <p class="stat-subtext" id="statStudentsSubtext">ผ่านเกณฑ์ความพร้อม 80% (12 คน)</p>
+            </div>
+          </div>
+
+          <div class="v2-stat-card stat-clickable" data-jump-tab="view-positions" title="คลิกเพื่อดูสถานประกอบการ">
+            <div class="stat-icon-wrapper icon-company">
+              <i class="fa-solid fa-building"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">สถานประกอบการพันธมิตร <i class="fa-solid fa-arrow-right" style="font-size: 10px; margin-left: 2px;"></i></p>
+              <h2 class="stat-number" id="statCompaniesTotal">12 แห่ง</h2>
+              <p class="stat-subtext" id="statCompaniesSubtext">มี MOU สหกิจ 11 แห่ง</p>
+            </div>
+          </div>
+
+          <div class="v2-stat-card stat-clickable" data-jump-tab="view-positions" title="คลิกเพื่อดูตำแหน่งงานและโครงการ">
+            <div class="stat-icon-wrapper icon-position">
+              <i class="fa-solid fa-briefcase"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">ตำแหน่ง/โครงการเปิดรับ <i class="fa-solid fa-arrow-right" style="font-size: 10px; margin-left: 2px;"></i></p>
+              <h2 class="stat-number" id="statPositionsTotal">14 โครงการ</h2>
+              <p class="stat-subtext" id="statPositionsSubtext">รวมโควตารับ 33 อัตรา</p>
+            </div>
+          </div>
+
+          <div class="v2-stat-card stat-clickable" data-jump-tab="view-cycles" title="คลิกเพื่อดูกำหนดการและรอบเวลา">
+            <div class="stat-icon-wrapper icon-cycle">
+              <i class="fa-solid fa-calendar-check"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">รอบสหกิจศึกษาปัจจุบัน <i class="fa-solid fa-arrow-right" style="font-size: 10px; margin-left: 2px;"></i></p>
+              <h2 class="stat-number stat-highlight" id="statActiveCycle">ภาคเรียนที่ 2/2567</h2>
+              <p class="stat-subtext text-warning" id="statCycleCountdown">ปิดรับแผนใน 26 วัน (15 พ.ย. 2567)</p>
+            </div>
+          </div>
+
+          <div class="v2-stat-card stat-clickable" data-jump-tab="view-plans" title="คลิกเพื่อดูแผนสหกิจศึกษาทั้งหมด">
+            <div class="stat-icon-wrapper icon-plan">
+              <i class="fa-solid fa-file-signature"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">แผนสหกิจที่ยื่นในระบบ <i class="fa-solid fa-arrow-right" style="font-size: 10px; margin-left: 2px;"></i></p>
+              <h2 class="stat-number" id="statPlansTotal">8 ฉบับ</h2>
+              <p class="stat-subtext" id="statPlansSubtext">ผ่านการอนุมัติ 5 แผน</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Navigation Tabs for 4 Primary Dynamic Views -->
+    <div class="container v2-content-container">
+      <nav class="v2-tabs-nav" role="tablist" aria-label="เลือกมุมมองข้อมูลพลวัต">
+        <button class="v2-tab-btn active" role="tab" id="tab-positions" aria-selected="true" aria-controls="view-positions" data-target="view-positions">
+          <i class="fa-solid fa-briefcase"></i> ตำแหน่ง/โครงการ & สถานประกอบการ
+        </button>
+        <button class="v2-tab-btn" role="tab" id="tab-students" aria-selected="false" aria-controls="view-students" data-target="view-students">
+          <i class="fa-solid fa-user-graduate"></i> นักศึกษา & ตรวจสอบสิทธิ์ <span class="tab-count-badge">15</span>
+        </button>
+        <button class="v2-tab-btn" role="tab" id="tab-cycles" aria-selected="false" aria-controls="view-cycles" data-target="view-cycles">
+          <i class="fa-solid fa-calendar-days"></i> รอบเวลา & กำหนดการ
+        </button>
+        <button class="v2-tab-btn" role="tab" id="tab-plans" aria-selected="false" aria-controls="view-plans" data-target="view-plans">
+          <i class="fa-solid fa-file-lines"></i> แผนสหกิจศึกษา <span class="tab-count-badge" id="plansTabBadge">8</span>
+        </button>
+      </nav>
+
+      <!-- ============================================================ -->
+      <!-- VIEW 1: POSITIONS & COMPANIES DYNAMIC EXPLORER               -->
+      <!-- ============================================================ -->
+      <section id="view-positions" class="v2-tab-panel active" role="tabpanel" aria-labelledby="tab-positions">
+        <div class="filter-card">
+          <div class="filter-grid">
+            <div class="filter-item search-grow">
+              <label for="positionSearchInput">ค้นหาตำแหน่งหรือทักษะ</label>
+              <div class="input-icon-group">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="search" id="positionSearchInput" placeholder="พิมพ์ชื่อตำแหน่ง ทักษะ หรือบริษัท เช่น React, Cloud, AI..." />
+              </div>
+            </div>
+
+            <div class="filter-item">
+              <label for="positionFieldFilter">สายงาน / ขอบเขต</label>
+              <select id="positionFieldFilter">
+                <option value="all">ทุกสายงาน</option>
+                <option value="Software Engineering">Software Engineering</option>
+                <option value="Data Science & AI">Data Science & AI</option>
+                <option value="Cloud & DevOps">Cloud & DevOps</option>
+                <option value="Cybersecurity">Cybersecurity</option>
+                <option value="Mobile Development">Mobile Development</option>
+                <option value="UX/UI Design">UX/UI Design</option>
+                <option value="System Analysis & QA">System Analysis & QA</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <label for="positionWorkModeFilter">รูปแบบการทำงาน</label>
+              <select id="positionWorkModeFilter">
+                <option value="all">ทุกรูปแบบ</option>
+                <option value="Hybrid">Hybrid</option>
+                <option value="Onsite">Onsite</option>
+                <option value="Remote">Remote</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <label for="positionCompanyFilter">สถานประกอบการ</label>
+              <select id="positionCompanyFilter">
+                <option value="all">ทุกสถานประกอบการ</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="filter-footer">
+            <span class="results-count-text" id="positionsResultCount">กำลังโหลดข้อมูล...</span>
+            <button type="button" class="btn-reset-filters" id="btnResetPositionFilters">
+              <i class="fa-solid fa-rotate-left"></i> ล้างตัวกรอง
+            </button>
+          </div>
+        </div>
+
+        <!-- Position Cards Grid -->
+        <div class="positions-grid" id="positionsGrid">
+          <!-- Dynamically populated via JS -->
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- VIEW 2: STUDENTS & ELIGIBILITY DYNAMIC TABLE                 -->
+      <!-- ============================================================ -->
+      <section id="view-students" class="v2-tab-panel" role="tabpanel" aria-labelledby="tab-students" hidden>
+        <div class="filter-card">
+          <div class="filter-grid">
+            <div class="filter-item search-grow">
+              <label for="studentSearchInput">ค้นหานักศึกษา</label>
+              <div class="input-icon-group">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="search" id="studentSearchInput" placeholder="ค้นหาด้วยรหัสนักศึกษา ชื่อ-นามสกุล หรือทักษะ..." />
+              </div>
+            </div>
+
+            <div class="filter-item">
+              <label for="studentEligibilityFilter">สถานะความพร้อม / สิทธิ์</label>
+              <select id="studentEligibilityFilter">
+                <option value="all">ทุกสถานะ</option>
+                <option value="eligible">ผ่านเกณฑ์ครบถ้วน (Eligible)</option>
+                <option value="conditional">รอตรวจสอบ/มีเงื่อนไข (Conditional)</option>
+                <option value="ineligible">ไม่ผ่านเกณฑ์ (Ineligible)</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <label for="studentYearFilter">ชั้นปี</label>
+              <select id="studentYearFilter">
+                <option value="all">ทุกชั้นปี</option>
+                <option value="3">ชั้นปีที่ 3</option>
+                <option value="4">ชั้นปีที่ 4</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <label for="studentSortFilter">เรียงตาม</label>
+              <select id="studentSortFilter">
+                <option value="name">ชื่อ-นามสกุล (ก-ฮ)</option>
+                <option value="gpax">เกรดเฉลี่ยสะสม (GPAX สูงไปต่ำ)</option>
+                <option value="creditsCompleted">หน่วยกิตสะสม (มากไปน้อย)</option>
+                <option value="id">รหัสนักศึกษา</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="filter-footer">
+            <span class="results-count-text" id="studentsResultCount">กำลังโหลดข้อมูล...</span>
+            <div class="legend-group">
+              <span class="badge-status badge-eligible"><i class="fa-solid fa-check"></i> ผ่านเกณฑ์</span>
+              <span class="badge-status badge-conditional"><i class="fa-solid fa-clock"></i> รอตรวจสอบ</span>
+              <span class="badge-status badge-ineligible"><i class="fa-solid fa-xmark"></i> ไม่ผ่านเกณฑ์</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Students Table -->
+        <div class="table-container">
+          <table class="v2-table" aria-label="ตารางข้อมูลนักศึกษาและตรวจสอบสิทธิ์">
+            <thead>
+              <tr>
+                <th>รหัสนักศึกษา</th>
+                <th>ชื่อ - นามสกุล</th>
+                <th>สาขาวิชา / หลักสูตร</th>
+                <th>ชั้นปี</th>
+                <th>GPAX</th>
+                <th>หน่วยกิต</th>
+                <th>สถานะคุณสมบัติสหกิจ</th>
+                <th>สถานะแผน</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="studentsTableBody">
+              <!-- Dynamically populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- VIEW 3: CYCLES & TIMELINE SCHEDULE                           -->
+      <!-- ============================================================ -->
+      <section id="view-cycles" class="v2-tab-panel" role="tabpanel" aria-labelledby="tab-cycles" hidden>
+        <!-- Active Cycle Banner Card -->
+        <div class="active-cycle-spotlight" id="activeCycleCard">
+          <!-- Dynamically populated via JS -->
+        </div>
+
+        <!-- Milestones Schedule -->
+        <div class="section-subheading">
+          <h2><i class="fa-solid fa-timeline"></i> กำหนดการและขั้นตอนการปฏิบัติงานสหกิจศึกษา</h2>
+          <p>ลำดับกำหนดการสำคัญตั้งแต่วันเปิดรับสมัคร การยื่นแผน การนิเทศงาน จนถึงเสร็จสิ้นการปฏิบัติงาน</p>
+        </div>
+
+        <div class="milestones-timeline" id="milestonesTimeline">
+          <!-- Dynamically populated via JS -->
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- VIEW 4: CO-OP PLANS MANAGEMENT                               -->
+      <!-- ============================================================ -->
+      <section id="view-plans" class="v2-tab-panel" role="tabpanel" aria-labelledby="tab-plans" hidden>
+        <div class="filter-card">
+          <div class="filter-grid">
+            <div class="filter-item search-grow">
+              <label for="planSearchInput">ค้นหาแผนสหกิจศึกษา</label>
+              <div class="input-icon-group">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="search" id="planSearchInput" placeholder="ค้นหาด้วยชื่อนักศึกษา รหัสแผน สถานประกอบการ หรือหัวข้อโครงการ..." />
+              </div>
+            </div>
+
+            <div class="filter-item">
+              <label for="planStatusFilter">สถานะการพิจารณา</label>
+              <select id="planStatusFilter">
+                <option value="all">ทุกสถานะ</option>
+                <option value="approved">ผ่านการอนุมัติ (Approved)</option>
+                <option value="pending">รอการพิจารณา (Pending)</option>
+                <option value="needs_revision">ส่งกลับแก้ไข (Needs Revision)</option>
+                <option value="in_progress">กำลังปฏิบัติงาน (In Progress)</option>
+                <option value="completed">เสร็จสิ้น (Completed)</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <label for="planCycleFilter">รอบสหกิจ</label>
+              <select id="planCycleFilter">
+                <option value="all">ทุกรอบเวลา</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <label for="planCompanyFilter">สถานประกอบการ</label>
+              <select id="planCompanyFilter">
+                <option value="all">ทุกสถานประกอบการ</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="filter-footer">
+            <span class="results-count-text" id="plansResultCount">กำลังโหลดข้อมูล...</span>
+            <button type="button" class="btn-primary-action btn-sm" id="btnOpenPlanModalFromView">
+              <i class="fa-solid fa-plus"></i> ยื่นแผนสหกิจศึกษาใหม่
+            </button>
+          </div>
+        </div>
+
+        <!-- Plans Cards List -->
+        <div class="plans-list" id="plansList">
+          <!-- Dynamically populated via JS -->
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ============================================================ -->
+  <!-- MODALS                                                       -->
+  <!-- ============================================================ -->
+
+  <!-- Modal 1: Position Detail Modal -->
+  <div class="v2-modal-overlay" id="positionDetailModal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="posModalTitle">
+    <div class="v2-modal-content">
+      <div class="v2-modal-header">
+        <div class="pos-modal-heading-group">
+          <span class="pos-field-tag" id="modalPosField">Software Engineering</span>
+          <h2 id="posModalTitle" class="modal-title">ตำแหน่งงาน</h2>
+          <p id="modalPosCompany" class="modal-company-name">ชื่อบริษัท</p>
+        </div>
+        <button type="button" class="btn-close-modal" data-close="positionDetailModal" aria-label="ปิดหน้าต่าง">&times;</button>
+      </div>
+
+      <div class="v2-modal-body">
+        <div class="detail-section">
+          <h3><i class="fa-solid fa-circle-info"></i> รายละเอียดลักษณะงาน</h3>
+          <p id="modalPosDesc" class="detail-text">-</p>
+        </div>
+
+        <div class="detail-section">
+          <h3><i class="fa-solid fa-bullseye"></i> ขอบเขตโครงงานสหกิจที่มอบหมาย</h3>
+          <p id="modalPosScope" class="detail-text detail-highlight-box">-</p>
+        </div>
+
+        <div class="detail-grid-2">
+          <div>
+            <h3><i class="fa-solid fa-location-dot"></i> สถานที่ปฏิบัติงาน & รูปแบบ</h3>
+            <p id="modalPosLocation">-</p>
+            <p id="modalPosWorkMode" class="meta-tag">-</p>
+          </div>
+          <div>
+            <h3><i class="fa-solid fa-money-bill-wave"></i> ค่าตอบแทน / เบี้ยเลี้ยง</h3>
+            <p id="modalPosStipend">-</p>
+            <p id="modalPosCapacity" class="meta-tag">-</p>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3><i class="fa-solid fa-code"></i> ทักษะที่ต้องการ</h3>
+          <div class="skills-tags-wrap" id="modalPosSkills"></div>
+        </div>
+      </div>
+
+      <div class="v2-modal-footer">
+        <button type="button" class="btn-secondary-action" data-close="positionDetailModal">ปิด</button>
+        <button type="button" class="btn-primary-action" id="btnApplyThisPosition">
+          <i class="fa-solid fa-file-circle-check"></i> เลือกตำแหน่งนี้เพื่อยื่นแผน
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Student Profile & Eligibility Modal -->
+  <div class="v2-modal-overlay" id="studentDetailModal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="studentModalTitle">
+    <div class="v2-modal-content">
+      <div class="v2-modal-header">
+        <div>
+          <span class="v2-pill"><i class="fa-solid fa-id-card"></i> ข้อมูลนักศึกษา</span>
+          <h2 id="studentModalTitle" class="modal-title">นายชื่อ นามสกุล</h2>
+          <p id="studentModalId" class="modal-subtext">รหัส 6609650000</p>
+        </div>
+        <button type="button" class="btn-close-modal" data-close="studentDetailModal" aria-label="ปิดหน้าต่าง">&times;</button>
+      </div>
+
+      <div class="v2-modal-body">
+        <div class="student-status-callout" id="modalStudentEligibilityCallout">
+          <div class="callout-header">
+            <span class="badge-status" id="modalStudentStatusBadge">ผ่านเกณฑ์</span>
+            <span id="modalStudentCurriculum">หลักสูตรปรับปรุง 2566</span>
+          </div>
+          <p id="modalStudentEligibilityReason" class="callout-reason">-</p>
+        </div>
+
+        <div class="detail-grid-3">
+          <div class="metric-mini-box">
+            <span class="mini-label">เกรดเฉลี่ยสะสม</span>
+            <span class="mini-val" id="modalStudentGpax">-</span>
+          </div>
+          <div class="metric-mini-box">
+            <span class="mini-label">หน่วยกิตสะสม</span>
+            <span class="mini-val" id="modalStudentCredits">-</span>
+          </div>
+          <div class="metric-mini-box">
+            <span class="mini-label">ชั้นปีที่ศึกษา</span>
+            <span class="mini-val" id="modalStudentYear">-</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3><i class="fa-solid fa-code"></i> ทักษะความเชี่ยวชาญ</h3>
+          <div class="skills-tags-wrap" id="modalStudentSkills"></div>
+        </div>
+
+        <div class="detail-section">
+          <h3><i class="fa-solid fa-envelope"></i> ข้อมูลการติดต่อ</h3>
+          <p id="modalStudentContact">-</p>
+        </div>
+
+        <div class="detail-section" id="modalStudentPlanSection">
+          <h3><i class="fa-solid fa-file-signature"></i> แผนสหกิจศึกษาในระบบ</h3>
+          <div id="modalStudentPlanDetails" class="plan-mini-card">
+            <!-- Dynamically populated via JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="v2-modal-footer">
+        <button type="button" class="btn-secondary-action" data-close="studentDetailModal">ปิด</button>
+        <button type="button" class="btn-primary-action" id="btnStudentSubmitPlan">
+          <i class="fa-solid fa-paper-plane"></i> ยื่นแผนสหกิจศึกษาให้นักศึกษานี้
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Plan Detail & Review Modal -->
+  <div class="v2-modal-overlay" id="planDetailModal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="planModalTitle">
+    <div class="v2-modal-content">
+      <div class="v2-modal-header">
+        <div>
+          <span class="v2-pill" id="modalPlanCycleTag">รอบ 2/2567</span>
+          <h2 id="planModalTitle" class="modal-title">รหัสแผนสหกิจศึกษา</h2>
+          <p id="modalPlanStudent" class="modal-subtext">นักศึกษา</p>
+        </div>
+        <button type="button" class="btn-close-modal" data-close="planDetailModal" aria-label="ปิดหน้าต่าง">&times;</button>
+      </div>
+
+      <div class="v2-modal-body">
+        <div class="plan-status-row">
+          <span class="badge-status" id="modalPlanStatusBadge">ผ่านการอนุมัติ</span>
+          <span class="text-muted" id="modalPlanDate">ยื่นเมื่อ 10 ต.ค. 2567</span>
+        </div>
+
+        <div class="detail-section">
+          <h3><i class="fa-solid fa-lightbulb"></i> หัวข้อโครงงานสหกิจศึกษาที่เสนอ</h3>
+          <p id="modalPlanTopic" class="detail-text detail-highlight-box">-</p>
+        </div>
+
+        <div class="detail-section">
+          <h3><i class="fa-solid fa-list-check"></i> วัตถุประสงค์และขอบเขตงาน</h3>
+          <pre id="modalPlanObjective" class="detail-pre"></pre>
+        </div>
+
+        <div class="detail-grid-2">
+          <div>
+            <h3><i class="fa-solid fa-building"></i> สถานประกอบการ & ตำแหน่ง</h3>
+            <p><strong id="modalPlanCompany">-</strong></p>
+            <p id="modalPlanPosition" class="text-muted">-</p>
+          </div>
+          <div>
+            <h3><i class="fa-solid fa-user-tie"></i> บุคลากรที่รับผิดชอบ</h3>
+            <p><span class="text-muted">อาจารย์ที่ปรึกษา:</span> <span id="modalPlanAdvisor">-</span></p>
+            <p><span class="text-muted">พี่เลี้ยงสถานประกอบการ:</span> <span id="modalPlanMentor">-</span></p>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3><i class="fa-solid fa-comment-dots"></i> ความเห็นการตรวจสอบ / ผลการพิจารณา</h3>
+          <p id="modalPlanReviewNotes" class="detail-review-box">-</p>
+        </div>
+
+        <!-- Faculty Committee Review Actions (Dynamic Simulation) -->
+        <div class="committee-review-controls">
+          <p class="section-kicker">การดำเนินการโดยอาจารย์/คณะกรรมการสหกิจ (Dynamic Status Update):</p>
+          <div class="review-buttons-group">
+            <button type="button" class="btn-review btn-approve" id="btnReviewApprove">
+              <i class="fa-solid fa-circle-check"></i> อนุมัติแผน (Approve)
+            </button>
+            <button type="button" class="btn-review btn-revision" id="btnReviewRevision">
+              <i class="fa-solid fa-circle-exclamation"></i> ส่งกลับแก้ไข (Request Revision)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="v2-modal-footer">
+        <button type="button" class="btn-secondary-action" data-close="planDetailModal">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Submit New Co-op Plan Form Modal -->
+  <div class="v2-modal-overlay" id="newPlanModal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="newPlanModalTitle">
+    <div class="v2-modal-content modal-form">
+      <div class="v2-modal-header">
+        <div>
+          <span class="v2-pill"><i class="fa-solid fa-file-pen"></i> แบบฟอร์มออนไลน์ V2</span>
+          <h2 id="newPlanModalTitle" class="modal-title">ยื่นเสนอแผนสหกิจศึกษา</h2>
+          <p class="modal-subtext">บันทึกข้อมูลแผนสหกิจศึกษาเข้าสู่แหล่งข้อมูลแบบพลวัตอย่างเป็นระบบ</p>
+        </div>
+        <button type="button" class="btn-close-modal" data-close="newPlanModal" aria-label="ปิดหน้าต่าง">&times;</button>
+      </div>
+
+      <form id="newPlanForm" class="v2-modal-body form-body">
+        <div class="form-group">
+          <label for="formStudentSelect">1. เลือกนักศึกษาผู้ยื่นแผน <span class="required">*</span></label>
+          <select id="formStudentSelect" required>
+            <option value="">-- กรุณาเลือกนักศึกษา (เฉพาะผู้ผ่านเกณฑ์หรือมีเงื่อนไข) --</option>
+          </select>
+          <small class="form-hint" id="formStudentHint">ระบบจะตรวจสอบสิทธิ์และสถานะการยื่นแผนซ้ำโดยอัตโนมัติ</small>
+        </div>
+
+        <div class="form-group">
+          <label for="formCycleSelect">2. รอบสหกิจศึกษา <span class="required">*</span></label>
+          <select id="formCycleSelect" required>
+            <!-- Dynamically populated via JS -->
+          </select>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="formCompanySelect">3. สถานประกอบการเป้าหมาย <span class="required">*</span></label>
+            <select id="formCompanySelect" required>
+              <option value="">-- เลือกสถานประกอบการ --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="formPositionSelect">4. ตำแหน่งงาน / โครงการ <span class="required">*</span></label>
+            <select id="formPositionSelect" required disabled>
+              <option value="">-- กรุณาเลือกสถานประกอบการก่อน --</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="formProposedTopic">5. หัวข้อโครงงานสหกิจศึกษาที่เสนอ (Proposed Project Topic) <span class="required">*</span></label>
+          <input type="text" id="formProposedTopic" required placeholder="เช่น การพัฒนาระบบ Real-time Streaming Analytics ด้วย Apache Kafka และ Node.js" />
+        </div>
+
+        <div class="form-group">
+          <label for="formObjective">6. วัตถุประสงค์และขอบเขตงานโครงงาน <span class="required">*</span></label>
+          <textarea id="formObjective" rows="4" required placeholder="1. เพื่อศึกษาและออกแบบสถาปัตยกรรม...&#10;2. เพื่อพัฒนาระบบ...&#10;3. เพื่อวัดผลประสิทธิภาพ..."></textarea>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="formAdvisor">อาจารย์ที่ปรึกษาสหกิจ (ถ้ามี)</label>
+            <input type="text" id="formAdvisor" placeholder="เช่น รศ.ดร.สมชาย ทรงคุณ (เว้นว่างได้)" />
+          </div>
+          <div class="form-group">
+            <label for="formMentor">พนักงานพี่เลี้ยง ณ สถานประกอบการ (ถ้ามี)</label>
+            <input type="text" id="formMentor" placeholder="เช่น นายธนาธิป เจริญดี (Senior Tech Lead)" />
+          </div>
+        </div>
+
+        <div class="form-alert alert-error" id="formErrorMessage" hidden></div>
+        <div class="form-alert alert-success" id="formSuccessMessage" hidden></div>
+
+        <div class="v2-modal-footer">
+          <button type="button" class="btn-secondary-action" data-close="newPlanModal">ยกเลิก</button>
+          <button type="submit" class="btn-primary-action" id="btnSubmitPlanForm">
+            <i class="fa-solid fa-paper-plane"></i> ยืนยันการยื่นแผนสหกิจศึกษา
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="v2Toast" class="v2-toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div>
+        <div class="footer-logo">
+          <img src="resources/images/logo.png" alt="CO-ED" />
+        </div>
+        <p class="footer-tagline">ระบบวางแผนและบริหารจัดการสหกิจศึกษา สาขาวิชาวิทยาการคอมพิวเตอร์ มหาวิทยาลัยธรรมศาสตร์</p>
+      </div>
+
+      <div>
+        <h4 class="footer-heading">ระบบข้อมูล</h4>
+        <div class="footer-links">
+          <a href="index.html">หน้าแรก (V1)</a>
+          <a href="requirements.html">ข้อกำหนดสหกิจศึกษา</a>
+          <a href="company-directory.html">ทำเนียบสถานประกอบการ</a>
+          <a href="dynamic-data.html">ระบบข้อมูลและแผนสหกิจ (V2)</a>
+          <a href="faq.html">คำถามที่พบบ่อย</a>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="footer-heading">แหล่งข้อมูลอ้างอิง</h4>
+        <div class="footer-links">
+          <a href="https://cs.sci.tu.ac.th/" target="_blank" rel="noopener">เว็บไซต์สาขาวิชาวิทยาการคอมพิวเตอร์</a>
+          <a href="https://web2.reg.tu.ac.th/" target="_blank" rel="noopener">สำนักทะเบียน มหาวิทยาลัยธรรมศาสตร์</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="container footer-bottom">
+      <p>© 2026 CO-ED. Version 2 - Dynamic Data Architecture. CS361 Software Architecture Project.</p>
+    </div>
+  </footer>
+
+  <!-- Script for V2 Dynamic Data Logic -->
+  <script src="dynamic-data.js?v=2.0.1" defer></script>
+</body>
+</html>

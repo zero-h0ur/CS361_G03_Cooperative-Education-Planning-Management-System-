@@ -1,13 +1,16 @@
-# CO-ED: Cooperative Education Planning and Information System (Version 1)
+# CO-ED: Cooperative Education Planning and Management System (Version 2 - Dynamic Data)
 
-CO-ED เป็นเว็บไซต์รวบรวมข้อมูลเบื้องต้นสำหรับนักศึกษาชั้นปีที่ 3 สาขาวิชาวิทยาการคอมพิวเตอร์ มหาวิทยาลัยธรรมศาสตร์ ที่กำลังเตรียมตัวเข้าร่วมสหกิจศึกษา โดยรวมข้อกำหนด ขั้นตอน กำหนดการ รายชื่อสถานประกอบการ และคำถามที่พบบ่อยไว้ในจุดเดียว
+CO-ED เป็นระบบสำหรับวางแผนและจัดการข้อมูลสหกิจศึกษาสำหรับนักศึกษา คณาจารย์ และผู้รับผิดชอบ สาขาวิชาวิทยาการคอมพิวเตอร์ มหาวิทยาลัยธรรมศาสตร์ 
 
+- **Version 1 (Information):** ศูนย์รวมข้อมูลพื้นฐาน ขั้นตอน คุณสมบัติ กำหนดการ และทำเนียบสถานประกอบการเบื้องต้น
+- **Version 2 (Dynamic Data):** จัดเก็บและเรียกใช้ข้อมูลนักศึกษา สถานประกอบการ ตำแหน่ง/โครงการ รอบเวลา และแผนสหกิจศึกษาจากแหล่งข้อมูลที่จัดการได้อย่างเป็นระบบ พร้อมรองรับการค้นหา กรอง เรียกดูตามเงื่อนไข และยื่นเสนอแผนสหกิจศึกษาออนไลน์
+- รายละเอียดสถาปัตยกรรม V2: ดูได้ที่ [docs/v2-dynamic-data.md](docs/v2-dynamic-data.md)
 - เว็บไซต์ที่ Deploy แล้ว: [CO-ED บน AWS Amplify](https://main.d1d9qrqnsi5nl6.amplifyapp.com/)
 - GitHub Repository: [zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-)
 
 ## Problem and Primary User
 
-ข้อมูลที่ใช้เตรียมสหกิจศึกษาอยู่ในหลายแหล่ง เช่น ประกาศ เอกสาร และช่องทางสื่อสารของสาขาวิชา ทำให้นักศึกษาตรวจสอบข้อมูลและขั้นตอนที่ต้องดำเนินการได้ยาก ผู้ใช้หลักของ V1 จึงเป็นนักศึกษาชั้นปีที่ 3 ที่กำลังเตรียมสมัครเข้าแผนสหกิจศึกษาและต้องการดูข้อมูลสำคัญจากหน้าเว็บเดียว
+ข้อมูลที่ใช้เตรียมสหกิจศึกษาอยู่ในหลายแหล่ง เช่น ประกาศ เอกสาร และช่องทางสื่อสารของสาขาวิชา ทำให้นักศึกษาตรวจสอบข้อมูลและขั้นตอนที่ต้องดำเนินการได้ยาก ผู้ใช้หลักของระบบจึงเป็นนักศึกษาชั้นปีที่ 3-4 ที่กำลังเตรียมสมัครเข้าแผนสหกิจศึกษา รวมถึงอาจารย์และเจ้าหน้าที่ผู้ดูแลโครงการที่ต้องการระบบจัดเก็บ ค้นหา กรอง และตรวจสอบสถานะความพร้อมได้อย่างเป็นระบบ
 
 ## Project Vision
 
@@ -22,30 +25,25 @@ CO-ED มีเป้าหมายเป็นระบบกลางสำ�
 - ค้นหา กรอง สรุป และรายงานข้อมูลเพื่อสนับสนุนการวางแผนในระดับหลักสูตรหรือสาขาวิชา
 - รองรับการนำเข้า แลกเปลี่ยน หรือส่งออกข้อมูลกับแหล่งข้อมูลอื่น โดยคำนึงถึงความถูกต้อง สิทธิ์ ความเป็นส่วนตัว และการตรวจสอบย้อนหลัง
 
-ความสามารถเหล่านี้เป็น Vision ระยะยาวตามการพัฒนาตั้งแต่ V1 ถึง V7 ส่วน V1 ปัจจุบันรับผิดชอบเฉพาะการเผยแพร่ข้อมูลพื้นฐานที่จำเป็นต่อการเตรียมสหกิจศึกษา และยังไม่มี Dynamic Data, Authentication, Workflow หรือการติดตามสถานะรายบุคคล
+## Implemented Features (V1 & V2)
 
-## Smallest Useful V1
+| Feature | Version | รายละเอียด | ไฟล์หลัก |
+| --- | --- | --- | --- |
+| Landing page | V1 | แสดงภาพรวม ประกาศ กำหนดการ และตัวอย่างสถานประกอบการ | `index.html` |
+| Requirements | V1 | แสดงคุณสมบัติ ข้อกำหนด ขั้นตอน เอกสาร และแนวทางเตรียมตัว | `requirements.html` |
+| Company directory | V1 | แสดง ค้นหา และโหลดรายชื่อสถานประกอบการเพิ่มเติม | `company-directory.html`, `company-directory.js` |
+| FAQ | V1 | แสดงและค้นหาคำถามที่พบบ่อย พร้อมล้างคำค้นหา | `faq.html` |
+| **Dynamic Data Portal** | **V2** | หน้าจอรวมศูนย์สืบค้น กรอง และจัดการข้อมูล 5 กลุ่มแบบพลวัต | `dynamic-data.html`, `dynamic-data.js` |
+| **Systematic Data Store** | **V2** | แหล่งจัดเก็บข้อมูลนักศึกษา สถานประกอบการ ตำแหน่งงาน รอบเวลา และแผนสหกิจ | `data/` (`students.js`, `companies.js`, `positions.js`, `cycles.js`, `plans.js`) |
+| **Dynamic Service Layer** | **V2** | บริการสืบค้น Multi-facet, กรองตามสิทธิ์, เรียงลำดับ, แบ่งหน้า และตรวจความถูกต้อง | `services/dynamic-data-service.js` |
+| **Local Compute REST API** | **V2** | Node.js HTTP Server ให้บริการ API `/api/v2/*` และ static hosting | `server.js` |
+| **Online Plan Submission** | **V2** | ยื่นเสนอแผนสหกิจออนไลน์พร้อม Validation ตรวจสอบสิทธิ์อัตโนมัติ | `dynamic-data.html`, `server.js` |
+| **Review & Status Workflow** | **V2** | จำลองการพิจารณาอนุมัติ/ส่งกลับแก้ไขแผนโดยคณะกรรมการ (Approve / Needs Revision) | `dynamic-data.html`, `server.js` |
+| **Dashboard Metrics** | **V2** | แดชบอร์ดสรุปสถิติอัตราความพร้อม โควตารับ แผนที่ยื่น และนับถอยหลังรอบปัจจุบัน | `dynamic-data.html`, `services/dynamic-data-service.js` |
+| Responsive layout | V1 & V2 | รองรับการใช้งานบน Desktop, Tablet และ Mobile ทุกหน้าจอ | `style.css` |
+| Automated Testing | V1 & V2 | ชุดทดสอบอัตโนมัติ 29 รายการ ครอบคลุม Service, Search, Validation และ REST API | `test/` |
 
-V1 ช่วยให้ผู้ใช้ดำเนินตาม Core User Path ต่อไปนี้ได้:
-
-1. เปิดหน้าแรกเพื่อดูภาพรวมและข้อมูลสำคัญ
-2. ตรวจสอบคุณสมบัติและข้อกำหนดของสหกิจศึกษา
-3. อ่านภาพรวมขั้นตอนและเอกสารที่ต้องเตรียม
-4. เรียกดูและค้นหารายชื่อสถานประกอบการ
-5. ค้นหาคำถามที่พบบ่อยเกี่ยวกับการสมัครและการเตรียมตัว
-
-## Implemented Features
-
-| Feature | รายละเอียด | ไฟล์หลัก |
-| --- | --- | --- |
-| Landing page | แสดงภาพรวม ประกาศ กำหนดการ และตัวอย่างสถานประกอบการ | `index.html` |
-| Requirements | แสดงคุณสมบัติ ข้อกำหนด ขั้นตอน เอกสาร และแนวทางเตรียมตัว | `requirements.html` |
-| Company directory | แสดง ค้นหา และโหลดรายชื่อสถานประกอบการเพิ่มเติม | `company-directory.html`, `company-directory.js` |
-| FAQ | แสดงและค้นหาคำถามที่พบบ่อย พร้อมล้างคำค้นหา | `faq.html` |
-| Responsive layout | รองรับการใช้งานบน Desktop, Tablet และ Mobile | `style.css` |
-| Deployment | Deploy จาก Branch `main` ผ่าน AWS Amplify Hosting | AWS Amplify, GitHub |
-
-## V1 System Boundary
+## V1 & V2 System Boundary
 
 ### Inside V1
 

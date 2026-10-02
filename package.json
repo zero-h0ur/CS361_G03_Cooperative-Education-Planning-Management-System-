@@ -1,8 +1,8 @@
 {
-  "name": "co-ed-compute-prototype",
-  "version": "1.0.0",
+  "name": "co-ed-system",
+  "version": "2.0.0",
   "private": true,
-  "description": "Local compute-layer prototype for the CO-ED company directory",
+  "description": "CO-ED: Cooperative Education Planning and Management System (Version 2 - Dynamic Data)",
   "type": "module",
   "scripts": {
     "start": "node server.js",
