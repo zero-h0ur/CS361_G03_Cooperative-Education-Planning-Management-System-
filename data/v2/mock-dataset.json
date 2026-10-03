@@ -1,8 +1,8 @@
 {
   "dataset_metadata": {
     "dataset_id": "co-ed-v2-mock-seed",
-    "version": "0.2.0-provisional",
-    "schema_reference": "GitHub Issue #28 minimum data model, updated 2026-10-03",
+    "version": "0.2.0",
+    "schema_reference": "GitHub Issue #28 accepted minimum data model",
     "source": "CO-ED V2 mock seed",
     "updated_at": "2026-10-03T00:00:00Z",
     "data_status": "mock",

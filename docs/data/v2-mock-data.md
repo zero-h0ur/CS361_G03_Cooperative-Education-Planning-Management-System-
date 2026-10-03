@@ -2,7 +2,7 @@
 
 เอกสารนี้อธิบายชุดข้อมูลมาตรฐานสำหรับ Development, Test และ Demo ของ CO-ED V2 ตาม Issue [#29](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/29) โดยปรับโครงสร้างให้ตรงกับ Minimum data model ล่าสุดใน Issue [#28](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/28)
 
-> สถานะ: Provisional — ชุดข้อมูลนี้ใช้ได้ระหว่างพัฒนา แต่ต้องตรวจเทียบกับ #28 อีกครั้งเมื่อทีมอนุมัติ Data model ฉบับสุดท้าย
+> สถานะ: Accepted — โครงสร้างตรงกับ Data model ที่ได้รับการยืนยันใน #28 และผ่าน Human data-safety review แล้วเมื่อวันที่ 2026-10-04
 
 ## Files
 
@@ -97,7 +97,7 @@ Validator ตรวจอย่างน้อย:
 
 ## Decisions After Review
 
-รายการต่อไปนี้เป็นข้อสรุปชั่วคราวจาก #28 เวอร์ชันล่าสุด และยังต้องได้รับการยืนยันจาก Reviewer ก่อน Merge:
+รายการต่อไปนี้เป็นข้อสรุปที่ได้รับการยืนยันจาก #28 และการ Review Dataset:
 
 - Canonical format: JSON ที่ไม่ผูกกับฐานข้อมูลชนิดใด
 - Entity counts: 12 Companies, 18 Positions, 3 Rounds, 8 Document metadata, 5 Students และ 7 Plans
@@ -107,12 +107,12 @@ Validator ตรวจอย่างน้อย:
 - Public/Private: มี Private fixture สำหรับทดสอบการไม่รั่วไหล และ Student/Plan เป็น Private ทั้งหมด
 - Load/Reset: ใช้ไฟล์เดิมเป็น Input แบบ Idempotent; Seed loader จริงอยู่ใน Persistence issue
 - Validation: ตรวจ Schema, ID, Relationship, Privacy และ Access-pattern coverage
-- Data safety: Automated validation ผ่านแล้ว ส่วน Human data-safety review ยังรอ Reviewer
+- Data safety: Automated validation และ Human data-safety review ผ่านแล้ว ไม่พบข้อมูลส่วนบุคคลจริงหรือ Credential
 - Deferred: Openings, Plan choices, Recruitment fields และ Plan workflow ตาม #28
 
-## Before Merge
+## Review Result
 
-- ตรวจว่า #28 ฉบับที่ทีมอนุมัติยังใช้ 6 entities และ fields ชุดนี้
-- หาก #28 เปลี่ยน Identifier, Relationship หรือ Constraint ให้ปรับทุกไฟล์ในหัวข้อ Files
-- รัน Validator และ Test suite ให้ผ่าน
-- ตรวจ Diff ว่าไม่มีข้อมูลจริงหรือการแก้ไขหน้าเว็บ V1 ที่ไม่เกี่ยวข้อง
+- #28 ได้รับการ Accept และ Dataset ตรงกับ 6 entities, fields, identifiers และ relationships ที่กำหนด
+- Human data-safety review ผ่าน ไม่พบข้อมูลส่วนบุคคลจริงหรือ Credential
+- Validator และ Test suite ต้องผ่านก่อน Merge
+- Diff ต้องไม่มีข้อมูลจริงหรือการแก้ไขหน้าเว็บ V1 ที่ไม่เกี่ยวข้อง
