@@ -10,7 +10,6 @@ export const DEFAULT_DATASET_PATH = path.resolve(
 
 const UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const ACADEMIC_YEAR_PATTERN = /^\d{4}$/;
 const ALLOWED_VISIBILITY = new Set(["public", "private"]);
 const ALLOWED_DATA_STATUS = new Set(["mock", "to_validate", "verified"]);
 const ENTITY_NAMES = [
@@ -235,8 +234,8 @@ function validateEntityRules(dataset, errors) {
   });
 
   dataset.rounds.forEach((round, index) => {
-    if (!ACADEMIC_YEAR_PATTERN.test(round.academic_year ?? "")) {
-      errors.push(`rounds[${index}].academic_year must contain four digits`);
+    if (!Number.isInteger(round.academic_year)) {
+      errors.push(`rounds[${index}].academic_year must be an integer`);
     }
   });
 
@@ -247,10 +246,10 @@ function validateEntityRules(dataset, errors) {
     if (
       document.academic_year !== null &&
       document.academic_year !== undefined &&
-      !ACADEMIC_YEAR_PATTERN.test(document.academic_year)
+      !Number.isInteger(document.academic_year)
     ) {
       errors.push(
-        `document_metadata[${index}].academic_year must contain four digits or be null`,
+        `document_metadata[${index}].academic_year must be an integer or null`,
       );
     }
   });

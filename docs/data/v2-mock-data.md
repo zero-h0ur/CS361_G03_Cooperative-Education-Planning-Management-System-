@@ -34,7 +34,7 @@
 - Round 1:N Plan แบบ Optional ผ่าน plans.round_id
 - Public Position ต้องอ้างถึง Public Company เท่านั้น
 
-ทุก entity มี source, updated_at, visibility และ data_status ตาม Data governance ใน Issues #26 และ #28 โดย Canonical dataset นี้ใช้ data_status เป็น mock ทุก record
+ทุก entity มี source, updated_at, visibility และ data_status ตาม Data governance ใน Issues #26 และ #28 โดย Canonical dataset นี้ใช้ data_status เป็น mock ทุก record ส่วน academic_year ใช้ Integer เมื่อ Entity นั้นต้องมีข้อมูลปีการศึกษา
 
 Issue #28 เวอร์ชันล่าสุดใช้ data_status เป็นตัวระบุสถานะข้อมูล จึงไม่เพิ่ม is_mock ซ้ำในแต่ละ record เพื่อลด field ที่ไม่ได้อยู่ใน Minimum model
 

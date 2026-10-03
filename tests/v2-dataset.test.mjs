@@ -62,6 +62,19 @@ test("malformed UUIDs are rejected", () => {
   assertHasError(validateDataset(dataset), "must be a UUID v4");
 });
 
+test("academic_year strings are rejected", () => {
+  const dataset = freshDataset();
+  dataset.rounds[0].academic_year = "2569";
+  dataset.document_metadata[0].academic_year = "2569";
+
+  const errors = validateDataset(dataset);
+  assertHasError(errors, "rounds[0].academic_year must be an integer");
+  assertHasError(
+    errors,
+    "document_metadata[0].academic_year must be an integer or null",
+  );
+});
+
 test("a position must reference an existing company", () => {
   const dataset = freshDataset();
   dataset.positions[0].company_id =
