@@ -1,0 +1,580 @@
+{
+  "dataset_metadata": {
+    "dataset_id": "co-ed-v2-mock-seed",
+    "version": "0.2.0-provisional",
+    "schema_reference": "GitHub Issue #28 minimum data model, updated 2026-10-03",
+    "source": "CO-ED V2 mock seed",
+    "updated_at": "2026-10-03T00:00:00Z",
+    "data_status": "mock",
+    "notice": "ข้อมูลทั้งหมดเป็นข้อมูลสมมติสำหรับ Development, Test และ Demo เท่านั้น ไม่ใช่ข้อมูลการเปิดรับจริง",
+    "test_page_size": 10,
+    "expected_counts": {
+      "companies": 12,
+      "positions": 18,
+      "rounds": 3,
+      "document_metadata": 8,
+      "students": 5,
+      "plans": 7
+    },
+    "scenario_expectations": {
+      "search_terms": [
+        { "query": "tech", "minimum_matches": 2 },
+        { "query": "นักวิเคราะห์", "minimum_matches": 2 },
+        { "query": "ไม่พบข้อมูลตัวอย่างนี้", "exact_matches": 0 }
+      ],
+      "locations": ["กรุงเทพฯ", "ปทุมธานี", "นนทบุรี", "ชลบุรี", "เชียงใหม่", "ระยอง"]
+    }
+  },
+  "companies": [
+    {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "name": "Example Tech Co.",
+      "description": "บริษัทสมมติด้านการพัฒนาซอฟต์แวร์และระบบคลาวด์",
+      "website_url": "https://company-001.example",
+      "location": "กรุงเทพฯ",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000002",
+      "name": "Mock Analytics Lab",
+      "description": "องค์กรสมมติด้านข้อมูลและการวิเคราะห์",
+      "website_url": "https://company-002.example",
+      "location": "ปทุมธานี",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000003",
+      "name": "Demo Cloud Solutions",
+      "description": "บริษัทสมมติด้าน Cloud Platform และ DevOps",
+      "website_url": "https://company-003.example",
+      "location": "นนทบุรี",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000004",
+      "name": "Example Retail Systems",
+      "description": "บริษัทสมมติด้านระบบสารสนเทศสำหรับธุรกิจค้าปลีก",
+      "website_url": "https://company-004.example",
+      "location": "กรุงเทพฯ",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000005",
+      "name": "Mock Green Energy Lab",
+      "description": "องค์กรสมมติด้านข้อมูลพลังงานและความยั่งยืน",
+      "website_url": "https://company-005.example",
+      "location": "ระยอง",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000006",
+      "name": "Demo Financial Technology",
+      "description": "บริษัทสมมติด้านผลิตภัณฑ์ดิจิทัลและเทคโนโลยีการเงิน",
+      "website_url": "https://company-006.example",
+      "location": "กรุงเทพฯ",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000007",
+      "name": "Example Robotics Studio",
+      "description": "สตูดิโอสมมติด้านระบบอัตโนมัติและหุ่นยนต์",
+      "website_url": "https://company-007.example",
+      "location": "ชลบุรี",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000008",
+      "name": "Mock Cybersecurity Center",
+      "description": "ศูนย์สมมติสำหรับฝึกทักษะด้านความมั่นคงปลอดภัย",
+      "website_url": "https://company-008.example",
+      "location": "ปทุมธานี",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000009",
+      "name": "Demo Design Collective",
+      "description": "ทีมสมมติด้านการออกแบบประสบการณ์และการวิจัยผู้ใช้",
+      "website_url": "https://company-009.example",
+      "location": "เชียงใหม่",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000010",
+      "name": "Example Logistics Labs",
+      "description": "บริษัทสมมติด้านระบบขนส่งและการเพิ่มประสิทธิภาพ",
+      "website_url": "https://company-010.example",
+      "location": "ชลบุรี",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000011",
+      "name": "Mock Health Informatics",
+      "description": "องค์กรสมมติด้านระบบข้อมูลสุขภาพที่ไม่ใช้ข้อมูลผู้ป่วยจริง",
+      "website_url": "https://company-011.example",
+      "location": "กรุงเทพฯ",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000012",
+      "name": "Demo Internal Innovation Hub",
+      "description": "ข้อมูลสมมติแบบ Private สำหรับทดสอบการกรอง Public response",
+      "website_url": null,
+      "location": "นนทบุรี",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    }
+  ],
+  "positions": [
+    {
+      "id": "20000000-0000-4000-8000-000000000001",
+      "company_id": "10000000-0000-4000-8000-000000000001",
+      "title": "Software Engineer Intern",
+      "description": "พัฒนาฟีเจอร์ตัวอย่างสำหรับเว็บแอปพลิเคชัน",
+      "location": "กรุงเทพฯ",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000002",
+      "company_id": "10000000-0000-4000-8000-000000000001",
+      "title": "Technical Support Intern",
+      "description": "ช่วยวิเคราะห์เหตุขัดข้องของระบบตัวอย่าง",
+      "location": "กรุงเทพฯ",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000003",
+      "company_id": "10000000-0000-4000-8000-000000000002",
+      "title": "นักวิเคราะห์ข้อมูล",
+      "description": "วิเคราะห์ชุดข้อมูลสมมติเพื่อสร้างรายงาน",
+      "location": "ปทุมธานี",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000004",
+      "company_id": "10000000-0000-4000-8000-000000000002",
+      "title": "Data Quality Intern",
+      "description": "ตรวจคุณภาพและความสอดคล้องของข้อมูลตัวอย่าง",
+      "location": "ปทุมธานี",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000005",
+      "company_id": "10000000-0000-4000-8000-000000000003",
+      "title": "DevOps Intern",
+      "description": "สร้าง pipeline ตัวอย่างและตรวจสอบระบบทดสอบ",
+      "location": "นนทบุรี",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000006",
+      "company_id": "10000000-0000-4000-8000-000000000003",
+      "title": "Cloud Platform Intern",
+      "description": "ดูแลบริการคลาวด์ในสภาพแวดล้อมจำลอง",
+      "location": "นนทบุรี",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000007",
+      "company_id": "10000000-0000-4000-8000-000000000004",
+      "title": "นักวิเคราะห์ระบบธุรกิจ",
+      "description": "วิเคราะห์ความต้องการของระบบค้าปลีกจำลอง",
+      "location": "กรุงเทพฯ",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000008",
+      "company_id": "10000000-0000-4000-8000-000000000004",
+      "title": "Software Tester",
+      "description": "ออกแบบ test case สำหรับระบบตัวอย่าง",
+      "location": "กรุงเทพฯ",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000009",
+      "company_id": "10000000-0000-4000-8000-000000000005",
+      "title": "Energy Data Intern",
+      "description": "วิเคราะห์ข้อมูลพลังงานสังเคราะห์เพื่อหาแนวโน้ม",
+      "location": "ระยอง",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000010",
+      "company_id": "10000000-0000-4000-8000-000000000005",
+      "title": "IoT Developer Intern",
+      "description": "พัฒนาต้นแบบระบบรับข้อมูลจากอุปกรณ์จำลอง",
+      "location": "ระยอง",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000011",
+      "company_id": "10000000-0000-4000-8000-000000000006",
+      "title": "Mobile Developer Intern",
+      "description": "พัฒนาแอปต้นแบบโดยไม่เชื่อมข้อมูลลูกค้าจริง",
+      "location": "กรุงเทพฯ",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000012",
+      "company_id": "10000000-0000-4000-8000-000000000006",
+      "title": "UX Research Intern",
+      "description": "วิจัยประสบการณ์ผู้ใช้จาก persona สมมติ",
+      "location": "กรุงเทพฯ",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000013",
+      "company_id": "10000000-0000-4000-8000-000000000007",
+      "title": "Robotics Software Intern",
+      "description": "พัฒนาซอฟต์แวร์ควบคุมหุ่นยนต์ต้นแบบ",
+      "location": "ชลบุรี",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000014",
+      "company_id": "10000000-0000-4000-8000-000000000008",
+      "title": "Cybersecurity Intern",
+      "description": "ทดสอบความปลอดภัยในห้องปฏิบัติการจำลอง",
+      "location": "ปทุมธานี",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000015",
+      "company_id": "10000000-0000-4000-8000-000000000009",
+      "title": "UX/UI Designer Intern",
+      "description": "ออกแบบหน้าจอและทดสอบกับ persona สมมติ",
+      "location": "เชียงใหม่",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000016",
+      "company_id": "10000000-0000-4000-8000-000000000010",
+      "title": "Logistics Optimization Intern",
+      "description": "ทดลองปรับเส้นทางจากข้อมูลขนส่งสมมติ",
+      "location": "ชลบุรี",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000017",
+      "company_id": "10000000-0000-4000-8000-000000000011",
+      "title": "Health Data Engineering Intern",
+      "description": "จัดเตรียมข้อมูลสุขภาพสังเคราะห์สำหรับทดสอบระบบ",
+      "location": "กรุงเทพฯ",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000018",
+      "company_id": "10000000-0000-4000-8000-000000000012",
+      "title": "Internal Prototype Intern",
+      "description": "ตำแหน่ง Private สำหรับทดสอบการจำกัดสิทธิ์",
+      "location": "นนทบุรี",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    }
+  ],
+  "rounds": [
+    {
+      "id": "30000000-0000-4000-8000-000000000001",
+      "name": "รอบเตรียมความพร้อม 1/2569",
+      "academic_year": "2569",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000002",
+      "name": "รอบเตรียมความพร้อม 2/2569",
+      "academic_year": "2569",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000003",
+      "name": "รอบทดสอบภายใน 1/2570",
+      "academic_year": "2570",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    }
+  ],
+  "document_metadata": [
+    {
+      "id": "60000000-0000-4000-8000-000000000001",
+      "title": "คู่มือสหกิจศึกษาตัวอย่าง 2569",
+      "public_url": "https://documents.example/coop-guide-2569.pdf",
+      "academic_year": "2569",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "60000000-0000-4000-8000-000000000002",
+      "title": "แบบฟอร์มสมัครตัวอย่าง",
+      "public_url": "https://documents.example/application-form.pdf",
+      "academic_year": "2569",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "60000000-0000-4000-8000-000000000003",
+      "title": "แบบฟอร์มแผนการปฏิบัติงานตัวอย่าง",
+      "public_url": "https://documents.example/work-plan-form.pdf",
+      "academic_year": "2569",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "60000000-0000-4000-8000-000000000004",
+      "title": "รายการเอกสารประกอบตัวอย่าง",
+      "public_url": "https://documents.example/checklist.pdf",
+      "academic_year": "2569",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "60000000-0000-4000-8000-000000000005",
+      "title": "แนวทางการเตรียมตัวอย่าง",
+      "public_url": "https://documents.example/preparation-guide.pdf",
+      "academic_year": null,
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "60000000-0000-4000-8000-000000000006",
+      "title": "คำถามที่พบบ่อยฉบับตัวอย่าง",
+      "public_url": "https://documents.example/faq.pdf",
+      "academic_year": "2569",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "60000000-0000-4000-8000-000000000007",
+      "title": "เอกสารทดสอบสิทธิ์ภายใน",
+      "public_url": "https://documents.example/internal-access-test.pdf",
+      "academic_year": "2569",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    },
+    {
+      "id": "60000000-0000-4000-8000-000000000008",
+      "title": "ประกาศตัวอย่างปีการศึกษา 2570",
+      "public_url": "https://documents.example/announcement-2570.pdf",
+      "academic_year": "2570",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    }
+  ],
+  "students": [
+    {
+      "id": "40000000-0000-4000-8000-000000000001",
+      "anonymous_ref": "student-demo-a1",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000002",
+      "anonymous_ref": "student-demo-b2",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000003",
+      "anonymous_ref": "student-demo-c3",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000004",
+      "anonymous_ref": "student-demo-d4",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000005",
+      "anonymous_ref": "student-demo-e5",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    }
+  ],
+  "plans": [
+    {
+      "id": "50000000-0000-4000-8000-000000000001",
+      "student_id": "40000000-0000-4000-8000-000000000001",
+      "round_id": "30000000-0000-4000-8000-000000000001",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000002",
+      "student_id": "40000000-0000-4000-8000-000000000001",
+      "round_id": "30000000-0000-4000-8000-000000000002",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000003",
+      "student_id": "40000000-0000-4000-8000-000000000002",
+      "round_id": "30000000-0000-4000-8000-000000000001",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000004",
+      "student_id": "40000000-0000-4000-8000-000000000002",
+      "round_id": "30000000-0000-4000-8000-000000000002",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000005",
+      "student_id": "40000000-0000-4000-8000-000000000003",
+      "round_id": "30000000-0000-4000-8000-000000000001",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000006",
+      "student_id": "40000000-0000-4000-8000-000000000005",
+      "round_id": "30000000-0000-4000-8000-000000000002",
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000007",
+      "student_id": "40000000-0000-4000-8000-000000000005",
+      "round_id": null,
+      "source": "CO-ED V2 mock seed",
+      "updated_at": "2026-10-03T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    }
+  ]
+}
