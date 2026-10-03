@@ -1,0 +1,122 @@
+{
+  "companies": [
+    {
+      "id": "c1000000-0000-0000-0000-000000000000",
+      "name": "Demo Tech Company A",
+      "description": "A demo technology company for testing purposes.",
+      "website_url": "https://example.com/companyA",
+      "location": "Bangkok",
+      "source": "mock_data_script",
+      "updated_at": "2026-10-04T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "c2000000-0000-0000-0000-000000000000",
+      "name": "Example Corp B",
+      "description": null,
+      "website_url": null,
+      "location": "Chiang Mai",
+      "source": "mock_data_script",
+      "updated_at": "2026-10-04T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    }
+  ],
+  "positions": [
+    {
+      "id": "p1000000-0000-0000-0000-000000000000",
+      "company_id": "c1000000-0000-0000-0000-000000000000",
+      "title": "Software Engineer Intern",
+      "description": "Backend development using Node.js.",
+      "location": "Bangkok",
+      "source": "mock_data_script",
+      "updated_at": "2026-10-04T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "p2000000-0000-0000-0000-000000000000",
+      "company_id": "c1000000-0000-0000-0000-000000000000",
+      "title": "Data Science Intern",
+      "description": "Data analysis and model building.",
+      "location": "Bangkok",
+      "source": "mock_data_script",
+      "updated_at": "2026-10-04T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    },
+    {
+      "id": "p3000000-0000-0000-0000-000000000000",
+      "company_id": "c2000000-0000-0000-0000-000000000000",
+      "title": "Frontend Developer Intern",
+      "description": null,
+      "location": "Chiang Mai",
+      "source": "mock_data_script",
+      "updated_at": "2026-10-04T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    }
+  ],
+  "rounds": [
+    {
+      "id": "r1000000-0000-0000-0000-000000000000",
+      "name": "Co-op Round 1",
+      "academic_year": 2026,
+      "source": "mock_data_script",
+      "updated_at": "2026-10-04T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    }
+  ],
+  "document_metadata": [
+    {
+      "id": "d1000000-0000-0000-0000-000000000000",
+      "title": "Co-op Handbook 2026",
+      "public_url": "https://example.com/docs/handbook.pdf",
+      "academic_year": 2026,
+      "source": "mock_data_script",
+      "updated_at": "2026-10-04T00:00:00Z",
+      "visibility": "public",
+      "data_status": "mock"
+    }
+  ],
+  "students": [
+    {
+      "id": "s1000000-0000-0000-0000-000000000000",
+      "anonymous_ref": "mock-student-1",
+      "source": "mock_data_script",
+      "updated_at": "2026-10-04T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    },
+    {
+      "id": "s2000000-0000-0000-0000-000000000000",
+      "anonymous_ref": "mock-student-2",
+      "source": "mock_data_script",
+      "updated_at": "2026-10-04T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    }
+  ],
+  "plans": [
+    {
+      "id": "pl100000-0000-0000-0000-000000000000",
+      "student_id": "s1000000-0000-0000-0000-000000000000",
+      "round_id": "r1000000-0000-0000-0000-000000000000",
+      "source": "mock_data_script",
+      "updated_at": "2026-10-04T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    },
+    {
+      "id": "pl200000-0000-0000-0000-000000000000",
+      "student_id": "s2000000-0000-0000-0000-000000000000",
+      "round_id": null,
+      "source": "mock_data_script",
+      "updated_at": "2026-10-04T00:00:00Z",
+      "visibility": "private",
+      "data_status": "mock"
+    }
+  ]
+}
