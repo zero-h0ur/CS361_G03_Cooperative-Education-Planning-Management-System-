@@ -127,6 +127,15 @@ V1 เป็น Static Website ที่ให้บริการผ่าน 
 - Git และ GitHub สำหรับ Issue, Branch, Commit, Pull Request และ Review
 - AWS Amplify Hosting สำหรับ HTTPS และ Deployment
 
+## V2 Development Data
+
+V2 มี Canonical Mock dataset สำหรับ Development, Test และ Demo ที่ `data/v2/mock-dataset.json` ข้อมูลทั้งหมดเป็นข้อมูลสมมติและแยกจากหน้าเว็บ V1 โดยอ่านกติกาและวิธีตรวจสอบได้ที่ [CO-ED V2 Mock Dataset](docs/data/v2-mock-data.md)
+
+```bash
+node scripts/validate-v2-dataset.mjs
+node --test tests/v2-dataset.test.mjs
+```
+
 ## Project Structure
 
 ```text
@@ -137,10 +146,18 @@ V1 เป็น Static Website ที่ให้บริการผ่าน 
 ├── company-directory.js       # การค้นหาและโหลดรายการเพิ่มเติม
 ├── faq.html                   # คำถามที่พบบ่อยและการค้นหา
 ├── style.css                  # รูปแบบและ Responsive layout
+├── data/v2/
+│   └── mock-dataset.json      # Canonical Mock dataset สำหรับ V2
+├── scripts/
+│   └── validate-v2-dataset.mjs # ตรวจ Metadata, Relationship และ Data safety
+├── tests/
+│   └── v2-dataset.test.mjs    # Automated data-quality tests
 ├── resources/images/          # รูปภาพและโลโก้ที่ใช้ในเว็บไซต์
 ├── docs/
-│   └── architecture/
-│       └── G03-V1-architecture.png  # Architecture Diagram ของ V1
+│   ├── architecture/
+│   │   └── G03-V1-architecture.png  # Architecture Diagram ของ V1
+│   └── data/
+│       └── v2-mock-data.md    # Policy, scenarios และวิธีตรวจ Dataset
 ├── CONTRIBUTING.md            # Branch, Commit, PR และ Merge workflow
 └── README.md
 ```
