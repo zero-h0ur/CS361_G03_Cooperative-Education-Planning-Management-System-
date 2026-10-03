@@ -12,24 +12,30 @@ async function seed() {
     throw new Error('Seed/Reset requires ALLOW_DB_RESET=true flag.');
   }
 
+  if (
+    process.env.NODE_ENV === 'test' &&
+    (!process.env.TEST_DATABASE_URL || process.env.TEST_DATABASE_URL === process.env.DATABASE_URL)
+  ) {
+    throw new Error('Test reset requires a TEST_DATABASE_URL that differs from DATABASE_URL.');
+  }
+
+  console.log('Starting seed process...');
+
+  // Run migrations before reserving a client so seeding also works with a pool size of 1.
+  console.log('Running migrations...');
+  await migrate();
+
   const pool = getPool();
   const client = await pool.connect();
-
   try {
-    console.log('Starting seed process...');
-    
-    // 1. Run migrations via migrate()
-    console.log('Running migrations...');
-    await migrate();
-
     await client.query('BEGIN');
 
-    // 2. Load dataset
+    // 1. Load dataset
     console.log('Loading dataset...');
     const datasetPath = path.join(__dirname, '..', '..', 'data', 'v2', 'mock-dataset.json');
     const dataset = JSON.parse(fs.readFileSync(datasetPath, 'utf8'));
 
-    // 3. Reset tables (Delete in reverse order of dependencies)
+    // 2. Reset tables (Delete in reverse order of dependencies)
     console.log('Resetting tables...');
     await client.query('DELETE FROM plans');
     await client.query('DELETE FROM students');
@@ -38,7 +44,7 @@ async function seed() {
     await client.query('DELETE FROM positions');
     await client.query('DELETE FROM companies');
 
-    // 4. Seed data
+    // 3. Seed data
     console.log('Seeding companies...');
     for (const c of dataset.companies) {
       await client.query(

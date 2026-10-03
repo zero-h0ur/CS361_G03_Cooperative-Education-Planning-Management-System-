@@ -9,8 +9,7 @@ const {
   getMockStudentByAnonymousRef,
   listMockPlansByStudentId,
   InvalidInputError,
-  RecordNotFoundError,
-  DALError
+  RecordNotFoundError
 } = require('../src/db/dal');
 
 describe('Data Access Layer', () => {
@@ -51,9 +50,42 @@ describe('Data Access Layer', () => {
     
     it('should have schema_migrations tracking table', async () => {
       const pool = getPool();
-      const res = await pool.query(`SELECT version FROM schema_migrations`);
-      expect(res.rows.length).toBeGreaterThan(0);
+      const res = await pool.query(`SELECT version FROM schema_migrations ORDER BY version`);
+      expect(res.rows).toHaveLength(1);
       expect(res.rows[0].version).toBe('001_initial_schema.sql');
+    });
+  });
+
+  describe('Seed Reset Safety', () => {
+    it('rejects reset when ALLOW_DB_RESET is not true', async () => {
+      const originalFlag = process.env.ALLOW_DB_RESET;
+      process.env.ALLOW_DB_RESET = 'false';
+
+      await expect(seed()).rejects.toThrow('Seed/Reset requires ALLOW_DB_RESET=true flag.');
+
+      process.env.ALLOW_DB_RESET = originalFlag;
+    });
+
+    it('rejects test reset without TEST_DATABASE_URL', async () => {
+      const originalTestUrl = process.env.TEST_DATABASE_URL;
+      delete process.env.TEST_DATABASE_URL;
+
+      await expect(seed()).rejects.toThrow(
+        'Test reset requires a TEST_DATABASE_URL that differs from DATABASE_URL.'
+      );
+
+      process.env.TEST_DATABASE_URL = originalTestUrl;
+    });
+
+    it('rejects test reset when TEST_DATABASE_URL matches DATABASE_URL', async () => {
+      const originalTestUrl = process.env.TEST_DATABASE_URL;
+      process.env.TEST_DATABASE_URL = process.env.DATABASE_URL;
+
+      await expect(seed()).rejects.toThrow(
+        'Test reset requires a TEST_DATABASE_URL that differs from DATABASE_URL.'
+      );
+
+      process.env.TEST_DATABASE_URL = originalTestUrl;
     });
   });
 
@@ -105,6 +137,7 @@ describe('Data Access Layer', () => {
     });
 
     it('should return positions by company ID and not leak private positions/companies', async () => {
+      const pool = getPool();
       const companies = await listPublicCompanies({ page: 1, pageSize: 5 });
       const companyId = companies.items[0].id;
       const positions = await listPublicPositionsByCompany(companyId);
@@ -113,6 +146,19 @@ describe('Data Access Layer', () => {
         expect(p.company_id).toBe(companyId);
         expect(p.visibility).toBe('public');
       }
+
+      const privateCompany = await pool.query(
+        "SELECT id FROM companies WHERE visibility = 'private' LIMIT 1"
+      );
+      expect(privateCompany.rows).toHaveLength(1);
+      await expect(getPublicCompanyById(privateCompany.rows[0].id)).rejects.toThrow(RecordNotFoundError);
+      await expect(listPublicPositionsByCompany(privateCompany.rows[0].id)).resolves.toEqual([]);
+
+      const privatePosition = await pool.query(
+        "SELECT id FROM positions WHERE visibility = 'private' LIMIT 1"
+      );
+      expect(privatePosition.rows).toHaveLength(1);
+      await expect(getPublicPositionById(privatePosition.rows[0].id)).rejects.toThrow(RecordNotFoundError);
     });
   });
 
@@ -167,37 +213,65 @@ describe('Data Access Layer', () => {
 
     it('get plans by student ID', async () => {
       const pool = getPool();
-      const sRes = await pool.query("SELECT id FROM students LIMIT 1");
+      const sRes = await pool.query(`
+        SELECT DISTINCT s.id
+        FROM students s
+        JOIN plans p ON p.student_id = s.id
+        LIMIT 1
+      `);
       const sId = sRes.rows[0].id;
 
       const plans = await listMockPlansByStudentId(sId);
-      expect(Array.isArray(plans)).toBe(true);
-      if (plans.length > 0) {
-        expect(plans[0].student_id).toBe(sId);
-        expect(plans[0].visibility).toBe('private');
+      expect(plans.length).toBeGreaterThan(0);
+      for (const plan of plans) {
+        expect(plan.student_id).toBe(sId);
+        expect(plan.visibility).toBe('private');
       }
     });
   });
 
   describe('Persistence Check', () => {
     it('data count and relationships are preserved after connection is closed and reopened', async () => {
-      await close(); // Close existing pool
-      
-      const pool = getPool();
-      
-      let total = 0;
       const tables = ['companies', 'positions', 'rounds', 'document_metadata', 'students', 'plans'];
+      const beforeCounts = {};
+      const poolBeforeClose = getPool();
+
       for (const table of tables) {
-        const res = await pool.query(`SELECT COUNT(*) FROM ${table}`);
-        total += parseInt(res.rows[0].count, 10);
+        const res = await poolBeforeClose.query(`SELECT COUNT(*) FROM ${table}`);
+        beforeCounts[table] = parseInt(res.rows[0].count, 10);
       }
-      expect(total).toBe(53);
-      
-      // Check relationship (students to plans)
-      const sRes = await pool.query("SELECT id FROM students LIMIT 1");
-      const sId = sRes.rows[0].id;
-      const plans = await pool.query("SELECT * FROM plans WHERE student_id = $1", [sId]);
-      expect(plans.rows.length).toBeGreaterThanOrEqual(0);
+
+      const relationshipsBefore = await poolBeforeClose.query(`
+        SELECT COUNT(*)
+        FROM plans p
+        JOIN students s ON s.id = p.student_id
+        LEFT JOIN rounds r ON r.id = p.round_id
+        WHERE p.round_id IS NULL OR r.id IS NOT NULL
+      `);
+      const relationshipCountBefore = parseInt(relationshipsBefore.rows[0].count, 10);
+      expect(relationshipCountBefore).toBe(7);
+
+      await close();
+
+      const poolAfterReopen = getPool();
+      const afterCounts = {};
+      for (const table of tables) {
+        const res = await poolAfterReopen.query(`SELECT COUNT(*) FROM ${table}`);
+        afterCounts[table] = parseInt(res.rows[0].count, 10);
+      }
+
+      const relationshipsAfter = await poolAfterReopen.query(`
+        SELECT COUNT(*)
+        FROM plans p
+        JOIN students s ON s.id = p.student_id
+        LEFT JOIN rounds r ON r.id = p.round_id
+        WHERE p.round_id IS NULL OR r.id IS NOT NULL
+      `);
+      const relationshipCountAfter = parseInt(relationshipsAfter.rows[0].count, 10);
+
+      expect(afterCounts).toEqual(beforeCounts);
+      expect(Object.values(afterCounts).reduce((sum, count) => sum + count, 0)).toBe(53);
+      expect(relationshipCountAfter).toBe(relationshipCountBefore);
     });
   });
 });
