@@ -39,3 +39,4 @@ The data access layer tests (`test/data-access.test.js`) require a running datab
 - The `pg` driver is configured to parse integers for pagination but pagination defaults to offset-based mapping.
 - **Security:** `.env` and sensitive credentials MUST NOT be committed to git.
 - **Difference from AWS:** While local uses standard PG, the production deployment will use Amazon RDS for PostgreSQL. Ensure connection pool settings are tuned for AWS limits in the future.
+

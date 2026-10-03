@@ -59,3 +59,4 @@
 ## Remaining limitations
 - The HTTP handler mapping to this new layer isn't completed fully in this issue (intentionally out of scope, handled in API endpoints Issue #31).
 - `pg_trgm` index extension for partial search is deferred based on the #28 decision.
+

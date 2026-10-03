@@ -108,3 +108,4 @@ const data = {
 const outputPath = path.join(__dirname, '../data/seed/canonical-mock-data.json');
 fs.writeFileSync(outputPath, JSON.stringify(data, null, 2));
 console.log('Mock dataset generated at', outputPath);
+
