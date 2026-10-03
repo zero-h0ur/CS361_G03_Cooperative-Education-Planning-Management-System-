@@ -2,48 +2,48 @@
 
 ## Decision Status: Pending review
 
-### PostgreSQL driver and Migration approach
-- **Driver**: Node.js `pg` module with Connection Pool.
-- **Migration approach**: A `schema_migrations` table tracks executed SQL files in `src/db/migrations`. Migrations are separated from the seed logic and applied sequentially via `src/db/migrate.js`.
+### PostgreSQL driver และ Migration approach
+- **Driver**: ใช้ `pg` module ของ Node.js พร้อมกับการจัดการ Connection Pool
+- **Migration approach**: สร้างตาราง `schema_migrations` เพื่อติดตามไฟล์ SQL ที่ถูกรันแล้วในโฟลเดอร์ `src/db/migrations` โดยแยกระบบ Migration ออกจากโค้ด Seed และเรียกใช้งานผ่าน `src/db/migrate.js`
 
 ### Environment variable names
-- `DATABASE_URL`: Full PostgreSQL connection string.
-- `DB_POOL_MAX`: Maximum number of clients in the pool (default 10).
-- `DB_IDLE_TIMEOUT`: Milliseconds a client must sit idle before being disconnected (default 30000).
-- `DB_CONN_TIMEOUT`: Milliseconds to wait before timing out when connecting a new client (default 2000).
-- `DB_QUERY_TIMEOUT`: Milliseconds before a query times out (default 5000).
-- `NODE_ENV` and `ALLOW_DB_RESET`: Required safety flags to prevent accidental database resets in production.
+- `DATABASE_URL`: Connection string ตัวเต็มสำหรับเชื่อมต่อ PostgreSQL
+- `DB_POOL_MAX`: จำนวน Connection สูงสุดใน Pool (ค่าเริ่มต้นคือ 10)
+- `DB_IDLE_TIMEOUT`: ระยะเวลา (มิลลิวินาที) ที่ Connection สามารถอยู่ในสถานะว่างก่อนจะถูกตัด (ค่าเริ่มต้นคือ 30000)
+- `DB_CONN_TIMEOUT`: ระยะเวลาสูงสุดในการรอเชื่อมต่อ (ค่าเริ่มต้นคือ 2000)
+- `DB_QUERY_TIMEOUT`: ระยะเวลาสูงสุดในการรอ Query (ค่าเริ่มต้นคือ 5000)
+- `NODE_ENV` และ `ALLOW_DB_RESET`: Flag สำหรับความปลอดภัย เพื่อป้องกันการลบข้อมูล (Reset) ในระดับ Production โดยไม่ได้ตั้งใจ
 
-### Connection pool and Query timeout
-- The pool size is limited to 10 connections to prevent resource exhaustion.
-- Timeout values (including query timeouts via `query_timeout` in the pool config) are configurable but have sane defaults to fail fast if the database is unreachable or slow.
+### Connection pool และ Query timeout
+- จำกัดขนาด Pool ไว้ที่ 10 เพื่อป้องกันปัญหา Resource exhaustion
+- ค่า Timeout ต่างๆ (รวมถึง Query timeout) สามารถกำหนดผ่าน Environment variable ได้ แต่มีค่าเริ่มต้นที่เหมาะสมเพื่อให้ระบบ Fail-fast หาก Database ช้าหรือไม่สามารถเชื่อมต่อได้
 
 ### Page size Default/Maximum
 - **Default Page Size**: 10
 - **Maximum Page Size**: 100
-- **Validation**: Strict positive integer validation prevents non-integer payloads (e.g. `1abc` or floats) from causing errors.
+- **Validation**: มีการตรวจสอบค่าให้เป็นจำนวนเต็มบวกอย่างเคร่งครัด (Strict positive integer) ป้องกันไม่ให้ค่าอย่าง `1abc` หรือตัวเลขทศนิยมทำให้ระบบทำงานผิดพลาด
 
-### Seed and Reset commands
-- The seed script (`src/db/seed.js`) calls the migrator, truncates/deletes existing data in the correct dependency order, and re-inserts from the canonical `mock-dataset.json`.
-- **Command**: `node src/db/seed.js`
-- **Safety**: Fails immediately if `NODE_ENV` is not `development` or `test`, or if `ALLOW_DB_RESET=true` is missing. Throws errors to the test runner instead of using `process.exit()`. Test databases must be logically separated from development databases.
+### Seed และ Reset commands
+- คำสั่ง Seed (`src/db/seed.js`) จะทำการเรียก Migrator จากนั้นจะลบข้อมูลเดิมออกตามลำดับ Dependency และ Insert ข้อมูลใหม่จากไฟล์ `mock-dataset.json`
+- **คำสั่ง**: `node src/db/seed.js`
+- **ความปลอดภัย**: คำสั่งจะทำงานล้มเหลวทันทีหาก `NODE_ENV` ไม่ใช่ `development` หรือ `test` หรือไม่มี `ALLOW_DB_RESET=true` โดยใช้การโยน Error ให้ Test runner จับ แทนที่จะใช้ `process.exit()` ฐานข้อมูลที่ใช้ทดสอบ (Test DB) ต้องแยกออกจาก Development DB อย่างชัดเจน
 
 ### Error types
-- `DALError`: Base error for database failures (e.g., Connection Error, Constraint Violation, Query Failure). Maps constraints properly (e.g. `23502` -> Required field missing).
-- `RecordNotFoundError`: Thrown when an ID lookup fails.
-- `InvalidInputError`: Thrown for invalid pagination, missing required parameters, or invalid UUID text representations. Raw SQL error messages are not leaked.
+- `DALError`: Error พื้นฐานสำหรับปัญหาเกี่ยวกับ Database (เช่น ปัญหาการเชื่อมต่อ, Constraint Violation หรือ Query ล้มเหลว) โดยมีการแปลงรหัส Constraint ให้เข้าใจง่าย (เช่น `23502` -> Required field is missing)
+- `RecordNotFoundError`: ใช้เมื่อค้นหา ID ไม่พบ
+- `InvalidInputError`: ใช้เมื่อส่งค่า Pagination ไม่ถูกต้อง, ขาด Parameter ที่จำเป็น หรือรูปแบบ UUID ไม่ถูกต้อง โดยจะไม่ส่ง Raw SQL error message ออกไปให้ฝั่ง Caller เห็น
 
 ### Test results
-- Automated tests via Jest (`tests/dal.test.js`) cover:
-  - Migration tracking (`schema_migrations`) execution and 53 mock records insertion.
-  - Foreign key and Check constraint enforcement verification.
-  - Proper error throwing for invalid input (e.g. malformed UUID, bad pagination) and missing records.
-  - Public operations strictly filtering out private companies and checking that a public position belongs to a public company.
-  - Persistence validation confirming exact record counts and preserved relationships.
+- มี Automated tests ด้วย Jest (`tests/dal.test.js`) ครอบคลุม:
+  - การบันทึกและรัน Migration (`schema_migrations`) และการ Insert ข้อมูล 53 Records
+  - การตรวจสอบและบังคับใช้ Foreign key และ Check constraints
+  - การโยน Error เมื่อได้รับข้อมูลไม่ถูกต้อง (เช่น UUID ผิดรูปแบบ) หรือไม่พบ Record
+  - ข้อบังคับการดึงข้อมูล Public ที่กรองข้อมูล Private ออกอย่างเข้มงวด และตรวจสอบว่า Position แบบ Public ต้องมาจาก Company ที่เป็น Public ด้วยเท่านั้น
+  - การทดสอบ Persistence ยืนยันจำนวน Record และความสัมพันธ์หลังปิดและเปิด Connection
 
 ### Persistence evidence
-- The tests run `close()` on the database connection pool and then reopen it. A subsequent query successfully retrieves 53 total rows and tests relationship mappings, verifying that data and keys persist independently of the application process.
+- ชุดทดสอบมีการสั่ง `close()` กับ Connection pool แล้วพยายามดึงข้อมูลใหม่ ซึ่งระบบสามารถเรียกข้อมูล 53 Records ขึ้นมาได้ถูกต้องและรักษาความสัมพันธ์ครบถ้วน ยืนยันว่าข้อมูลยังอยู่ถึงแม้ว่าจะรีสตาร์ท Application ก็ตาม
 
-### Trade-offs or Remaining limitations
-- Initial search uses `ILIKE` rather than full-text indexing or `pg_trgm`. This was decided in Issue 28 as acceptable for the mock dataset size, and will be revisited later if performance suffers.
-- Returning nested positions for AP2 (search) is partially aggregated at the DAL level but relies on two queries.
+### Trade-offs หรือข้อจำกัดที่เหลืออยู่
+- การค้นหาแบบ Partial search ช่วงเริ่มต้นใช้ `ILIKE` แทนการทำ Full-text indexing หรือใช้ `pg_trgm` เนื่องจากขนาดข้อมูล Mock ยังไม่ใหญ่มาก ตามข้อตกลงใน Issue 28 โดยจะนำกลับมาพิจารณาอีกครั้งเมื่อพบปัญหาด้านประสิทธิภาพ
+- การดึงข้อมูล Position พร้อม Company ใน AP2 (Search) ยังอาศัย 2 Queries และ Aggregate ใน Data Access Layer แทนที่จะ Join ทันที
