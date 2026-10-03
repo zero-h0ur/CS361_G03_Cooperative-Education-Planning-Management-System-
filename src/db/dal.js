@@ -26,11 +26,11 @@ const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 100;
 
 function validatePagination(page, pageSize) {
-  const p = parseInt(page, 10);
-  const ps = parseInt(pageSize, 10);
+  const p = Number(page);
+  const ps = Number(pageSize);
   
-  if (isNaN(p) || p < 1) throw new InvalidInputError("Page must be a positive integer.");
-  if (isNaN(ps) || ps < 1) throw new InvalidInputError("PageSize must be a positive integer.");
+  if (!Number.isInteger(p) || p < 1) throw new InvalidInputError("Page must be a positive integer.");
+  if (!Number.isInteger(ps) || ps < 1) throw new InvalidInputError("PageSize must be a positive integer.");
   if (ps > MAX_PAGE_SIZE) throw new InvalidInputError(`PageSize cannot exceed ${MAX_PAGE_SIZE}.`);
   
   return { page: p, pageSize: ps };
@@ -45,17 +45,26 @@ async function executeQuery(text, params) {
     if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
       throw new DALError("Database connection unavailable.", 'CONNECTION_ERROR');
     }
+    if (err.code === '22P02') { // invalid_text_representation
+      throw new InvalidInputError("Invalid input format (e.g., malformed UUID).");
+    }
+    if (err.code === '23502') { // not_null_violation
+      throw new DALError("Required field is missing.", 'CONSTRAINT_VIOLATION');
+    }
     if (err.code === '23505') { // unique_violation
-      throw new DALError("Constraint violation.", 'CONSTRAINT_VIOLATION');
+      throw new DALError("Unique constraint violation.", 'CONSTRAINT_VIOLATION');
     }
     if (err.code === '23503') { // foreign_key_violation
       throw new DALError("Foreign key constraint violation.", 'CONSTRAINT_VIOLATION');
+    }
+    if (err.code === '23514') { // check_violation
+      throw new DALError("Check constraint violation.", 'CONSTRAINT_VIOLATION');
     }
     if (err.code === '42P01') { // undefined_table
       throw new DALError("Migration or Schema not ready.", 'SCHEMA_NOT_READY');
     }
     // generic query failure
-    throw new DALError(`Query failure: ${err.message}`, 'QUERY_FAILURE');
+    throw new DALError("Query failed.", 'QUERY_FAILURE');
   }
 }
 
@@ -88,9 +97,12 @@ async function listPublicPositionsByCompany(companyId) {
   if (!companyId) throw new InvalidInputError("Company ID is required.");
   
   const query = `
-    SELECT * FROM positions 
-    WHERE company_id = $1 AND visibility = 'public'
-    ORDER BY title ASC
+    SELECT p.* FROM positions p
+    JOIN companies c ON p.company_id = c.id
+    WHERE p.company_id = $1 
+      AND p.visibility = 'public' 
+      AND c.visibility = 'public'
+    ORDER BY p.title ASC
   `;
   const res = await executeQuery(query, [companyId]);
   return res.rows;
@@ -130,23 +142,21 @@ async function searchPublicCompaniesAndPositions({ q = '', location = null, page
   `;
   const res = await executeQuery(query, [searchPattern, location, ps, offset]);
   
-  // Optionally attach positions to companies if needed, but since it asks for 
-  // searchPublicCompaniesAndPositions, we can just return companies. 
-  // Let's attach positions for completeness if the user interface needs it.
   const companies = res.rows;
   if (companies.length > 0) {
     const companyIds = companies.map(c => c.id);
-    // Find all matching positions for these companies
     const posQuery = `
-      SELECT * FROM positions
-      WHERE company_id = ANY($1) AND visibility = 'public'
-        AND (title ILIKE $2 OR $2 = '%%')
-        AND ($3::text IS NULL OR location = $3)
-      ORDER BY title ASC
+      SELECT p.* FROM positions p
+      JOIN companies c ON p.company_id = c.id
+      WHERE p.company_id = ANY($1) 
+        AND p.visibility = 'public'
+        AND c.visibility = 'public'
+        AND (p.title ILIKE $2 OR $2 = '%%')
+        AND ($3::text IS NULL OR p.location = $3)
+      ORDER BY p.title ASC
     `;
     const posRes = await executeQuery(posQuery, [companyIds, searchPattern, location]);
     
-    // Group positions by company
     const posMap = {};
     for (const pos of posRes.rows) {
       if (!posMap[pos.company_id]) posMap[pos.company_id] = [];
@@ -182,7 +192,13 @@ async function getPublicCompanyById(companyId) {
 async function getPublicPositionById(positionId) {
   if (!positionId) throw new InvalidInputError("Position ID is required.");
   
-  const query = `SELECT * FROM positions WHERE id = $1 AND visibility = 'public'`;
+  const query = `
+    SELECT p.* FROM positions p
+    JOIN companies c ON p.company_id = c.id
+    WHERE p.id = $1 
+      AND p.visibility = 'public'
+      AND c.visibility = 'public'
+  `;
   const res = await executeQuery(query, [positionId]);
   
   if (res.rows.length === 0) {

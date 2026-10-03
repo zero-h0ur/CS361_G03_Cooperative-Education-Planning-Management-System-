@@ -2,19 +2,27 @@ const fs = require('fs');
 const path = require('path');
 const { getPool, close } = require('./connection');
 
+const { migrate } = require('./migrate');
+
 async function seed() {
+  if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
+    throw new Error('Seed/Reset is only allowed in development or test environment.');
+  }
+  if (process.env.ALLOW_DB_RESET !== 'true') {
+    throw new Error('Seed/Reset requires ALLOW_DB_RESET=true flag.');
+  }
+
   const pool = getPool();
   const client = await pool.connect();
 
   try {
     console.log('Starting seed process...');
-    await client.query('BEGIN');
+    
+    // 1. Run migrations via migrate()
+    console.log('Running migrations...');
+    await migrate();
 
-    // 1. Run migration
-    console.log('Running migration...');
-    const migrationPath = path.join(__dirname, 'migrations', '001_initial_schema.sql');
-    const migrationSql = fs.readFileSync(migrationPath, 'utf8');
-    await client.query(migrationSql);
+    await client.query('BEGIN');
 
     // 2. Load dataset
     console.log('Loading dataset...');
@@ -103,15 +111,14 @@ async function seed() {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Seed process failed, rolling back.', err);
-    process.exit(1);
+    throw err;
   } finally {
     client.release();
-    await close();
   }
 }
 
 if (require.main === module) {
-  seed();
+  seed().then(() => close()).catch(() => process.exit(1));
 }
 
 module.exports = { seed };

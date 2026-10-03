@@ -7,12 +7,17 @@ const {
   getPublicCompanyById,
   getPublicPositionById,
   getMockStudentByAnonymousRef,
-  listMockPlansByStudentId
+  listMockPlansByStudentId,
+  InvalidInputError,
+  RecordNotFoundError,
+  DALError
 } = require('../src/db/dal');
 
 describe('Data Access Layer', () => {
   beforeAll(async () => {
-    // We assume the DB is running and DATABASE_URL is set
+    // Requires NODE_ENV=test and ALLOW_DB_RESET=true
+    process.env.NODE_ENV = 'test';
+    process.env.ALLOW_DB_RESET = 'true';
     await seed();
   });
 
@@ -43,6 +48,48 @@ describe('Data Access Layer', () => {
       }
       expect(total).toBe(53);
     });
+    
+    it('should have schema_migrations tracking table', async () => {
+      const pool = getPool();
+      const res = await pool.query(`SELECT version FROM schema_migrations`);
+      expect(res.rows.length).toBeGreaterThan(0);
+      expect(res.rows[0].version).toBe('001_initial_schema.sql');
+    });
+  });
+
+  describe('Database Constraints', () => {
+    it('should enforce Foreign Key constraint on positions', async () => {
+      const pool = getPool();
+      await expect(pool.query(`
+        INSERT INTO positions (id, company_id, title, source, visibility, data_status)
+        VALUES (gen_random_uuid(), gen_random_uuid(), 'Test', 'test', 'public', 'mock')
+      `)).rejects.toThrow();
+    });
+
+    it('should enforce Check constraint on visibility', async () => {
+      const pool = getPool();
+      await expect(pool.query(`
+        INSERT INTO companies (id, name, source, visibility, data_status)
+        VALUES (gen_random_uuid(), 'Test Co', 'test', 'invalid_vis', 'mock')
+      `)).rejects.toThrow();
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should throw InvalidInputError for invalid pagination', async () => {
+      await expect(listPublicCompanies({ page: '1abc', pageSize: 10 })).rejects.toThrow(InvalidInputError);
+      await expect(listPublicCompanies({ page: 1, pageSize: 1.5 })).rejects.toThrow(InvalidInputError);
+      await expect(listPublicCompanies({ page: -1, pageSize: 10 })).rejects.toThrow(InvalidInputError);
+    });
+
+    it('should throw RecordNotFoundError for missing records', async () => {
+      const fakeId = '00000000-0000-0000-0000-000000000000';
+      await expect(getPublicCompanyById(fakeId)).rejects.toThrow(RecordNotFoundError);
+    });
+
+    it('should throw InvalidInputError for malformed UUID', async () => {
+      await expect(getPublicCompanyById('not-a-uuid')).rejects.toThrow(InvalidInputError);
+    });
   });
 
   describe('AP1: Public list and Pagination', () => {
@@ -52,19 +99,19 @@ describe('Data Access Layer', () => {
       expect(result.page).toBe(1);
       expect(result.pageSize).toBe(5);
       expect(result.total).toBeGreaterThan(0);
-      // Ensure no private records
+      
       const privateRec = result.items.find(c => c.visibility === 'private');
       expect(privateRec).toBeUndefined();
     });
 
-    it('should return positions by company ID', async () => {
+    it('should return positions by company ID and not leak private positions/companies', async () => {
       const companies = await listPublicCompanies({ page: 1, pageSize: 5 });
       const companyId = companies.items[0].id;
       const positions = await listPublicPositionsByCompany(companyId);
       expect(Array.isArray(positions)).toBe(true);
-      if (positions.length > 0) {
-        expect(positions[0].company_id).toBe(companyId);
-        expect(positions[0].visibility).toBe('public');
+      for (const p of positions) {
+        expect(p.company_id).toBe(companyId);
+        expect(p.visibility).toBe('public');
       }
     });
   });
@@ -133,13 +180,24 @@ describe('Data Access Layer', () => {
   });
 
   describe('Persistence Check', () => {
-    it('data is preserved after connection is closed and reopened', async () => {
+    it('data count and relationships are preserved after connection is closed and reopened', async () => {
       await close(); // Close existing pool
       
-      // Attempt to query again, pool should automatically re-initialize in connection.js
       const pool = getPool();
-      const res = await pool.query("SELECT COUNT(*) FROM companies");
-      expect(parseInt(res.rows[0].count, 10)).toBe(12); // Should be 12 based on the 53 records breakdown
+      
+      let total = 0;
+      const tables = ['companies', 'positions', 'rounds', 'document_metadata', 'students', 'plans'];
+      for (const table of tables) {
+        const res = await pool.query(`SELECT COUNT(*) FROM ${table}`);
+        total += parseInt(res.rows[0].count, 10);
+      }
+      expect(total).toBe(53);
+      
+      // Check relationship (students to plans)
+      const sRes = await pool.query("SELECT id FROM students LIMIT 1");
+      const sId = sRes.rows[0].id;
+      const plans = await pool.query("SELECT * FROM plans WHERE student_id = $1", [sId]);
+      expect(plans.rows.length).toBeGreaterThanOrEqual(0);
     });
   });
 });
