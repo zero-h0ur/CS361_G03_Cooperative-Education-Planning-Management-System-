@@ -1081,6 +1081,47 @@ a {
   color: #9299aa;
 }
 
+.directory-controls {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.directory-controls .directory-search {
+  margin-bottom: 0 !important;
+}
+
+.directory-location-filter {
+  min-width: 210px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: #596176;
+  background: #fff;
+  border: 1px solid #dfe3ea;
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+.directory-location-filter:focus-within {
+  border-color: #6a67e8;
+  box-shadow: 0 0 0 3px rgba(75, 72, 229, 0.12);
+}
+
+.directory-location-filter select {
+  min-width: 0;
+  flex: 1;
+  height: 38px;
+  border: 0;
+  outline: 0;
+  color: #252b3e;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
 .directory-auth {
   display: flex;
   align-items: center;
@@ -1206,6 +1247,21 @@ a {
   display: none;
 }
 
+.partner-card-dynamic {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.partner-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.partner-card-header h2 {
+  flex: 1;
+}
+
 .partner-logo {
   width: 78px;
   height: 78px;
@@ -1280,6 +1336,36 @@ a {
 .tag-benefit {
   color: #5e4a14;
   background: #fff1bd;
+}
+
+.tag-metadata {
+  color: #3f4758;
+  background: #edf0f5;
+}
+
+.partner-status-badge {
+  flex: 0 0 auto;
+  font-size: 10px;
+}
+
+.status-mock {
+  color: #4d3d0e;
+  background: #fff1bd;
+}
+
+.status-to-validate {
+  color: #854d0e;
+  background: #fef08a;
+}
+
+.directory-offline-banner {
+  padding: 12px 24px;
+  color: #92400e;
+  background: #fffbeb;
+  border-top: 1px solid #fcd34d;
+  border-bottom: 1px solid #fcd34d;
+  text-align: center;
+  font-size: 14px;
 }
 
 .directory-load-more-wrap {
@@ -1460,6 +1546,21 @@ a {
     min-width: 100%;
   }
 
+  .directory-controls {
+    flex-direction: column;
+  }
+
+  .directory-controls .directory-search,
+  .directory-location-filter {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .directory-controls .directory-search {
+    order: initial;
+    flex-basis: auto;
+  }
+
   .directory-auth {
     margin-left: auto;
   }
@@ -1516,6 +1617,10 @@ a {
     grid-template-columns: 64px minmax(0, 1fr);
     gap: 13px;
     padding: 15px;
+  }
+
+  .partner-card-dynamic {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .partner-logo {
