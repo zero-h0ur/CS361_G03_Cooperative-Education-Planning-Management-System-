@@ -128,6 +128,7 @@ function createCompanyCardFromAPI(company) {
  */
 function activateStaticFallback() {
   state.mode = 'static';
+  searchResultStatus.removeAttribute('aria-busy');
   companyList.innerHTML = '';
   staticCompanyCards.forEach(card => companyList.appendChild(card));
 
@@ -202,7 +203,7 @@ function renderState() {
     loadMoreButton.hidden = true;
     return;
   }
-  
+
   searchResultStatus.removeAttribute('aria-busy');
 
   if (state.error) {
@@ -222,18 +223,22 @@ function renderState() {
   const fragment = document.createDocumentFragment();
   const startIdx = (state.page - 1) * state.pageSize;
   const newItems = apiDataStore.slice(startIdx);
-  
+
   newItems.forEach(company => {
     fragment.appendChild(createCompanyCardFromAPI(company));
   });
-  
+
   companyList.appendChild(fragment);
 
   // Update Load More button
-  if (state.page < state.totalPages) {
+  if (state.loading && state.page > 1) {
     loadMoreButton.hidden = false;
-    loadMoreButton.disabled = state.loading;
-    loadMoreButton.textContent = state.loading ? 'กำลังโหลด...' : 'ดูเพิ่มเติม';
+    loadMoreButton.disabled = true;
+    loadMoreButton.textContent = 'กำลังโหลด...';
+  } else if (state.page < state.totalPages) {
+    loadMoreButton.hidden = false;
+    loadMoreButton.disabled = false;
+    loadMoreButton.textContent = 'ดูเพิ่มเติม';
   } else {
     loadMoreButton.hidden = true;
   }
@@ -270,19 +275,19 @@ async function fetchCompanies(isAppend = false) {
 
     const json = await response.json();
     if (!requestTracker.isCurrent(requestVersion)) return;
-    
+
     if (!isAppend) {
       apiDataStore = [];
     }
-    
+
     apiDataStore = mergeUniqueCompanies(apiDataStore, Array.isArray(json.data) ? json.data : []);
-    
+
     if (json.pagination) {
       state.totalPages = json.pagination.totalPages || 1;
     } else {
       state.totalPages = 1;
     }
-    
+
     state.loading = false;
     if (abortController === controller) abortController = null;
     renderState();
@@ -293,7 +298,7 @@ async function fetchCompanies(isAppend = false) {
     state.loading = false;
     state.error = error;
     if (abortController === controller) abortController = null;
-    
+
     // First time load failure -> Fallback to static
     if (apiDataStore.length === 0 && state.page === 1) {
       activateStaticFallback();
