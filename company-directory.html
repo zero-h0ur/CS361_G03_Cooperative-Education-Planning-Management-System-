@@ -58,12 +58,21 @@
 
       <p id="searchResultStatus" class="directory-result-status" aria-live="polite"></p>
 
-      <label class="directory-search" for="companySearch">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="m20 20-4.4-4.4m2.4-4.1a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"/>
-        </svg>
-        <input id="companySearch" type="search" placeholder="ค้นหาสถานที่ฝึกงาน, สาขาวิชา" autocomplete="off">
-      </label>
+      <div style="display: flex; gap: 12px; margin-bottom: 28px;">
+        <label class="directory-search" for="companySearch" style="margin-bottom: 0;">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m20 20-4.4-4.4m2.4-4.1a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"/>
+          </svg>
+          <input id="companySearch" type="search" placeholder="ค้นหาสถานที่ฝึกงาน, สาขาวิชา" autocomplete="off">
+        </label>
+        <select id="locationFilter" class="directory-search" style="flex: 0 0 auto; min-width: 150px; cursor: pointer; padding-right: 32px;" aria-label="กรองตามสถานที่">
+          <option value="">ทุกสถานที่</option>
+          <option value="กรุงเทพฯ">กรุงเทพฯ</option>
+          <option value="นนทบุรี">นนทบุรี</option>
+          <option value="ปทุมธานี">ปทุมธานี</option>
+          <option value="ปากเกร็ด">ปากเกร็ด</option>
+        </select>
+      </div>
 
       <section id="companyList" class="partner-grid" aria-label="รายชื่อพันธมิตรสถานประกอบการ">
         <article class="partner-card" data-company="Agoda กรุงเทพ UX Researcher">
