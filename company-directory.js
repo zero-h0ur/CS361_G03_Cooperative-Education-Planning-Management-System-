@@ -8,6 +8,11 @@ const searchResultStatus = document.getElementById('searchResultStatus');
 const companyList = document.getElementById('companyList');
 const loadMoreButton = document.getElementById('loadMoreCompanies');
 const locationFilter = document.getElementById('locationFilter');
+const {
+  buildCompanyQuery,
+  mergeUniqueCompanies,
+  getDataStatusIndicator
+} = window.CompanyDirectoryHelpers;
 
 // Fallback items
 const staticCompanyCards = Array.from(companyList.children);
@@ -35,7 +40,7 @@ let apiDataStore = [];
 function createElement(tag, className, textContent) {
   const el = document.createElement(tag);
   if (className) el.className = className;
-  if (textContent) el.textContent = textContent;
+  if (textContent !== undefined && textContent !== null) el.textContent = textContent;
   return el;
 }
 
@@ -45,6 +50,7 @@ function createElement(tag, className, textContent) {
 function formatDate(dateString) {
   if (!dateString) return '';
   const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
@@ -53,27 +59,24 @@ function formatDate(dateString) {
  */
 function createCompanyCardFromAPI(company) {
   const article = document.createElement('article');
-  article.className = 'partner-card';
+  article.className = 'partner-card partner-card-dynamic';
 
-  // Card Header (Name, location, source)
   const infoDiv = document.createElement('div');
   infoDiv.className = 'partner-info';
-  infoDiv.style.width = '100%';
 
   const headerRow = document.createElement('div');
-  headerRow.style.display = 'flex';
-  headerRow.style.justifyContent = 'space-between';
-  headerRow.style.alignItems = 'flex-start';
+  headerRow.className = 'partner-card-header';
 
   const nameEl = createElement('h2', '', company.name || 'ไม่มีชื่อ');
   headerRow.appendChild(nameEl);
 
-  if (company.data_status === 'mock' || company.source === 'mock') {
-    const mockBadge = createElement('span', 'partner-tag tag-benefit', 'TO VALIDATE');
-    mockBadge.style.background = '#fef08a';
-    mockBadge.style.color = '#854d0e';
-    mockBadge.style.fontSize = '10px';
-    headerRow.appendChild(mockBadge);
+  const statusIndicator = getDataStatusIndicator(company);
+  if (statusIndicator) {
+    headerRow.appendChild(createElement(
+      'span',
+      `partner-tag partner-status-badge ${statusIndicator.className}`,
+      statusIndicator.label
+    ));
   }
 
   infoDiv.appendChild(headerRow);
@@ -84,14 +87,22 @@ function createCompanyCardFromAPI(company) {
   if (company.location) {
     tagsDiv.appendChild(createElement('span', 'partner-tag tag-location', company.location));
   }
-  
-  if (company.updated_at) {
-    tagsDiv.appendChild(createElement('span', 'partner-tag', `อัปเดต: ${formatDate(company.updated_at)}`));
+
+  if (company.source) {
+    tagsDiv.appendChild(createElement('span', 'partner-tag tag-metadata', `แหล่งที่มา: ${company.source}`));
   }
 
-  // Display positions if available
-  if (company.positions && company.positions.length > 0) {
-    company.positions.forEach(pos => {
+  const updatedDate = formatDate(company.updated_at);
+  if (updatedDate) {
+    tagsDiv.appendChild(createElement('span', 'partner-tag tag-metadata', `อัปเดต: ${updatedDate}`));
+  }
+
+  if (!statusIndicator && company.data_status) {
+    tagsDiv.appendChild(createElement('span', 'partner-tag tag-metadata', `สถานะ: ${company.data_status}`));
+  }
+
+  if (Array.isArray(company.positions)) {
+    company.positions.filter((position) => position && position.title).forEach((pos) => {
       tagsDiv.appendChild(createElement('span', 'partner-tag tag-field', pos.title));
     });
   }
@@ -109,28 +120,20 @@ function activateStaticFallback() {
   state.mode = 'static';
   companyList.innerHTML = '';
   staticCompanyCards.forEach(card => companyList.appendChild(card));
-  
-  // Inject warning banner as a child of .header so it sticks with it
+
   if (!document.getElementById('offlineBanner')) {
     const banner = document.createElement('div');
     banner.id = 'offlineBanner';
-    banner.style.backgroundColor = '#fffbeb'; // amber-50
-    banner.style.color = '#92400e'; // amber-800
-    banner.style.padding = '12px 24px';
-    banner.style.textAlign = 'center';
-    banner.style.fontSize = '14px';
-    banner.style.borderTop = '1px solid #fcd34d'; // amber-300
-    banner.style.borderBottom = '1px solid #fcd34d';
-    banner.textContent = '⚠️ แจ้งเตือนสถานะระบบ: ไม่สามารถดึงข้อมูลล่าสุดจากฐานข้อมูลได้ ข้อมูลและรายละเอียดการรับสมัครที่ปรากฏบนหน้าเว็บขณะนี้ เป็นเพียงข้อมูลจำลองสำหรับการทดสอบระบบ โปรดตรวจสอบข้อมูลจริงอีกครั้งในภายหลัง';
-    
+    banner.className = 'directory-offline-banner';
+    banner.setAttribute('role', 'status');
+    banner.textContent = 'ไม่สามารถดึงข้อมูลล่าสุดได้ ขณะนี้กำลังแสดงข้อมูลตัวอย่าง โปรดรีเฟรชหน้าเพื่อลองอีกครั้ง';
+
     const header = document.querySelector('.header');
     if (header) {
       header.appendChild(banner);
     }
   }
-  
-  // Re-bind original static logic
-  const extraCompanyCards = document.querySelectorAll('.partner-card-extra');
+
   const updateStaticVisibility = () => {
     const query = companySearch.value.trim().toLocaleLowerCase('th');
     let visibleCount = 0;
@@ -152,17 +155,23 @@ function activateStaticFallback() {
       searchResultStatus.textContent = '';
     }
   };
-  
+
   companySearch.removeEventListener('input', onSearchInput);
-  if(locationFilter) locationFilter.removeEventListener('change', onFilterChange);
+  if (locationFilter) {
+    locationFilter.removeEventListener('change', onFilterChange);
+    locationFilter.value = '';
+    locationFilter.disabled = true;
+    const filterContainer = locationFilter.closest('.directory-location-filter');
+    if (filterContainer) filterContainer.hidden = true;
+  }
   companySearch.addEventListener('input', updateStaticVisibility);
-  
+
   loadMoreButton.onclick = () => {
     hasExpandedDirectory = true;
     loadMoreButton.setAttribute('aria-expanded', 'true');
     updateStaticVisibility();
   };
-  
+
   updateStaticVisibility();
 }
 
@@ -197,9 +206,7 @@ function renderState() {
     return;
   }
 
-  if (state.page === 1) {
-    searchResultStatus.textContent = `พบข้อมูลสถานประกอบการ`;
-  }
+  searchResultStatus.textContent = `แสดงสถานประกอบการ ${apiDataStore.length} รายการ`;
 
   // Render cards
   const fragment = document.createDocumentFragment();
@@ -238,13 +245,9 @@ async function fetchCompanies(isAppend = false) {
   renderState();
 
   try {
-    const params = new URLSearchParams();
-    if (state.query) params.set('q', state.query);
-    if (state.location) params.set('location', state.location);
-    params.set('page', state.page);
-    params.set('pageSize', state.pageSize);
+    const queryString = buildCompanyQuery(state);
 
-    const response = await fetch('/api/companies?' + params.toString(), {
+    const response = await fetch(`/api/companies?${queryString}`, {
       signal: abortController.signal,
       headers: { 'Accept': 'application/json' }
     });
@@ -259,7 +262,7 @@ async function fetchCompanies(isAppend = false) {
       apiDataStore = [];
     }
     
-    apiDataStore = [...apiDataStore, ...(json.data || [])];
+    apiDataStore = mergeUniqueCompanies(apiDataStore, Array.isArray(json.data) ? json.data : []);
     
     if (json.pagination) {
       state.totalPages = json.pagination.totalPages || 1;
@@ -280,7 +283,12 @@ async function fetchCompanies(isAppend = false) {
     if (apiDataStore.length === 0 && state.page === 1) {
       activateStaticFallback();
     } else {
+      const failedPage = state.page;
       renderState();
+      state.page = Math.max(1, failedPage - 1);
+      loadMoreButton.hidden = false;
+      loadMoreButton.disabled = false;
+      loadMoreButton.textContent = 'ลองโหลดอีกครั้ง';
     }
   }
 }
@@ -306,7 +314,7 @@ function onFilterChange(e) {
 
 // Bind Events
 companySearch.addEventListener('input', onSearchInput);
-if(locationFilter) locationFilter.addEventListener('change', onFilterChange);
+if (locationFilter) locationFilter.addEventListener('change', onFilterChange);
 
 loadMoreButton.onclick = () => {
   if (state.mode === 'api' && !state.loading && state.page < state.totalPages) {
@@ -317,4 +325,3 @@ loadMoreButton.onclick = () => {
 
 // Initial Load
 fetchCompanies(false);
-
