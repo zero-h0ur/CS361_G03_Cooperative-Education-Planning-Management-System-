@@ -11,7 +11,8 @@ const locationFilter = document.getElementById('locationFilter');
 const {
   buildCompanyQuery,
   mergeUniqueCompanies,
-  getDataStatusIndicator
+  getDataStatusIndicator,
+  createLatestRequestTracker
 } = window.CompanyDirectoryHelpers;
 
 // Fallback items
@@ -33,6 +34,15 @@ let state = {
 let abortController = null;
 let debounceTimer = null;
 let apiDataStore = [];
+const requestTracker = createLatestRequestTracker();
+
+function cancelPendingRequest() {
+  requestTracker.invalidate();
+  if (abortController) {
+    abortController.abort();
+    abortController = null;
+  }
+}
 
 /**
  * Creates a DOM element safely
@@ -234,11 +244,13 @@ function renderState() {
  */
 async function fetchCompanies(isAppend = false) {
   if (state.mode === 'static') return;
-  
+
   if (abortController) {
     abortController.abort();
   }
-  abortController = new AbortController();
+  const controller = new AbortController();
+  abortController = controller;
+  const requestVersion = requestTracker.start();
 
   state.loading = true;
   state.error = null;
@@ -248,7 +260,7 @@ async function fetchCompanies(isAppend = false) {
     const queryString = buildCompanyQuery(state);
 
     const response = await fetch(`/api/companies?${queryString}`, {
-      signal: abortController.signal,
+      signal: controller.signal,
       headers: { 'Accept': 'application/json' }
     });
 
@@ -257,6 +269,7 @@ async function fetchCompanies(isAppend = false) {
     }
 
     const json = await response.json();
+    if (!requestTracker.isCurrent(requestVersion)) return;
     
     if (!isAppend) {
       apiDataStore = [];
@@ -271,13 +284,15 @@ async function fetchCompanies(isAppend = false) {
     }
     
     state.loading = false;
+    if (abortController === controller) abortController = null;
     renderState();
 
   } catch (error) {
-    if (error.name === 'AbortError') return;
+    if (error.name === 'AbortError' || !requestTracker.isCurrent(requestVersion)) return;
     console.error('Failed to fetch companies:', error);
     state.loading = false;
     state.error = error;
+    if (abortController === controller) abortController = null;
     
     // First time load failure -> Fallback to static
     if (apiDataStore.length === 0 && state.page === 1) {
@@ -299,7 +314,8 @@ async function fetchCompanies(isAppend = false) {
 function onSearchInput(e) {
   state.query = e.target.value.trim();
   state.page = 1;
-  
+
+  cancelPendingRequest();
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
     fetchCompanies(false);

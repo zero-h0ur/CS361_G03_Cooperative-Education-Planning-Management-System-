@@ -1,7 +1,8 @@
 const {
   buildCompanyQuery,
   mergeUniqueCompanies,
-  getDataStatusIndicator
+  getDataStatusIndicator,
+  createLatestRequestTracker
 } = require('../company-directory-helpers');
 
 describe('company directory helpers', () => {
@@ -51,5 +52,16 @@ describe('company directory helpers', () => {
 
   test('does not add a warning badge to a verified record', () => {
     expect(getDataStatusIndicator({ data_status: 'verified', source: 'official' })).toBeNull();
+  });
+
+  test('invalidates an older request before its response can update the page', () => {
+    const tracker = createLatestRequestTracker();
+    const firstRequest = tracker.start();
+
+    tracker.invalidate();
+    const secondRequest = tracker.start();
+
+    expect(tracker.isCurrent(firstRequest)).toBe(false);
+    expect(tracker.isCurrent(secondRequest)).toBe(true);
   });
 });

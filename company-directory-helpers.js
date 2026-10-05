@@ -46,9 +46,27 @@
     return null;
   }
 
+  function createLatestRequestTracker() {
+    let version = 0;
+
+    return {
+      start() {
+        version += 1;
+        return version;
+      },
+      invalidate() {
+        version += 1;
+      },
+      isCurrent(requestVersion) {
+        return requestVersion === version;
+      }
+    };
+  }
+
   return {
     buildCompanyQuery,
     mergeUniqueCompanies,
-    getDataStatusIndicator
+    getDataStatusIndicator,
+    createLatestRequestTracker
   };
 });
