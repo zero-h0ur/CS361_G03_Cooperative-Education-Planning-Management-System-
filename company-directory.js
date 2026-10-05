@@ -110,7 +110,7 @@ function activateStaticFallback() {
   companyList.innerHTML = '';
   staticCompanyCards.forEach(card => companyList.appendChild(card));
   
-  // Inject warning banner
+  // Inject warning banner as a child of .header so it sticks with it
   if (!document.getElementById('offlineBanner')) {
     const banner = document.createElement('div');
     banner.id = 'offlineBanner';
@@ -124,7 +124,7 @@ function activateStaticFallback() {
     
     const header = document.querySelector('.header');
     if (header) {
-      header.parentNode.insertBefore(banner, header.nextSibling);
+      header.appendChild(banner);
     }
   }
   
