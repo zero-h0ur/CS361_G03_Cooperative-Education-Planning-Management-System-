@@ -114,12 +114,13 @@ function activateStaticFallback() {
   if (!document.getElementById('offlineBanner')) {
     const banner = document.createElement('div');
     banner.id = 'offlineBanner';
-    banner.style.backgroundColor = '#f1f5f9'; // gray-100
-    banner.style.color = '#334155'; // gray-700
+    banner.style.backgroundColor = '#fffbeb'; // amber-50
+    banner.style.color = '#92400e'; // amber-800
     banner.style.padding = '12px 24px';
     banner.style.textAlign = 'center';
     banner.style.fontSize = '14px';
-    banner.style.borderBottom = '1px solid #e2e8f0';
+    banner.style.borderTop = '1px solid #fcd34d'; // amber-300
+    banner.style.borderBottom = '1px solid #fcd34d';
     banner.textContent = '⚠️ แจ้งเตือนสถานะระบบ: ไม่สามารถดึงข้อมูลล่าสุดจากฐานข้อมูลได้ ข้อมูลและรายละเอียดการรับสมัครที่ปรากฏบนหน้าเว็บขณะนี้ เป็นเพียงข้อมูลจำลองสำหรับการทดสอบระบบ โปรดตรวจสอบข้อมูลจริงอีกครั้งในภายหลัง';
     
     const header = document.querySelector('.header');
