@@ -138,6 +138,24 @@ node scripts/validate-v2-dataset.mjs
 node --test tests/v2-dataset.test.mjs
 ```
 
+## V2 Public API (Development)
+
+หลังตั้งค่า `DATABASE_URL` และรัน Migration/Seed ตาม [V2 Backend Setup](docs/v2-backend-setup.md) ให้เริ่ม API ด้วย:
+
+```bash
+npm start
+```
+
+API ใช้ Port `3000` เป็นค่าเริ่มต้น และรองรับ Public read-only endpoints ต่อไปนี้:
+
+- `GET /api/health`
+- `GET /api/companies?q=&location=&page=&pageSize=`
+- `GET /api/companies/:companyId`
+- `GET /api/companies/:companyId/positions`
+- `GET /api/positions/:positionId`
+
+รัน API tests ที่ไม่ต้องเชื่อม Database ด้วย `npm run test:api`
+
 ## Project Structure
 
 ```text
