@@ -279,7 +279,9 @@ async function fetchCompanies(isAppend = false) {
       let errorMsg = 'ข้อมูลการค้นหาไม่ถูกต้อง';
       try {
         const errJson = await response.json();
-        if (errJson.error) errorMsg = errJson.error;
+        if (typeof errJson?.error?.message === 'string') {
+          errorMsg = errJson.error.message;
+        }
       } catch (e) {}
       const err = new Error('ValidationError');
       err.validationMessage = errorMsg;

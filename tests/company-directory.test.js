@@ -299,7 +299,9 @@ describe('company directory failures (Issue #33)', () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
       status: 400,
-      json: jest.fn().mockResolvedValue({ error: 'รูปแบบที่ตั้งไม่ถูกต้อง' })
+      json: jest.fn().mockResolvedValue({
+        error: { code: 'INVALID_INPUT', message: 'รูปแบบที่ตั้งไม่ถูกต้อง' }
+      })
     });
     loadDirectoryScript();
     await flushAsyncWork();
@@ -319,12 +321,32 @@ describe('company directory failures (Issue #33)', () => {
   });
 
   test('500 และ 503 Activate Fallback', async () => {
+    // Test 503
     global.fetch = jest.fn().mockResolvedValue(apiResponse([], { ok: false, status: 503 }));
+    loadDirectoryScript();
+    await flushAsyncWork();
+    expect(document.getElementById('offlineBanner')).not.toBeNull();
+    expect(document.getElementById('companyList').children.length).toBe(2);
+    
+    // Reset and test 500
+    jest.resetModules();
+    setupDirectoryDom();
+    global.fetch = jest.fn().mockResolvedValue(apiResponse([], { ok: false, status: 500 }));
+    loadDirectoryScript();
+    await flushAsyncWork();
+    expect(document.getElementById('offlineBanner')).not.toBeNull();
+  });
+
+  test('Invalid JSON Activate Fallback', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockRejectedValue(new SyntaxError('Unexpected token'))
+    });
     loadDirectoryScript();
     await flushAsyncWork();
 
     expect(document.getElementById('offlineBanner')).not.toBeNull();
-    expect(document.getElementById('companyList').children.length).toBe(2);
   });
 
   test('Abort ไม่ Activate Fallback', async () => {
