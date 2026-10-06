@@ -127,6 +127,7 @@ function createCompanyCardFromAPI(company) {
  * Fallback to static logic
  */
 function activateStaticFallback() {
+  if (state.mode === 'static') return; // Prevent duplicate execution
   state.mode = 'static';
   searchResultStatus.removeAttribute('aria-busy');
   companyList.innerHTML = '';
@@ -173,7 +174,10 @@ function activateStaticFallback() {
     locationFilter.value = '';
     locationFilter.disabled = true;
     const filterContainer = locationFilter.closest('.directory-location-filter');
-    if (filterContainer) filterContainer.hidden = true;
+    if (filterContainer) {
+      filterContainer.hidden = true;
+      filterContainer.style.display = 'none';
+    }
   }
   companySearch.addEventListener('input', updateStaticVisibility);
 
@@ -207,7 +211,9 @@ function renderState() {
   searchResultStatus.removeAttribute('aria-busy');
 
   if (state.error) {
-    searchResultStatus.textContent = 'ไม่สามารถโหลดข้อมูลจากระบบได้ กรุณาลองใหม่อีกครั้ง';
+    searchResultStatus.textContent = typeof state.error === 'string' ? state.error : 'ไม่สามารถโหลดข้อมูลจากระบบได้ กรุณาลองใหม่อีกครั้ง';
+    companyList.innerHTML = '';
+    loadMoreButton.hidden = true;
     return;
   }
 
@@ -269,8 +275,19 @@ async function fetchCompanies(isAppend = false) {
       headers: { 'Accept': 'application/json' }
     });
 
+    if (response.status === 400) {
+      let errorMsg = 'ข้อมูลการค้นหาไม่ถูกต้อง';
+      try {
+        const errJson = await response.json();
+        if (errJson.error) errorMsg = errJson.error;
+      } catch (e) {}
+      const err = new Error('ValidationError');
+      err.validationMessage = errorMsg;
+      throw err;
+    }
+
     if (!response.ok) {
-      throw new Error('API Error: ' + response.status);
+      throw new Error('ServiceError: ' + response.status);
     }
 
     const json = await response.json();
@@ -294,22 +311,19 @@ async function fetchCompanies(isAppend = false) {
 
   } catch (error) {
     if (error.name === 'AbortError' || !requestTracker.isCurrent(requestVersion)) return;
+    
     console.error('Failed to fetch companies:', error);
     state.loading = false;
-    state.error = error;
     if (abortController === controller) abortController = null;
-
-    // First time load failure -> Fallback to static
-    if (apiDataStore.length === 0 && state.page === 1) {
-      activateStaticFallback();
-    } else {
-      const failedPage = state.page;
+    
+    if (error.message === 'ValidationError') {
+      state.error = error.validationMessage;
       renderState();
-      state.page = Math.max(1, failedPage - 1);
-      loadMoreButton.hidden = false;
-      loadMoreButton.disabled = false;
-      loadMoreButton.textContent = 'ลองโหลดอีกครั้ง';
+      return;
     }
+    
+    // Unconditional fallback on Service failure / Network error / Invalid JSON
+    activateStaticFallback();
   }
 }
 
