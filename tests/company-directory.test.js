@@ -131,6 +131,7 @@ describe('company directory browser flow', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.useRealTimers();
+    delete window.CO_ED_CONFIG;
     setupDirectoryDom();
   });
 
@@ -186,6 +187,17 @@ describe('company directory browser flow', () => {
     expect(document.getElementById('locationFilter').disabled).toBe(true);
     expect(document.querySelector('.directory-location-filter').hidden).toBe(true);
     expect(document.getElementById('searchResultStatus').hasAttribute('aria-busy')).toBe(false);
+  });
+
+  test('uses the configured API base URL for a separate origin', async () => {
+    window.CO_ED_CONFIG = { apiBaseUrl: 'https://api.example.com/' };
+    global.fetch = jest.fn().mockResolvedValue(apiResponse([]));
+
+    loadDirectoryScript();
+    await flushAsyncWork();
+
+    expect(global.fetch.mock.calls[0][0])
+      .toBe('https://api.example.com/api/companies?page=1&pageSize=10');
   });
 
   test('renders API text as text without executing or inserting HTML', async () => {
@@ -276,6 +288,7 @@ describe('company directory failures (Issue #33)', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.useRealTimers();
+    delete window.CO_ED_CONFIG;
     setupDirectoryDom();
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });

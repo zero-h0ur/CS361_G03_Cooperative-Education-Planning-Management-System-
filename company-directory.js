@@ -35,6 +35,13 @@ let abortController = null;
 let debounceTimer = null;
 let apiDataStore = [];
 const requestTracker = createLatestRequestTracker();
+const apiBaseUrl = String(window.CO_ED_CONFIG?.apiBaseUrl || '')
+  .trim()
+  .replace(/\/+$/, '');
+
+function buildApiUrl(path) {
+  return `${apiBaseUrl}${path}`;
+}
 
 function cancelPendingRequest() {
   requestTracker.invalidate();
@@ -288,7 +295,7 @@ async function fetchCompanies(isAppend = false) {
   try {
     const queryString = buildCompanyQuery(state);
 
-    const response = await fetch(`/api/companies?${queryString}`, {
+    const response = await fetch(buildApiUrl(`/api/companies?${queryString}`), {
       signal: controller.signal,
       headers: { 'Accept': 'application/json' }
     });

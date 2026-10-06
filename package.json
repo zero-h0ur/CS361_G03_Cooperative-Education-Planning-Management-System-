@@ -9,8 +9,9 @@
   "scripts": {
     "start": "node src/server.js",
     "migrate": "node src/db/migrate.js",
-    "test": "npm run test:dataset && npm run test:api && npm run test:frontend && npm run test:dal",
+    "test": "npm run test:dataset && npm run test:api && npm run test:lambda && npm run test:frontend && npm run test:dal",
     "test:api": "jest --runInBand tests/api.test.js",
+    "test:lambda": "jest --runInBand tests/lambda.test.js",
     "test:dataset": "node --test tests/v2-dataset.test.mjs",
     "test:dal": "jest --runInBand tests/dal.test.js",
     "test:frontend": "jest --runInBand tests/company-directory.test.js",
