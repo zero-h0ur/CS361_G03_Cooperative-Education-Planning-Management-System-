@@ -64,6 +64,24 @@ function formatDate(dateString) {
   return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+function isValidCompanyListResponse(json) {
+  const pagination = json && json.pagination;
+
+  return Boolean(
+    json
+    && Array.isArray(json.data)
+    && pagination
+    && Number.isInteger(pagination.page)
+    && pagination.page >= 1
+    && Number.isInteger(pagination.pageSize)
+    && pagination.pageSize >= 1
+    && Number.isInteger(pagination.total)
+    && pagination.total >= 0
+    && Number.isInteger(pagination.totalPages)
+    && pagination.totalPages >= 0
+  );
+}
+
 /**
  * Generates a company card from API data
  */
@@ -293,19 +311,17 @@ async function fetchCompanies(isAppend = false) {
     }
 
     const json = await response.json();
+    if (!isValidCompanyListResponse(json)) {
+      throw new Error('ServiceError: invalid response contract');
+    }
     if (!requestTracker.isCurrent(requestVersion)) return;
 
     if (!isAppend) {
       apiDataStore = [];
     }
 
-    apiDataStore = mergeUniqueCompanies(apiDataStore, Array.isArray(json.data) ? json.data : []);
-
-    if (json.pagination) {
-      state.totalPages = json.pagination.totalPages || 1;
-    } else {
-      state.totalPages = 1;
-    }
+    apiDataStore = mergeUniqueCompanies(apiDataStore, json.data);
+    state.totalPages = json.pagination.totalPages;
 
     state.loading = false;
     if (abortController === controller) abortController = null;

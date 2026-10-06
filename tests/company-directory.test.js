@@ -82,12 +82,12 @@ describe('company directory browser flow', () => {
     };
   }
 
-  function apiResponse(data, { page = 1, totalPages = 1 } = {}) {
+  function apiResponse(data, { page = 1, total = data.length, totalPages = 1 } = {}) {
     return {
       ok: true,
       json: jest.fn().mockResolvedValue({
         data,
-        pagination: { page, pageSize: 10, totalPages }
+        pagination: { page, pageSize: 10, total, totalPages }
       })
     };
   }
@@ -235,13 +235,13 @@ describe('company directory browser flow', () => {
 });
 
 describe('company directory failures (Issue #33)', () => {
-  function apiResponse(data, { page = 1, totalPages = 1, ok = true, status = 200 } = {}) {
+  function apiResponse(data, { page = 1, total = data.length, totalPages = 1, ok = true, status = 200 } = {}) {
     return {
       ok,
       status,
       json: jest.fn().mockResolvedValue({
         data,
-        pagination: { page, pageSize: 10, totalPages }
+        pagination: { page, pageSize: 10, total, totalPages }
       })
     };
   }
@@ -349,6 +349,19 @@ describe('company directory failures (Issue #33)', () => {
     expect(document.getElementById('offlineBanner')).not.toBeNull();
   });
 
+  test('JSON ที่ไม่ตรง API contract Activate Fallback', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockResolvedValue({ data: {} })
+    });
+    loadDirectoryScript();
+    await flushAsyncWork();
+
+    expect(document.getElementById('offlineBanner')).not.toBeNull();
+    expect(document.getElementById('companyList').children.length).toBe(2);
+  });
+
   test('Abort ไม่ Activate Fallback', async () => {
     global.fetch = jest.fn().mockRejectedValue({ name: 'AbortError' });
     loadDirectoryScript();
@@ -398,4 +411,3 @@ describe('company directory failures (Issue #33)', () => {
     expect(companyList.children.length).toBe(2);
   });
 });
-
