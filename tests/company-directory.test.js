@@ -423,4 +423,32 @@ describe('company directory failures (Issue #33)', () => {
     await flushAsyncWork();
     expect(companyList.children.length).toBe(2);
   });
+
+  test('Static fallback keeps search, load more, and retry-on-refresh behavior', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    loadDirectoryScript();
+    await flushAsyncWork();
+
+    const companyList = document.getElementById('companyList');
+    const search = document.getElementById('companySearch');
+    const loadMore = document.getElementById('loadMoreCompanies');
+    const location = document.getElementById('locationFilter');
+
+    expect(companyList.children[0].hidden).toBe(false);
+    expect(companyList.children[1].hidden).toBe(true);
+    expect(location.disabled).toBe(true);
+    expect(location.closest('.directory-location-filter').hidden).toBe(true);
+
+    loadMore.click();
+    expect(loadMore.getAttribute('aria-expanded')).toBe('true');
+    expect(companyList.children[1].hidden).toBe(false);
+
+    search.value = 'Static Two';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(companyList.children[0].hidden).toBe(true);
+    expect(companyList.children[1].hidden).toBe(false);
+    expect(loadMore.hidden).toBe(true);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
 });

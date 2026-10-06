@@ -15,6 +15,7 @@
     "test:dataset": "node --test tests/v2-dataset.test.mjs",
     "test:dal": "jest --runInBand tests/dal.test.js",
     "test:frontend": "jest --runInBand tests/company-directory.test.js",
+    "test:deployment": "node --test tests/deployed-v2.test.mjs",
     "seed": "node src/db/seed.js"
   },
   "dependencies": {
