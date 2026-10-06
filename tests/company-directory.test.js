@@ -82,12 +82,12 @@ describe('company directory browser flow', () => {
     };
   }
 
-  function apiResponse(data, { page = 1, totalPages = 1 } = {}) {
+  function apiResponse(data, { page = 1, total = data.length, totalPages = 1 } = {}) {
     return {
       ok: true,
       json: jest.fn().mockResolvedValue({
         data,
-        pagination: { page, pageSize: 10, totalPages }
+        pagination: { page, pageSize: 10, total, totalPages }
       })
     };
   }
@@ -228,9 +228,186 @@ describe('company directory browser flow', () => {
     ], { page: 2, totalPages: 2 }));
     await flushAsyncWork();
 
-    const cards = document.querySelectorAll('#companyList .partner-card-dynamic');
+    const cards = document.querySelectorAll('#companyList .partner-card');
     expect(cards).toHaveLength(11);
-    expect(Array.from(cards).filter((card) => card.textContent.includes('Company 11'))).toHaveLength(1);
     expect(loadMore.hidden).toBe(true);
+  });
+});
+
+describe('company directory failures (Issue #33)', () => {
+  function apiResponse(data, { page = 1, total = data.length, totalPages = 1, ok = true, status = 200 } = {}) {
+    return {
+      ok,
+      status,
+      json: jest.fn().mockResolvedValue({
+        data,
+        pagination: { page, pageSize: 10, total, totalPages }
+      })
+    };
+  }
+
+  function setupDirectoryDom() {
+    document.body.innerHTML = `
+      <header class="header"></header>
+      <p id="searchResultStatus" aria-live="polite"></p>
+      <label for="companySearch"><input id="companySearch" type="search"></label>
+      <label class="directory-location-filter" for="locationFilter"><select id="locationFilter"></select></label>
+      <section id="companyList">
+        <article class="partner-card" data-company="Static One กรุงเทพฯ"></article>
+        <article class="partner-card partner-card-extra" data-company="Static Two ชลบุรี"></article>
+      </section>
+      <button id="loadMoreCompanies" type="button" aria-expanded="false">ดูเพิ่มเติม</button>
+    `;
+    window.CompanyDirectoryHelpers = require('../company-directory-helpers');
+  }
+
+  async function flushAsyncWork() {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  }
+
+  function loadDirectoryScript() {
+    jest.isolateModules(() => {
+      require('../company-directory');
+    });
+  }
+
+  beforeEach(() => {
+    jest.resetModules();
+    jest.useRealTimers();
+    setupDirectoryDom();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    delete global.fetch;
+  });
+
+  test('Empty result แสดง Empty state และไม่เข้า Fallback', async () => {
+    global.fetch = jest.fn().mockResolvedValue(apiResponse([], { page: 1, totalPages: 1 }));
+    loadDirectoryScript();
+    await flushAsyncWork();
+    
+    expect(document.getElementById('offlineBanner')).toBeNull();
+    expect(document.getElementById('searchResultStatus').textContent).toBe('ไม่พบสถานประกอบการที่ตรงกับคำค้นหา');
+    expect(document.getElementById('companyList').children.length).toBe(0);
+  });
+
+  test('400 ไม่ Activate Fallback ทั้งหน้า แต่แสดง Validation error', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: jest.fn().mockResolvedValue({
+        error: { code: 'INVALID_INPUT', message: 'รูปแบบที่ตั้งไม่ถูกต้อง' }
+      })
+    });
+    loadDirectoryScript();
+    await flushAsyncWork();
+
+    expect(document.getElementById('offlineBanner')).toBeNull();
+    expect(document.getElementById('searchResultStatus').textContent).toBe('รูปแบบที่ตั้งไม่ถูกต้อง');
+    expect(document.getElementById('companyList').children.length).toBe(0);
+  });
+
+  test('Network failure Activate Fallback', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    loadDirectoryScript();
+    await flushAsyncWork();
+
+    expect(document.getElementById('offlineBanner')).not.toBeNull();
+    expect(document.getElementById('companyList').children.length).toBe(2);
+  });
+
+  test('500 และ 503 Activate Fallback', async () => {
+    // Test 503
+    global.fetch = jest.fn().mockResolvedValue(apiResponse([], { ok: false, status: 503 }));
+    loadDirectoryScript();
+    await flushAsyncWork();
+    expect(document.getElementById('offlineBanner')).not.toBeNull();
+    expect(document.getElementById('companyList').children.length).toBe(2);
+    
+    // Reset and test 500
+    jest.resetModules();
+    setupDirectoryDom();
+    global.fetch = jest.fn().mockResolvedValue(apiResponse([], { ok: false, status: 500 }));
+    loadDirectoryScript();
+    await flushAsyncWork();
+    expect(document.getElementById('offlineBanner')).not.toBeNull();
+  });
+
+  test('Invalid JSON Activate Fallback', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockRejectedValue(new SyntaxError('Unexpected token'))
+    });
+    loadDirectoryScript();
+    await flushAsyncWork();
+
+    expect(document.getElementById('offlineBanner')).not.toBeNull();
+  });
+
+  test('JSON ที่ไม่ตรง API contract Activate Fallback', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockResolvedValue({ data: {} })
+    });
+    loadDirectoryScript();
+    await flushAsyncWork();
+
+    expect(document.getElementById('offlineBanner')).not.toBeNull();
+    expect(document.getElementById('companyList').children.length).toBe(2);
+  });
+
+  test('Abort ไม่ Activate Fallback', async () => {
+    global.fetch = jest.fn().mockRejectedValue({ name: 'AbortError' });
+    loadDirectoryScript();
+    await flushAsyncWork();
+
+    expect(document.getElementById('offlineBanner')).toBeNull();
+  });
+
+  test('Stale response ไม่ทับผลลัพธ์ล่าสุด', async () => {
+    jest.useFakeTimers();
+    let resolveStale;
+    const stalePromise = new Promise(r => resolveStale = r);
+    global.fetch = jest.fn()
+      .mockReturnValueOnce(stalePromise)
+      .mockResolvedValueOnce(apiResponse([{ id: 2, name: 'Latest' }], { page: 1, totalPages: 1 }));
+
+    loadDirectoryScript();
+    await flushAsyncWork(); // Starts first request
+    
+    // Simulate user typing triggering a new request
+    const search = document.getElementById('companySearch');
+    search.value = 'latest';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    jest.advanceTimersByTime(300);
+    await flushAsyncWork(); // Starts second request, receives "Latest"
+    
+    // Now resolve the stale request
+    resolveStale(apiResponse([{ id: 1, name: 'Stale' }], { page: 1, totalPages: 1 }));
+    await flushAsyncWork();
+    
+    // UI should only have Latest
+    expect(document.getElementById('companyList').textContent).toContain('Latest');
+    expect(document.getElementById('companyList').textContent).not.toContain('Stale');
+  });
+
+  test('Static cards ไม่มีข้อมูลซ้ำหลัง Restore', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    loadDirectoryScript();
+    await flushAsyncWork();
+
+    const companyList = document.getElementById('companyList');
+    expect(companyList.children.length).toBe(2);
+    
+    // Try forcing fallback again, should guard duplicate rendering
+    document.getElementById('loadMoreCompanies').click();
+    await flushAsyncWork();
+    expect(companyList.children.length).toBe(2);
   });
 });

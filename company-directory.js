@@ -64,6 +64,24 @@ function formatDate(dateString) {
   return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+function isValidCompanyListResponse(json) {
+  const pagination = json && json.pagination;
+
+  return Boolean(
+    json
+    && Array.isArray(json.data)
+    && pagination
+    && Number.isInteger(pagination.page)
+    && pagination.page >= 1
+    && Number.isInteger(pagination.pageSize)
+    && pagination.pageSize >= 1
+    && Number.isInteger(pagination.total)
+    && pagination.total >= 0
+    && Number.isInteger(pagination.totalPages)
+    && pagination.totalPages >= 0
+  );
+}
+
 /**
  * Generates a company card from API data
  */
@@ -127,6 +145,7 @@ function createCompanyCardFromAPI(company) {
  * Fallback to static logic
  */
 function activateStaticFallback() {
+  if (state.mode === 'static') return; // Prevent duplicate execution
   state.mode = 'static';
   searchResultStatus.removeAttribute('aria-busy');
   companyList.innerHTML = '';
@@ -173,7 +192,10 @@ function activateStaticFallback() {
     locationFilter.value = '';
     locationFilter.disabled = true;
     const filterContainer = locationFilter.closest('.directory-location-filter');
-    if (filterContainer) filterContainer.hidden = true;
+    if (filterContainer) {
+      filterContainer.hidden = true;
+      filterContainer.style.display = 'none';
+    }
   }
   companySearch.addEventListener('input', updateStaticVisibility);
 
@@ -207,7 +229,9 @@ function renderState() {
   searchResultStatus.removeAttribute('aria-busy');
 
   if (state.error) {
-    searchResultStatus.textContent = 'ไม่สามารถโหลดข้อมูลจากระบบได้ กรุณาลองใหม่อีกครั้ง';
+    searchResultStatus.textContent = typeof state.error === 'string' ? state.error : 'ไม่สามารถโหลดข้อมูลจากระบบได้ กรุณาลองใหม่อีกครั้ง';
+    companyList.innerHTML = '';
+    loadMoreButton.hidden = true;
     return;
   }
 
@@ -269,24 +293,35 @@ async function fetchCompanies(isAppend = false) {
       headers: { 'Accept': 'application/json' }
     });
 
+    if (response.status === 400) {
+      let errorMsg = 'ข้อมูลการค้นหาไม่ถูกต้อง';
+      try {
+        const errJson = await response.json();
+        if (typeof errJson?.error?.message === 'string') {
+          errorMsg = errJson.error.message;
+        }
+      } catch (e) {}
+      const err = new Error('ValidationError');
+      err.validationMessage = errorMsg;
+      throw err;
+    }
+
     if (!response.ok) {
-      throw new Error('API Error: ' + response.status);
+      throw new Error('ServiceError: ' + response.status);
     }
 
     const json = await response.json();
+    if (!isValidCompanyListResponse(json)) {
+      throw new Error('ServiceError: invalid response contract');
+    }
     if (!requestTracker.isCurrent(requestVersion)) return;
 
     if (!isAppend) {
       apiDataStore = [];
     }
 
-    apiDataStore = mergeUniqueCompanies(apiDataStore, Array.isArray(json.data) ? json.data : []);
-
-    if (json.pagination) {
-      state.totalPages = json.pagination.totalPages || 1;
-    } else {
-      state.totalPages = 1;
-    }
+    apiDataStore = mergeUniqueCompanies(apiDataStore, json.data);
+    state.totalPages = json.pagination.totalPages;
 
     state.loading = false;
     if (abortController === controller) abortController = null;
@@ -294,22 +329,19 @@ async function fetchCompanies(isAppend = false) {
 
   } catch (error) {
     if (error.name === 'AbortError' || !requestTracker.isCurrent(requestVersion)) return;
+    
     console.error('Failed to fetch companies:', error);
     state.loading = false;
-    state.error = error;
     if (abortController === controller) abortController = null;
-
-    // First time load failure -> Fallback to static
-    if (apiDataStore.length === 0 && state.page === 1) {
-      activateStaticFallback();
-    } else {
-      const failedPage = state.page;
+    
+    if (error.message === 'ValidationError') {
+      state.error = error.validationMessage;
       renderState();
-      state.page = Math.max(1, failedPage - 1);
-      loadMoreButton.hidden = false;
-      loadMoreButton.disabled = false;
-      loadMoreButton.textContent = 'ลองโหลดอีกครั้ง';
+      return;
     }
+    
+    // Unconditional fallback on Service failure / Network error / Invalid JSON
+    activateStaticFallback();
   }
 }
 
