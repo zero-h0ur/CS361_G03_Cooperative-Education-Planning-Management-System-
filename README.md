@@ -1,270 +1,385 @@
-# CO-ED: Cooperative Education Planning and Information System (Version 1)
+# CO-ED: Cooperative Education Planning and Information System (Version 2)
 
-CO-ED เป็นเว็บไซต์รวบรวมข้อมูลเบื้องต้นสำหรับนักศึกษาชั้นปีที่ 3 สาขาวิชาวิทยาการคอมพิวเตอร์ มหาวิทยาลัยธรรมศาสตร์ ที่กำลังเตรียมตัวเข้าร่วมสหกิจศึกษา โดยรวมข้อกำหนด ขั้นตอน กำหนดการ รายชื่อสถานประกอบการ และคำถามที่พบบ่อยไว้ในจุดเดียว
+CO-ED เป็นระบบรวบรวมและให้บริการข้อมูลสำหรับนักศึกษาชั้นปีที่ 3 สาขาวิชาวิทยาการคอมพิวเตอร์ มหาวิทยาลัยธรรมศาสตร์ ที่กำลังเตรียมตัวเข้าร่วมสหกิจศึกษา โดยรวมข้อกำหนด ขั้นตอน กำหนดการ รายชื่อสถานประกอบการ และคำถามที่พบบ่อยไว้ในจุดเดียว
+
+Version 2 พัฒนาต่อจาก Static Website ของ V1 โดยเพิ่ม Public read-only API, Serverless compute และ Persistent relational database สำหรับหน้า Company Directory ขณะที่หน้าและพฤติกรรมหลักของ V1 ยังคงใช้งานได้
 
 - เว็บไซต์ที่ Deploy แล้ว: [CO-ED บน AWS Amplify](https://main.d1d9qrqnsi5nl6.amplifyapp.com/)
+- หน้า Company Directory: [รายชื่อสถานประกอบการ](https://main.d1d9qrqnsi5nl6.amplifyapp.com/company-directory.html)
+- API Health Check: [GET /api/health](https://qtqlsb1aec.execute-api.us-east-1.amazonaws.com/api/health)
 - GitHub Repository: [zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-)
+
+> ข้อมูลบริษัท ตำแหน่งงาน นักศึกษา แผน และรอบเวลาใน V2 เป็น Mock/Anonymized data สำหรับ Development, Test และ Demo ไม่ใช่ข้อมูลการเปิดรับจริง
 
 ## Problem and Primary User
 
-ข้อมูลที่ใช้เตรียมสหกิจศึกษาอยู่ในหลายแหล่ง เช่น ประกาศ เอกสาร และช่องทางสื่อสารของสาขาวิชา ทำให้นักศึกษาตรวจสอบข้อมูลและขั้นตอนที่ต้องดำเนินการได้ยาก ผู้ใช้หลักของ V1 จึงเป็นนักศึกษาชั้นปีที่ 3 ที่กำลังเตรียมสมัครเข้าแผนสหกิจศึกษาและต้องการดูข้อมูลสำคัญจากหน้าเว็บเดียว
+ข้อมูลสำหรับเตรียมสหกิจศึกษาอยู่ในหลายแหล่ง เช่น ประกาศ เอกสาร และช่องทางสื่อสารของสาขาวิชา ทำให้นักศึกษาตรวจสอบข้อมูลและขั้นตอนที่ต้องดำเนินการได้ยาก ผู้ใช้หลักของระบบจึงเป็นนักศึกษาชั้นปีที่ 3 ที่ต้องการค้นหาและตรวจสอบข้อมูลสำคัญจากจุดเดียว
 
-## Project Vision
+ใน V1 รายชื่อสถานประกอบการเป็น Static data ภายในหน้าเว็บ การปรับปรุงข้อมูลต้องแก้ Source code และ Deploy Frontend ใหม่ ส่วน V2 ย้ายข้อมูลสำหรับ Company Directory ไปยัง PostgreSQL และให้ Browser อ่านผ่าน Public API เพื่อรองรับการค้นหา การกรอง Pagination และการคงอยู่ของข้อมูลหลัง Restart หรือ Redeploy
 
-CO-ED มีเป้าหมายเป็นระบบกลางสำหรับวางแผนและจัดการสหกิจศึกษาของนักศึกษาอย่างครบวงจร เพื่อลดปัญหาข้อมูลที่กระจายอยู่ในแบบฟอร์ม ไฟล์ ตาราง และช่องทางสื่อสารหลายแห่ง รวมทั้งทำให้ข้อมูลสิทธิ์ สถานะ และช่วงเวลาของนักศึกษา สถานประกอบการ และผู้เกี่ยวข้องมีความสอดคล้องและตรวจสอบได้
+## V2 Scope
 
-เมื่อพัฒนาครบตามทิศทางของโจทย์ ระบบควรรองรับความสามารถหลักดังนี้:
+### สิ่งที่ V2 รองรับ
 
-- จัดการข้อมูลนักศึกษา สถานประกอบการ ตำแหน่งหรือโครงการ รอบเวลา และแผนสหกิจศึกษา
-- ให้นักศึกษาสร้าง แก้ไข และส่งแผน รวมถึงเลือกหรือเสนอสถานประกอบการตามเงื่อนไขและช่วงเวลาที่กำหนด
-- ให้อาจารย์และเจ้าหน้าที่ตรวจสอบ อนุมัติ ส่งกลับแก้ไข และติดตามความก้าวหน้าตามสิทธิ์
-- ติดตามสถานะและ Deadline ตั้งแต่การเตรียมตัว การยื่นแผน การพิจารณา การสมัคร การตอบรับ การปฏิบัติงาน จนถึงเสร็จสิ้น
-- ค้นหา กรอง สรุป และรายงานข้อมูลเพื่อสนับสนุนการวางแผนในระดับหลักสูตรหรือสาขาวิชา
-- รองรับการนำเข้า แลกเปลี่ยน หรือส่งออกข้อมูลกับแหล่งข้อมูลอื่น โดยคำนึงถึงความถูกต้อง สิทธิ์ ความเป็นส่วนตัว และการตรวจสอบย้อนหลัง
+- ใช้งานหน้า Landing page, Requirements, Company Directory และ FAQ จาก V1 ต่อได้
+- โหลดรายชื่อสถานประกอบการจาก Dynamic API
+- ค้นหาจากชื่อสถานประกอบการหรือชื่อตำแหน่งงาน
+- กรองตามสถานที่ของบริษัทหรือตำแหน่งงาน
+- แบ่งหน้าข้อมูลและโหลดหน้าถัดไปด้วยปุ่มดูเพิ่มเติม
+- แสดงสถานะ Mock/To validate ให้ผู้ใช้ทราบคุณภาพของข้อมูล
+- ใช้ Static V1 fallback เมื่อ API, Network หรือ Response contract มีปัญหา
+- จัดเก็บข้อมูลใน Amazon RDS for PostgreSQL
+- จำกัด Public API ให้เป็น Read-only และส่งเฉพาะ Public fields
+- บันทึก Runtime logs ของ Lambda ใน Amazon CloudWatch Logs
 
-ความสามารถเหล่านี้เป็น Vision ระยะยาวตามการพัฒนาตั้งแต่ V1 ถึง V7 ส่วน V1 ปัจจุบันรับผิดชอบเฉพาะการเผยแพร่ข้อมูลพื้นฐานที่จำเป็นต่อการเตรียมสหกิจศึกษา และยังไม่มี Dynamic Data, Authentication, Workflow หรือการติดตามสถานะรายบุคคล
+### สิ่งที่ยังอยู่นอกขอบเขต V2
 
-## Smallest Useful V1
-
-V1 ช่วยให้ผู้ใช้ดำเนินตาม Core User Path ต่อไปนี้ได้:
-
-1. เปิดหน้าแรกเพื่อดูภาพรวมและข้อมูลสำคัญ
-2. ตรวจสอบคุณสมบัติและข้อกำหนดของสหกิจศึกษา
-3. อ่านภาพรวมขั้นตอนและเอกสารที่ต้องเตรียม
-4. เรียกดูและค้นหารายชื่อสถานประกอบการ
-5. ค้นหาคำถามที่พบบ่อยเกี่ยวกับการสมัครและการเตรียมตัว
-
-## Implemented Features
-
-| Feature | รายละเอียด | ไฟล์หลัก |
-| --- | --- | --- |
-| Landing page | แสดงภาพรวม ประกาศ กำหนดการ และตัวอย่างสถานประกอบการ | `index.html` |
-| Requirements | แสดงคุณสมบัติ ข้อกำหนด ขั้นตอน เอกสาร และแนวทางเตรียมตัว | `requirements.html` |
-| Company directory | แสดง ค้นหา และโหลดรายชื่อสถานประกอบการเพิ่มเติม | `company-directory.html`, `company-directory.js` |
-| FAQ | แสดงและค้นหาคำถามที่พบบ่อย พร้อมล้างคำค้นหา | `faq.html` |
-| Responsive layout | รองรับการใช้งานบน Desktop, Tablet และ Mobile | `style.css` |
-| Deployment | Deploy จาก Branch `main` ผ่าน AWS Amplify Hosting | AWS Amplify, GitHub |
-
-## V1 System Boundary
-
-### Inside V1
-
-- แสดงข้อมูลเบื้องต้นเกี่ยวกับสหกิจศึกษา
-- แสดงเกณฑ์ คุณสมบัติ ขั้นตอน และแนวทางเตรียมตัว
-- แสดงข้อมูลเอกสารและกำหนดการที่ทีมรวบรวมไว้
-- เรียกดูและค้นหารายชื่อสถานประกอบการ
-- แสดงและค้นหาคำถามที่พบบ่อย
-- รองรับการเปิดเว็บไซต์ผ่าน HTTPS บน AWS Amplify
-
-### Outside V1
-
-- ระบบสมัครสมาชิกและเข้าสู่ระบบที่ทำงานจริง
-- การจัดเก็บข้อมูลส่วนบุคคลของนักศึกษา
-- การยื่นใบสมัครหรืออัปโหลดเอกสาร
-- การอนุมัติแผนและติดตามสถานะรายบุคคล
+- Authentication และ Authorization ของผู้ใช้
+- การสมัครสหกิจหรือ Upload เอกสารจริง
+- การเพิ่ม แก้ไข หรือลบข้อมูลผ่าน Public API
+- Workflow การอนุมัติแผนและติดตามสถานะรายบุคคล
 - ระบบหลังบ้านสำหรับอาจารย์หรือเจ้าหน้าที่
-- Backend, API, Database และการเชื่อมต่อข้อมูลแบบ Real-time
+- การใช้ข้อมูลนักศึกษาหรือข้อมูลสถานประกอบการจริงใน Production
 
-## Actors and Data Sources
+## Architecture
 
-| ประเภท | รายละเอียด |
-| --- | --- |
-| Primary actor | นักศึกษาชั้นปีที่ 3 ที่กำลังเตรียมสมัครเข้าแผนสหกิจศึกษา |
-| Information providers | สาขาวิชา อาจารย์หรือเจ้าหน้าที่ผู้รับผิดชอบ และสถานประกอบการ |
-| University sources | เว็บไซต์สาขาวิชา รายละเอียดหลักสูตร ประกาศ และแบบฟอร์มของมหาวิทยาลัย |
-| Company sources | ข้อมูลสาธารณะของสถานประกอบการ |
-| V1 data format | เนื้อหา Static ภายใน HTML และ JavaScript ซึ่งแก้ไขผ่าน Git workflow |
+### Detailed Architecture and Request Flow
 
-## Current Architecture
+[![CO-ED Version 2 Detailed Architecture](docs/architecture/G03-V2-architecture-full.png)](docs/architecture/G03-V2-architecture-full.png)
 
-[![แผนภาพสถาปัตยกรรมของระบบ CO-ED Version 1](docs/architecture/G03-V1-architecture.png)](docs/architecture/G03-V1-architecture.png)
+แผนภาพนี้แสดง Runtime flow, Deployment flow, VPC, Security Groups, CORS, TLS, CloudWatch Logs และ Static fallback ของ V1
 
-V1 เป็น Static Website ที่ให้บริการผ่าน AWS Amplify Hosting ผู้ใช้เปิดหน้าเว็บผ่าน HTTPS และการค้นหาหรือกรองข้อมูลทำงานภายใน Browser โดยไม่มี Login, Backend API, Lambda หรือ Database
+### AWS Cloud Architecture Overview
 
-### Components
+[![CO-ED Version 2 AWS Cloud Architecture Overview](docs/architecture/G03-V2-architecture.drawio.png)](docs/architecture/G03-V2-architecture.drawio.png)
+
+ไฟล์ Overview นี้ Export จาก Draw.io พร้อมฝังข้อมูล Diagram จึงสามารถนำไฟล์ PNG กลับไปเปิดและแก้ไขใน Draw.io ได้
+
+### Runtime Flow
+
+```text
+ผู้ใช้
+  │
+  ▼
+Web Browser ── HTTPS: HTML/CSS/JavaScript/Images ──> AWS Amplify Hosting
+  │
+  └── HTTPS: GET /api/* ──> Amazon API Gateway HTTP API
+                                  │
+                                  ▼
+                             AWS Lambda
+                                  │
+                                  │ SQL over TLS: TCP 5432
+                                  ▼
+                         Amazon RDS for PostgreSQL
+```
+
+1. Browser โหลด Frontend และ Static assets จาก AWS Amplify ผ่าน HTTPS
+2. JavaScript ใน Browser เรียก API Gateway โดยตรง พร้อมเงื่อนไข `q`, `location`, `page` และ `pageSize`
+3. API Gateway จัดการ Route/CORS แล้ว Invoke Lambda ด้วย Lambda proxy integration
+4. Lambda ตรวจสอบ Input และเรียก Data Access Layer (DAL)
+5. DAL ส่ง Parameterized SQL ผ่าน TLS ไปยัง RDS for PostgreSQL
+6. PostgreSQL เป็นส่วนที่ค้นหา กรอง เรียง และแบ่งหน้าข้อมูลจริง
+7. ผลลัพธ์ย้อนกลับเป็น JSON ผ่าน Lambda และ API Gateway ไปยัง Browser
+8. Lambda ส่ง Log และ Error ไปยัง CloudWatch Logs
+9. หาก Dynamic API ใช้งานไม่ได้ หน้า Company Directory จะใช้ Static fallback ของ V1
+
+### AWS Components
 
 | Component | Service / Technology | Responsibility |
 | --- | --- | --- |
-| Client | Web Browser | ขอและแสดงผลหน้าเว็บ รวมถึงค้นหาและกรองข้อมูลด้วย JavaScript ภายใน Browser |
-| Hosting | AWS Amplify Hosting | ให้บริการไฟล์ HTML, CSS, JavaScript และรูปภาพผ่าน HTTPS และ Global CDN ที่ทำงานบน CloudFront |
-| Source and Deployment | GitHub และ AWS Amplify | เก็บ Source code และ Deploy อัตโนมัติเมื่อ Pull Request ได้รับอนุมัติและ Merge เข้า `main` |
-| Data and External Sources | Static content และแหล่งข้อมูลของมหาวิทยาลัย | ทีมตรวจสอบข้อมูลจากประกาศ ข้อกำหนด กำหนดการ และรายการเอกสารก่อนปรับปรุงเนื้อหาใน Repository |
+| Client | Web Browser | แสดงหน้าเว็บ รับเงื่อนไขค้นหา เรียก API และ Render ผลลัพธ์ |
+| Frontend Hosting | AWS Amplify Hosting | ให้บริการ Static assets ผ่าน HTTPS/CDN และ Deploy จาก GitHub `main` |
+| Public API | Amazon API Gateway HTTP API | ให้ HTTPS endpoint, Route, CORS และ Invoke Lambda |
+| Compute | AWS Lambda, Node.js 22.x | รัน API routing, validation และ DAL |
+| Database | Amazon RDS for PostgreSQL | เก็บ Persistent relational data และประมวลผล Query |
+| Network | Amazon VPC และ Security Groups | จำกัด RDS Port 5432 ให้เข้าถึงจาก Lambda Security Group เท่านั้น |
+| Observability | Amazon CloudWatch Logs | เก็บ Lambda runtime logs, errors, duration และ Request ID |
+| Source and Delivery | GitHub และ AWS Amplify | Branch, Pull Request, Review, Merge และ Automatic frontend deployment |
 
-### Data Flow
+### Security and Data Boundary
 
-1. ทีมตรวจสอบข้อมูลจากแหล่งข้อมูลของมหาวิทยาลัยและปรับปรุง Static content ใน Feature Branch
-2. เมื่อ Pull Request ได้รับอนุมัติและ Merge เข้า `main` ระบบ Amplify จะ Build และ Deploy เว็บไซต์อัตโนมัติ
-3. Browser ส่ง HTTPS request ไปยัง Amplify เพื่อขอหน้าเว็บและไฟล์ Static
-4. Amplify ส่ง HTML, CSS, JavaScript และรูปภาพกลับมา จากนั้น Browser แสดงผลและประมวลผลการค้นหาหรือกรองข้อมูลฝั่ง Client
+- Frontend และ API แยกกันคนละ Origin โดย CORS อนุญาตเฉพาะ Amplify origin ของทีม
+- CORS เป็น Browser policy ไม่ใช่ Authentication ดังนั้น API จึงเปิดเฉพาะข้อมูล Public และ Read-only operations
+- RDS ปิด Public access และรับ TCP 5432 จาก `coed-lambda-sg` เท่านั้น
+- Browser ไม่สามารถติดต่อ Database โดยตรง ทุก Request ต้องผ่าน API Gateway และ Lambda
+- การเชื่อมต่อจาก Lambda ไป RDS ใช้ TLS และตรวจ Certificate ด้วย RDS CA bundle
+- API ใช้ Public-field allowlist และไม่เปิด Endpoint สำหรับ Student หรือ Plan
+- Configuration แยกจาก Source code ผ่าน Environment variables และไม่ Commit Credential ลง Repository
 
-## Design Decision and Trade-off
+## Design Decisions
 
-ทีมเลือกพัฒนา V1 เป็น Static Website เพราะ Requirement ของ Version นี้เน้นการเผยแพร่ข้อมูลพื้นฐาน และยังไม่มีการบันทึกข้อมูลผู้ใช้หรือธุรกรรมที่จำเป็นต้องมี Backend โดยเปรียบเทียบการ Hosting ระหว่าง Amazon S3 และ AWS Amplify Hosting ก่อนเลือกใช้ Amplify
+### ใช้ Amplify เดิมสำหรับ Frontend
 
-| ประเด็น | AWS Amplify Hosting | Amazon S3 |
+V1 Deploy บน Amplify อยู่แล้ว ทีมจึงคง Hosting, HTTPS, CDN และ Automatic deployment เดิมไว้ ลดผลกระทบต่อหน้าเว็บและ URL ที่ผู้ใช้ใช้งานอยู่
+
+### แยก Frontend กับ API คนละ Origin
+
+Browser โหลดหน้าเว็บจาก Amplify แต่เรียก Dynamic API ที่ API Gateway โดยตรง ทำให้ Frontend และ Backend Deploy แยกจากกันได้ และควบคุม Browser access ผ่าน CORS
+
+### ใช้ API Gateway HTTP API และ Lambda
+
+V2 เป็น Public read-only API ที่มี Traffic ระดับงานนักศึกษา จึงไม่จำเป็นต้องเปิด Server ตลอดเวลา API Gateway ให้ Public HTTPS endpoint ส่วน Lambda ทำงานเมื่อมี Request และไม่ต้องดูแล Operating system หรือ Web Server
+
+### ใช้ PostgreSQL
+
+ข้อมูล V2 มีความสัมพันธ์ระหว่าง Company, Position, Student, Plan และ Round จึงใช้ PostgreSQL เพื่อรองรับ Primary key, Foreign key, Constraints, Indexes, Search และ Pagination รวมถึงรักษาข้อมูลไว้หลัง Restart หรือ Redeploy
+
+### ใช้ Data Access Layer
+
+DAL แยก SQL และ Database error handling ออกจาก API handler ทำให้ทดสอบ Database logic แยกได้ ลด Query ซ้ำ และควบคุมการอ่านเฉพาะ Public records จากจุดเดียว
+
+### คง Static fallback ของ V1
+
+หาก API, Network หรือ Response contract มีปัญหา หน้า Company Directory ยังแสดงข้อมูลตัวอย่างเดิมได้แทนหน้าว่าง โดยจะแจ้งสถานะให้ผู้ใช้ทราบว่าไม่ได้ใช้ข้อมูลล่าสุด
+
+## Public API
+
+Base URL:
+
+```text
+https://qtqlsb1aec.execute-api.us-east-1.amazonaws.com
+```
+
+| Method | Endpoint | รายละเอียด |
 | --- | --- | --- |
-| Deployment | เชื่อม GitHub และ Deploy อัตโนมัติเมื่อมีการเปลี่ยนแปลงบน Branch `main` | ต้องอัปโหลดหรือ Sync ไฟล์เอง หรือสร้าง GitHub Actions สำหรับการ Deploy |
-| HTTPS และ CDN | มี HTTPS และ CDN ซึ่งทำงานบน Amazon CloudFront ให้พร้อมใช้งาน | S3 Website Endpoint รองรับ HTTP และไม่มี CDN มาให้ในตัว |
-| การตั้งค่าและดูแล | ตั้งค่าน้อยและติดตามผลการ Deploy ได้จากหน้าเดียว | ต้องตั้งค่า Bucket, Static website hosting, สิทธิ์การเข้าถึง และขั้นตอน Deploy |
-| ค่าใช้จ่าย | คิดตามเวลา Build, พื้นที่จัดเก็บ และการส่งข้อมูล | คิดตามพื้นที่จัดเก็บ จำนวน Request และการส่งข้อมูล |
-| ความเหมาะสม | เหมาะกับทีมที่ต้องการนำโค้ดจาก GitHub ขึ้นเว็บอย่างรวดเร็ว | เหมาะกับเว็บ Static ที่ต้องการควบคุมการจัดเก็บไฟล์และขั้นตอน Deploy เอง |
+| GET | `/api/health` | ตรวจสอบว่า API และ Lambda ตอบสนองได้ |
+| GET | `/api/companies?q=&location=&page=&pageSize=` | แสดง ค้นหา กรอง และแบ่งหน้ารายชื่อบริษัท |
+| GET | `/api/companies/:companyId` | อ่านบริษัท Public ตาม UUID |
+| GET | `/api/companies/:companyId/positions` | อ่านตำแหน่งงาน Public ของบริษัท |
+| GET | `/api/positions/:positionId` | อ่านตำแหน่งงาน Public ตาม UUID |
 
-สำหรับเว็บไซต์ V1 ที่มีขนาดเล็ก ค่าใช้จ่ายของทั้งสองทางเลือกอยู่ตามปริมาณการใช้งาน ทีมยอมรับค่า Build ที่อาจเกิดขึ้นกับ Amplify เพื่อแลกกับการ Deploy จาก GitHub, HTTPS และ CDN ที่พร้อมใช้งาน ส่วน S3 อาจประหยัดกว่าเมื่อเก็บไฟล์ Static เพียงอย่างเดียว แต่ทีมต้องจัดการขั้นตอน Deploy และการให้บริการเว็บเพิ่มเติมเอง
-
-ทีมจึงเลือก Amplify เพราะเหมาะกับ Workflow ที่ Merge โค้ดเข้า `main` แล้ว Deploy อัตโนมัติ ทำให้ตรวจสอบ Version ที่นำขึ้นใช้งานได้ง่าย Trade-off คือมีค่า Build ทุกครั้งที่ Deploy และควบคุมรายละเอียดของ Hosting ได้น้อยกว่าการตั้งค่าบน S3 ด้วยตนเอง
-
-แหล่งอ้างอิงสำหรับการตัดสินใจ:
-
-- [AWS Amplify Pricing](https://aws.amazon.com/amplify/pricing/)
-- [AWS Amplify Hosting และ Continuous Deployment](https://docs.aws.amazon.com/amplify/latest/userguide/welcome.html)
-- [Amazon S3 Pricing](https://aws.amazon.com/s3/pricing/)
-- [Amazon S3 Website Endpoints และข้อจำกัด HTTPS](https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteEndpoints.html)
-
-## Technology Stack
-
-- HTML5
-- CSS3
-- Vanilla JavaScript
-- Font Awesome ผ่าน CDN
-- Git และ GitHub สำหรับ Issue, Branch, Commit, Pull Request และ Review
-- AWS Amplify Hosting สำหรับ HTTPS และ Deployment
-
-## V2 Development Data
-
-V2 มี Canonical Mock dataset สำหรับ Development, Test และ Demo ที่ `data/v2/mock-dataset.json` ข้อมูลทั้งหมดเป็นข้อมูลสมมติและแยกจากหน้าเว็บ V1 โดยอ่านกติกาและวิธีตรวจสอบได้ที่ [CO-ED V2 Mock Dataset](docs/data/v2-mock-data.md)
+ตัวอย่าง:
 
 ```bash
-node scripts/validate-v2-dataset.mjs
-node --test tests/v2-dataset.test.mjs
+curl "https://qtqlsb1aec.execute-api.us-east-1.amazonaws.com/api/companies?q=Cloud&location=นนทบุรี&page=1&pageSize=10"
 ```
 
-## V2 Public API (Development)
+API รองรับเฉพาะ `GET` หากใช้ Method อื่นจะตอบ `405 Method Not Allowed` และ Query parameters ที่ไม่รองรับจะตอบ `400 Bad Request`
 
-หลังตั้งค่า `DATABASE_URL` และรัน Migration/Seed ตาม [V2 Backend Setup](docs/v2-backend-setup.md) ให้เริ่ม API ด้วย:
+## Data Model
 
-```bash
-npm start
-```
+ตารางหลักของ V2 ได้แก่:
 
-API ใช้ Port `3000` เป็นค่าเริ่มต้น และรองรับ Public read-only endpoints ต่อไปนี้:
+| Table | หน้าที่ | ความสัมพันธ์สำคัญ |
+| --- | --- | --- |
+| `companies` | ข้อมูลสถานประกอบการ | `id` เป็น UUID Primary key |
+| `positions` | ตำแหน่งงาน | `company_id` เป็น Foreign key ไป `companies.id` |
+| `rounds` | รอบและปีการศึกษา | ถูกอ้างถึงจาก `plans.round_id` |
+| `document_metadata` | Metadata ของเอกสารสาธารณะ | ไม่มีข้อมูลไฟล์ส่วนบุคคล |
+| `students` | นักศึกษาสมมติ | `anonymous_ref` เป็น Unique และข้อมูลเป็น Private |
+| `plans` | แผนสหกิจสมมติ | Foreign key ไป `students.id` และ `rounds.id` |
 
-- `GET /api/health`
-- `GET /api/companies?q=&location=&page=&pageSize=`
-- `GET /api/companies/:companyId`
-- `GET /api/companies/:companyId/positions`
-- `GET /api/positions/:positionId`
+`Company.location` และ `Position.location` เป็น Text attributes ใน V2 ยังไม่มีตาราง Location หรือ Location foreign key แยก การกรองสถานที่จะตรวจทั้ง Location ของบริษัทและของตำแหน่งงาน
 
-รัน API tests ที่ไม่ต้องเชื่อม Database ด้วย `npm run test:api`
+อ่าน Schema ได้ที่ [`src/db/migrations/001_initial_schema.sql`](src/db/migrations/001_initial_schema.sql) และอ่านกติกาของ Dataset ได้ที่ [`docs/data/v2-mock-data.md`](docs/data/v2-mock-data.md)
 
 ## Project Structure
 
 ```text
 .
-├── index.html                 # หน้าแรก
-├── requirements.html          # คุณสมบัติ ข้อกำหนด ขั้นตอน และเอกสาร
-├── company-directory.html     # หน้ารายชื่อสถานประกอบการ
-├── company-directory.js       # การค้นหาและโหลดรายการเพิ่มเติม
-├── faq.html                   # คำถามที่พบบ่อยและการค้นหา
-├── style.css                  # รูปแบบและ Responsive layout
+├── index.html
+├── requirements.html
+├── company-directory.html
+├── company-directory.js
+├── company-directory-helpers.js
+├── runtime-config.js
+├── faq.html
+├── style.css
 ├── data/v2/
-│   └── mock-dataset.json      # Canonical Mock dataset สำหรับ V2
-├── scripts/
-│   └── validate-v2-dataset.mjs # ตรวจ Metadata, Relationship และ Data safety
+│   └── mock-dataset.json
+├── src/
+│   ├── lambda.js
+│   ├── server.js
+│   ├── api/app.js
+│   └── db/
+│       ├── connection.js
+│       ├── dal.js
+│       ├── migrate.js
+│       ├── seed.js
+│       └── migrations/001_initial_schema.sql
 ├── tests/
-│   └── v2-dataset.test.mjs    # Automated data-quality tests
-├── resources/images/          # รูปภาพและโลโก้ที่ใช้ในเว็บไซต์
+│   ├── api.test.js
+│   ├── company-directory.test.js
+│   ├── dal.test.js
+│   ├── lambda.test.js
+│   └── v2-dataset.test.mjs
 ├── docs/
 │   ├── architecture/
-│   │   └── G03-V1-architecture.png  # Architecture Diagram ของ V1
-│   └── data/
-│       └── v2-mock-data.md    # Policy, scenarios และวิธีตรวจ Dataset
-├── CONTRIBUTING.md            # Branch, Commit, PR และ Merge workflow
+│   │   ├── G03-V1-architecture.png
+│   │   ├── G03-V2-architecture-full.png
+│   │   └── G03-V2-architecture.drawio.png
+│   ├── data/v2-mock-data.md
+│   ├── decisions/issue-30-decisions.md
+│   ├── issue-32-manual-verification.md
+│   └── v2-backend-setup.md
+├── CONTRIBUTING.md
 └── README.md
 ```
 
 ## Run Locally
 
-### วิธีที่ 1: เปิดไฟล์โดยตรง
+### Prerequisites
 
-Clone Repository แล้วเปิด `index.html` ด้วย Browser
+- Node.js 18.14 ขึ้นไป
+- npm
+- Docker สำหรับ Local PostgreSQL
+
+### 1. ติดตั้ง Dependencies
 
 ```bash
-git clone https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-.git
-cd CS361_G03_Cooperative-Education-Planning-Management-System-
-open index.html
+npm ci
 ```
 
-บน Windows สามารถใช้ `start index.html` แทนคำสั่ง `open index.html`
+### 2. เริ่ม Local PostgreSQL
 
-### วิธีที่ 2: เปิดผ่าน Local Server
+```bash
+docker run --name pg-v2 \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=coed_v2 \
+  -p 5432:5432 \
+  -d postgres:16-alpine
+
+docker exec pg-v2 psql -U postgres \
+  -c "CREATE DATABASE coed_v2_test;"
+```
+
+### 3. ตั้งค่า Environment
+
+```bash
+cp .env.example .env
+```
+
+ตรวจสอบว่า `DATABASE_URL` ชี้ไป Development database และ `TEST_DATABASE_URL` ชี้ไป Test database คนละตัวกัน ห้าม Commit ไฟล์ `.env`
+
+### 4. Migration และ Seed
+
+```bash
+NODE_ENV=development ALLOW_DB_RESET=true npm run seed
+```
+
+> คำเตือน: Seed script ลบและเขียนข้อมูลใน Database เป้าหมายใหม่ ห้ามรันกับ Production database
+
+### 5. เริ่ม Local API
+
+```bash
+npm start
+```
+
+API จะทำงานที่ `http://localhost:3000` โดยค่าเริ่มต้น รายละเอียดเพิ่มเติมอยู่ใน [`docs/v2-backend-setup.md`](docs/v2-backend-setup.md)
+
+### 6. เปิด Frontend
 
 ```bash
 python3 -m http.server 8000
 ```
 
-จากนั้นเปิด [http://localhost:8000](http://localhost:8000) และหยุด Server ด้วย `Ctrl + C`
+จากนั้นเปิด [http://localhost:8000](http://localhost:8000)
+
+`runtime-config.js` กำหนด API Base URL ที่ Frontend ใช้ หากต้องการทดสอบกับ Local API ให้ Override `window.CO_ED_CONFIG.apiBaseUrl` เป็น `http://localhost:3000` ใน Environment สำหรับทดสอบ และอย่า Commit ค่า Local ทับ Production configuration
+
+## Tests
+
+รัน Test ทั้งหมดด้วย:
+
+```bash
+NODE_ENV=test ALLOW_DB_RESET=true npm test
+```
+
+Test suites ครอบคลุม:
+
+- Dataset metadata, relationships และ data-safety rules
+- API routes, validation, status codes และ public-field contract
+- Lambda event/response adapter
+- Frontend query parameters, search/filter reset, pagination, stale responses และ Static fallback
+- DAL migration, seed, constraints, search, location filter และ pagination กับ PostgreSQL แยกสำหรับ Test
+
+สามารถรันแยกได้ด้วย:
+
+```bash
+npm run test:dataset
+npm run test:api
+npm run test:lambda
+npm run test:frontend
+npm run test:dal
+```
+
+## Deployment
+
+### Frontend
+
+```text
+Feature branch → Pull Request → Review → Merge เข้า main
+              → AWS Amplify build และ deploy อัตโนมัติ
+```
+
+### Backend
+
+- Package Application code, Dependencies และ RDS CA bundle เป็น Lambda ZIP
+- Deploy ไปยัง Lambda Function `coed-api`
+- Runtime: Node.js 22.x
+- Handler: `src/lambda.handler`
+- API Gateway Route: `GET /api/{proxy+}`
+- Lambda เชื่อม RDS ผ่าน VPC และ Security Groups
+- Runtime configuration เก็บใน Lambda Environment variables
+
+## Version History and Git Tags
+
+ทีมใช้ Annotated Git tags เพื่อเก็บจุดสิ้นสุดของแต่ละ Milestone:
+
+| Version | Tag | เนื้อหาหลัก |
+| --- | --- | --- |
+| Version 1 | `v1.0.0` | Static website บน Amplify และ Client-side search |
+| Version 2 | `v2.0.0` | Dynamic Company Directory, API Gateway, Lambda และ RDS PostgreSQL |
+
+Tag เก็บ Snapshot ของ Source code, README และ Architecture ของ Version นั้นทั้งหมด ดังนั้นแม้ README บน `main` จะเปลี่ยนเป็น V3 ในอนาคต README ของ V1 และ V2 จะยังเปิดดูจาก Tag เดิมได้
+
+ตัวอย่างการกลับไปดู Version เก่าโดยไม่แก้ Branch ปัจจุบัน:
+
+```bash
+git fetch --tags
+git switch --detach v1.0.0
+
+# กลับ Branch หลัก
+git switch main
+```
+
+หากต้องการพัฒนาต่อจาก Version เก่า ให้สร้าง Branch ใหม่จาก Tag แทนการ Commit บน Detached HEAD:
+
+```bash
+git switch -c investigate-v1 v1.0.0
+```
 
 ## Verification Checklist
 
-1. เปิดหน้าแรกและตรวจว่า Navigation ไปยังทุกหน้าได้
-2. เปิดหน้า Requirements และตรวจสอบการแสดงคุณสมบัติ ขั้นตอน และเอกสาร
-3. เปิดหน้า Company Directory แล้วค้นหาชื่อบริษัททั้งกรณีที่พบและไม่พบ
-4. กดปุ่มโหลดรายการเพิ่มเติมในหน้า Company Directory
-5. เปิดหน้า FAQ แล้วค้นหาคำถามและทดลองล้างคำค้นหา
-6. ตรวจหน้าเว็บที่ความกว้าง Mobile, Tablet และ Desktop
-7. ตรวจ Deployment หลัง Merge เข้า `main`
-
-## Assumptions and Information to Validate
-
-ข้อมูลบางส่วนอาจเปลี่ยนแปลงตามปีการศึกษาและประกาศของสาขาวิชา จึงต้องตรวจสอบก่อนนำไปใช้จริง
-
-| ข้อมูล | สถานะ |
-| --- | --- |
-| กำหนดการและวันสำคัญ | `TO VALIDATE` กับประกาศของปีการศึกษาปัจจุบัน |
-| รายการเอกสารและช่องทางส่ง | `TO VALIDATE` กับแบบฟอร์มและประกาศล่าสุด |
-| สถานะการเปิดรับของสถานประกอบการ | `TO VALIDATE` กับสาขาวิชาและสถานประกอบการ |
-| ตำแหน่ง สถานที่ และค่าตอบแทน | `TO VALIDATE` จากประกาศของสถานประกอบการ |
-| เงื่อนไขการสมัครที่อาจเปลี่ยนรายปี | `TO VALIDATE` กับผู้รับผิดชอบโครงการ |
+1. เปิดหน้า Company Directory แล้วตรวจว่าโหลดข้อมูล 10 รายการแรกจาก API
+2. ค้นหาด้วยชื่อบริษัทและชื่อตำแหน่งงาน
+3. กรองตามสถานที่และตรวจจำนวนผลลัพธ์
+4. กดดูเพิ่มเติมและตรวจว่าไม่มี Company ซ้ำ
+5. ทดสอบคำค้นหาที่ไม่พบข้อมูลและตรวจ Empty state
+6. เปิด Health endpoint และตรวจ HTTP `200`
+7. ตรวจ Network tab ว่า `/api/companies` ตอบ `200`
+8. ตรวจ CloudWatch Logs เมื่อเรียก Lambda
+9. ทดสอบ Static fallback เมื่อ API ใช้งานไม่ได้
+10. รัน Automated tests กับ Test database แยกจาก Development/Production
 
 ## Engineering Evidence
 
-### Issues
+V2 ถูกพัฒนาผ่าน Issues, Feature branches, Pull Requests และ Reviews โดยหลักฐานสำคัญประกอบด้วย:
 
-- [#3 Define Project and V1 Direction](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/3)
-- [#5 Define V1 System Boundary](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/5)
-- [#6 Prepare and Validate V1 Public Information](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/6)
-- [#7 Implement V1 Landing Page](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/7)
-- [#8 Display and Search Company Information](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/8)
-- [#9 Display Frequently Asked Questions](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/9)
-- [#10 Display Cooperative Education Requirements and Guidelines](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/10)
-- [#11 Complete V1 README](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/11)
+- Mock/Anonymized dataset และ Data-quality tests
+- PostgreSQL migrations, seed และ Data Access Layer tests
+- Public read-only API และ API contract tests
+- Dynamic Company Directory และ Frontend behavior tests
+- Static fallback และ Manual verification checklist
+- AWS deployment, Network response และ Lambda execution evidence
 
-### Pull Requests and Reviews
+เอกสารเพิ่มเติม:
 
-- [#12 Repository workflow](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/pull/12)
-- [#13 Requirements page](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/pull/13)
-- [#14 Company names and logos](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/pull/14)
-- [#15 Mobile navigation](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/pull/15)
-- [#16 FAQ reference content](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/pull/16)
-- [#17 FAQ search](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/pull/17)
-- [#18 Eligibility criteria](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/pull/18)
-- [#19 Responsive layout](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/pull/19)
-- [#20 Company search layout](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/pull/20)
-- [#21 Company directory code comments](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/pull/21)
-
-### Screenshot Evidence
-
-ภาพตัวอย่างหน้าเกณฑ์รับสมัครจาก Pull Request #18:
-
-![หน้าเกณฑ์รับสมัครสหกิจศึกษา](https://github.com/user-attachments/assets/db8b15e8-f821-4e00-9764-cb520a61b3a7)
-
-## Sources
-
-- [เว็บไซต์สาขาวิชาวิทยาการคอมพิวเตอร์ มหาวิทยาลัยธรรมศาสตร์](https://cs.sci.tu.ac.th/)
-- [ข้อมูลหลักสูตรวิทยาการคอมพิวเตอร์](https://cs.sci.tu.ac.th/comsci-ac-th-2/)
-- [แบบฟอร์มงานวิชาการและกิจการนักศึกษา](https://cs.sci.tu.ac.th/academic-scitu-th/)
-- [ช่องทางติดต่อสาขาวิชา](https://cs.sci.tu.ac.th/contact-th-2/)
-- [รายละเอียดหลักสูตรจากสำนักทะเบียน มหาวิทยาลัยธรรมศาสตร์](https://web2.reg.tu.ac.th/th/Picture/AttFile/699889be-7baf-4d2b-8066-69807be2f296)
+- [V2 Backend Setup](docs/v2-backend-setup.md)
+- [V2 Mock Dataset](docs/data/v2-mock-data.md)
+- [Data Access Layer Decisions](docs/decisions/issue-30-decisions.md)
+- [Company Directory Manual Verification](docs/issue-32-manual-verification.md)
+- [Contribution Workflow](CONTRIBUTING.md)
 
 ## Team Members
 
@@ -272,7 +387,3 @@ python3 -m http.server 8000
 - นายภูริณัฐ วรรธนะธัญญา 6709650565
 - นายรณกฤต วรลักษณ์ภักดี 6709650607
 - นายณัษฐภาคย์ ไกรวิชญ์ชนาพร 6709650334
-
-## Contribution Workflow
-
-รูปแบบ Branch, Commit, Pull Request, Review และ Merge ระบุไว้ใน [CONTRIBUTING.md](CONTRIBUTING.md)
