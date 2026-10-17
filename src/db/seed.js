@@ -66,8 +66,11 @@ async function seed() {
     console.log('Seeding rounds...');
     for (const r of dataset.rounds) {
       await client.query(
-        `INSERT INTO rounds (id, name, academic_year, source, updated_at, visibility, data_status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        `INSERT INTO rounds (
+           id, name, academic_year, source, updated_at,
+           visibility, data_status, status
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'CLOSED')`,
         [r.id, r.name, r.academic_year, r.source, r.updated_at, r.visibility, r.data_status]
       );
     }
@@ -93,8 +96,11 @@ async function seed() {
     console.log('Seeding plans...');
     for (const p of dataset.plans) {
       await client.query(
-        `INSERT INTO plans (id, student_id, round_id, source, updated_at, visibility, data_status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        `INSERT INTO plans (
+           id, student_id, round_id, cycle_id, source, updated_at,
+           visibility, data_status, status, version, legacy_compatibility
+         )
+         VALUES ($1, $2, $3, $3, $4, $5, $6, $7, 'DRAFT', 1, TRUE)`,
         [p.id, p.student_id, p.round_id || null, p.source, p.updated_at, p.visibility, p.data_status]
       );
     }
