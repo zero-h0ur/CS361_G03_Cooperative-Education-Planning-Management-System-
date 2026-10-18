@@ -34,6 +34,42 @@ const ACTIVE_STAFF_SCOPE_CTE = `
   )
 `;
 
+// Same scope predicate as is_in_staff_scope for a Plan (year compared with the Round, #53)
+const PLAN_IN_STAFF_SCOPE_CONDITION = `EXISTS (
+          SELECT 1 FROM staff_scope sc
+          WHERE s.department = sc.department
+            AND (sc.program IS NULL OR sc.program = s.program)
+            AND (sc.academic_year IS NULL OR sc.academic_year = r.academic_year)
+        )`;
+
+const PLAN_FROM_CLAUSE = `FROM plans p
+      JOIN students s ON s.id = p.student_id
+      JOIN rounds r ON r.id = p.cycle_id
+      LEFT JOIN companies c ON c.id = p.company_id
+      LEFT JOIN positions po ON po.id = p.position_id`;
+
+const PLAN_SELECT_COLUMNS = `p.id,
+        p.status,
+        p.version,
+        p.created_at,
+        p.updated_at,
+        r.id AS cycle_id,
+        r.name AS cycle_name,
+        r.academic_year AS cycle_academic_year,
+        r.semester AS cycle_semester,
+        r.status AS cycle_status,
+        c.id AS company_id,
+        CASE WHEN c.visibility = 'public' THEN c.name END AS company_name,
+        po.id AS position_id,
+        CASE WHEN po.visibility = 'public' THEN po.title END AS position_title,
+        s.id AS student_id,
+        s.student_number,
+        s.full_name,
+        s.preferred_name,
+        s.department,
+        s.program,
+        s.academic_year AS student_academic_year`;
+
 function escapeLikePattern(value) {
   return `%${value.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 }
@@ -192,12 +228,7 @@ class StaffReviewRepository {
     const builder = new QueryBuilder(staffUserId);
     builder.where('p.legacy_compatibility = FALSE');
     builder.where('s.user_id IS NOT NULL');
-    builder.where(`EXISTS (
-          SELECT 1 FROM staff_scope sc
-          WHERE s.department = sc.department
-            AND (sc.program IS NULL OR sc.program = s.program)
-            AND (sc.academic_year IS NULL OR sc.academic_year = r.academic_year)
-        )`);
+    builder.where(PLAN_IN_STAFF_SCOPE_CONDITION);
 
     if (reviewQueue) {
       builder.where(`r.status = 'OPEN'`);
@@ -215,35 +246,31 @@ class StaffReviewRepository {
 
     return this.paginate(
       builder,
-      `FROM plans p
-      JOIN students s ON s.id = p.student_id
-      JOIN rounds r ON r.id = p.cycle_id
-      LEFT JOIN companies c ON c.id = p.company_id
-      LEFT JOIN positions po ON po.id = p.position_id`,
-      `p.id,
-        p.status,
-        p.version,
-        p.created_at,
-        p.updated_at,
-        r.id AS cycle_id,
-        r.name AS cycle_name,
-        r.academic_year AS cycle_academic_year,
-        r.semester AS cycle_semester,
-        r.status AS cycle_status,
-        c.id AS company_id,
-        CASE WHEN c.visibility = 'public' THEN c.name END AS company_name,
-        po.id AS position_id,
-        CASE WHEN po.visibility = 'public' THEN po.title END AS position_title,
-        s.id AS student_id,
-        s.student_number,
-        s.full_name,
-        s.preferred_name,
-        s.department,
-        s.program,
-        s.academic_year AS student_academic_year`,
+      PLAN_FROM_CLAUSE,
+      PLAN_SELECT_COLUMNS,
       `${sortColumn} ${direction}, p.id ${direction}`,
       { page, pageSize }
     );
+  }
+
+  /**
+   * One Plan inside the caller's Staff scope, including the Student's Plan notes (#50:
+   * scoped Staff may read Plan content). The policy has already checked scope; the SQL
+   * predicate is repeated so this query can never return an out-of-scope row by itself.
+   */
+  async findScopedPlan({ staffUserId, planId }) {
+    const result = await this.query(
+      `${ACTIVE_STAFF_SCOPE_CTE}
+      SELECT ${PLAN_SELECT_COLUMNS},
+        p.notes
+      ${PLAN_FROM_CLAUSE}
+      WHERE p.id = $2
+        AND p.legacy_compatibility = FALSE
+        AND s.user_id IS NOT NULL
+        AND ${PLAN_IN_STAFF_SCOPE_CONDITION}`,
+      [staffUserId, planId]
+    );
+    return result?.rows?.[0] || null;
   }
 }
 
