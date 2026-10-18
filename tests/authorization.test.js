@@ -202,15 +202,20 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
     });
 
     it('allows Student A to edit/submit own Plan in DRAFT or NEEDS_REVISION state, and denies in SUBMITTED/APPROVED', async () => {
+      const planRow = (planStatus) => ({
+        rows: [{
+          plan_id: 'plan-a-1',
+          student_id: 'student-a-uuid',
+          plan_status: planStatus,
+          plan_version: 1
+        }]
+      });
       const mockPool = {
-        query: jest.fn().mockResolvedValue({
-          rows: [{
-            plan_id: 'plan-a-1',
-            student_id: 'student-a-uuid',
-            plan_status: 'DRAFT',
-            plan_version: 1
-          }]
-        })
+        query: jest.fn()
+          .mockResolvedValueOnce(planRow('DRAFT'))
+          .mockResolvedValueOnce(planRow('NEEDS_REVISION'))
+          .mockResolvedValueOnce(planRow('SUBMITTED'))
+          .mockResolvedValueOnce(planRow('APPROVED'))
       };
       const authz = new AuthorizationService({ pool: mockPool });
       const studentA = makeStudentContext();
@@ -221,25 +226,46 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
       expect(draftEdit.authorized).toBe(true);
 
       const revisionSubmit = await authz.authorize(studentA, ACTIONS.PLAN_SUBMIT, {
-        planId: 'plan-a-1',
-        planStudentId: 'student-a-uuid',
-        planStatus: 'NEEDS_REVISION'
+        planId: 'plan-a-1'
       });
       expect(revisionSubmit.authorized).toBe(true);
 
       await expect(
-        authz.authorize(studentA, ACTIONS.PLAN_UPDATE_CONTENT, {
-          planId: 'plan-a-1',
-          planStudentId: 'student-a-uuid',
-          planStatus: 'SUBMITTED'
-        })
+        authz.authorize(studentA, ACTIONS.PLAN_UPDATE_CONTENT, { planId: 'plan-a-1' })
       ).rejects.toThrow(ForbiddenError);
 
       await expect(
-        authz.authorize(studentA, ACTIONS.PLAN_SUBMIT, {
-          planId: 'plan-a-1',
-          planStudentId: 'student-a-uuid',
-          planStatus: 'APPROVED'
+        authz.authorize(studentA, ACTIONS.PLAN_SUBMIT, { planId: 'plan-a-1' })
+      ).rejects.toThrow(ForbiddenError);
+    });
+
+    it('ignores caller-supplied planStudentId and planStatus and re-reads ownership/state from the database', async () => {
+      const mockPool = {
+        query: jest.fn().mockResolvedValue({
+          rows: [{
+            plan_id: 'plan-b-1',
+            student_id: 'student-b-uuid',
+            plan_status: 'SUBMITTED'
+          }]
+        })
+      };
+      const authz = new AuthorizationService({ pool: mockPool });
+
+      // Student A claims Student B's plan is theirs
+      await expect(
+        authz.authorize(makeStudentContext(), ACTIONS.PLAN_LIST_READ, {
+          planId: 'plan-b-1',
+          planStudentId: 'student-a-uuid'
+        })
+      ).rejects.toThrow(ForbiddenError);
+
+      // Student B claims their SUBMITTED plan is still a DRAFT
+      const studentB = makeStudentContext({ userId: 'user-student-b', studentId: 'student-b-uuid' });
+      await expect(
+        authz.authorize(studentB, ACTIONS.PLAN_UPDATE_CONTENT, {
+          planId: 'plan-b-1',
+          planStudentId: 'student-b-uuid',
+          planStatus: 'DRAFT'
         })
       ).rejects.toThrow(ForbiddenError);
     });
@@ -361,6 +387,38 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
           planId: 'unassigned-plan-uuid'
         })
       ).rejects.toThrow(ForbiddenError);
+    });
+
+    it('rejects Advisor assigned to Student A reading a Plan owned by Student B even when studentId=A is supplied', async () => {
+      const repository = {
+        findPlanById: jest.fn().mockResolvedValue({
+          plan_id: 'plan-b-1',
+          student_id: 'student-b-uuid',
+          plan_status: 'SUBMITTED',
+          round_academic_year: 2567,
+          round_semester: 1
+        }),
+        findActiveAdvisorAssignment: jest.fn(async ({ studentId }) =>
+          studentId === 'student-a-uuid'
+            ? { status: 'ACTIVE', user_role: 'ADVISOR', user_account_status: 'ACTIVE' }
+            : null
+        )
+      };
+      const authz = new AuthorizationService({ repository, now: () => FIXED_NOW });
+
+      await expect(
+        authz.authorize(makeAdvisorContext(), ACTIONS.PLAN_LIST_READ, {
+          studentId: 'student-a-uuid',
+          planId: 'plan-b-1'
+        })
+      ).rejects.toThrow(ForbiddenError);
+
+      await expect(
+        authz.authorize(makeAdvisorContext(), ACTIONS.PLAN_LIST_READ, { planId: 'plan-b-1' })
+      ).rejects.toThrow(ForbiddenError);
+      expect(repository.findActiveAdvisorAssignment).toHaveBeenLastCalledWith(
+        expect.objectContaining({ studentId: 'student-b-uuid', academicYear: 2567, semester: 1 })
+      );
     });
 
     it('enforces half-open interval [effective_from, effective_to): rejects when req_timestamp === effective_to or effective_from > now or revoked (#53 Section 2.3)', async () => {
@@ -714,6 +772,59 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
           message: 'Access denied.'
         }
       });
+    });
+
+    it('authenticates protected routes as route-scoped middleware and leaves public routes untouched', async () => {
+      const router = new Router();
+      router.get('/api/health', (req, res) => sendSuccess(res, { status: 'ok' }));
+      registerProtectedRoute(router, {
+        method: 'GET',
+        pattern: '/api/v3/me',
+        action: ACTIONS.SESSION_READ_ME,
+        authOptions: {
+          tokenValidator: new TokenValidator({ expectedIssuer: 'https://iss', expectedClientId: 'cid' }),
+          identityResolver: new IdentityResolver({ pool: { query: jest.fn() } })
+        },
+        handler: async (req, res) => sendSuccess(res, { ok: true })
+      });
+
+      const publicRes = createMockResponse();
+      await router.handle({ method: 'GET', url: '/api/health', headers: {} }, publicRes);
+      expect(publicRes.statusCode).toBe(200);
+
+      const protectedRes = createMockResponse();
+      await router.handle({ method: 'GET', url: '/api/v3/me', headers: {} }, protectedRes);
+      expect(protectedRes.statusCode).toBe(401);
+      expect(protectedRes.body.error.code).toBe('UNAUTHORIZED');
+    });
+
+    it('rejects protected route registration without a valid canonical action', () => {
+      const router = new Router();
+      expect(() => registerProtectedRoute(router, {
+        method: 'GET',
+        pattern: '/api/v3/anything',
+        action: 'plan:do_anything',
+        handler: async () => {}
+      })).toThrow(TypeError);
+    });
+
+    it('returns 503 when authorization lookups cannot reach the database', async () => {
+      const connectionError = Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
+      const authz = new AuthorizationService({
+        pool: { query: jest.fn().mockRejectedValue(connectionError) }
+      });
+      const middleware = createAuthorizationMiddleware(ACTIONS.PLAN_LIST_READ, {
+        authorizationService: authz,
+        resolveResource: () => ({ planId: 'plan-a-1' })
+      });
+
+      const req = { headers: {} };
+      attachRequestContext(req, makeStudentContext());
+      const res = createMockResponse();
+      await middleware(req, res, {});
+
+      expect(res.statusCode).toBe(503);
+      expect(res.body.error.code).toBe('SERVICE_UNAVAILABLE');
     });
 
     it('provides deterministic role capabilities for STUDENT, ADVISOR, STAFF, and ADMIN', () => {

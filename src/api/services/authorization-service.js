@@ -308,7 +308,7 @@ function createForbiddenError(reason = 'FORBIDDEN') {
 }
 
 function createNotFoundError(reason = 'NOT_FOUND') {
-  const err = new NotFoundError('Requested resource was not found.', 'NOT_FOUND');
+  const err = new NotFoundError('Requested resource was not found.', 'RECORD_NOT_FOUND');
   Object.defineProperty(err, 'reason', {
     value: reason,
     enumerable: false,
@@ -621,15 +621,9 @@ class AuthorizationService {
         throw createForbiddenError('CROSS_STUDENT_ACCESS_DENIED');
       }
 
-      if (
-        isNonEmptyString(resource.planStudentId) &&
-        resource.planStudentId !== authContext.studentId
-      ) {
-        throw createForbiddenError('CROSS_STUDENT_PLAN_ACCESS_DENIED');
-      }
-
+      // Ownership and plan state always come from the database, never from caller-supplied fields
       let planRecord = null;
-      if (isNonEmptyString(resource.planId) && !isNonEmptyString(resource.planStudentId)) {
+      if (isNonEmptyString(resource.planId)) {
         planRecord = await this.findPlanResource(resource.planId);
         if (!planRecord) {
           throw createNotFoundError('PLAN_NOT_FOUND');
@@ -639,7 +633,7 @@ class AuthorizationService {
         }
       }
 
-      const planStatus = resource.planStatus || planRecord?.plan_status || null;
+      const planStatus = planRecord?.plan_status || null;
       if (
         (action === ACTIONS.PLAN_UPDATE_CONTENT ||
           action === ACTIONS.PLAN_SELECT_COMPANY_POSITION ||
@@ -686,16 +680,21 @@ class AuthorizationService {
       let targetSemester = resource.semester ?? null;
       let planRecord = null;
 
-      if (isNonEmptyString(resource.planId) && !isNonEmptyString(targetStudentId)) {
+      // A plan's owner and round always come from the database (#53): the assignment
+      // check must target the student who actually owns the requested plan.
+      if (isNonEmptyString(resource.planId)) {
         planRecord = await this.findPlanResource(resource.planId);
         if (!planRecord) {
           throw createForbiddenError('ADVISOR_ASSIGNMENT_REQUIRED');
         }
+        if (isNonEmptyString(targetStudentId) && planRecord.student_id !== targetStudentId) {
+          throw createForbiddenError('ADVISOR_PLAN_STUDENT_MISMATCH');
+        }
         targetStudentId = planRecord.student_id;
-        if (targetAcademicYear === null && planRecord.round_academic_year !== undefined) {
+        if (planRecord.round_academic_year !== undefined && planRecord.round_academic_year !== null) {
           targetAcademicYear = planRecord.round_academic_year;
         }
-        if (targetSemester === null && planRecord.round_semester !== undefined) {
+        if (planRecord.round_semester !== undefined && planRecord.round_semester !== null) {
           targetSemester = planRecord.round_semester;
         }
       }
@@ -714,16 +713,6 @@ class AuthorizationService {
 
       if (!assigned) {
         throw createForbiddenError('ADVISOR_NOT_ASSIGNED');
-      }
-
-      if (isNonEmptyString(resource.planId) && !planRecord && resource.verifyPlanExists) {
-        planRecord = await this.findPlanResource(resource.planId);
-        if (!planRecord) {
-          throw createNotFoundError('PLAN_NOT_FOUND');
-        }
-        if (planRecord.student_id !== targetStudentId) {
-          throw createForbiddenError('ADVISOR_PLAN_STUDENT_MISMATCH');
-        }
       }
 
       return Object.freeze({
