@@ -32,11 +32,18 @@ function createLambdaHandler({ dal, ...options } = {}) {
       let headers = {};
 
       const response = {
+        // Mirrors Node's ServerResponse: the router stops the middleware chain once a
+        // response has ended. Without this flag a 401/403 from auth/authz middleware is
+        // returned to the client but the protected route handler still runs.
+        writableEnded: false,
         writeHead(nextStatusCode, nextHeaders = {}) {
+          if (this.writableEnded) return;
           statusCode = nextStatusCode;
           headers = { ...headers, ...nextHeaders };
         },
         end(body = '') {
+          if (this.writableEnded) return;
+          this.writableEnded = true;
           resolve({
             statusCode,
             headers,
