@@ -13,6 +13,7 @@ const { getRequestContext } = require('../context');
 const { registerSessionRoutes } = require('./session-routes');
 const { registerStudentProfileRoutes } = require('./student-profile-routes');
 const { registerPlanSubmissionRoutes } = require('./plan-submission-routes');
+const { registerStaffReviewRoutes } = require('./staff-review-routes');
 
 const VALID_ACTIONS = new Set(Object.values(ACTIONS));
 
@@ -114,7 +115,9 @@ function registerV3Routes(router, options = {}) {
   // Issue #69: Student Plan submission transaction
   registerPlanSubmissionRoutes(router, registerProtectedRoute, options);
 
-  // Downstream Issue #70: Staff review commands
+  // Issue #70: Staff review commands
+  registerStaffReviewRoutes(router, registerProtectedRoute, options);
+
   return options;
 }
 
