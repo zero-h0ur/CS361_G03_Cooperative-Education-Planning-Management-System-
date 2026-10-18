@@ -260,6 +260,30 @@ describe('Issue #66 Student Own Plan service', () => {
     expect(submitted.repository.updateOwnPlan).not.toHaveBeenCalled();
   });
 
+  test('rejects clearing Company/Position outside DRAFT with 400 instead of a DB check violation', async () => {
+    const revision = createRepository({
+      findPlanByIdForUpdate: jest.fn(async () => planRow({ status: 'NEEDS_REVISION', version: 3 }))
+    });
+    const service = new StudentPlanService({ repository: revision.repository });
+
+    await expect(service.updateOwnPlan(ACTOR, PLAN_ID, {
+      company_id: null, position_id: null, expected_version: 3, operation_id: OPERATION_ID
+    })).rejects.toMatchObject({ statusCode: 400, code: 'VALIDATION_ERROR' });
+    expect(revision.repository.updateOwnPlan).not.toHaveBeenCalled();
+
+    const draft = createRepository({
+      findPlanByIdForUpdate: jest.fn(async () => planRow({ status: 'DRAFT', version: 1 }))
+    });
+    const draftService = new StudentPlanService({ repository: draft.repository });
+    await draftService.updateOwnPlan(ACTOR, PLAN_ID, {
+      company_id: null, position_id: null, expected_version: 1, operation_id: OPERATION_ID
+    });
+    expect(draft.repository.updateOwnPlan).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ companyId: null, positionId: null })
+    );
+  });
+
   test('requires explicit position_id whenever company_id changes', async () => {
     const { repository } = createRepository();
     const service = new StudentPlanService({ repository });

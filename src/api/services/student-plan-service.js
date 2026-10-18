@@ -349,6 +349,15 @@ class StudentPlanService {
       if (next.positionId !== null && next.companyId === null) {
         throw new ValidationError('position_id requires company_id.');
       }
+      // Mirrors chk_plans_submittable_fields: only DRAFT may leave Company/Position empty.
+      // A NEEDS_REVISION Plan was already submitted once, so clearing them must be a 400,
+      // not a PostgreSQL check violation surfacing as 500.
+      if (current.status !== 'DRAFT' && (next.companyId === null || next.positionId === null)) {
+        throw new ValidationError('company_id and position_id are required once a Plan has been submitted.', [
+          ...(next.companyId === null ? [{ field: 'company_id', issue: 'required outside DRAFT' }] : []),
+          ...(next.positionId === null ? [{ field: 'position_id', issue: 'required outside DRAFT' }] : [])
+        ]);
+      }
       await this.assertReferences(client, next);
       const updated = await this.repository.updateOwnPlan(client, {
         planId: id,
