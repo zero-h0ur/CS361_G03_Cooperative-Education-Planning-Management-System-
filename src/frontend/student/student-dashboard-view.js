@@ -15,12 +15,10 @@ const OFFICIAL_FIELD_DEFINITIONS = Object.freeze([
   { key: 'enrollment_status', label: 'สถานะภาพนักศึกษา' }
 ]);
 
+// enrollment_status values allowed by #51 and chk_students_enrollment_status
 const ENROLLMENT_STATUS_LABELS = Object.freeze({
   ACTIVE: 'กำลังศึกษา (ACTIVE)',
-  ELIGIBLE: 'มีสิทธิ์ยื่นสหกิจ (ELIGIBLE)',
-  ENROLLED: 'ลงทะเบียนสหกิจแล้ว (ENROLLED)',
-  ON_LEAVE: 'ลาพักการศึกษา (ON_LEAVE)',
-  GRADUATED: 'สำเร็จการศึกษา (GRADUATED)'
+  INACTIVE: 'ไม่ได้อยู่ระหว่างการศึกษา (INACTIVE)'
 });
 
 function element(tagName, className, text) {

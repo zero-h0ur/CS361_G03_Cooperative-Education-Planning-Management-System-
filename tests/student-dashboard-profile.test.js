@@ -12,15 +12,15 @@ const {
 
 const SAMPLE_PROFILE_V1 = Object.freeze({
   id: '20000000-0000-4000-8000-000000000101',
-  student_number: '65010001',
+  student_number: 'TEST000001',
   full_name: 'สมชาย ใจดี',
   preferred_name: 'ชาย',
-  institutional_email: '65010001@student.university.ac.th',
+  institutional_email: 'test000001@student.example.com',
   department: 'วิทยาการคอมพิวเตอร์',
   program: 'วิทยาศาสตรบัณฑิต',
   major: 'วิทยาการคอมพิวเตอร์',
   academic_year: 2569,
-  enrollment_status: 'ELIGIBLE',
+  enrollment_status: 'ACTIVE',
   created_at: '2026-01-10T08:00:00.000Z',
   updated_at: '2026-01-15T09:30:00.000Z',
   version: 1
@@ -210,14 +210,14 @@ describe('Issue #72: Student Dashboard and My Profile UI view', () => {
     await flushPromises();
 
     // Official fields displayed in read-only definition list
-    expect(context.root.querySelector('[data-field="student_number"]').textContent).toBe('65010001');
+    expect(context.root.querySelector('[data-field="student_number"]').textContent).toBe('TEST000001');
     expect(context.root.querySelector('[data-field="full_name"]').textContent).toBe('สมชาย ใจดี');
-    expect(context.root.querySelector('[data-field="institutional_email"]').textContent).toBe('65010001@student.university.ac.th');
+    expect(context.root.querySelector('[data-field="institutional_email"]').textContent).toBe('test000001@student.example.com');
     expect(context.root.querySelector('[data-field="department"]').textContent).toBe('วิทยาการคอมพิวเตอร์');
     expect(context.root.querySelector('[data-field="program"]').textContent).toBe('วิทยาศาสตรบัณฑิต');
     expect(context.root.querySelector('[data-field="major"]').textContent).toBe('วิทยาการคอมพิวเตอร์');
     expect(context.root.querySelector('[data-field="academic_year"]').textContent).toBe('2569');
-    expect(context.root.querySelector('[data-field="enrollment_status"]').textContent).toContain('ELIGIBLE');
+    expect(context.root.querySelector('[data-field="enrollment_status"]').textContent).toContain('กำลังศึกษา (ACTIVE)');
 
     // Only one form input exists in the entire workspace, and it is preferred_name
     const inputs = [...context.root.querySelectorAll('input, textarea, select')];
@@ -365,14 +365,88 @@ describe('Issue #72: Student Dashboard and My Profile UI view', () => {
 
     await context.app.start();
     await flushPromises();
-    expect(context.root.textContent).toContain('65010001');
+    expect(context.root.textContent).toContain('TEST000001');
 
     const form = context.root.querySelector('form.student-profile-form');
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await flushPromises();
 
-    expect(context.root.textContent).not.toContain('65010001');
+    expect(context.root.textContent).not.toContain('TEST000001');
     expect(context.root.textContent).toContain('Session หมดอายุ');
     expect(window.sessionStorage.getItem('co-ed:return-route')).toBe('#/student/profile');
+  });
+
+  describe('navigation with a real browser window', () => {
+    function startWithRealWindow(hash) {
+      document.body.innerHTML = '<div id="authenticatedApp"></div>';
+      window.location.hash = hash;
+      const root = document.getElementById('authenticatedApp');
+      const studentProfileClient = {
+        getOwnProfile: jest.fn(async () => SAMPLE_PROFILE_V1),
+        updateOwnProfile: jest.fn()
+      };
+      const app = createShellApp({
+        root,
+        loadSession: jest.fn().mockResolvedValue({ role: 'STUDENT' }),
+        startLogin: jest.fn(),
+        restartLogin: jest.fn(),
+        logout: jest.fn(),
+        location: window.location,
+        eventTarget: window,
+        storage: window.sessionStorage,
+        history: window.history,
+        studentProfileClient
+      });
+      return { app, root, studentProfileClient };
+    }
+
+    function countRenders(root) {
+      const counter = { renders: 0 };
+      const original = root.replaceChildren.bind(root);
+      root.replaceChildren = (...nodes) => {
+        counter.renders += 1;
+        return original(...nodes);
+      };
+      return counter;
+    }
+
+    it('renders the target route once when the dashboard navigates (no duplicate render from hashchange)', async () => {
+      const { app, root } = startWithRealWindow('#/student/profile');
+      await app.start();
+      await flushPromises();
+
+      const counter = countRenders(root);
+      const cta = [...root.querySelectorAll('main button, main a')]
+        .find((node) => /แผนสหกิจ/.test(node.textContent));
+      cta.click();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(window.location.hash).toBe('#/student/plan');
+      expect(counter.renders).toBe(1);
+      app.destroy();
+    });
+
+    it('still renders when the hash changes outside the shell (menu link or Back button)', async () => {
+      const { app, root, studentProfileClient } = startWithRealWindow('#/student/plan');
+      await app.start();
+      await flushPromises();
+
+      window.location.hash = '#/student/profile';
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(root.querySelector('h1').textContent).toBe('ข้อมูลนักศึกษา');
+      expect(studentProfileClient.getOwnProfile).toHaveBeenCalledTimes(1);
+      app.destroy();
+    });
+  });
+
+  it('labels the INACTIVE enrollment status allowed by #51', async () => {
+    const context = setupStudentShell({
+      getOwnProfile: jest.fn().mockResolvedValue({ ...SAMPLE_PROFILE_V1, enrollment_status: 'INACTIVE' })
+    });
+    await context.app.start();
+    await flushPromises();
+    expect(context.root.querySelector('[data-field="enrollment_status"]').textContent)
+      .toContain('INACTIVE');
   });
 });
