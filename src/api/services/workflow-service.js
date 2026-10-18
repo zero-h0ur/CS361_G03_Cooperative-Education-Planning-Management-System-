@@ -605,6 +605,20 @@ class WorkflowService {
       } catch (rollbackErr) {
         // Rollback failure is ignored to preserve original error
       }
+      // Different Plans take different row locks, so both transactions can
+      // observe a missing operation before one wins the globally unique key.
+      // The failed transaction has been rolled back; report the same conflict
+      // as sequential reuse, without masking unrelated constraint failures.
+      if (
+        err.code === '23505' &&
+        err.table === 'plan_operations' &&
+        err.constraint === 'plan_operations_pkey'
+      ) {
+        throw new ConflictError(
+          'Idempotency key has already been used with different request parameters.',
+          'IDEMPOTENCY_KEY_REUSED'
+        );
+      }
       throw err;
     } finally {
       client.release();
