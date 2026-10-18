@@ -52,7 +52,7 @@ async function executeQuery(text, params) {
       throw new DALError("Required field is missing.", 'CONSTRAINT_VIOLATION');
     }
     if (err.code === '23505') { // unique_violation
-      throw new DALError("Unique constraint violation.", 'CONSTRAINT_VIOLATION');
+      throw new DALError("Unique constraint violation.", 'UNIQUE_VIOLATION');
     }
     if (err.code === '23503') { // foreign_key_violation
       throw new DALError("Foreign key constraint violation.", 'CONSTRAINT_VIOLATION');

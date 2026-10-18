@@ -204,6 +204,21 @@ describe('Issue #55 - V3 Modular API and Shared Response/Error Contract', () => 
         headers: {},
         details: null
       });
+
+      const duplicate = new mockDal.DALError('Unique constraint violation.', 'UNIQUE_VIOLATION');
+      expect(mapError(duplicate, mockDal)).toEqual({
+        status: 409,
+        code: 'CONFLICT',
+        message: 'Resource conflict or concurrent update.',
+        headers: {},
+        details: null
+      });
+
+      const otherConstraint = new mockDal.DALError('Check constraint violation.', 'CONSTRAINT_VIOLATION');
+      expect(mapError(otherConstraint, mockDal)).toMatchObject({
+        status: 500,
+        code: 'INTERNAL_ERROR'
+      });
     });
   });
 
