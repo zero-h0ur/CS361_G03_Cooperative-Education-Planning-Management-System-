@@ -22,7 +22,7 @@ describe('authenticated V3 session client', () => {
     expect(SUPPORTED_ROLES).toEqual(['STUDENT', 'STAFF', 'ADVISOR']);
   });
 
-  it('calls /api/v3/me with an Access Token and returns only role', async () => {
+  it('calls /api/v3/me with an Access Token and returns only role and the review capability', async () => {
     const fetchImpl = jest.fn().mockResolvedValue(response(200, {
       data: {
         role: 'STUDENT',
@@ -38,7 +38,7 @@ describe('authenticated V3 session client', () => {
       fetchImpl
     });
 
-    await expect(client.loadSession()).resolves.toEqual({ role: 'STUDENT' });
+    await expect(client.loadSession()).resolves.toEqual({ role: 'STUDENT', canReviewPlan: false });
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://api.example.com/stage/api/v3/me',
       expect.objectContaining({
@@ -49,6 +49,24 @@ describe('authenticated V3 session client', () => {
         }
       })
     );
+  });
+
+  it.each([
+    ['STAFF', { canReviewPlan: true }, true],
+    ['STAFF', { canReviewPlan: 'true' }, false],
+    ['STAFF', undefined, false],
+    // A capability on any other role is never trusted to render review controls (#77)
+    ['ADVISOR', { canReviewPlan: true }, false],
+    ['STUDENT', { canReviewPlan: true }, false]
+  ])('keeps canReviewPlan only for %s with a boolean true capability (%#)', async (role, capabilities, expected) => {
+    const client = createSessionClient({
+      apiBaseUrl: 'https://api.example.com',
+      currentOrigin: 'https://app.example.com',
+      getAccessToken: jest.fn().mockResolvedValue('access-token-value'),
+      fetchImpl: jest.fn().mockResolvedValue(response(200, { data: { role, capabilities } }))
+    });
+
+    await expect(client.loadSession()).resolves.toEqual({ role, canReviewPlan: expected });
   });
 
   it.each([
