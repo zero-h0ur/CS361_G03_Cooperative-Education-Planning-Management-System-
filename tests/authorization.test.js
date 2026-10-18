@@ -417,7 +417,46 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
         authz.authorize(makeAdvisorContext(), ACTIONS.PLAN_LIST_READ, { planId: 'plan-b-1' })
       ).rejects.toThrow(ForbiddenError);
       expect(repository.findActiveAdvisorAssignment).toHaveBeenLastCalledWith(
-        expect.objectContaining({ studentId: 'student-b-uuid', academicYear: 2567, semester: 1 })
+        expect.objectContaining({
+          studentId: 'student-b-uuid',
+          academicYear: null,
+          semester: null
+        })
+      );
+    });
+
+    it('allows historical Plan reads across cycles while any current Student assignment is active (#53 section 4.1)', async () => {
+      const repository = {
+        findPlanById: jest.fn().mockResolvedValue({
+          plan_id: 'plan-history-1',
+          student_id: 'student-a-uuid',
+          plan_status: 'CANCELLED',
+          round_academic_year: 2564,
+          round_semester: 2
+        }),
+        findActiveAdvisorAssignment: jest.fn().mockResolvedValue({
+          status: 'ACTIVE',
+          user_role: 'ADVISOR',
+          user_account_status: 'ACTIVE',
+          academic_year: 2567,
+          semester: 1
+        })
+      };
+      const authz = new AuthorizationService({ repository, now: () => FIXED_NOW });
+
+      const decision = await authz.authorize(
+        makeAdvisorContext(),
+        ACTIONS.PLAN_LIST_READ,
+        { planId: 'plan-history-1' }
+      );
+
+      expect(decision.authorized).toBe(true);
+      expect(repository.findActiveAdvisorAssignment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentId: 'student-a-uuid',
+          academicYear: null,
+          semester: null
+        })
       );
     });
 
