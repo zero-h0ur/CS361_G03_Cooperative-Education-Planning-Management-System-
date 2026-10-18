@@ -37,7 +37,7 @@
       </div>
 
       <div class="auth-buttons">
-        <a href="app.html" class="btn-login">เข้าสู่ระบบ</a>
+        <a href="app.html" class="btn-login"><i class="fa-solid fa-arrow-right-to-bracket"></i> <span>เข้าสู่ระบบ</span></a>
       </div>
     </div>
     <nav class="mobile-nav-links" aria-label="เมนูหลักสำหรับหน้าจอขนาดเล็ก">
@@ -374,194 +374,282 @@
         <a href="company-directory.html" class="see-all-link">ดูทั้งหมด <i class="fa-solid fa-arrow-right"></i></a>
       </div>
 
-    <!-- เมื่อกดการ์ด จะเรียก openModal พร้อมส่ง ID บริษัท -->
-      <!-- Bento Grid Showcase: 2 Featured Spotlight Tiles + 6 Minimalist Compact Tiles -->
-      <div class="bento-directory-grid">
-        <!-- Card 1: Agoda (Featured Spotlight Tile) -->
-        <article class="bento-card bento-card-featured" onclick="openModal(1)" tabindex="0" role="button" aria-label="ดูรายละเอียด Agoda">
-          <div class="bento-card-glow" aria-hidden="true"></div>
-          <div class="bento-top-row">
-            <div class="bento-logo-wrapper bento-logo-agoda">
+      <!-- Infinite Logo Marquee Showcase with Hover Popovers -->
+      <div class="partner-marquee-section">
+        <div class="partner-marquee-container" aria-label="สถานประกอบการพันธมิตร">
+          <div class="marquee-track">
+            <!-- Set 1 -->
+            <div class="marquee-logo-card marquee-logo-agoda" onclick="openModal(1)" tabindex="0" role="button" aria-label="Agoda">
+              <img src="resources/images/agoda.jpg" alt="Agoda" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">Agoda</h4>
+                  <span class="popover-badge">Tier 1 Partner</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(2)" tabindex="0" role="button" aria-label="G-Able">
+              <img src="resources/images/g-able.png" alt="G-Able" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">G-Able</h4>
+                  <span class="popover-badge">Enterprise IT</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(3)" tabindex="0" role="button" aria-label="Gosoft">
+              <img src="resources/images/gosoft.png" alt="Gosoft" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">Gosoft</h4>
+                  <span class="popover-badge">Retail Tech</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • On-site</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(4)" tabindex="0" role="button" aria-label="Huawei">
+              <img src="resources/images/huawei.jpg" alt="Huawei" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">Huawei</h4>
+                  <span class="popover-badge">Global Tech</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • On-site</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(5)" tabindex="0" role="button" aria-label="KBTG">
+              <img src="resources/images/KBTG.jpg" alt="KBTG" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">KBTG</h4>
+                  <span class="popover-badge">FinTech Leader</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> นนทบุรี • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(6)" tabindex="0" role="button" aria-label="Krungsri">
+              <img src="resources/images/krungsri.jpg" alt="Krungsri" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">Krungsri</h4>
+                  <span class="popover-badge">Digital Banking</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(7)" tabindex="0" role="button" aria-label="NECTEC">
+              <img src="resources/images/nectec.png" alt="NECTEC" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">NECTEC</h4>
+                  <span class="popover-badge">Research</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> ปทุมธานี • On-site</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(8)" tabindex="0" role="button" aria-label="PTT Digital">
+              <img src="resources/images/PTT-Digital.png" alt="PTT Digital" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">PTT Digital</h4>
+                  <span class="popover-badge">Energy Tech</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(1)" tabindex="0" role="button" aria-label="CP ALL">
+              <img src="resources/images/CP-ALL.png" alt="CP ALL" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">CP ALL</h4>
+                  <span class="popover-badge">Supply Chain</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(5)" tabindex="0" role="button" aria-label="SCB Tech X">
+              <img src="resources/images/SCB-TechX.png" alt="SCB Tech X" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">SCB Tech X</h4>
+                  <span class="popover-badge">Next-gen Tech</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(2)" tabindex="0" role="button" aria-label="SCG">
+              <img src="resources/images/SCG.png" alt="SCG" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">SCG</h4>
+                  <span class="popover-badge">Industrial Tech</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • On-site</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(1)" tabindex="0" role="button" aria-label="Wongnai">
+              <img src="resources/images/wongnai.png" alt="Wongnai" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">Wongnai</h4>
+                  <span class="popover-badge">Lifestyle Unicorn</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <!-- Set 2 (Duplicate for seamless infinite scroll) -->
+            <div class="marquee-logo-card marquee-logo-agoda" onclick="openModal(1)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/agoda.jpg" alt="Agoda" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(2)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/g-able.png" alt="G-Able" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(3)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/gosoft.png" alt="Gosoft" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(4)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/huawei.jpg" alt="Huawei" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(5)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/KBTG.jpg" alt="KBTG" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(6)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/krungsri.jpg" alt="Krungsri" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(7)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/nectec.png" alt="NECTEC" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(8)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/PTT-Digital.png" alt="PTT Digital" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(1)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/CP-ALL.png" alt="CP ALL" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(5)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/SCB-TechX.png" alt="SCB Tech X" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(2)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/SCG.png" alt="SCG" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(1)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/wongnai.png" alt="Wongnai" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 Curated Spotlight Cards (Direct Access) -->
+      <div class="partner-grid" style="margin-top: 18px;">
+        <!-- Card 1: Agoda -->
+        <article class="partner-card" onclick="openModal(1)" tabindex="0" role="button" aria-label="ดูรายละเอียด Agoda">
+          <div class="pricing-card-top">
+            <div class="partner-logo partner-logo-agoda-image">
               <img src="resources/images/agoda.jpg" alt="โลโก้ Agoda" />
             </div>
-            <div class="bento-badge-group">
-              <span class="bento-pill pill-featured"><i class="fa-solid fa-star"></i> Featured Partner</span>
-              <span class="bento-pill pill-quota">เปิดรับ 3 อัตรา</span>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-crown"></i> Tier 1 Partner</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 3 อัตรา</span>
             </div>
           </div>
-          <div class="bento-content">
-            <h3 class="bento-company-title">Agoda</h3>
-            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (เซ็นทรัลเวิลด์)</p>
-            <p class="bento-desc">เปิดรับนักศึกษาร่วมพัฒนาประสบการณ์ดิจิทัลระดับโลกสำหรับแพลตฟอร์มการท่องเที่ยว สัมผัส High-scale Distributed Systems</p>
-            <div class="bento-tags">
-              <span class="partner-tag tag-role-dev"><i class="fa-solid fa-code"></i> Software Engineer</span>
-              <span class="partner-tag tag-role-design"><i class="fa-solid fa-palette"></i> UX/UI Design</span>
-              <span class="partner-tag tag-benefit"><i class="fa-solid fa-wallet"></i> มีเบี้ยเลี้ยง</span>
+          <div class="partner-info">
+            <h2>Agoda</h2>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (เซ็นทรัลเวิลด์)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-laptop-house"></i> Hybrid</span>
             </div>
-          </div>
-          <div class="bento-footer">
-            <span class="bento-cta-text">ดูรายละเอียด & สัมภาษณ์</span>
-            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
-          </div>
-        </article>
-
-        <!-- Card 2: G-Able (Compact Tile) -->
-        <article class="bento-card bento-card-compact" onclick="openModal(2)" tabindex="0" role="button" aria-label="ดูรายละเอียด G-Able">
-          <div class="bento-top-row">
-            <div class="bento-logo-wrapper">
-              <img src="resources/images/g-able.png" alt="โลโก้ G-Able" />
-            </div>
-            <span class="bento-pill pill-neutral">Enterprise IT</span>
-          </div>
-          <div class="bento-content">
-            <h3 class="bento-company-title">G-Able</h3>
-            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ</p>
-            <div class="bento-tags">
-              <span class="partner-tag tag-role-dev">Software Dev</span>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-dev">Software Engineer</span>
+              <span class="partner-tag tag-role-design">UX/UI Design</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
-          </div>
-          <div class="bento-footer">
-            <span class="bento-cta-text">ดูรายละเอียด</span>
-            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
-          </div>
-        </article>
-
-        <!-- Card 3: Gosoft (Compact Tile) -->
-        <article class="bento-card bento-card-compact" onclick="openModal(3)" tabindex="0" role="button" aria-label="ดูรายละเอียด Gosoft">
-          <div class="bento-top-row">
-            <div class="bento-logo-wrapper">
-              <img src="resources/images/gosoft.png" alt="โลโก้ Gosoft" />
-            </div>
-            <span class="bento-pill pill-neutral">Retail Tech</span>
-          </div>
-          <div class="bento-content">
-            <h3 class="bento-company-title">Gosoft</h3>
-            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (แจ้งวัฒนะ)</p>
-            <div class="bento-tags">
-              <span class="partner-tag tag-role-data">Data Analyst</span>
-              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
-            </div>
-          </div>
-          <div class="bento-footer">
-            <span class="bento-cta-text">ดูรายละเอียด</span>
-            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
+            <button type="button" class="pricing-cta-btn">
+              ดูรายละเอียด &amp; ยื่นสมัคร <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
 
-        <!-- Card 4: Huawei (Compact Tile) -->
-        <article class="bento-card bento-card-compact" onclick="openModal(4)" tabindex="0" role="button" aria-label="ดูรายละเอียด Huawei">
-          <div class="bento-top-row">
-            <div class="bento-logo-wrapper">
-              <img src="resources/images/huawei.jpg" alt="โลโก้ Huawei" />
-            </div>
-            <span class="bento-pill pill-neutral">Global Tech</span>
-          </div>
-          <div class="bento-content">
-            <h3 class="bento-company-title">Huawei</h3>
-            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (พระราม 9)</p>
-            <div class="bento-tags">
-              <span class="partner-tag tag-role-sec">Cloud & 5G</span>
-              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
-            </div>
-          </div>
-          <div class="bento-footer">
-            <span class="bento-cta-text">ดูรายละเอียด</span>
-            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
-          </div>
-        </article>
-
-        <!-- Card 5: KBTG (Featured Spotlight Tile) -->
-        <article class="bento-card bento-card-featured" onclick="openModal(5)" tabindex="0" role="button" aria-label="ดูรายละเอียด KBTG">
-          <div class="bento-card-glow" aria-hidden="true"></div>
-          <div class="bento-top-row">
-            <div class="bento-logo-wrapper">
+        <!-- Card 2: KBTG -->
+        <article class="partner-card" onclick="openModal(5)" tabindex="0" role="button" aria-label="ดูรายละเอียด KBTG">
+          <div class="pricing-card-top">
+            <div class="partner-logo">
               <img src="resources/images/KBTG.jpg" alt="โลโก้ KBTG" />
             </div>
-            <div class="bento-badge-group">
-              <span class="bento-pill pill-featured"><i class="fa-solid fa-coins"></i> FinTech Leader</span>
-              <span class="bento-pill pill-quota">เปิดรับ 6 อัตรา</span>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-coins"></i> FinTech Leader</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 6 อัตรา</span>
             </div>
           </div>
-          <div class="bento-content">
-            <h3 class="bento-company-title">KBTG</h3>
-            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> ปากเกร็ด (เมืองทองธานี)</p>
-            <p class="bento-desc">ร่วมสร้างนวัตกรรมทางการเงินและระบบคลาวด์กับทีมเทคโนโลยีของกสิกรไทย พัฒนาระบบที่มีเสถียรภาพระดับล้านธุรกรรม</p>
-            <div class="bento-tags">
-              <span class="partner-tag tag-role-dev"><i class="fa-solid fa-shield-halved"></i> Cloud Engineer</span>
-              <span class="partner-tag tag-role-data"><i class="fa-solid fa-brain"></i> Machine Learning</span>
-              <span class="partner-tag tag-benefit"><i class="fa-solid fa-wallet"></i> มีเบี้ยเลี้ยง</span>
+          <div class="partner-info">
+            <h2>KBTG</h2>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> นนทบุรี (เมืองทองธานี)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-laptop-house"></i> Hybrid</span>
             </div>
-          </div>
-          <div class="bento-footer">
-            <span class="bento-cta-text">ดูรายละเอียด & สัมภาษณ์</span>
-            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-sec">Cloud Engineer</span>
+              <span class="partner-tag tag-role-dev">Mobile iOS/Android</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+            <button type="button" class="pricing-cta-btn">
+              ดูรายละเอียด &amp; ยื่นสมัคร <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
 
-        <!-- Card 6: Krungsri (Compact Tile) -->
-        <article class="bento-card bento-card-compact" onclick="openModal(6)" tabindex="0" role="button" aria-label="ดูรายละเอียด Krungsri">
-          <div class="bento-top-row">
-            <div class="bento-logo-wrapper">
-              <img src="resources/images/krungsri.jpg" alt="โลโก้ Krungsri" />
+        <!-- Card 3: Krungsri -->
+        <article class="partner-card" onclick="openModal(6)" tabindex="0" role="button" aria-label="ดูรายละเอียด Krungsri">
+          <div class="pricing-card-top">
+            <div class="partner-logo">
+              <img src="resources/images/krungsri.jpg" alt="โลโก้ Krungsri">
             </div>
-            <span class="bento-pill pill-neutral">Digital Banking</span>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-building-columns"></i> Digital Banking</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 3 อัตรา</span>
+            </div>
           </div>
-          <div class="bento-content">
-            <h3 class="bento-company-title">Krungsri</h3>
-            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (พระราม 3)</p>
-            <div class="bento-tags">
-              <span class="partner-tag tag-role-design">Mobile UX/UI</span>
+          <div class="partner-info">
+            <h2>Krungsri</h2>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (พระราม 3)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-laptop-house"></i> Hybrid</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-design">UX/UI Designer</span>
+              <span class="partner-tag tag-role-dev">FinTech App</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
-          </div>
-          <div class="bento-footer">
-            <span class="bento-cta-text">ดูรายละเอียด</span>
-            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
-          </div>
-        </article>
-
-        <!-- Card 7: NECTEC (Compact Tile) -->
-        <article class="bento-card bento-card-compact" onclick="openModal(7)" tabindex="0" role="button" aria-label="ดูรายละเอียด NECTEC">
-          <div class="bento-top-row">
-            <div class="bento-logo-wrapper">
-              <img src="resources/images/nectec.png" alt="โลโก้ NECTEC" />
-            </div>
-            <span class="bento-pill pill-neutral">National Research</span>
-          </div>
-          <div class="bento-content">
-            <h3 class="bento-company-title">NECTEC</h3>
-            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> ปทุมธานี (อุทยานวิทย์ฯ)</p>
-            <div class="bento-tags">
-              <span class="partner-tag tag-role-sec">Cyber Security</span>
-              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
-            </div>
-          </div>
-          <div class="bento-footer">
-            <span class="bento-cta-text">ดูรายละเอียด</span>
-            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
-          </div>
-        </article>
-
-        <!-- Card 8: PTT Digital (Compact Tile) -->
-        <article class="bento-card bento-card-compact" onclick="openModal(8)" tabindex="0" role="button" aria-label="ดูรายละเอียด PTT Digital">
-          <div class="bento-top-row">
-            <div class="bento-logo-wrapper">
-              <img src="resources/images/PTT-Digital.png" alt="โลโก้ PTT Digital" />
-            </div>
-            <span class="bento-pill pill-neutral">Energy Tech</span>
-          </div>
-          <div class="bento-content">
-            <h3 class="bento-company-title">PTT Digital</h3>
-            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (วิภาวดี)</p>
-            <div class="bento-tags">
-              <span class="partner-tag tag-role-biz">Business Analyst</span>
-              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
-            </div>
-          </div>
-          <div class="bento-footer">
-            <span class="bento-cta-text">ดูรายละเอียด</span>
-            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
+            <button type="button" class="pricing-cta-btn">
+              ดูรายละเอียด &amp; ยื่นสมัคร <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
       </div>
