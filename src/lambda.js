@@ -11,8 +11,8 @@ function buildRequestUrl(event = {}) {
   return rawQueryString ? `${rawPath}?${rawQueryString}` : rawPath;
 }
 
-function createLambdaHandler({ dal } = {}) {
-  const requestHandler = createRequestHandler(dal);
+function createLambdaHandler({ dal, ...options } = {}) {
+  const requestHandler = createRequestHandler(dal, options);
 
   return async function lambdaHandler(event = {}) {
     const method = event.requestContext?.http?.method || event.httpMethod || 'GET';
@@ -22,7 +22,9 @@ function createLambdaHandler({ dal } = {}) {
       headers: event.headers && typeof event.headers === 'object' ? event.headers : {},
       requestContext: event.requestContext && typeof event.requestContext === 'object'
         ? event.requestContext
-        : {}
+        : {},
+      body: event.body,
+      isBase64Encoded: Boolean(event.isBase64Encoded)
     };
 
     return new Promise((resolve, reject) => {
