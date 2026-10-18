@@ -26,7 +26,7 @@ test("canonical V3 fixtures have declared record counts and deterministic struct
   const fixtures = freshFixtures();
   assert.deepEqual(fixtures.dataset_metadata.expected_counts, {
     users: 11,
-    external_identity_links: 11,
+    external_identity_links: 12,
     students: 5,
     rounds: 2,
     plans: 6,
@@ -79,16 +79,16 @@ test("students and staff_scopes strictly use standardized department codes ('CPE
   }
 });
 
-test("all academic_year values use the unified Common Era calendar (2026/2025)", () => {
+test("all academic_year values use the unified Buddhist Era calendar (2569/2568)", () => {
   const fixtures = freshFixtures();
   for (const r of fixtures.rounds) {
-    assert.ok(r.academic_year >= 2020 && r.academic_year <= 2030, `Round year must be C.E.: ${r.academic_year}`);
+    assert.ok(r.academic_year >= 2563 && r.academic_year <= 2573, `Round year must be B.E.: ${r.academic_year}`);
   }
   for (const s of fixtures.students) {
-    assert.equal(s.academic_year, 2026, `Student year must be C.E. 2026: ${s.academic_year}`);
+    assert.equal(s.academic_year, 2569, `Student year must be B.E. 2569: ${s.academic_year}`);
   }
   for (const a of fixtures.advisor_assignments) {
-    assert.ok(a.academic_year === 2026 || a.academic_year === 2025, `Assignment year must be C.E.: ${a.academic_year}`);
+    assert.ok(a.academic_year === 2569 || a.academic_year === 2568, `Assignment year must be B.E.: ${a.academic_year}`);
   }
 });
 
@@ -147,7 +147,7 @@ test("rejects overlapping active advisor assignments for the same student", () =
     id: "90000000-0000-4000-8000-000000000099",
     advisor_id: "70000000-0000-4000-8000-000000000011",
     student_id: "40000000-0000-4000-8000-000000000101",
-    academic_year: 2026,
+    academic_year: 2569,
     semester: 1,
     status: "ACTIVE",
     effective_from: "2026-07-01T00:00:00Z",
@@ -164,28 +164,28 @@ test("rejects overlapping active advisor assignments for the same student", () =
   assert.ok(errors.some((e) => e.includes("overlaps with")));
 });
 
-test("fixtures provide both in-scope (200 OK) and out-of-year (403 Forbidden) staff test cases for OPEN round 2026", () => {
+test("fixtures provide both in-scope (200 OK) and out-of-year (403 Forbidden) staff test cases for OPEN round 2569", () => {
   const fixtures = freshFixtures();
   const openRound = fixtures.rounds.find((r) => r.status === "OPEN");
   assert.ok(openRound, "Must have an OPEN round");
-  assert.equal(openRound.academic_year, 2026, "OPEN round must be 2026");
+  assert.equal(openRound.academic_year, 2569, "OPEN round must be 2569");
 
-  // Check Staff 1: has NULL academic_year -> covers 2026 OPEN round (200 OK)
+  // Check Staff 1: has NULL academic_year -> covers 2569 OPEN round (200 OK)
   const staff1Scopes = fixtures.staff_scopes.filter(
     (sc) => sc.staff_id === "70000000-0000-4000-8000-000000000020" && sc.status === "ACTIVE"
   );
   const staff1Covers2026 = staff1Scopes.some(
     (sc) => sc.academic_year === null || sc.academic_year === openRound.academic_year
   );
-  assert.ok(staff1Covers2026, "Must have at least one Staff whose scope covers 2026 OPEN round for 200 OK tests");
+  assert.ok(staff1Covers2026, "Must have at least one Staff whose scope covers 2569 OPEN round for 200 OK tests");
 
-  // Check Staff 3: strictly restricted to 2025 -> does NOT cover 2026 OPEN round (403 Forbidden)
+  // Check Staff 3: strictly restricted to 2568 -> does NOT cover 2569 OPEN round (403 Forbidden)
   const staff3Scopes = fixtures.staff_scopes.filter(
     (sc) => sc.staff_id === "70000000-0000-4000-8000-000000000022" && sc.status === "ACTIVE"
   );
   assert.ok(staff3Scopes.length > 0, "Staff 3 must have active scope");
-  const staff3All2025 = staff3Scopes.every((sc) => sc.academic_year === 2025);
-  assert.ok(staff3All2025, "Staff 3 must be strictly restricted to academic_year 2025 for 403 Forbidden tests");
+  const staff3All2025 = staff3Scopes.every((sc) => sc.academic_year === 2568);
+  assert.ok(staff3All2025, "Staff 3 must be strictly restricted to academic_year 2568 for 403 Forbidden tests");
 });
 
 test("every staff member has at least one student outside their scope to guarantee 403 test coverage", () => {
@@ -243,7 +243,7 @@ test("all active plans have student.academic_year matching round.academic_year f
 
 test("validator rejects plans where student.academic_year diverges from round.academic_year", () => {
   const fixtures = freshFixtures();
-  fixtures.students[0].academic_year = 2025; // Diverges from round 2026
+  fixtures.students[0].academic_year = 2568; // Diverges from round 2569
   const errors = validateFixtures(fixtures, freshV2Dataset());
   assert.ok(
     errors.some((e) => e.includes("staff scope predicate outcome would diverge")),
@@ -262,3 +262,45 @@ test("validator rejects rounds without end_date", () => {
 });
 
 
+
+test("V3 fixtures cover identity link states ACTIVE and REVOKED for the #51 relink flow", () => {
+  const fixtures = freshFixtures();
+  const revoked = fixtures.external_identity_links.filter((l) => l.status === "REVOKED");
+  assert.ok(revoked.length >= 1, "Must cover a REVOKED identity link");
+
+  for (const link of revoked) {
+    const activeForUser = fixtures.external_identity_links.filter(
+      (l) => l.user_id === link.user_id && l.status === "ACTIVE"
+    );
+    assert.equal(activeForUser.length, 1, `User ${link.user_id} must keep exactly one ACTIVE link after relink`);
+  }
+});
+
+test("currently-active fixtures do not expire with the wall clock", () => {
+  const fixtures = freshFixtures();
+  const longLived = new Date("2090-01-01T00:00:00Z").getTime();
+
+  for (const r of fixtures.rounds.filter((round) => round.status === "OPEN")) {
+    assert.ok(new Date(r.end_date).getTime() > longLived, `OPEN round ${r.id} end_date must be long-lived`);
+  }
+  for (const a of fixtures.advisor_assignments.filter((assignment) => assignment.status === "ACTIVE")) {
+    assert.ok(new Date(a.effective_to).getTime() > longLived, `ACTIVE assignment ${a.id} effective_to must be long-lived`);
+  }
+});
+
+test("student numbers use a clearly synthetic TEST prefix", () => {
+  const fixtures = freshFixtures();
+  for (const s of fixtures.students) {
+    assert.match(s.student_number, /^TEST\d{6}$/, `Student ${s.id} must use a synthetic student_number`);
+  }
+});
+
+test("validator rejects Common Era academic years now that the team uses Buddhist Era", () => {
+  const fixtures = freshFixtures();
+  fixtures.rounds[0].academic_year = 2026;
+  const errors = validateFixtures(fixtures, freshV2Dataset());
+  assert.ok(
+    errors.some((e) => e.includes("must be a Buddhist Era year")),
+    "Should report error when a round uses a C.E. academic_year"
+  );
+});

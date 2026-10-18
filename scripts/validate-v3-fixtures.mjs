@@ -38,6 +38,15 @@ const RFC2606_EMAIL_PATTERN = /@(?:[a-z0-9-]+\.)*(?:example\.(?:com|net|org)|exa
 // Standard department codes used in Issue #53 and engineering curriculum
 const ALLOWED_DEPARTMENTS = new Set(["CPE", "EE", "ME"]);
 
+// Team decision: academic_year uses the Thai Buddhist Era (พ.ศ.), matching the V2 dataset
+// (rounds 2569/2570). Timestamps stay ISO 8601 (Gregorian).
+const BE_YEAR_MIN = 2500;
+const BE_YEAR_MAX = 2700;
+
+function isBuddhistEraYear(value) {
+  return Number.isInteger(value) && value >= BE_YEAR_MIN && value <= BE_YEAR_MAX;
+}
+
 const TOP_LEVEL_KEYS = new Set([
   "dataset_metadata",
   "users",
@@ -224,9 +233,9 @@ export function validateFixtures(fixtures, v2Dataset = null) {
         );
       }
 
-      // Academic year calendar check: C.E. year (e.g. 2026) per Issue #53
-      if (s.academic_year && (s.academic_year < 2000 || s.academic_year > 2100)) {
-        errors.push(`Student academic_year "${s.academic_year}" must be a Common Era year (e.g. 2026)`);
+      // Academic year calendar check: Buddhist Era year (e.g. 2569)
+      if (s.academic_year && !isBuddhistEraYear(s.academic_year)) {
+        errors.push(`Student academic_year "${s.academic_year}" must be a Buddhist Era year (e.g. 2569)`);
       }
 
       if (s.student_number) {
@@ -267,9 +276,9 @@ export function validateFixtures(fixtures, v2Dataset = null) {
     if (!ALLOWED_ROUND_STATUS.has(r.status)) {
       errors.push(`Invalid round status "${r.status}" for round ${r.id}`);
     }
-    // Academic year calendar check: C.E. year (e.g. 2026)
-    if (!Number.isInteger(r.academic_year) || r.academic_year < 2000 || r.academic_year > 2100) {
-      errors.push(`Round academic_year "${r.academic_year}" must be a Common Era year (e.g. 2026) in round ${r.id}`);
+    // Academic year calendar check: Buddhist Era year (e.g. 2569)
+    if (!isBuddhistEraYear(r.academic_year)) {
+      errors.push(`Round academic_year "${r.academic_year}" must be a Buddhist Era year (e.g. 2569) in round ${r.id}`);
     }
     if (r.semester !== undefined && r.semester !== null && (!Number.isInteger(r.semester) || r.semester <= 0)) {
       errors.push(`Invalid round semester "${r.semester}" for round ${r.id}`);
@@ -410,9 +419,9 @@ export function validateFixtures(fixtures, v2Dataset = null) {
       errors.push(`Invalid assignment status "${a.status}" in assignment ${a.id}`);
     }
 
-    // Academic year calendar check: C.E. year (e.g. 2026)
-    if (!Number.isInteger(a.academic_year) || a.academic_year < 2000 || a.academic_year > 2100) {
-      errors.push(`Assignment academic_year "${a.academic_year}" must be a Common Era year (e.g. 2026) in assignment ${a.id}`);
+    // Academic year calendar check: Buddhist Era year (e.g. 2569)
+    if (!isBuddhistEraYear(a.academic_year)) {
+      errors.push(`Assignment academic_year "${a.academic_year}" must be a Buddhist Era year (e.g. 2569) in assignment ${a.id}`);
     }
 
     const fromDate = new Date(a.effective_from);
@@ -487,8 +496,8 @@ export function validateFixtures(fixtures, v2Dataset = null) {
     }
 
     if (sc.academic_year !== null && sc.academic_year !== undefined) {
-      if (!Number.isInteger(sc.academic_year) || sc.academic_year < 2000 || sc.academic_year > 2100) {
-        errors.push(`Staff scope academic_year "${sc.academic_year}" must be a Common Era year in ${sc.id}`);
+      if (!isBuddhistEraYear(sc.academic_year)) {
+        errors.push(`Staff scope academic_year "${sc.academic_year}" must be a Buddhist Era year in ${sc.id}`);
       }
     }
 

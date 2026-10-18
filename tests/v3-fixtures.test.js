@@ -188,31 +188,31 @@ describe('Issue #60 - Anonymized V3 Fixtures and Destructive-Seed Guards', () =>
       }
     });
 
-    it('uses the unified Common Era calendar (2026/2025) for academic_year', () => {
+    it('uses the unified Buddhist Era calendar (2569/2568) for academic_year', () => {
       for (const s of fixtures.students) {
-        expect(s.academic_year).toBe(2026);
+        expect(s.academic_year).toBe(2569);
       }
       for (const r of fixtures.rounds) {
-        expect(r.academic_year).toBe(2026);
+        expect(r.academic_year).toBe(2569);
       }
     });
 
     it('covers both in-scope 200 OK and out-of-year 403 Forbidden staff cases for OPEN round', () => {
       const openRound = fixtures.rounds.find((r) => r.status === 'OPEN');
-      expect(openRound.academic_year).toBe(2026);
+      expect(openRound.academic_year).toBe(2569);
 
-      // Staff 1 covers 2026 OPEN round via NULL academic_year -> 200 OK
+      // Staff 1 covers 2569 OPEN round via NULL academic_year -> 200 OK
       const staff1Scopes = fixtures.staff_scopes.filter(
         (sc) => sc.staff_id === '70000000-0000-4000-8000-000000000020' && sc.status === 'ACTIVE'
       );
       expect(staff1Scopes.some((sc) => sc.academic_year === null)).toBe(true);
 
-      // Staff 3 restricted to 2025 -> 403 Forbidden on OPEN round 2026
+      // Staff 3 restricted to 2568 -> 403 Forbidden on OPEN round 2569
       const staff3Scopes = fixtures.staff_scopes.filter(
         (sc) => sc.staff_id === '70000000-0000-4000-8000-000000000022' && sc.status === 'ACTIVE'
       );
       expect(staff3Scopes.length).toBeGreaterThan(0);
-      expect(staff3Scopes.every((sc) => sc.academic_year === 2025)).toBe(true);
+      expect(staff3Scopes.every((sc) => sc.academic_year === 2568)).toBe(true);
     });
   });
 
@@ -318,7 +318,7 @@ describe('Issue #60 - Anonymized V3 Fixtures and Destructive-Seed Guards', () =>
             studentCtx.studentId,
           ])
         ).rows[0];
-        expect(studentRow.student_number).toBe('650610001');
+        expect(studentRow.student_number).toBe('TEST000001');
         expect(studentRow.department).toBe('CPE');
 
         // Advisor 1
