@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "node src/server.js",
+    "build": "node scripts/build-frontend.mjs",
     "migrate": "node src/db/migrate.js",
     "test": "npm run test:dataset && npm run test:api && npm run test:contract && npm run test:auth && npm run test:lambda && npm run test:frontend && npm run test:migration && npm run test:dal",
     "test:api": "jest --runInBand tests/api.test.js",
@@ -22,10 +23,12 @@
     "seed": "node src/db/seed.js"
   },
   "dependencies": {
+    "aws-amplify": "^6.22.2",
     "dotenv": "^16.3.1",
     "pg": "^8.11.3"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.2"
   }
