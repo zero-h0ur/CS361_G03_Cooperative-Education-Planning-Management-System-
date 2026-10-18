@@ -1,5 +1,8 @@
 /** @jest-environment jsdom */
 
+const fs = require('node:fs');
+const path = require('node:path');
+
 const { AUTH_ERROR_CODES } = require('../tmp/frontend-test-modules/auth/auth-errors.cjs');
 const {
   createShellApp,
@@ -32,6 +35,28 @@ function setup({ hash = '', session = { role: 'STUDENT' }, error } = {}) {
 }
 
 describe('authenticated V3 shell and route guards', () => {
+  it.each([
+    'index.html',
+    'requirements.html',
+    'company-directory.html',
+    'faq.html'
+  ])('keeps %s public while linking its Login action to the protected shell', (fileName) => {
+    const html = fs.readFileSync(path.resolve(__dirname, '..', fileName), 'utf8');
+    const page = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(page.querySelector('.auth-buttons .btn-login')?.getAttribute('href')).toBe('app.html');
+    expect(page.querySelector('.auth-buttons .btn-signup')).toBeNull();
+    expect(page.querySelector('script[src="assets/authenticated-shell.js"]')).toBeNull();
+  });
+
+  it('keeps the Company Directory anonymous scripts separate from the protected bundle', () => {
+    const html = fs.readFileSync(path.resolve(__dirname, '..', 'company-directory.html'), 'utf8');
+    const page = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(page.querySelector('script[src="company-directory.js"]')).not.toBeNull();
+    expect(page.querySelector('script[src="company-directory-helpers.js"]')).not.toBeNull();
+  });
+
   it('renders an accessible loading state before session bootstrap completes', () => {
     let resolveSession;
     const pendingSession = new Promise((resolve) => {
