@@ -4,7 +4,8 @@ const defaultDal = require('../db/dal');
 const {
   Router,
   decodePathParameter,
-  assertAllowedQueryParameters
+  assertAllowedQueryParameters,
+  parseJsonBody
 } = require('./router');
 const {
   mapError,
@@ -79,6 +80,7 @@ module.exports = {
   formatError,
   decodePathParameter,
   assertAllowedQueryParameters,
+  parseJsonBody,
   // Export errors & context for downstream consumers
   AppError,
   ValidationError,

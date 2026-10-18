@@ -22,7 +22,9 @@ function createLambdaHandler({ dal, ...options } = {}) {
       headers: event.headers && typeof event.headers === 'object' ? event.headers : {},
       requestContext: event.requestContext && typeof event.requestContext === 'object'
         ? event.requestContext
-        : {}
+        : {},
+      body: event.body,
+      isBase64Encoded: Boolean(event.isBase64Encoded)
     };
 
     return new Promise((resolve, reject) => {

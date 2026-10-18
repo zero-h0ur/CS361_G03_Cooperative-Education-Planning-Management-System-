@@ -234,6 +234,57 @@ Frontend (#57) เรียก endpoint นี้หลัง Login เพื่
 
 Error: ไม่มี/ผิด/หมดอายุ token → `401`, ไม่พบ link/disabled/provisioning ไม่ครบ → `403`, Method อื่นนอกจาก `GET` → `405`
 
+### 3.5 Student Self-Profile: `/api/v3/students/me` (#65)
+
+ใช้ได้เฉพาะ Role `STUDENT` เจ้าของ Profile มาจาก Trusted Identity Context เสมอ ไม่มี Endpoint ที่รับ `studentId` เพื่อเลือกเจ้าของข้อมูล (`/api/v3/students/:studentId` สงวนไว้สำหรับ Staff/Advisor ใน #67 และ #68)
+
+| Method | หน้าที่ |
+|---|---|
+| `GET` | อ่าน Profile ของตนเอง |
+| `PATCH`, `PUT` | แก้ `preferred_name` ของตนเอง (ทั้งสอง Method ทำงานเหมือนกัน) |
+
+Response (`GET` และผลของการ Update) ส่งเฉพาะ Field ใน Allowlist ตาม #50/#51:
+
+```json
+{
+  "data": {
+    "id": "<student-uuid>",
+    "student_number": "6509610001",
+    "full_name": "<ชื่อทางการ>",
+    "preferred_name": "Chai",
+    "institutional_email": "<email>@dome.tu.ac.th",
+    "department": "Computer Science",
+    "program": "B.Sc. Computer Science",
+    "major": "Software Engineering",
+    "academic_year": 2566,
+    "enrollment_status": "ACTIVE",
+    "created_at": "2026-01-10T08:00:00.000Z",
+    "updated_at": "2026-02-15T10:30:00.000Z",
+    "version": 3
+  }
+}
+```
+
+Update payload:
+
+```json
+{ "preferred_name": "Chai", "version": 3 }
+```
+
+- `preferred_name` จำเป็นต้องส่ง: เป็น String หรือ `null`, ระบบ Trim ให้, String ว่างจะถูกเก็บเป็น `null`, ยาวไม่เกิน 100 ตัวอักษร และห้ามมี Control character
+- `version` เป็น Optional แต่ **Frontend ควรส่งค่าที่อ่านมาล่าสุดเสมอ** ถ้าไม่ส่งจะเป็น Last-write-wins
+- ถ้ามี Field อื่นใน Payload (Field ทางการ, Immutable หรือไม่รู้จัก) ระบบจะปฏิเสธทั้ง Request โดยไม่แก้ข้อมูลบางส่วน
+- ไม่รับ Query parameter ใดๆ
+
+| กรณี | Response |
+|---|---|
+| Payload ผิด/มี Field ที่ไม่อนุญาต/Query parameter | `400 VALIDATION_ERROR` พร้อม `details: [{ field, issue }]` |
+| ไม่มี/ผิด/หมดอายุ token | `401 UNAUTHORIZED` |
+| ไม่ใช่ Role `STUDENT` | `403 FORBIDDEN` |
+| ไม่พบ Profile ที่ Link กับบัญชี | `404 RECORD_NOT_FOUND` |
+| `version` ไม่ตรงกับข้อมูลปัจจุบัน | `409 STALE_RECORD_CONFLICT` พร้อม `details: { expectedVersion, currentVersion }` |
+| Database ไม่พร้อมใช้งาน | `503 SERVICE_UNAVAILABLE` |
+
 ---
 
 ## 4. Architectural Boundaries

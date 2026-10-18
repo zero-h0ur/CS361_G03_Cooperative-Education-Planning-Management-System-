@@ -174,8 +174,75 @@ function assertAllowedQueryParameters(searchParams, allowed, InvalidInputError) 
   }
 }
 
+const MAX_JSON_BODY_BYTES = 64 * 1024;
+
+function parseRawJsonObject(rawText) {
+  if (typeof rawText !== 'string' || rawText.trim().length === 0) {
+    throw new ValidationError('Request body must be a valid JSON object.');
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch {
+    throw new ValidationError('Request body must be valid JSON.');
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new ValidationError('Request body must be a JSON object.');
+  }
+  return parsed;
+}
+
+async function parseJsonBody(request) {
+  if (!request || typeof request !== 'object') {
+    throw new ValidationError('Request body must be a valid JSON object.');
+  }
+
+  if (request.body !== undefined) {
+    if (request.body === null) {
+      throw new ValidationError('Request body must be a valid JSON object.');
+    }
+    if (typeof request.body === 'string') {
+      const text = request.isBase64Encoded
+        ? Buffer.from(request.body, 'base64').toString('utf8')
+        : request.body;
+      return parseRawJsonObject(text);
+    }
+    if (Buffer.isBuffer(request.body)) {
+      return parseRawJsonObject(request.body.toString('utf8'));
+    }
+    if (typeof request.body === 'object' && !Array.isArray(request.body)) {
+      return request.body;
+    }
+    throw new ValidationError('Request body must be a JSON object.');
+  }
+
+  if (typeof request.on === 'function') {
+    const raw = await new Promise((resolve, reject) => {
+      const chunks = [];
+      let totalBytes = 0;
+      request.on('data', (chunk) => {
+        const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+        totalBytes += buf.length;
+        if (totalBytes > MAX_JSON_BODY_BYTES) {
+          reject(new ValidationError('Request body exceeds maximum allowed size.'));
+          return;
+        }
+        chunks.push(buf);
+      });
+      request.on('end', () => {
+        resolve(Buffer.concat(chunks).toString('utf8'));
+      });
+      request.on('error', reject);
+    });
+    return parseRawJsonObject(raw);
+  }
+
+  throw new ValidationError('Request body is required.');
+}
+
 module.exports = {
   Router,
   decodePathParameter,
-  assertAllowedQueryParameters
+  assertAllowedQueryParameters,
+  parseJsonBody
 };
