@@ -9,6 +9,26 @@ import {
 } from './routes.js';
 
 const RETURN_ROUTE_KEY = 'co-ed:return-route';
+const SENSITIVE_QUERY_PARAMS = Object.freeze([
+  'code',
+  'state',
+  'session_state',
+  'error',
+  'error_description',
+  'access_token',
+  'id_token',
+  'refresh_token',
+  'token_type',
+  'iss',
+  'sub'
+]);
+const SENSITIVE_HASH_PATTERNS = Object.freeze([
+  /(?:^|[&#?])access_token=/i,
+  /(?:^|[&#?])id_token=/i,
+  /(?:^|[&#?])refresh_token=/i,
+  /(?:^|[&#?])code=/i,
+  /(?:^|[&#?])error=/i
+]);
 
 function element(tagName, className, text) {
   const node = document.createElement(tagName);
@@ -91,6 +111,61 @@ function safelyRememberReturnRoute(storage, hash) {
   }
 }
 
+function safelyClearReturnRoute(storage) {
+  try {
+    storage?.removeItem(RETURN_ROUTE_KEY);
+  } catch {
+    // Ignore blocked storage errors during logout cleanup.
+  }
+}
+
+export function scrubAuthCallbackUrl(location, history = globalThis.history) {
+  if (!location || typeof location !== 'object') {
+    return;
+  }
+
+  if (typeof location.hash === 'string' && SENSITIVE_HASH_PATTERNS.some((pattern) => pattern.test(location.hash))) {
+    location.hash = '';
+  }
+
+  if (typeof location.search !== 'string' || location.search === '') {
+    return;
+  }
+
+  try {
+    const params = new URLSearchParams(location.search);
+    let modified = false;
+
+    for (const key of SENSITIVE_QUERY_PARAMS) {
+      if (params.has(key)) {
+        params.delete(key);
+        modified = true;
+      }
+    }
+
+    if (!modified) {
+      return;
+    }
+
+    const nextSearch = params.toString();
+    const cleanSearch = nextSearch ? `?${nextSearch}` : '';
+    const pathname = typeof location.pathname === 'string' ? location.pathname : 'app.html';
+    const hash = typeof location.hash === 'string' ? location.hash : '';
+
+    if (history && typeof history.replaceState === 'function') {
+      history.replaceState(null, '', `${pathname}${cleanSearch}${hash}`);
+    }
+
+    try {
+      location.search = cleanSearch;
+    } catch {
+      // Browser Location objects update search via history.replaceState above.
+    }
+  } catch {
+    // Never fail closed on URL cleanup alone.
+  }
+}
+
 function createBrand() {
   const brand = element('a', 'shell-brand');
   brand.href = 'index.html';
@@ -119,7 +194,20 @@ function createNavigation(role, activeHash) {
   return navigation;
 }
 
-function createProtectedLayout({ role, route, onLogout }) {
+function createDefaultPlaceholder(route) {
+  const placeholder = element('section', 'shell-placeholder');
+  placeholder.setAttribute('aria-labelledby', 'shell-placeholder-title');
+  const placeholderTitle = element('h2', 'shell-placeholder__title', 'พื้นที่นี้พร้อมสำหรับการเชื่อมต่อขั้นถัดไป');
+  placeholderTitle.id = 'shell-placeholder-title';
+  placeholder.append(
+    element('span', 'shell-placeholder__index', 'V3'),
+    placeholderTitle,
+    element('p', 'shell-placeholder__description', route.status)
+  );
+  return placeholder;
+}
+
+function createProtectedLayout({ role, route, onLogout, bodyNode }) {
   const layout = element('div', 'protected-shell');
   const sidebar = element('aside', 'shell-sidebar');
   const identity = element('div', 'shell-role');
@@ -150,15 +238,7 @@ function createProtectedLayout({ role, route, onLogout }) {
     element('p', 'shell-content__description', route.description)
   );
 
-  const placeholder = element('section', 'shell-placeholder');
-  placeholder.setAttribute('aria-labelledby', 'shell-placeholder-title');
-  const placeholderTitle = element('h2', 'shell-placeholder__title', 'พื้นที่นี้พร้อมสำหรับการเชื่อมต่อขั้นถัดไป');
-  placeholderTitle.id = 'shell-placeholder-title';
-  placeholder.append(
-    element('span', 'shell-placeholder__index', 'V3'),
-    placeholderTitle,
-    element('p', 'shell-placeholder__description', route.status)
-  );
+  const contentRegion = bodyNode || createDefaultPlaceholder(route);
 
   const securityNote = element('aside', 'shell-security-note');
   securityNote.append(
@@ -166,7 +246,7 @@ function createProtectedLayout({ role, route, onLogout }) {
     element('p', null, 'เมนูและ Route guard ช่วยนำทางเท่านั้น Backend ยังต้องตรวจสิทธิ์ทุก Request')
   );
 
-  main.append(headingGroup, placeholder, securityNote);
+  main.append(headingGroup, contentRegion, securityNote);
   mainColumn.append(topbar, main);
   layout.append(sidebar, mainColumn);
   return { layout, main };
@@ -194,7 +274,9 @@ export function createShellApp({
   logout,
   location,
   eventTarget,
-  storage
+  storage,
+  history = globalThis.history,
+  renderRouteContent
 }) {
   if (
     !root ||
@@ -207,8 +289,14 @@ export function createShellApp({
   }
 
   let activeController = null;
+  let routeController = null;
   let currentRole = null;
   let destroyed = false;
+
+  function abortRouteWork() {
+    routeController?.abort();
+    routeController = null;
+  }
 
   function renderLoading(title = 'กำลังตรวจสอบ Session') {
     renderState(root, {
@@ -223,6 +311,8 @@ export function createShellApp({
   // First visit in this tab: ask the user to sign in explicitly. No automatic redirect,
   // so a failed or cancelled Cognito login cannot cause a redirect loop.
   function renderSignIn() {
+    abortRouteWork();
+    currentRole = null;
     safelyRememberReturnRoute(storage, location.hash);
     const publicDirectory = element('a', 'shell-button shell-button--secondary', 'ดูรายชื่อสถานประกอบการ');
     publicDirectory.href = 'company-directory.html';
@@ -248,26 +338,35 @@ export function createShellApp({
   }
 
   function renderExpired() {
+    abortRouteWork();
+    currentRole = null;
     safelyRememberReturnRoute(storage, location.hash);
+    const publicDirectory = element('a', 'shell-button shell-button--secondary', 'ดูรายชื่อสถานประกอบการ');
+    publicDirectory.href = 'company-directory.html';
+
     renderState(root, {
       eyebrow: 'SESSION EXPIRED',
       title: 'Session หมดอายุ',
       description: 'เพื่อความปลอดภัย กรุณาเข้าสู่ระบบใหม่ก่อนกลับไปยังพื้นที่ของคุณ',
       tone: 'warning',
       alert: true,
-      actions: [createActionButton('เข้าสู่ระบบอีกครั้ง', async () => {
-        safelyRememberReturnRoute(storage, location.hash);
-        renderLoading('กำลังไปยังหน้าเข้าสู่ระบบ');
-        try {
-          await restartLogin();
-        } catch {
-          renderUnavailable();
-        }
-      })]
+      actions: [
+        createActionButton('เข้าสู่ระบบอีกครั้ง', async () => {
+          safelyRememberReturnRoute(storage, location.hash);
+          renderLoading('กำลังไปยังหน้าเข้าสู่ระบบ');
+          try {
+            await restartLogin();
+          } catch {
+            renderUnavailable();
+          }
+        }),
+        publicDirectory
+      ]
     });
   }
 
   function renderForbidden(description = 'บัญชีนี้ไม่มีสิทธิ์เปิด Route ที่ร้องขอ') {
+    abortRouteWork();
     const actions = [];
     const defaultRoute = getDefaultRoute(currentRole);
     if (defaultRoute) {
@@ -289,6 +388,7 @@ export function createShellApp({
   }
 
   function renderUnavailable() {
+    abortRouteWork();
     renderState(root, {
       eyebrow: 'SERVICE UNAVAILABLE',
       title: 'ตรวจสอบ Session ไม่สำเร็จ',
@@ -303,8 +403,11 @@ export function createShellApp({
   }
 
   async function handleLogout() {
-    renderLoading('กำลังออกจากระบบ');
+    activeController?.abort();
+    abortRouteWork();
     currentRole = null;
+    safelyClearReturnRoute(storage);
+    renderLoading('กำลังออกจากระบบ');
     try {
       await logout();
     } catch {
@@ -312,24 +415,62 @@ export function createShellApp({
     }
   }
 
+  function handleSessionExpired() {
+    if (destroyed) {
+      return;
+    }
+    activeController?.abort();
+    renderExpired();
+  }
+
   function renderCurrentRoute() {
     if (!currentRole) {
       return;
     }
 
+    abortRouteWork();
     const route = getRoute(location.hash);
     if (!route || !canRoleAccessRoute(currentRole, location.hash)) {
       renderForbidden(route ? 'Route นี้ไม่อยู่ในสิทธิ์ของบัญชีปัจจุบัน' : 'ไม่พบ Route นี้ในรายการที่ระบบอนุญาต');
       return;
     }
 
-    const { layout, main } = createProtectedLayout({ role: currentRole, route, onLogout: handleLogout });
+    const controller = new AbortController();
+    routeController = controller;
+
+    const customBody = typeof renderRouteContent === 'function'
+      ? renderRouteContent({
+        role: currentRole,
+        route,
+        signal: controller.signal,
+        onSessionExpired: handleSessionExpired,
+        onAccessDenied: (message) => renderForbidden(message),
+        onNavigate: (targetHash) => {
+          if (isAllowlistedRoute(targetHash)) {
+            location.hash = targetHash;
+          }
+        }
+      })
+      : null;
+
+    const { layout, main } = createProtectedLayout({
+      role: currentRole,
+      route,
+      onLogout: handleLogout,
+      bodyNode: customBody
+    });
     replaceRoot(root, layout);
     main.focus({ preventScroll: true });
   }
 
   function selectInitialRoute() {
-    if (location.hash) {
+    if (location.hash && isAllowlistedRoute(location.hash)) {
+      safelyClearReturnRoute(storage);
+      renderCurrentRoute();
+      return;
+    }
+
+    if (location.hash && !isAllowlistedRoute(location.hash)) {
       renderCurrentRoute();
       return;
     }
@@ -350,6 +491,7 @@ export function createShellApp({
 
   async function bootstrap() {
     activeController?.abort();
+    abortRouteWork();
     const controller = new AbortController();
     activeController = controller;
     currentRole = null;
@@ -357,12 +499,14 @@ export function createShellApp({
 
     try {
       const session = await loadSession({ signal: controller.signal });
+      scrubAuthCallbackUrl(location, history);
       if (destroyed || activeController !== controller) {
         return;
       }
       currentRole = session.role;
       selectInitialRoute();
     } catch (error) {
+      scrubAuthCallbackUrl(location, history);
       if (destroyed || activeController !== controller || error?.name === 'AbortError') {
         return;
       }
@@ -387,9 +531,13 @@ export function createShellApp({
       eventTarget.addEventListener('hashchange', handleHashChange);
       return bootstrap();
     },
+    expireSession() {
+      handleSessionExpired();
+    },
     destroy() {
       destroyed = true;
       activeController?.abort();
+      abortRouteWork();
       eventTarget.removeEventListener('hashchange', handleHashChange);
     }
   });

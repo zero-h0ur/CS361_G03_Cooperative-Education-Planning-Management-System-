@@ -129,6 +129,11 @@ export function createAmplifyAuthClient({ config, currentOrigin = window.locatio
     },
 
     async logout() {
+      try {
+        await cognitoUserPoolsTokenProvider.tokenOrchestrator.clearTokens();
+      } catch {
+        // Proceed with global sign-out even if local storage cleanup fails.
+      }
       await signOut({ global: true });
     }
   });
