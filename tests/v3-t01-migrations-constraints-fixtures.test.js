@@ -47,6 +47,71 @@ const MIGRATION_002_SQL = fs.readFileSync(
 const CHECKSUM_001 = sha256(MIGRATION_001_SQL);
 const CHECKSUM_002 = sha256(MIGRATION_002_SQL);
 
+const SENSITIVE_FIELD_PATTERN =
+  /(?:^|_)(?:password|passwd|secret|token|api_key|access_key|secret_key|private_key|credential|database_url|connection_string)(?:$|_)/i;
+const CREDENTIAL_URI_PATTERN =
+  /\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?):\/\/[^\s:/@]+:[^\s/@]+@/i;
+const AWS_ACCESS_KEY_PATTERN = /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/;
+const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/;
+const PRIVATE_KEY_PATTERN = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/;
+const EMAIL_PATTERN = /[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})/gi;
+const RESERVED_EMAIL_DOMAIN_PATTERN =
+  /^(?:[a-z0-9-]+\.)*(?:example\.(?:com|net|org)|example|invalid|test)$/i;
+const THAI_NATIONAL_ID_PATTERN = /\b\d{13}\b/;
+const THAI_PHONE_PATTERN = /(?:^|\D)(?:\+66|0)[689]\d{8}(?:\D|$)/;
+
+function scanFixtureSecurity(...datasets) {
+  const findings = [];
+
+  function visit(node, currentPath) {
+    if (Array.isArray(node)) {
+      node.forEach((item, index) => visit(item, `${currentPath}[${index}]`));
+      return;
+    }
+
+    if (!node || typeof node !== 'object') return;
+
+    for (const [key, value] of Object.entries(node)) {
+      const fieldPath = `${currentPath}.${key}`;
+      if (SENSITIVE_FIELD_PATTERN.test(key)) {
+        findings.push(`${fieldPath}: sensitive field name`);
+      }
+
+      if (typeof value === 'string') {
+        if (AWS_ACCESS_KEY_PATTERN.test(value)) {
+          findings.push(`${fieldPath}: AWS access key`);
+        }
+        if (JWT_PATTERN.test(value)) {
+          findings.push(`${fieldPath}: JWT`);
+        }
+        if (PRIVATE_KEY_PATTERN.test(value)) {
+          findings.push(`${fieldPath}: private key`);
+        }
+        if (CREDENTIAL_URI_PATTERN.test(value)) {
+          findings.push(`${fieldPath}: credential-bearing database URI`);
+        }
+        if (THAI_NATIONAL_ID_PATTERN.test(value)) {
+          findings.push(`${fieldPath}: possible Thai national ID`);
+        }
+        if (THAI_PHONE_PATTERN.test(value)) {
+          findings.push(`${fieldPath}: possible Thai phone number`);
+        }
+
+        for (const match of value.matchAll(EMAIL_PATTERN)) {
+          if (!RESERVED_EMAIL_DOMAIN_PATTERN.test(match[1])) {
+            findings.push(`${fieldPath}: non-reserved email domain`);
+          }
+        }
+      }
+
+      visit(value, fieldPath);
+    }
+  }
+
+  datasets.forEach((dataset, index) => visit(dataset, `$[${index}]`));
+  return findings;
+}
+
 /**
  * Creates a stateful transactional mock PostgreSQL pool to verify migration
  * state transitions, checksum backfill, idempotency, and rollback behavior.
@@ -396,40 +461,21 @@ describe('Issue #78 [V3-T01]: Verify V3 migrations, constraints and safe fixture
     const v2Dataset = JSON.parse(fs.readFileSync(V2_DATASET_PATH, 'utf8'));
     const v3Fixtures = JSON.parse(fs.readFileSync(V3_FIXTURES_PATH, 'utf8'));
 
-    function collectStrings(node, results = []) {
-      if (typeof node === 'string') {
-        results.push(node);
-      } else if (Array.isArray(node)) {
-        for (const item of node) collectStrings(item, results);
-      } else if (node && typeof node === 'object') {
-        for (const [k, v] of Object.entries(node)) {
-          results.push(k);
-          collectStrings(v, results);
-        }
-      }
-      return results;
-    }
-
     it('scans V2 and V3 datasets and confirms zero secrets, tokens, private keys, or production PII', () => {
-      const allStrings = [
-        ...collectStrings(v2Dataset),
-        ...collectStrings(v3Fixtures)
-      ];
+      expect(scanFixtureSecurity(v2Dataset, v3Fixtures)).toEqual([]);
+    });
 
-      for (const value of allStrings) {
-        // No AWS Access Keys or Secret Keys
-        expect(value).not.toMatch(/\b(AKIA|ASIA)[0-9A-Z]{16}\b/);
-        // No raw JWTs
-        expect(value).not.toMatch(/^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
-        // No PEM private keys
-        expect(value).not.toMatch(/-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----/);
-        // No real Thai university or consumer email addresses
-        expect(value).not.toMatch(
-          /@(cmu\.ac\.th|tu\.ac\.th|chula\.ac\.th|ku\.ac\.th|kmitl\.ac\.th|mahidol\.ac\.th|gmail\.com|hotmail\.com|outlook\.com|yahoo\.com)\b/i
-        );
-        // No 13-digit Thai National ID numbers
-        expect(value).not.toMatch(/\b\d{13}\b/);
-      }
+    it.each([
+      [{ password: 'synthetic-but-forbidden' }, /sensitive field name/],
+      [
+        { endpoint: 'postgres://example-user:example-password@db.example.invalid/coed' },
+        /credential-bearing database URI/
+      ],
+      [{ contact: 'student@gmail.com' }, /non-reserved email domain/],
+      [{ contact: '0812345678' }, /possible Thai phone number/],
+      [{ identity_number: '1234567890123' }, /possible Thai national ID/]
+    ])('rejects representative secret or production-PII mutation %#', (mutation, expected) => {
+      expect(scanFixtureSecurity(mutation).join('\n')).toMatch(expected);
     });
 
     it('passes the CLI V3 fixture validator and rejects invalid or duplicate fixture mutations', () => {
