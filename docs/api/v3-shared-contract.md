@@ -172,3 +172,20 @@ if (!isAuthenticated) {
     ├─► /api/health (Health Route)
     └─► /api/v3/* (Protected Routes)   ──► Context / Services / Workflows
 ```
+
+### 4.1 Layer Responsibilities
+
+| Layer | ตำแหน่ง | หน้าที่ | ห้ามทำ |
+|---|---|---|---|
+| Route / Controller | `src/api/routes/*-routes.js` | ลงทะเบียน path กับ Router, ตรวจ query/path parameter, อ่าน Request Context, เรียก Service และส่ง Response ผ่าน `sendSuccess()` | ห้าม query database โดยตรง และห้ามสร้าง response shape เอง |
+| Service | `src/api/services/*-service.js` | Business rule, การตรวจสิทธิ์ตาม Scope (#62) และ Workflow transition (#63) โดย throw Error class จาก `src/api/errors.js` | ห้ามอ่าน/เขียน HTTP request หรือ response |
+| Repository (DAL) | `src/db/dal.js` หรือ `src/db/repositories/*.js` | SQL query, transaction และแปลง PostgreSQL error เป็น `DALError` | ห้ามรู้จัก HTTP status หรือ Role ของผู้ใช้ |
+
+ทิศทางการ import ต้องเป็นทางเดียวเสมอ: `app` → `routes` → `services` → `repositories` และทุกชั้นใช้ `errors` / `response` / `context` ร่วมกันได้ ห้าม import ย้อนทิศเพื่อป้องกัน circular dependency
+
+Feature Issue ที่เพิ่ม endpoint ให้สร้างไฟล์ route ใหม่ใน `src/api/routes/` แล้วลงทะเบียนใน `registerV3Routes()` ภายใน `src/api/routes/v3-routes.js`
+
+### 4.2 Compatibility Notes
+
+- Request ที่ไม่ใช่ `GET` ไปยัง path ที่ไม่มี route จะได้ `405 METHOD_NOT_ALLOWED` พร้อม `Allow: GET` ตามพฤติกรรม V2 ส่วน `GET` ไปยัง path ที่ไม่มีจะได้ `404 ROUTE_NOT_FOUND`
+- `DALError` ที่มี code `UNIQUE_VIOLATION` (PostgreSQL `23505`) จะถูก map เป็น `409 CONFLICT` ส่วน constraint violation อื่นยังเป็น `500 INTERNAL_ERROR` เพราะควรถูกดักด้วย validation ใน Service ก่อนถึง database
