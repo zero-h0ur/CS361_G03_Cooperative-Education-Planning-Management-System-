@@ -1,6 +1,6 @@
 /**
  * Staff Review Command Routes for CO-ED V3.
- * Provides POST /api/v3/plans/:planId/start-review, /return (/return-for-revision), and /approve
+ * Provides POST /api/v3/plans/:planId/start-review, /return, and /approve
  * using Centralized Authorization (#62) and Transactional WorkflowService (#63).
  * Conforms to Issue #49, #50, #52, #53, #54, #55, #61, #62, #63, and #70.
  */
@@ -12,15 +12,12 @@ const {
   decodePathParameter,
   parseJsonBody
 } = require('../router');
-const { getRequestContext } = require('../context');
-const { ValidationError, ForbiddenError } = require('../errors');
+const { ValidationError } = require('../errors');
 const { sendSuccess } = require('../response');
 
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 const PLAN_START_REVIEW_PATTERN = /^\/api\/v3\/plans\/([^/]+)\/start-review$/;
-const PLAN_RETURN_PATTERN = /^\/api\/v3\/plans\/([^/]+)\/(?:return|return-for-revision)$/;
+// One path per command (#53 examples); each path needs its own API Gateway JWT Authorizer route
+const PLAN_RETURN_PATTERN = /^\/api\/v3\/plans\/([^/]+)\/return$/;
 const PLAN_APPROVE_PATTERN = /^\/api\/v3\/plans\/([^/]+)\/approve$/;
 
 const ALLOWED_REVIEW_QUERY_PARAMS = new Set([]);
@@ -58,8 +55,8 @@ function toStaffReviewCommandResponse(result = {}) {
   return Object.freeze({
     id: plan.id ?? null,
     student_id: plan.student_id ?? null,
+    // V3 uses cycle_id as the contract name; legacy round_id is not exposed (#52 section 12)
     cycle_id: plan.cycle_id ?? null,
-    round_id: plan.round_id ?? null,
     company_id: plan.company_id ?? null,
     position_id: plan.position_id ?? null,
     notes: plan.notes ?? null,
@@ -103,22 +100,11 @@ function assertNoBodyOverrides(body) {
   }
 }
 
-function resolveReviewPlanResource(request, context) {
-  const authContext = getRequestContext(request);
-  const planId = decodePathParameter(context.params[0]);
-
-  // Only validate UUID after confirming the caller is an authenticated STAFF actor,
-  // so non-STAFF roles (e.g. ADVISOR, STUDENT, ADMIN) receive 403 FORBIDDEN first.
-  if (authContext?.isAuthenticated && authContext.role === 'STAFF') {
-    if (!planId || typeof planId !== 'string' || !UUID_REGEX.test(planId)) {
-      throw new ValidationError('Invalid planId: must be a valid UUID.', [
-        { field: 'plan_id', issue: 'must be a valid UUID string' }
-      ]);
-    }
-  }
-
+// The central policy (#62) rejects malformed plan ids with 400 and checks Staff role,
+// scope and OPEN round; this resolver only identifies the target Plan.
+function resolveReviewPlanResource(_request, context) {
   return {
-    planId,
+    planId: decodePathParameter(context.params[0]),
     isReviewAction: true
   };
 }
@@ -143,12 +129,9 @@ function registerStaffReviewRoutes(router, registerProtectedRoute, options = {})
     });
 
   function createReviewCommandHandler(executeCommand) {
+    // Role (STAFF only, Advisor read-only) is enforced by the central policy action;
+    // no ad-hoc role checks in route handlers (#62 coordination note).
     return async function handleStaffReviewCommand(request, response, context) {
-      // Strictly enforce STAFF-only boundary; Advisor is read-only (#49, #70 coordination note)
-      if (context.authContext?.role !== 'STAFF') {
-        throw new ForbiddenError('Access denied.', 'FORBIDDEN');
-      }
-
       assertAllowedQueryParameters(
         context.url.searchParams,
         ALLOWED_REVIEW_QUERY_PARAMS

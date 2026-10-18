@@ -12,8 +12,11 @@ const {
 const { getRequestContext } = require('../context');
 const { registerSessionRoutes } = require('./session-routes');
 const { registerStudentProfileRoutes } = require('./student-profile-routes');
-const { registerPlanSubmissionRoutes } = require('./plan-submission-routes');
+const { registerStudentPlanRoutes } = require('./student-plan-routes');
+const { registerStaffRoutes } = require('./staff-routes');
 const { registerStaffReviewRoutes } = require('./staff-review-routes');
+const { registerPlanSubmissionRoutes } = require('./plan-submission-routes');
+const { registerPlanHistoryRoutes } = require('./plan-history-routes');
 
 const VALID_ACTIONS = new Set(Object.values(ACTIONS));
 
@@ -108,12 +111,19 @@ function registerV3Routes(router, options = {}) {
   // Issue #65: Student self-profile read/update API
   registerStudentProfileRoutes(router, registerProtectedRoute, options);
 
-  // Downstream Issue #66: Own Plan create/read/edit API
-  // Downstream Issue #67: Staff Student/Plan search and review queue API
+  // Issue #66: Student own Plan create/read/edit API
+  registerStudentPlanRoutes(router, registerProtectedRoute, options);
+
+  // Issue #67: Staff Student/Plan search and review queue API (read-only)
+  registerStaffRoutes(router, registerProtectedRoute, options);
+
   // Downstream Issue #68: Advisor assigned-scope read-only API
 
   // Issue #69: Student Plan submission transaction
   registerPlanSubmissionRoutes(router, registerProtectedRoute, options);
+
+  // Issue #76: Student own Plan audit-derived history
+  registerPlanHistoryRoutes(router, registerProtectedRoute, options);
 
   // Issue #70: Staff review commands
   registerStaffReviewRoutes(router, registerProtectedRoute, options);

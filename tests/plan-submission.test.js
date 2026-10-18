@@ -300,8 +300,17 @@ describe('Issue #69: Student Plan submission transaction (POST /api/v3/plans/:pl
       publicKey: keyPair.publicKey
     });
     const identityResolver = new IdentityResolver({ pool: mockPool });
+    // The central policy reads Plan ownership from the same store as the workflow repository,
+    // mirroring a single database in production (#62 resolves planId -> owner before the handler)
     const authorizationService = new AuthorizationService({
-      pool: mockPool,
+      repository: {
+        findPlanById: jest.fn(async (planId) => {
+          const row = plansStore.get(planId);
+          return row
+            ? { plan_id: row.id, student_id: row.student_id, plan_status: row.status, plan_version: row.version }
+            : null;
+        })
+      },
       now: () => new Date('2026-10-18T08:00:00.000Z')
     });
 
@@ -373,7 +382,6 @@ describe('Issue #69: Student Plan submission transaction (POST /api/v3/plans/:pl
           id: PLAN_A_ID,
           student_id: STUDENT_A_ID,
           cycle_id: CYCLE_OPEN_ID,
-          round_id: CYCLE_OPEN_ID,
           company_id: COMPANY_PUBLIC_ID,
           position_id: POSITION_PUBLIC_ID,
           notes: 'Interested in backend engineering internship',
@@ -698,6 +706,42 @@ describe('Issue #69: Student Plan submission transaction (POST /api/v3/plans/:pl
 
       expect(response.statusCode).toBe(500);
       expect(txLog).toEqual(['BEGIN', 'ROLLBACK']);
+    });
+  });
+
+  describe('5. Central policy boundary and response allowlist', () => {
+    test('rejects malformed and unknown plan ids in the central policy before the workflow runs', async () => {
+      const { handler, tokenFor, workflowRepository } = createTestSetup();
+      const token = tokenFor('sub-student-a');
+
+      const malformed = await handler(
+        buildEvent('/api/v3/plans/not-a-uuid/submit', token, {
+          body: { expected_version: 1, operation_id: OP_ID_1 }
+        })
+      );
+      expect(malformed.statusCode).toBe(400);
+      expect(JSON.parse(malformed.body).error.code).toBe('VALIDATION_ERROR');
+
+      const unknown = await handler(
+        buildEvent('/api/v3/plans/50000000-0000-4000-8000-0000000009ff/submit', token, {
+          body: { expected_version: 1, operation_id: OP_ID_2 }
+        })
+      );
+      expect(unknown.statusCode).toBe(404);
+      expect(workflowRepository.getClient).not.toHaveBeenCalled();
+    });
+
+    test('returns cycle_id but never the legacy round_id', async () => {
+      const { handler, tokenFor } = createTestSetup();
+      const response = await handler(
+        buildEvent(`/api/v3/plans/${PLAN_A_ID}/submit`, tokenFor('sub-student-a'), {
+          body: { expected_version: 1, operation_id: OP_ID_1 }
+        })
+      );
+      expect(response.statusCode).toBe(200);
+      const { data } = JSON.parse(response.body);
+      expect(data).toHaveProperty('cycle_id');
+      expect(data).not.toHaveProperty('round_id');
     });
   });
 });

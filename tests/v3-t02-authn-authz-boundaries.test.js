@@ -573,9 +573,25 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
     { method: 'PUT', path: '/api/v3/students/me', body: { preferred_name: 'ชาย', version: 1 } },
     {
       method: 'POST',
+      path: '/api/v3/plans',
+      body: { company_id: PLANS.planA_Draft.company_id }
+    },
+    { method: 'GET', path: '/api/v3/plans' },
+    { method: 'GET', path: `/api/v3/plans/${PLANS.planA_Draft.id}` },
+    {
+      method: 'PATCH',
+      path: `/api/v3/plans/${PLANS.planA_Draft.id}`,
+      body: { position_title: 'Changed', expected_version: 1 }
+    },
+    {
+      method: 'POST',
       path: `/api/v3/plans/${PLANS.planA_Draft.id}/submit`,
       body: { version: 1 }
     },
+    { method: 'GET', path: `/api/v3/plans/${PLANS.planA_Draft.id}/history` },
+    { method: 'GET', path: '/api/v3/staff/students' },
+    { method: 'GET', path: '/api/v3/staff/plans' },
+    { method: 'GET', path: '/api/v3/staff/review-queue' },
     {
       method: 'POST',
       path: `/api/v3/plans/${PLANS.planA_Submitted.id}/start-review`,
@@ -671,6 +687,9 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
       expect(response.status).toBe(403);
       expect(payload.error.code).toBe('FORBIDDEN');
       expect(JSON.stringify(payload)).not.toContain(sub);
+      expect(JSON.stringify(payload)).not.toContain(ACTORS.studentA.institutionalEmail);
+      expect(JSON.stringify(env.auditLogs)).not.toContain(ACTORS.studentA.institutionalEmail);
+      expect(JSON.stringify(env.auditLogs)).not.toContain(ACTORS.studentA.studentNumber);
     });
   });
 
@@ -812,7 +831,7 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
       expect(inScopeRes.status).toBe(200);
     });
 
-    it('enforces Advisor read-only boundary: Advisor can read assigned student/plan, is denied on unassigned student, and is denied on every mutation endpoint', async () => {
+    it('enforces the central Advisor boundary: assigned reads pass policy, unassigned reads and every registered mutation are denied', async () => {
       const advisorToken = signJwt(makeClaims(ACTORS.advisorAssigned.sub));
       const advisorContext = {
         isAuthenticated: true,
@@ -841,6 +860,16 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
           method: 'PATCH',
           path: '/api/v3/students/me',
           body: { preferred_name: 'Hack', version: 1 }
+        },
+        {
+          method: 'POST',
+          path: '/api/v3/plans',
+          body: { company_id: PLANS.planA_Draft.company_id }
+        },
+        {
+          method: 'PATCH',
+          path: `/api/v3/plans/${PLANS.planA_Draft.id}`,
+          body: { position_title: 'Hack', expected_version: 1 }
         },
         {
           method: 'POST',
