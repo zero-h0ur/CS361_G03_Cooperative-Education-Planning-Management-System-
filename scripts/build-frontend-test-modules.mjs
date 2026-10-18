@@ -19,6 +19,8 @@ await build({
     resolve(workspace, 'src/frontend/advisor/advisor-client.js'),
     resolve(workspace, 'src/frontend/advisor/advisor-views.js'),
     resolve(workspace, 'src/frontend/routes.js'),
+    resolve(workspace, 'src/frontend/staff/staff-client.js'),
+    resolve(workspace, 'src/frontend/staff/staff-route-state.js'),
     resolve(workspace, 'src/frontend/shell-app.js')
   ],
   bundle: true,
