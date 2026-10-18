@@ -7,7 +7,9 @@ const { TokenValidator } = require('../src/auth/token-validator');
 const { IdentityResolver } = require('../src/auth/identity-resolver');
 const { createAuthMiddleware } = require('../src/auth/auth-middleware');
 const { getRequestContext } = require('../src/api/context');
-const { UnauthorizedError, ForbiddenError } = require('../src/api/errors');
+const { UnauthorizedError, ForbiddenError, ServiceUnavailableError } = require('../src/api/errors');
+const { Router } = require('../src/api/router');
+const { sendSuccess } = require('../src/api/response');
 const { createLambdaHandler } = require('../src/lambda');
 
 const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
@@ -286,6 +288,34 @@ describe('Issue #61: Token Validation and Trusted Identity Context', () => {
       );
     });
 
+    it('rejects SYSTEM role from token authentication (deny by default per #49)', async () => {
+      const mockPool = {
+        query: jest.fn().mockResolvedValue({
+          rows: [{
+            user_id: 'system-user',
+            role: 'SYSTEM',
+            account_status: 'ACTIVE',
+            link_status: 'ACTIVE',
+            active_link_count: 1,
+            student_id: null
+          }]
+        })
+      };
+
+      const resolver = new IdentityResolver({ pool: mockPool });
+      await expect(resolver.resolveIdentity(ISSUER, 'system-sub')).rejects.toThrow(
+        new ForbiddenError('User role is not recognized.', 'INVALID_ROLE')
+      );
+    });
+
+    it('maps database connection failures to 503 ServiceUnavailableError', async () => {
+      const connectionError = Object.assign(new Error('connect ECONNREFUSED 10.0.0.1:5432'), { code: 'ECONNREFUSED' });
+      const mockPool = { query: jest.fn().mockRejectedValue(connectionError) };
+
+      const resolver = new IdentityResolver({ pool: mockPool });
+      await expect(resolver.resolveIdentity(ISSUER, 'any-sub')).rejects.toBeInstanceOf(ServiceUnavailableError);
+    });
+
     it('rejects STUDENT user without linked Student record or incomplete profile (INCOMPLETE_PROVISIONING per #51)', async () => {
       const mockPoolNoStudent = {
         query: jest.fn().mockResolvedValue({
@@ -387,7 +417,8 @@ describe('Issue #61: Token Validation and Trusted Identity Context', () => {
           expectedClientId: CLIENT_ID,
           publicKey
         }),
-        identityResolver: new IdentityResolver({ pool: mockPool })
+        identityResolver: new IdentityResolver({ pool: mockPool }),
+        allowBearerFallback: true
       });
 
       const req = {
@@ -462,6 +493,75 @@ describe('Issue #61: Token Validation and Trusted Identity Context', () => {
       expect(ctx.scopes).toEqual(['coed-api/access']);
     });
 
+    it('rejects raw Bearer tokens without API Gateway authorizer claims by default (#48)', async () => {
+      const token = signJwt(validPayload());
+      const mockPool = { query: jest.fn() };
+      const middleware = createAuthMiddleware({
+        tokenValidator: new TokenValidator({
+          expectedIssuer: ISSUER,
+          expectedClientId: CLIENT_ID,
+          publicKey
+        }),
+        identityResolver: new IdentityResolver({ pool: mockPool })
+      });
+
+      const req = { headers: { authorization: `Bearer ${token}` } };
+      const res = createMockResponse();
+
+      await middleware(req, res);
+
+      expect(res.statusCode).toBe(401);
+      expect(res.body.error.code).toBe('UNAUTHORIZED');
+      expect(mockPool.query).not.toHaveBeenCalled();
+      expect(getRequestContext(req).isAuthenticated).toBe(false);
+    });
+
+    it('returns 503 when identity lookup cannot reach the database', async () => {
+      const connectionError = Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
+      const middleware = createAuthMiddleware({
+        tokenValidator: new TokenValidator({
+          expectedIssuer: ISSUER,
+          expectedClientId: CLIENT_ID
+        }),
+        identityResolver: new IdentityResolver({
+          pool: { query: jest.fn().mockRejectedValue(connectionError) }
+        })
+      });
+
+      const req = {
+        headers: {},
+        requestContext: { authorizer: { jwt: { claims: validPayload() } } }
+      };
+      const res = createMockResponse();
+
+      await middleware(req, res);
+
+      expect(res.statusCode).toBe(503);
+      expect(res.body.error.code).toBe('SERVICE_UNAVAILABLE');
+    });
+
+    it('applies auth only to routes that register it as route-scoped middleware', async () => {
+      const middleware = createAuthMiddleware({
+        tokenValidator: new TokenValidator({
+          expectedIssuer: ISSUER,
+          expectedClientId: CLIENT_ID
+        }),
+        identityResolver: new IdentityResolver({ pool: { query: jest.fn() } })
+      });
+      const router = new Router();
+      router.get('/api/health', (req, res) => sendSuccess(res, { status: 'ok' }));
+      router.get('/api/v3/me', middleware, (req, res) => sendSuccess(res, { ok: true }));
+
+      const publicRes = createMockResponse();
+      await router.handle({ method: 'GET', url: '/api/health', headers: {} }, publicRes);
+      expect(publicRes.statusCode).toBe(200);
+
+      const protectedRes = createMockResponse();
+      await router.handle({ method: 'GET', url: '/api/v3/me', headers: {} }, protectedRes);
+      expect(protectedRes.statusCode).toBe(401);
+      expect(protectedRes.body.error.code).toBe('UNAUTHORIZED');
+    });
+
     it('forwards headers and requestContext through createLambdaHandler', async () => {
       const handler = createLambdaHandler();
       const response = await handler({
@@ -501,7 +601,8 @@ describe('Issue #61: Token Validation and Trusted Identity Context', () => {
           expectedClientId: CLIENT_ID,
           publicKey
         }),
-        identityResolver: new IdentityResolver({ pool: mockPool })
+        identityResolver: new IdentityResolver({ pool: mockPool }),
+        allowBearerFallback: true
       });
 
       const req = { headers: { authorization: `Bearer ${token}` } };
@@ -539,7 +640,8 @@ describe('Issue #61: Token Validation and Trusted Identity Context', () => {
           expectedIssuer: ISSUER,
           expectedClientId: CLIENT_ID,
           publicKey
-        })
+        }),
+        allowBearerFallback: true
       });
       const req = {
         headers: { authorization: `Bearer ${sensitiveToken}` }

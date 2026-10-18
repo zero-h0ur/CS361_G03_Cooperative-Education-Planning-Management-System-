@@ -38,7 +38,7 @@ function createAuthorizationMiddleware(action, options = {}) {
 
   return async function authorizationMiddleware(request, response, context = {}) {
     try {
-      const authContext = request?.authContext || getRequestContext(request);
+      const authContext = getRequestContext(request);
       const resource = (await resolveResource(request, context)) || {};
       const decision = await authorizationService.authorize(authContext, action, resource);
 

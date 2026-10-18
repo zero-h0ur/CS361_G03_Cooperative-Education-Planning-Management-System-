@@ -137,18 +137,102 @@ router.post('/api/plans', async (req, res, { dal }) => {
 
 ### 3.3 การดึง Auth Context จาก Request (#61, #62)
 
+Protected route ทุกตัวต้องลงทะเบียนผ่าน `registerProtectedRoute()` เท่านั้น ซึ่งจะต่อ Authentication (#61) และ Centralized Authorization (#62) เป็น route-scoped middleware ให้อัตโนมัติ ห้ามใช้ `router.use()` เพราะจะบังคับ Login กับ Public routes และห้ามใส่ auth middleware เองโดยตรงเพราะจะข้าม Authorization
+
 ```javascript
-const { getRequestContext, extractBearerToken } = require('./context');
-
-// 1. ดึง Bearer Token
-const token = extractBearerToken(req);
-
-// 2. อ่านข้อมูล Context ที่ผ่านการ Verify แล้ว
-const { user, role, isAuthenticated } = getRequestContext(req);
-if (!isAuthenticated) {
-  throw new UnauthorizedError();
+// src/api/routes/v3-routes.js
+function registerV3Routes(router, options = {}) {
+  registerProtectedRoute(router, {
+    method: 'GET',
+    pattern: /^\/api\/v3\/plans\/([^/]+)$/,
+    action: ACTIONS.PLAN_LIST_READ,
+    // ส่งเฉพาะ identifier จาก path; policy อ่าน owner, round และ status ของ Plan จาก DB เอง
+    resolveResource: (req, { params }) => ({ planId: params[0] }),
+    authOptions: options.authOptions,
+    handler: async (req, res, { authContext, authzDecision }) => {
+      // authContext = Trusted Identity จาก RDS, authzDecision = ผลการตัดสินสิทธิ์
+      sendSuccess(res, await planService.getPlan(authzDecision.planId));
+    }
+  });
 }
 ```
+
+`resolveResource` ต้องคืนเฉพาะ identifier ของ resource เป้าหมาย (`studentId`, `planId`) จาก path ห้ามส่งข้อมูลที่ใช้ตัดสินสิทธิ์ เช่น owner หรือ status ของ Plan เพราะ policy จะอ่านค่าเหล่านี้จาก database ทุกครั้ง
+
+ข้อกำหนด:
+
+- Handler และ Service ห้าม parse token หรืออ่าน `Authorization` header เอง (#61 coordination note)
+- ห้ามเชื่อ `role`, `userId`, `studentId` จาก body, query หรือ header ที่ client ส่งมา
+- Production รับ identity จาก `requestContext.authorizer.jwt.claims` ของ API Gateway JWT Authorizer เท่านั้น (#48) การตรวจ Bearer token ใน Lambda (`allowBearerFallback: true`) ใช้ได้เฉพาะ local development และ test
+- Middleware ต้องตั้งค่า `AUTH_ISSUER` และ `AUTH_AUDIENCE` (#58) ถ้าไม่ตั้ง ทุก request จะได้ `401`
+- Role `SYSTEM` ไม่สามารถ authenticate ผ่าน token ได้
+
+| กรณี | Response |
+|---|---|
+| ไม่มี token, token ผิด, หมดอายุ, scope ไม่ครบ | `401 UNAUTHORIZED` |
+| ไม่พบ identity link, link ถูก revoke, account disabled, duplicate link, provisioning ไม่ครบ | `403 FORBIDDEN` (message เดียวกันทุกกรณี) |
+| Database ไม่พร้อมใช้งานระหว่าง resolve identity | `503 SERVICE_UNAVAILABLE` |
+
+### 3.4 Session Bootstrap: `GET /api/v3/me` (#64)
+
+Frontend (#57) เรียก endpoint นี้หลัง Login เพื่ออ่าน Identity, Role และ Capability ที่ Server resolve จาก RDS แล้ว ใช้แสดง Navigation/Controls เท่านั้น Backend ยังตรวจสิทธิ์ซ้ำทุก action (#49)
+
+- Path เดียวคือ `/api/v3/me` ต้องติด API Gateway JWT Authorizer และไม่มี alias อื่น
+- ไม่รับ Query parameter ใดๆ หากส่งมาจะได้ `400 VALIDATION_ERROR`
+- Response ไม่มี token, `iss`, `sub`, identity link ID, ชื่อ หรือ Email
+
+```json
+{
+  "data": {
+    "user": { "id": "<user-uuid>", "role": "STUDENT", "accountStatus": "ACTIVE" },
+    "role": "STUDENT",
+    "studentId": "<student-uuid>",
+    "profile": {
+      "studentId": "<student-uuid>",
+      "department": "Computer Science",
+      "program": "B.Sc.",
+      "major": "Computer Science",
+      "academicYear": 2567,
+      "enrollmentStatus": "ACTIVE"
+    },
+    "capabilities": {
+      "role": "STUDENT",
+      "scopeMode": "OWN",
+      "canMutateStudentProfile": true,
+      "canMutatePlanContent": true,
+      "canSubmitPlan": true,
+      "canReviewPlan": false,
+      "isReadOnly": false,
+      "allowedActions": ["session:read_me", "plan:create", "..."],
+      "permissions": { "session:read_me": "AUTHENTICATED", "plan:create": "OWN" },
+      "navigation": {
+        "canAccessStudentDashboard": true,
+        "canAccessMyProfile": true,
+        "canAccessMyPlan": true,
+        "canAccessAdvisorStudents": false,
+        "canAccessStaffStudentManagement": false,
+        "canAccessStaffReviewQueue": false
+      }
+    },
+    "scope": {
+      "mode": "OWN",
+      "studentId": "<student-uuid>",
+      "operationalScopes": [],
+      "assignedStudents": [],
+      "assignedStudentCount": 0
+    }
+  }
+}
+```
+
+| Field | ค่าตาม Role |
+|---|---|
+| `studentId`, `profile` | มีค่าเฉพาะ `STUDENT` นอกนั้นเป็น `null` |
+| `scope.mode` | `STUDENT` = `OWN`, `ADVISOR` = `ASSIGNED`, `STAFF` = `SCOPED`, `ADMIN` = `DENY` |
+| `scope.operationalScopes` | เฉพาะ `STAFF`: `[{ department, program, academicYear }]` จาก `staff_scopes` ที่ `ACTIVE` |
+| `scope.assignedStudents` | เฉพาะ `ADVISOR`: `[{ studentId, academicYear, semester }]` ที่ assignment มีผล ณ เวลาที่ร้องขอ |
+
+Error: ไม่มี/ผิด/หมดอายุ token → `401`, ไม่พบ link/disabled/provisioning ไม่ครบ → `403`, Method อื่นนอกจาก `GET` → `405`
 
 ---
 
@@ -183,7 +267,7 @@ if (!isAuthenticated) {
 
 ทิศทางการ import ต้องเป็นทางเดียวเสมอ: `app` → `routes` → `services` → `repositories` และทุกชั้นใช้ `errors` / `response` / `context` ร่วมกันได้ ห้าม import ย้อนทิศเพื่อป้องกัน circular dependency
 
-Feature Issue ที่เพิ่ม endpoint ให้สร้างไฟล์ route ใหม่ใน `src/api/routes/` แล้วลงทะเบียนใน `registerV3Routes()` ภายใน `src/api/routes/v3-routes.js`
+Feature Issue ที่เพิ่ม endpoint ให้สร้างไฟล์ route ใหม่ใน `src/api/routes/` แล้วลงทะเบียนผ่าน `registerProtectedRoute()` จาก `registerV3Routes()` ภายใน `src/api/routes/v3-routes.js`
 
 ### 4.2 Compatibility Notes
 
