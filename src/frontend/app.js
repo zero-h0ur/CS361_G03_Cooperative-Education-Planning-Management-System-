@@ -3,6 +3,7 @@ import './authenticated-shell.css';
 import { createAmplifyAuthClient } from './auth/amplify-client.js';
 import { createSessionClient } from './auth/session-client.js';
 import { createShellApp, renderStartupFailure } from './shell-app.js';
+import { createStudentProfileClient } from './student/profile-client.js';
 
 const root = document.getElementById('authenticatedApp');
 
@@ -14,6 +15,10 @@ if (root) {
       apiBaseUrl: config.apiBaseUrl,
       getAccessToken: authClient.getAccessToken
     });
+    const studentProfileClient = createStudentProfileClient({
+      apiBaseUrl: config.apiBaseUrl,
+      getAccessToken: authClient.getAccessToken
+    });
     const app = createShellApp({
       root,
       loadSession: sessionClient.loadSession,
@@ -22,7 +27,8 @@ if (root) {
       logout: authClient.logout,
       location: window.location,
       eventTarget: window,
-      storage: window.sessionStorage
+      storage: window.sessionStorage,
+      studentProfileClient
     });
 
     app.start();

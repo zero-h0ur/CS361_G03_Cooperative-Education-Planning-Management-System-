@@ -7,6 +7,7 @@ import {
   getRoutesForRole,
   isAllowlistedRoute
 } from './routes.js';
+import { renderStudentDashboardView } from './student/student-dashboard-view.js';
 
 const RETURN_ROUTE_KEY = 'co-ed:return-route';
 const SENSITIVE_QUERY_PARAMS = Object.freeze([
@@ -269,6 +270,7 @@ export function createShellApp({
   eventTarget,
   storage,
   history = globalThis.history,
+  studentProfileClient = null,
   renderRouteContent
 }) {
   if (
@@ -283,12 +285,16 @@ export function createShellApp({
 
   let activeController = null;
   let routeController = null;
+  // Hash of the protected route currently on screen; lets handleHashChange skip the
+  // hashchange event that follows our own navigation, which would render the route twice.
+  let renderedHash = null;
   let currentRole = null;
   let destroyed = false;
 
   function abortRouteWork() {
     routeController?.abort();
     routeController = null;
+    renderedHash = null;
   }
 
   function renderLoading(title = 'กำลังตรวจสอบ Session') {
@@ -416,12 +422,49 @@ export function createShellApp({
     renderExpired();
   }
 
+  function navigateToAllowlistedRoute(targetHash) {
+    if (!isAllowlistedRoute(targetHash)) {
+      return;
+    }
+    const changed = location.hash !== targetHash;
+    location.hash = targetHash;
+    if (changed) {
+      renderCurrentRoute();
+    }
+  }
+
+  function resolveRouteBody({ role, route, signal }) {
+    if (typeof renderRouteContent === 'function') {
+      return renderRouteContent({
+        role,
+        route,
+        signal,
+        onSessionExpired: handleSessionExpired,
+        onAccessDenied: (message) => renderForbidden(message),
+        onNavigate: navigateToAllowlistedRoute
+      });
+    }
+
+    if (role === 'STUDENT' && route.hash === '#/student/profile' && studentProfileClient) {
+      return renderStudentDashboardView({
+        profileClient: studentProfileClient,
+        signal,
+        onSessionExpired: handleSessionExpired,
+        onAccessDenied: (message) => renderForbidden(message),
+        onNavigate: navigateToAllowlistedRoute
+      });
+    }
+
+    return null;
+  }
+
   function renderCurrentRoute() {
     if (!currentRole) {
       return;
     }
 
     abortRouteWork();
+    renderedHash = location.hash;
     const route = getRoute(location.hash);
     if (!route || !canRoleAccessRoute(currentRole, location.hash)) {
       renderForbidden(route ? 'Route นี้ไม่อยู่ในสิทธิ์ของบัญชีปัจจุบัน' : 'ไม่พบ Route นี้ในรายการที่ระบบอนุญาต');
@@ -431,20 +474,11 @@ export function createShellApp({
     const controller = new AbortController();
     routeController = controller;
 
-    const customBody = typeof renderRouteContent === 'function'
-      ? renderRouteContent({
-        role: currentRole,
-        route,
-        signal: controller.signal,
-        onSessionExpired: handleSessionExpired,
-        onAccessDenied: (message) => renderForbidden(message),
-        onNavigate: (targetHash) => {
-          if (isAllowlistedRoute(targetHash)) {
-            location.hash = targetHash;
-          }
-        }
-      })
-      : null;
+    const customBody = resolveRouteBody({
+      role: currentRole,
+      route,
+      signal: controller.signal
+    });
 
     const { layout, main } = createProtectedLayout({
       role: currentRole,
@@ -516,7 +550,12 @@ export function createShellApp({
     }
   }
 
-  const handleHashChange = () => renderCurrentRoute();
+  const handleHashChange = () => {
+    if (location.hash === renderedHash) {
+      return;
+    }
+    renderCurrentRoute();
+  };
 
   return Object.freeze({
     start() {
