@@ -636,6 +636,59 @@ a:focus-visible,
   transform: none;
 }
 
+.student-badge--warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.student-badge--danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.student-plan-history__list {
+  display: grid;
+  gap: 14px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.student-plan-history__item {
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--shell-line);
+  border-left: 4px solid var(--shell-primary);
+  background: #fbfcfe;
+}
+
+.student-plan-history__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.student-plan-history__transition {
+  font-size: 0.94rem;
+  color: var(--shell-ink);
+}
+
+.student-plan-history__time {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  color: var(--shell-muted);
+}
+
+.student-plan-history__actor,
+.student-plan-history__reason {
+  margin: 6px 0 0;
+  font-size: 0.86rem;
+  color: var(--shell-muted);
+  line-height: 1.55;
+}
+
 @keyframes shell-pulse {
   50% {
     transform: translateY(-4px);
