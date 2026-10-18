@@ -80,14 +80,45 @@ class WorkflowRepository {
         r.status AS round_status,
         s.department AS student_department,
         s.program AS student_program,
-        s.academic_year AS student_academic_year
+        s.academic_year AS student_academic_year,
+        c.visibility AS company_visibility,
+        pos.visibility AS position_visibility,
+        pos.company_id AS position_company_id
       FROM plans p
       LEFT JOIN rounds r ON r.id = COALESCE(p.cycle_id, p.round_id)
       LEFT JOIN students s ON s.id = p.student_id
+      LEFT JOIN companies c ON c.id = p.company_id
+      LEFT JOIN positions pos ON pos.id = p.position_id
       WHERE p.id = $1
       FOR UPDATE OF p
     `;
     const result = await this.query(sql, [planId], client);
+    return result?.rows?.[0] || null;
+  }
+
+  /**
+   * Finds an existing plan operation by operation ID for idempotent retry.
+   * @param {object|null} client Active database client or null for pool
+   * @param {string} operationId UUID
+   * @returns {Promise<object|null>}
+   */
+  async findOperationById(client, operationId) {
+    const sql = `
+      SELECT
+        operation_id,
+        plan_id,
+        actor_id,
+        action,
+        request_hash,
+        response_status,
+        response_payload,
+        result_version,
+        created_at
+      FROM plan_operations
+      WHERE operation_id = $1
+      LIMIT 1
+    `;
+    const result = await this.query(sql, [operationId], client);
     return result?.rows?.[0] || null;
   }
 

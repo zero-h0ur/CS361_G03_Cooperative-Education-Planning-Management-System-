@@ -3,11 +3,18 @@
  * [V3-F06] Implement transactional workflow and immutable audit service.
  *
  * Verifies:
- * 1. State machine rules and allowed transitions (#54)
- * 2. Preconditions and editable constraints
- * 3. Centralized role, ownership, and scope authorization (#62)
+ * 1. State machine rules and allowed transitions (#54, #63)
+ *    - CANCEL allowed only from DRAFT, SUBMITTED, NEEDS_REVISION (not UNDER_REVIEW)
+ * 2. Preconditions and editable constraints (#52 ข้อ 3, ข้อ 6)
+ *    - Cycle, public company, and matching public position required for submit
+ *    - Review notes optional for approve, mandatory for return_for_revision
+ *    - Rejection of unknown fields with 400
+ * 3. Centralized role, ownership, and scope authorization (#49, #62)
  * 4. Optimistic concurrency control and conflict responses (409)
- * 5. Idempotent retries via plan_operations
+ * 5. Idempotent retries via plan_operations (#52 ข้อ 9)
+ *    - operation_id match with same payload -> cached response
+ *    - operation_id match with different payload/action/actor -> 409 IDEMPOTENCY_KEY_REUSED
+ *    - new operation_id with stale expected_version -> 409 STALE_RECORD_CONFLICT
  * 6. Single atomic database transactions and rollback safety
  * 7. Real PostgreSQL concurrency and row-lock serialization
  */
@@ -20,6 +27,7 @@ const {
   PLAN_STATES,
   TERMINAL_STATES,
   ACTIONS,
+  AUDIT_ACTIONS,
   TRANSITION_RULES,
   WorkflowService
 } = require('../src/api/services/workflow-service');
@@ -114,6 +122,9 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       student_department: 'Computer Science',
       student_program: 'B.Sc.',
       student_academic_year: 2568,
+      company_visibility: 'public',
+      position_visibility: 'public',
+      position_company_id: COMPANY_ID,
       ...overrides
     };
   }
@@ -165,6 +176,11 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           return { ...currentPlan };
         }
         return null;
+      }),
+
+      findOperationById: jest.fn().mockImplementation(async (client, opId) => {
+        const allOps = [...operations, ...pendingOperations];
+        return allOps.find((op) => op.operation_id === opId) || null;
       }),
 
       findOperationByRequestHash: jest.fn().mockImplementation(async (client, planId, hash) => {
@@ -253,8 +269,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
 
       const result = await service.submitPlan({
         actor: student,
-        planId: TEST_PLAN_ID,
-        expectedVersion: 1
+        plan_id: TEST_PLAN_ID,
+        expected_version: 1
       });
 
       expect(result.plan.status).toBe(PLAN_STATES.SUBMITTED);
@@ -266,7 +282,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       expect(repo.auditLogs[0]).toMatchObject({
         actor_id: USER_STUDENT_A,
         actor_role: 'STUDENT',
-        action: ACTIONS.PLAN_SUBMIT,
+        action: 'PLAN_SUBMITTED',
         from_state: PLAN_STATES.DRAFT,
         to_state: PLAN_STATES.SUBMITTED
       });
@@ -284,8 +300,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
 
       const result = await service.startReview({
         actor: staff,
-        planId: TEST_PLAN_ID,
-        expectedVersion: 2
+        plan_id: TEST_PLAN_ID,
+        expected_version: 2
       });
 
       expect(result.plan.status).toBe(PLAN_STATES.UNDER_REVIEW);
@@ -294,7 +310,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       expect(repo.auditLogs[0]).toMatchObject({
         actor_id: USER_STAFF_1,
         actor_role: 'STAFF',
-        action: ACTIONS.PLAN_START_REVIEW,
+        action: 'PLAN_REVIEW_STARTED',
         from_state: PLAN_STATES.SUBMITTED,
         to_state: PLAN_STATES.UNDER_REVIEW
       });
@@ -307,14 +323,15 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
 
       const result = await service.returnForRevision({
         actor: staff,
-        planId: TEST_PLAN_ID,
-        expectedVersion: 3,
-        notes: 'Please add more details regarding project responsibilities.'
+        plan_id: TEST_PLAN_ID,
+        expected_version: 3,
+        review_notes: 'Please add more details regarding project responsibilities.'
       });
 
       expect(result.plan.status).toBe(PLAN_STATES.NEEDS_REVISION);
       expect(result.plan.version).toBe(4);
       expect(result.plan.notes).toBe('Please add more details regarding project responsibilities.');
+      expect(repo.auditLogs[0].action).toBe('PLAN_RETURNED');
       expect(repo.auditLogs[0].notes).toBe('Please add more details regarding project responsibilities.');
     });
 
@@ -325,46 +342,62 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
 
       const result = await service.submitPlan({
         actor: student,
-        planId: TEST_PLAN_ID,
-        expectedVersion: 4,
-        notes: 'Updated project responsibilities.'
+        plan_id: TEST_PLAN_ID,
+        expected_version: 4,
+        review_notes: 'Updated project responsibilities.'
       });
 
       expect(result.plan.status).toBe(PLAN_STATES.SUBMITTED);
       expect(result.plan.version).toBe(5);
       expect(repo.auditLogs[0]).toMatchObject({
-        action: ACTIONS.PLAN_SUBMIT,
+        action: 'PLAN_SUBMITTED',
         from_state: PLAN_STATES.NEEDS_REVISION,
         to_state: PLAN_STATES.SUBMITTED
       });
     });
 
-    it('allows Staff to approve an UNDER_REVIEW Plan -> APPROVED (terminal state)', async () => {
-      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.UNDER_REVIEW, version: 5 }));
-      const service = new WorkflowService({ repository: repo });
+    it('allows Staff to approve an UNDER_REVIEW Plan -> APPROVED (terminal state) with review_notes optional', async () => {
+      // 1. Approve with review_notes
+      const repoWithNotes = createMockRepo(createMockPlanRow({ status: PLAN_STATES.UNDER_REVIEW, version: 5 }));
+      const serviceWithNotes = new WorkflowService({ repository: repoWithNotes });
       const staff = makeStaffContext();
 
-      const result = await service.approvePlan({
+      const resultWithNotes = await serviceWithNotes.approvePlan({
         actor: staff,
-        planId: TEST_PLAN_ID,
-        expectedVersion: 5,
+        plan_id: TEST_PLAN_ID,
+        expected_version: 5,
+        review_notes: 'Approved without remarks.'
+      });
+
+      expect(resultWithNotes.plan.status).toBe(PLAN_STATES.APPROVED);
+      expect(resultWithNotes.plan.version).toBe(6);
+      expect(repoWithNotes.auditLogs[0]).toMatchObject({
+        action: 'PLAN_APPROVED',
+        from_state: PLAN_STATES.UNDER_REVIEW,
+        to_state: PLAN_STATES.APPROVED,
         notes: 'Approved without remarks.'
       });
 
-      expect(result.plan.status).toBe(PLAN_STATES.APPROVED);
-      expect(result.plan.version).toBe(6);
-      expect(repo.auditLogs[0]).toMatchObject({
-        action: ACTIONS.PLAN_APPROVE,
-        from_state: PLAN_STATES.UNDER_REVIEW,
-        to_state: PLAN_STATES.APPROVED
+      // 2. Approve without review_notes (#52: optional)
+      const repoNoNotes = createMockRepo(createMockPlanRow({ status: PLAN_STATES.UNDER_REVIEW, version: 5 }));
+      const serviceNoNotes = new WorkflowService({ repository: repoNoNotes });
+
+      const resultNoNotes = await serviceNoNotes.approvePlan({
+        actor: staff,
+        plan_id: TEST_PLAN_ID,
+        expected_version: 5
       });
+
+      expect(resultNoNotes.plan.status).toBe(PLAN_STATES.APPROVED);
+      expect(repoNoNotes.auditLogs[0].action).toBe('PLAN_APPROVED');
+      expect(repoNoNotes.auditLogs[0].notes).toBeNull();
     });
 
-    it('allows Student to cancel Plan from DRAFT, SUBMITTED, UNDER_REVIEW, and NEEDS_REVISION -> CANCELLED', async () => {
+    it('allows Student to cancel Plan from DRAFT, SUBMITTED, and NEEDS_REVISION -> CANCELLED (#54)', async () => {
+      // #54: CANCEL only from DRAFT, SUBMITTED, NEEDS_REVISION (UNDER_REVIEW removed)
       const allowedStates = [
         PLAN_STATES.DRAFT,
         PLAN_STATES.SUBMITTED,
-        PLAN_STATES.UNDER_REVIEW,
         PLAN_STATES.NEEDS_REVISION
       ];
 
@@ -375,14 +408,36 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
 
         const result = await service.cancelPlan({
           actor: student,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 1,
-          notes: 'Cancelling this plan.'
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1,
+          review_notes: 'Cancelling this plan.'
         });
 
         expect(result.plan.status).toBe(PLAN_STATES.CANCELLED);
+        expect(repo.auditLogs[0].action).toBe('PLAN_CANCELLED');
         expect(repo.auditLogs[0].to_state).toBe(PLAN_STATES.CANCELLED);
       }
+    });
+
+    it('rejects Student cancel Plan from UNDER_REVIEW with 422 INVALID_STATE_TRANSITION (#54)', async () => {
+      // #54 contract: cancel from UNDER_REVIEW is illegal
+      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.UNDER_REVIEW, version: 2 }));
+      const service = new WorkflowService({ repository: repo });
+      const student = makeStudentContext();
+
+      await expect(
+        service.cancelPlan({
+          actor: student,
+          plan_id: TEST_PLAN_ID,
+          expected_version: 2,
+          review_notes: 'Attempting to cancel under review plan'
+        })
+      ).rejects.toThrow(InvalidStateTransitionError);
+
+      expect(repo.getCurrentPlan().status).toBe(PLAN_STATES.UNDER_REVIEW);
+      expect(repo.getCurrentPlan().version).toBe(2);
+      expect(repo.auditLogs).toHaveLength(0);
+      expect(repo.operations).toHaveLength(0);
     });
 
     it('rejects any transition attempt on terminal APPROVED or CANCELLED state with 422 INVALID_STATE_TRANSITION', async () => {
@@ -406,10 +461,10 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           await expect(
             service.executeTransition({
               actor,
-              planId: TEST_PLAN_ID,
+              plan_id: TEST_PLAN_ID,
               action: act,
-              expectedVersion: 10,
-              notes: 'Attempting invalid move'
+              expected_version: 10,
+              review_notes: 'Attempting invalid move'
             })
           ).rejects.toThrow(InvalidStateTransitionError);
 
@@ -440,20 +495,21 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         await expect(
           service.executeTransition({
             actor,
-            planId: TEST_PLAN_ID,
+            plan_id: TEST_PLAN_ID,
             action,
-            expectedVersion: 2,
-            notes: 'illegal note'
+            expected_version: 2,
+            review_notes: 'illegal note'
           })
         ).rejects.toThrow(InvalidStateTransitionError);
 
         expect(repo.getCurrentPlan().status).toBe(status);
+        expect(repo.getCurrentPlan().version).toBe(2);
         expect(repo.auditLogs).toHaveLength(0);
       }
     });
   });
 
-  describe('2. Preconditions and Required Fields Enforcement', () => {
+  describe('2. Preconditions and Required Fields Enforcement (#52)', () => {
     it('rejects submitPlan if cycle_id, company_id, or position_id is missing with 400 VALIDATION_ERROR', async () => {
       const missingFieldsCases = [
         { cycle_id: null, round_id: null },
@@ -469,8 +525,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         await expect(
           service.submitPlan({
             actor: student,
-            planId: TEST_PLAN_ID,
-            expectedVersion: 1
+            plan_id: TEST_PLAN_ID,
+            expected_version: 1
           })
         ).rejects.toThrow(ValidationError);
 
@@ -479,10 +535,89 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       }
     });
 
-    it('rejects returnForRevision if notes are missing or empty whitespace with 400 VALIDATION_ERROR', async () => {
+    it('rejects submitPlan if company is not public with 400 VALIDATION_ERROR (#52 ข้อ 3)', async () => {
+      const repo = createMockRepo(createMockPlanRow({
+        status: PLAN_STATES.DRAFT,
+        version: 1,
+        company_visibility: 'private'
+      }));
+      const service = new WorkflowService({ repository: repo });
+      const student = makeStudentContext();
+
+      let caughtErr = null;
+      try {
+        await service.submitPlan({
+          actor: student,
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
+        });
+      } catch (err) {
+        caughtErr = err;
+      }
+
+      expect(caughtErr).toBeInstanceOf(ValidationError);
+      expect(caughtErr.details.some((d) => d.field === 'company_id')).toBe(true);
+      expect(repo.getCurrentPlan().status).toBe(PLAN_STATES.DRAFT);
+      expect(repo.auditLogs).toHaveLength(0);
+    });
+
+    it('rejects submitPlan if position is not public with 400 VALIDATION_ERROR (#52 ข้อ 3)', async () => {
+      const repo = createMockRepo(createMockPlanRow({
+        status: PLAN_STATES.DRAFT,
+        version: 1,
+        position_visibility: 'private'
+      }));
+      const service = new WorkflowService({ repository: repo });
+      const student = makeStudentContext();
+
+      let caughtErr = null;
+      try {
+        await service.submitPlan({
+          actor: student,
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
+        });
+      } catch (err) {
+        caughtErr = err;
+      }
+
+      expect(caughtErr).toBeInstanceOf(ValidationError);
+      expect(caughtErr.details.some((d) => d.field === 'position_id')).toBe(true);
+      expect(repo.getCurrentPlan().status).toBe(PLAN_STATES.DRAFT);
+      expect(repo.auditLogs).toHaveLength(0);
+    });
+
+    it('rejects submitPlan if position does not belong to selected company with 400 VALIDATION_ERROR (#52 ข้อ 3)', async () => {
+      const repo = createMockRepo(createMockPlanRow({
+        status: PLAN_STATES.DRAFT,
+        version: 1,
+        company_id: COMPANY_ID,
+        position_company_id: '99999999-9999-4999-8999-999999999992' // Different company!
+      }));
+      const service = new WorkflowService({ repository: repo });
+      const student = makeStudentContext();
+
+      let caughtErr = null;
+      try {
+        await service.submitPlan({
+          actor: student,
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
+        });
+      } catch (err) {
+        caughtErr = err;
+      }
+
+      expect(caughtErr).toBeInstanceOf(ValidationError);
+      expect(caughtErr.details.some((d) => d.field === 'position_id')).toBe(true);
+      expect(repo.getCurrentPlan().status).toBe(PLAN_STATES.DRAFT);
+      expect(repo.auditLogs).toHaveLength(0);
+    });
+
+    it('rejects returnForRevision if review_notes are missing or empty whitespace with 400 VALIDATION_ERROR', async () => {
       const invalidNotesCases = [undefined, null, '', '   '];
 
-      for (const notes of invalidNotesCases) {
+      for (const review_notes of invalidNotesCases) {
         const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.UNDER_REVIEW, version: 2 }));
         const service = new WorkflowService({ repository: repo });
         const staff = makeStaffContext();
@@ -490,9 +625,9 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         await expect(
           service.returnForRevision({
             actor: staff,
-            planId: TEST_PLAN_ID,
-            expectedVersion: 2,
-            notes
+            plan_id: TEST_PLAN_ID,
+            expected_version: 2,
+            review_notes
           })
         ).rejects.toThrow(ValidationError);
 
@@ -501,7 +636,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       }
     });
 
-    it('rejects notes exceeding 2000 characters with 400 VALIDATION_ERROR', async () => {
+    it('rejects review_notes exceeding 2000 characters with 400 VALIDATION_ERROR (#52 ข้อ 6)', async () => {
       const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.UNDER_REVIEW, version: 2 }));
       const service = new WorkflowService({ repository: repo });
       const staff = makeStaffContext();
@@ -509,11 +644,35 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       await expect(
         service.returnForRevision({
           actor: staff,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 2,
-          notes: 'x'.repeat(2001)
+          plan_id: TEST_PLAN_ID,
+          expected_version: 2,
+          review_notes: 'x'.repeat(2001)
         })
       ).rejects.toThrow(ValidationError);
+    });
+
+    it('rejects unknown or unallowed fields with 400 VALIDATION_ERROR (#52 ข้อ 6)', async () => {
+      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.DRAFT, version: 1 }));
+      const service = new WorkflowService({ repository: repo });
+      const student = makeStudentContext();
+
+      let caughtErr = null;
+      try {
+        await service.executeTransition({
+          actor: student,
+          plan_id: TEST_PLAN_ID,
+          action: ACTIONS.PLAN_SUBMIT,
+          expected_version: 1,
+          unexpected_extra_field: 'malicious_input'
+        });
+      } catch (err) {
+        caughtErr = err;
+      }
+
+      expect(caughtErr).toBeInstanceOf(ValidationError);
+      expect(caughtErr.statusCode).toBe(400);
+      expect(caughtErr.message).toContain('Unknown or unallowed field');
+      expect(repo.auditLogs).toHaveLength(0);
     });
   });
 
@@ -536,9 +695,9 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         try {
           await service.executeTransition({
             actor: advisor,
-            planId: TEST_PLAN_ID,
+            plan_id: TEST_PLAN_ID,
             action: act,
-            expectedVersion: 1
+            expected_version: 1
           });
         } catch (err) {
           caughtErr = err;
@@ -561,8 +720,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       try {
         await service.submitPlan({
           actor: admin,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 1
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
         });
       } catch (err) {
         caughtErr = err;
@@ -582,16 +741,16 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       await expect(
         service.startReview({
           actor: student,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 1
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
         })
       ).rejects.toThrow(ForbiddenError);
 
       await expect(
         service.approvePlan({
           actor: student,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 1
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
         })
       ).rejects.toThrow(ForbiddenError);
     });
@@ -604,35 +763,52 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       await expect(
         service.submitPlan({
           actor: staff,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 1
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
         })
       ).rejects.toThrow(ForbiddenError);
 
       await expect(
         service.cancelPlan({
           actor: staff,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 1
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
         })
       ).rejects.toThrow(ForbiddenError);
     });
 
     it('prohibits Student A from transitioning Student B Plan with 403 FORBIDDEN', async () => {
-      const repo = createMockRepo(createMockPlanRow({
-        student_id: STUDENT_B_ID,
-        status: PLAN_STATES.DRAFT,
-        version: 1
-      }));
+      const repo = createMockRepo(createMockPlanRow({ student_id: STUDENT_B_ID, status: PLAN_STATES.DRAFT, version: 1 }));
       const service = new WorkflowService({ repository: repo });
-      const studentA = makeStudentContext({ studentId: STUDENT_A_ID });
+      const studentA = makeStudentContext({ studentId: STUDENT_A_ID, userId: USER_STUDENT_A });
 
       let caughtErr = null;
       try {
         await service.submitPlan({
           actor: studentA,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 1
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
+        });
+      } catch (err) {
+        caughtErr = err;
+      }
+
+      expect(caughtErr).toBeInstanceOf(ForbiddenError);
+      expect(caughtErr.statusCode).toBe(403);
+      expect(caughtErr.message).toBe('Access denied.');
+    });
+
+    it('prohibits Staff from reviewing Plan outside their department/program scope with 403 FORBIDDEN', async () => {
+      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.SUBMITTED, version: 1 }), { scopeMatch: false });
+      const service = new WorkflowService({ repository: repo });
+      const staffOutOfScope = makeStaffContext({ userId: USER_STAFF_OUT_SCOPE });
+
+      let caughtErr = null;
+      try {
+        await service.startReview({
+          actor: staffOutOfScope,
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
         });
       } catch (err) {
         caughtErr = err;
@@ -644,38 +820,16 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       expect(repo.auditLogs).toHaveLength(0);
     });
 
-    it('prohibits Staff from reviewing Plan outside their department/program scope with 403 FORBIDDEN', async () => {
-      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.SUBMITTED, version: 1 }), {
-        scopeMatch: false
-      });
-      const service = new WorkflowService({ repository: repo });
-      const outOfScopeStaff = makeStaffContext({ userId: USER_STAFF_OUT_SCOPE });
-
-      await expect(
-        service.startReview({
-          actor: outOfScopeStaff,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 1
-        })
-      ).rejects.toThrow(ForbiddenError);
-
-      expect(repo.auditLogs).toHaveLength(0);
-    });
-
     it('prohibits Staff review actions when round status is CLOSED with 403 FORBIDDEN', async () => {
-      const repo = createMockRepo(createMockPlanRow({
-        status: PLAN_STATES.SUBMITTED,
-        round_status: 'CLOSED',
-        version: 1
-      }));
+      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.SUBMITTED, version: 1, round_status: 'CLOSED' }));
       const service = new WorkflowService({ repository: repo });
       const staff = makeStaffContext();
 
       await expect(
         service.startReview({
           actor: staff,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 1
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
         })
       ).rejects.toThrow(ForbiddenError);
 
@@ -689,8 +843,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       await expect(
         service.submitPlan({
           actor: null,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 1
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
         })
       ).rejects.toThrow(UnauthorizedError);
     });
@@ -704,8 +858,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       try {
         await service.submitPlan({
           actor: disabledStudent,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 1
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
         });
       } catch (err) {
         caughtErr = err;
@@ -717,7 +871,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
   });
 
   describe('4. Optimistic Concurrency and Conflict Handling (409)', () => {
-    it('returns 409 STALE_RECORD_CONFLICT when expectedVersion does not match current version', async () => {
+    it('returns 409 STALE_RECORD_CONFLICT when expected_version does not match current version', async () => {
       const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.DRAFT, version: 3 }));
       const service = new WorkflowService({ repository: repo });
       const student = makeStudentContext();
@@ -726,8 +880,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       try {
         await service.submitPlan({
           actor: student,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 2 // Stale version! Current is 3
+          plan_id: TEST_PLAN_ID,
+          expected_version: 2 // Stale version! Current is 3
         });
       } catch (err) {
         caughtErr = err;
@@ -747,7 +901,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       expect(repo.auditLogs).toHaveLength(0);
     });
 
-    it('rejects invalid or missing expectedVersion with 400 VALIDATION_ERROR', async () => {
+    it('rejects invalid or missing expected_version with 400 VALIDATION_ERROR', async () => {
       const repo = createMockRepo();
       const service = new WorkflowService({ repository: repo });
       const student = makeStudentContext();
@@ -758,14 +912,14 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         await expect(
           service.submitPlan({
             actor: student,
-            planId: TEST_PLAN_ID,
-            expectedVersion: ver
+            plan_id: TEST_PLAN_ID,
+            expected_version: ver
           })
         ).rejects.toThrow(ValidationError);
       }
     });
 
-    it('returns 404 RECORD_NOT_FOUND when planId does not exist', async () => {
+    it('returns 404 RECORD_NOT_FOUND when plan_id does not exist', async () => {
       const repo = createMockRepo();
       const service = new WorkflowService({ repository: repo });
       const student = makeStudentContext();
@@ -773,26 +927,27 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       await expect(
         service.submitPlan({
           actor: student,
-          planId: OTHER_PLAN_ID,
-          expectedVersion: 1
+          plan_id: OTHER_PLAN_ID,
+          expected_version: 1
         })
       ).rejects.toThrow(NotFoundError);
     });
   });
 
-  describe('5. Idempotent Retry and Operation Tracking', () => {
-    it('returns cached response when retrying with the same requestHash or idempotencyKey', async () => {
+  describe('5. Idempotent Retry and Operation Tracking (#52 ข้อ 9)', () => {
+    it('returns cached response when retrying with the same operation_id, actor, action, and payload (#52)', async () => {
       const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.DRAFT, version: 1 }));
       const service = new WorkflowService({ repository: repo });
       const student = makeStudentContext();
-      const testKey = 'unique-idempotency-token-12345';
+      const testOperationId = crypto.randomUUID();
 
       // 1. First execution
       const firstResult = await service.submitPlan({
         actor: student,
-        planId: TEST_PLAN_ID,
-        expectedVersion: 1,
-        idempotencyKey: testKey
+        plan_id: TEST_PLAN_ID,
+        expected_version: 1,
+        operation_id: testOperationId,
+        review_notes: 'Initial submit'
       });
 
       expect(firstResult.plan.status).toBe(PLAN_STATES.SUBMITTED);
@@ -800,12 +955,13 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       expect(repo.auditLogs).toHaveLength(1);
       expect(repo.operations).toHaveLength(1);
 
-      // 2. Retry execution with same token
+      // 2. Retry execution with exact same operation_id and payload
       const retryResult = await service.submitPlan({
         actor: student,
-        planId: TEST_PLAN_ID,
-        expectedVersion: 1,
-        idempotencyKey: testKey
+        plan_id: TEST_PLAN_ID,
+        expected_version: 1,
+        operation_id: testOperationId,
+        review_notes: 'Initial submit'
       });
 
       expect(retryResult.idempotentReplay).toBe(true);
@@ -817,30 +973,138 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       expect(repo.operations).toHaveLength(1);
     });
 
+    it('rejects with 409 IDEMPOTENCY_KEY_REUSED when same operation_id is reused with different payload (#52 ข้อ 9)', async () => {
+      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.DRAFT, version: 1 }));
+      const service = new WorkflowService({ repository: repo });
+      const student = makeStudentContext();
+      const testOperationId = crypto.randomUUID();
+
+      // 1. First call with payload A
+      await service.submitPlan({
+        actor: student,
+        plan_id: TEST_PLAN_ID,
+        expected_version: 1,
+        operation_id: testOperationId,
+        review_notes: 'Notes A'
+      });
+
+      // 2. Second call with same operation_id but different payload (review_notes: 'Notes B')
+      let caughtErr = null;
+      try {
+        await service.submitPlan({
+          actor: student,
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1,
+          operation_id: testOperationId,
+          review_notes: 'Notes B' // Different payload!
+        });
+      } catch (err) {
+        caughtErr = err;
+      }
+
+      expect(caughtErr).toBeInstanceOf(ConflictError);
+      expect(caughtErr.statusCode).toBe(409);
+      expect(caughtErr.code).toBe('IDEMPOTENCY_KEY_REUSED');
+      expect(repo.auditLogs).toHaveLength(1); // Only initial audit log
+    });
+
+    it('rejects with 409 IDEMPOTENCY_KEY_REUSED when same operation_id is reused with different action or actor (#52 ข้อ 9)', async () => {
+      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.SUBMITTED, version: 2 }));
+      const service = new WorkflowService({ repository: repo });
+      const staff = makeStaffContext();
+      const sharedOperationId = crypto.randomUUID();
+
+      // Pre-seed an operation from student
+      repo.operations.push({
+        operation_id: sharedOperationId,
+        plan_id: TEST_PLAN_ID,
+        actor_id: USER_STUDENT_A,
+        action: 'PLAN_SUBMITTED',
+        request_hash: crypto.createHash('sha256').update(JSON.stringify({ review_notes: null })).digest('hex'),
+        response_status: 200,
+        response_payload: { status: 'SUBMITTED' },
+        result_version: 2
+      });
+
+      // Staff attempts to reuse the same operation_id for start_review
+      let caughtErr = null;
+      try {
+        await service.startReview({
+          actor: staff,
+          plan_id: TEST_PLAN_ID,
+          expected_version: 2,
+          operation_id: sharedOperationId
+        });
+      } catch (err) {
+        caughtErr = err;
+      }
+
+      expect(caughtErr).toBeInstanceOf(ConflictError);
+      expect(caughtErr.statusCode).toBe(409);
+      expect(caughtErr.code).toBe('IDEMPOTENCY_KEY_REUSED');
+    });
+
+    it('rejects with 409 STALE_RECORD_CONFLICT when new operation_id is used but expected_version is stale (#52 ข้อ 9)', async () => {
+      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.DRAFT, version: 1 }));
+      const service = new WorkflowService({ repository: repo });
+      const student = makeStudentContext();
+
+      // 1. Initial submit succeeds with op1, version becomes 2
+      const op1 = crypto.randomUUID();
+      await service.submitPlan({
+        actor: student,
+        plan_id: TEST_PLAN_ID,
+        expected_version: 1,
+        operation_id: op1
+      });
+
+      // 2. Caller sends a new operation_id (op2), but with stale expected_version = 1
+      const op2 = crypto.randomUUID();
+      let caughtErr = null;
+      try {
+        await service.submitPlan({
+          actor: student,
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1, // Stale! Current version is 2
+          operation_id: op2
+        });
+      } catch (err) {
+        caughtErr = err;
+      }
+
+      expect(caughtErr).toBeInstanceOf(ConflictError);
+      expect(caughtErr.statusCode).toBe(409);
+      expect(caughtErr.code).toBe('STALE_RECORD_CONFLICT');
+      expect(caughtErr.details).toEqual({
+        expectedVersion: 1,
+        currentVersion: 2
+      });
+    });
+
     it('strictly checks authorization BEFORE checking cache: unauthorized actor cannot obtain cached results', async () => {
       const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.DRAFT, version: 1 }));
       const service = new WorkflowService({ repository: repo });
       const studentA = makeStudentContext({ studentId: STUDENT_A_ID, userId: USER_STUDENT_A });
       const studentB = makeStudentContext({ studentId: STUDENT_B_ID, userId: USER_STUDENT_B });
-      const sharedKey = 'secret-token-attempt';
+      const sharedOpId = crypto.randomUUID();
 
       // 1. Student A executes transition successfully
       await service.submitPlan({
         actor: studentA,
-        planId: TEST_PLAN_ID,
-        expectedVersion: 1,
-        idempotencyKey: sharedKey
+        plan_id: TEST_PLAN_ID,
+        expected_version: 1,
+        operation_id: sharedOpId
       });
 
-      // 2. Student B attempts to call with the same idempotency key on Plan A
+      // 2. Student B attempts to call with the same operation_id on Plan A
       // Authorization must fail with 403 and NOT return cached response!
       let caughtErr = null;
       try {
         await service.submitPlan({
           actor: studentB,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 1,
-          idempotencyKey: sharedKey
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1,
+          operation_id: sharedOpId
         });
       } catch (err) {
         caughtErr = err;
@@ -849,35 +1113,6 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       expect(caughtErr).toBeInstanceOf(ForbiddenError);
       expect(caughtErr.statusCode).toBe(403);
       expect(caughtErr.message).toBe('Access denied.');
-    });
-
-    it('rejects with 409 CONFLICT if the same request hash is reused for a different action or actor', async () => {
-      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.SUBMITTED, version: 2 }));
-      const service = new WorkflowService({ repository: repo });
-      const staff = makeStaffContext();
-      const sharedHash = crypto.createHash('sha256').update('reused-hash-token').digest('hex');
-
-      // Pre-seed an operation from student
-      repo.operations.push({
-        operation_id: crypto.randomUUID(),
-        plan_id: TEST_PLAN_ID,
-        actor_id: USER_STUDENT_A,
-        action: ACTIONS.PLAN_SUBMIT,
-        request_hash: sharedHash,
-        response_status: 200,
-        response_payload: { status: 'SUBMITTED' },
-        result_version: 2
-      });
-
-      // Staff attempts to use same hash for review
-      await expect(
-        service.startReview({
-          actor: staff,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 2,
-          requestHash: sharedHash
-        })
-      ).rejects.toThrow(ConflictError);
     });
   });
 
@@ -893,8 +1128,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       await expect(
         service.submitPlan({
           actor: student,
-          planId: TEST_PLAN_ID,
-          expectedVersion: 1
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
         })
       ).rejects.toThrow('Audit table constraint violation simulation');
 
@@ -919,51 +1154,69 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
 
       const concurrentRepo = {
         getClient: jest.fn().mockImplementation(async () => {
-          let notifyRelease;
+          let hasLock = false;
+          let releaseLock = null;
+
           return {
             query: jest.fn().mockImplementation(async (sql) => {
               const text = sql.trim();
+              if (text === 'BEGIN') {
+                return { rows: [] };
+              }
               if (text === 'COMMIT' || text === 'ROLLBACK') {
-                if (notifyRelease) {
-                  notifyRelease();
-                  notifyRelease = null;
+                if (hasLock && releaseLock) {
+                  hasLock = false;
+                  releaseLock();
                 }
+                return { rows: [] };
               }
               return { rows: [] };
             }),
             release: jest.fn().mockImplementation(() => {
-              if (notifyRelease) {
-                notifyRelease();
-                notifyRelease = null;
+              if (hasLock && releaseLock) {
+                hasLock = false;
+                releaseLock();
               }
             }),
-            setReleaseCallback: (cb) => {
-              notifyRelease = cb;
+            _acquireRowLock: async () => {
+              let currentRelease;
+              const nextLock = new Promise((resolve) => {
+                currentRelease = resolve;
+              });
+              const oldQueue = lockQueue;
+              lockQueue = oldQueue.then(() => nextLock);
+              await oldQueue;
+              hasLock = true;
+              releaseLock = currentRelease;
             }
           };
         }),
-        findOperationByRequestHash: jest.fn().mockResolvedValue(null),
-        findStaffScopeMatch: jest.fn().mockResolvedValue({ round_status: 'OPEN' }),
-        findPlanByIdForUpdate: jest.fn().mockImplementation(async (client) => {
-          let releaseLock;
-          const currentLock = new Promise((resolve) => { releaseLock = resolve; });
-          const previousLock = lockQueue;
-          lockQueue = currentLock;
 
-          await previousLock;
-          client.setReleaseCallback(releaseLock);
-
+        findPlanByIdForUpdate: jest.fn().mockImplementation(async (client, id) => {
+          await client._acquireRowLock();
           return { ...planState };
         }),
-        updatePlanStatus: jest.fn().mockImplementation(async (client, { planId, status, nextVersion, expectedVersion }) => {
+
+        findOperationById: jest.fn().mockResolvedValue(null),
+        findOperationByRequestHash: jest.fn().mockResolvedValue(null),
+
+        findStaffScopeMatch: jest.fn().mockResolvedValue({
+          scope_id: 'scope-1',
+          scope_department: 'Computer Science',
+          round_status: 'OPEN'
+        }),
+
+        updatePlanStatus: jest.fn().mockImplementation(async (client, { status, nextVersion, expectedVersion, notes }) => {
           if (Number(planState.version) === Number(expectedVersion)) {
             planState.status = status;
             planState.version = nextVersion;
+            planState.notes = notes;
             return { ...planState };
           }
           return null;
         }),
-        insertPlanOperation: jest.fn().mockResolvedValue({ operation_id: crypto.randomUUID() }),
+
+        insertPlanOperation: jest.fn().mockImplementation(async (client, params) => params),
         insertAuditEvent: jest.fn().mockImplementation(async (client, params) => {
           auditLog.push(params);
           return params;
@@ -973,23 +1226,21 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       const service = new WorkflowService({ repository: concurrentRepo });
       const student = makeStudentContext();
 
-      // Launch two concurrent submit attempts simultaneously with expectedVersion: 1
-      const attempt1 = service.submitPlan({
-        actor: student,
-        planId: TEST_PLAN_ID,
-        expectedVersion: 1
-      });
+      const [res1, res2] = await Promise.allSettled([
+        service.submitPlan({
+          actor: student,
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
+        }),
+        service.submitPlan({
+          actor: student,
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1
+        })
+      ]);
 
-      const attempt2 = service.submitPlan({
-        actor: student,
-        planId: TEST_PLAN_ID,
-        expectedVersion: 1
-      });
-
-      const results = await Promise.allSettled([attempt1, attempt2]);
-
-      const fulfilled = results.filter((r) => r.status === 'fulfilled');
-      const rejected = results.filter((r) => r.status === 'rejected');
+      const fulfilled = [res1, res2].filter((r) => r.status === 'fulfilled');
+      const rejected = [res1, res2].filter((r) => r.status === 'rejected');
 
       expect(fulfilled).toHaveLength(1);
       expect(rejected).toHaveLength(1);
@@ -1001,19 +1252,20 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       expect(rejected[0].reason.statusCode).toBe(409);
       expect(rejected[0].reason.code).toBe('STALE_RECORD_CONFLICT');
 
-      // Final plan version is incremented exactly once (to 2, not 3)
+      expect(planState.status).toBe(PLAN_STATES.SUBMITTED);
       expect(planState.version).toBe(2);
       expect(auditLog).toHaveLength(1);
     });
   });
 
   describe('8. Real PostgreSQL Integration Tests (runs when TEST_DATABASE_URL is set)', () => {
-    let pool;
     const canRunPg = Boolean(process.env.TEST_DATABASE_URL);
+    let pool;
 
-    beforeAll(async () => {
-      if (!canRunPg) return;
-      pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL });
+    beforeAll(() => {
+      if (canRunPg) {
+        pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL });
+      }
     });
 
     afterAll(async () => {
@@ -1026,16 +1278,17 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       const repo = new WorkflowRepository({ pool });
       const service = new WorkflowService({ repository: repo });
 
-      // Generate isolated IDs
       const testStudentUserId = crypto.randomUUID();
       const testStudentId = crypto.randomUUID();
       const testRoundId = crypto.randomUUID();
       const testCompanyId = crypto.randomUUID();
       const testPositionId = crypto.randomUUID();
       const realPlanId = crypto.randomUUID();
+      const testOperationId = crypto.randomUUID();
 
       try {
         await pool.query(`INSERT INTO users (id, role, account_status) VALUES ($1, 'STUDENT', 'ACTIVE')`, [testStudentUserId]);
+
         const uniqueStudentNumber = String(Math.floor(1000000000 + Math.random() * 9000000000));
         await pool.query(`
           INSERT INTO students (
@@ -1044,7 +1297,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
             department, program, major, academic_year, enrollment_status
           ) VALUES (
             $1, $2, 'v3_test', 'private', 'mock',
-            $3, $4, 'Real Test Student', $5,
+            $3, $4, 'Real Student Workflow', $5,
             'Computer Science', 'B.Sc.', 'CS', 2568, 'ACTIVE'
           )
         `, [
@@ -1062,12 +1315,12 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
 
         await pool.query(`
           INSERT INTO companies (id, name, visibility, data_status, source)
-          VALUES ($1, 'Workflow Test Corp', 'private', 'mock', 'v3_test')
+          VALUES ($1, 'Workflow Test Corp', 'public', 'mock', 'v3_test')
         `, [testCompanyId]);
 
         await pool.query(`
           INSERT INTO positions (id, company_id, title, visibility, data_status, source)
-          VALUES ($1, $2, 'Software Intern', 'private', 'mock', 'v3_test')
+          VALUES ($1, $2, 'Software Intern', 'public', 'mock', 'v3_test')
         `, [testPositionId, testCompanyId]);
 
         await pool.query(`
@@ -1086,8 +1339,10 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         // 1. Submit plan
         const submitResult = await service.submitPlan({
           actor: studentActor,
-          planId: realPlanId,
-          expectedVersion: 1
+          plan_id: realPlanId,
+          expected_version: 1,
+          operation_id: testOperationId,
+          review_notes: 'Real integration submit'
         });
 
         expect(submitResult.plan.status).toBe('SUBMITTED');
@@ -1101,21 +1356,34 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         // Verify audit_events row
         const auditRes = await pool.query('SELECT * FROM audit_events WHERE plan_id = $1', [realPlanId]);
         expect(auditRes.rows).toHaveLength(1);
-        expect(auditRes.rows[0].action).toBe(ACTIONS.PLAN_SUBMIT);
+        expect(auditRes.rows[0].action).toBe('PLAN_SUBMITTED');
         expect(auditRes.rows[0].from_state).toBe('DRAFT');
         expect(auditRes.rows[0].to_state).toBe('SUBMITTED');
+        expect(auditRes.rows[0].notes).toBe('Real integration submit');
 
         // Verify plan_operations row
         const opRes = await pool.query('SELECT * FROM plan_operations WHERE plan_id = $1', [realPlanId]);
         expect(opRes.rows).toHaveLength(1);
+        expect(opRes.rows[0].operation_id).toBe(testOperationId);
         expect(opRes.rows[0].result_version).toBe(2);
 
-        // 2. Stale update attempt -> 409
+        // 2. Retry with exact same operation_id returns cached result
+        const retryResult = await service.submitPlan({
+          actor: studentActor,
+          plan_id: realPlanId,
+          expected_version: 1,
+          operation_id: testOperationId,
+          review_notes: 'Real integration submit'
+        });
+        expect(retryResult.idempotentReplay).toBe(true);
+        expect(retryResult.plan.status).toBe('SUBMITTED');
+
+        // 3. Stale update attempt -> 409
         await expect(
           service.submitPlan({
             actor: studentActor,
-            planId: realPlanId,
-            expectedVersion: 1 // Stale!
+            plan_id: realPlanId,
+            expected_version: 1 // Stale!
           })
         ).rejects.toThrow(ConflictError);
       } finally {
@@ -1191,12 +1459,12 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
 
         await pool.query(`
           INSERT INTO companies (id, name, visibility, data_status, source)
-          VALUES ($1, 'Workflow Race Corp', 'private', 'mock', 'v3_test')
+          VALUES ($1, 'Workflow Race Corp', 'public', 'mock', 'v3_test')
         `, [testCompanyId]);
 
         await pool.query(`
           INSERT INTO positions (id, company_id, title, visibility, data_status, source)
-          VALUES ($1, $2, 'Concurrency Tester', 'private', 'mock', 'v3_test')
+          VALUES ($1, $2, 'Concurrency Tester', 'public', 'mock', 'v3_test')
         `, [testPositionId, testCompanyId]);
 
         // Seed Plan in SUBMITTED state, version = 1
@@ -1216,13 +1484,13 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         const [res1, res2] = await Promise.allSettled([
           service.startReview({
             actor: staffActor,
-            planId: realPlanId,
-            expectedVersion: 1
+            plan_id: realPlanId,
+            expected_version: 1
           }),
           service.startReview({
             actor: staffActor,
-            planId: realPlanId,
-            expectedVersion: 1
+            plan_id: realPlanId,
+            expected_version: 1
           })
         ]);
 
@@ -1248,7 +1516,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         // Verify exactly one audit event in real PostgreSQL
         const auditRows = await pool.query('SELECT * FROM audit_events WHERE plan_id = $1', [realPlanId]);
         expect(auditRows.rows).toHaveLength(1);
-        expect(auditRows.rows[0].action).toBe(ACTIONS.PLAN_START_REVIEW);
+        expect(auditRows.rows[0].action).toBe('PLAN_REVIEW_STARTED');
       } finally {
         const client = await pool.connect();
         try {
@@ -1323,12 +1591,12 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
 
         await pool.query(`
           INSERT INTO companies (id, name, visibility, data_status, source)
-          VALUES ($1, 'Workflow Illegal Test Corp', 'private', 'mock', 'v3_test')
+          VALUES ($1, 'Workflow Illegal Test Corp', 'public', 'mock', 'v3_test')
         `, [testCompanyId]);
 
         await pool.query(`
           INSERT INTO positions (id, company_id, title, visibility, data_status, source)
-          VALUES ($1, $2, 'Position Illegal Test', 'private', 'mock', 'v3_test')
+          VALUES ($1, $2, 'Position Illegal Test', 'public', 'mock', 'v3_test')
         `, [testPositionId, testCompanyId]);
 
         // Seed Plan in DRAFT status
@@ -1348,8 +1616,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         await expect(
           service.approvePlan({
             actor: staffActor,
-            planId: realPlanId,
-            expectedVersion: 1
+            plan_id: realPlanId,
+            expected_version: 1
           })
         ).rejects.toThrow(InvalidStateTransitionError);
 
