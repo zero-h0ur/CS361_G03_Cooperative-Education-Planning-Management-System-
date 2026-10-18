@@ -19,7 +19,7 @@
 |---|---|
 | `data/v3/fixtures.json` | ไฟล์ข้อมูลจำลอง Canonical V3 Synthetic Fixtures ในรูปแบบ JSON |
 | `src/db/seed.js` | สคริปต์รัน Seed & Reset พร้อม Destructive-Seed Guards และการจัดการ Triggers |
-| `scripts/validate-v3-fixtures.mjs` | ตัวตรวจสอบความถูกต้องของ Fixtures (RFC 2606 Email, Exact Department Code, C.E. Year, UUID v4, Foreign Keys, Overlap) |
+| `scripts/validate-v3-fixtures.mjs` | ตัวตรวจสอบความถูกต้องของ Fixtures (RFC 2606 Email, Exact Department Code, B.E. Year, UUID v4, Foreign Keys, Overlap) |
 | `tests/v3-dataset.test.mjs` | ชุดการทดสอบโครงสร้างข้อมูลและความปลอดภัยของ Fixtures ด้วย `node:test` |
 | `tests/v3-fixtures.test.js` | ชุดการทดสอบ Integration ของ Environment Guards และ Database Seeding ด้วย `jest` |
 
@@ -33,25 +33,28 @@
 * **STUDENT (5 บัญชี)**: บัญชีนักศึกษาสำหรับทดสอบ Flow ต่างๆ (Active 4 บัญชี, Disabled 1 บัญชีสำหรับทดสอบ Authorization Failure `ACCOUNT_DISABLED`)
 * **ADVISOR (2 บัญชี)**: อาจารย์ที่ปรึกษาสหกิจศึกษา สำหรับทดสอบการมองเห็นแบบ Scoped Advisor Visibility
 * **STAFF (3 บัญชี)**: เจ้าหน้าที่ประจำคณะ/ภาควิชา ครอบคลุมทั้งกรณี In-scope, Out-of-department, และ Out-of-year:
-  1. `Staff 1 (70000000-0000-4000-8000-000000000020)`: ภาควิชา CPE, Scope ภาพรวม (`academic_year = null`) ครอบคลุมรอบ OPEN 2026 สำหรับทดสอบ `200 OK` (Review/Approve Plan)
+  1. `Staff 1 (70000000-0000-4000-8000-000000000020)`: ภาควิชา CPE, Scope ภาพรวม (`academic_year = null`) ครอบคลุมรอบ OPEN 2569 สำหรับทดสอบ `200 OK` (Review/Approve Plan)
   2. `Staff 2 (70000000-0000-4000-8000-000000000021)`: ภาควิชา EE, สำหรับทดสอบข้ามภาควิชา Out-of-department (`403 Forbidden` เมื่อพยายามดู/รีวิวข้อมูลนักศึกษาภาค CPE)
-  3. `Staff 3 (70000000-0000-4000-8000-000000000022)`: ภาควิชา CPE เฉพาะปีการศึกษา 2025 (`academic_year = 2025`), สำหรับทดสอบ Out-of-year (`403 Forbidden` เมื่อเข้าถึงแผนในรอบ OPEN ปี 2026 ตาม Predicate ของ Issue #53)
+  3. `Staff 3 (70000000-0000-4000-8000-000000000022)`: ภาควิชา CPE เฉพาะปีการศึกษา 2568 (`academic_year = 2568`), สำหรับทดสอบ Out-of-year (`403 Forbidden` เมื่อเข้าถึงแผนในรอบ OPEN ปี 2569 ตาม Predicate ของ Issue #53)
 * **ADMIN (1 บัญชี)**: ผู้ดูแลระบบที่มีสิทธิ์จัดการ Advisor Assignment และ Staff Scope
-* **External Identity Links (11 รายการ)**: จำลอง Issuer ของ AWS Cognito (`mockPool`) พร้อม Subject strings แบบคงที่ และมีตัวอย่างสถานะ `REVOKED`
+* **External Identity Links (12 รายการ)**: จำลอง Issuer ของ AWS Cognito (`mockPool`) พร้อม Subject strings แบบคงที่ เป็น `ACTIVE` 11 รายการ และ `REVOKED` 1 รายการ (`mock-sub-student-001-revoked`) สำหรับทดสอบ Relink flow ตาม #51: Subject เดิมที่ถูก Revoke ต้องได้ `403` ส่วน User เดียวกันยังมี Active link เดียว
 
 ### 3.2 ข้อมูลประวัตินักศึกษา (`students`)
 * ข้อมูลจำลอง 5 รายการที่เชื่อมโยงกับ `users` (`user_id NOT NULL`)
 * **Department Code แบบมาตรฐาน**: กำหนดค่า `department` เป็นรหัสตัวย่อตัวพิมพ์ใหญ่ตรงกันทั้งระบบ (เช่น `'CPE'`, `'EE'`) ตามตัวอย่างใน Issue [#53](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/53) เพื่อให้ตรงกับ `staff_scopes.department` แบบตัวอักษรต่อตัวอักษร (`s.department = ss.department`)
-* **ปีการศึกษา (Academic Year)**: ใช้ระบบปีปฏิทินสากล คริสต์ศักราช (Common Era - C.E.) เป็น **`2026`** ทั้งระบบ เพื่อให้การเปรียบเทียบใน Authorization Predicate ของ Staff และ Advisor ทำงานบนมาตรวัดเดียวกัน
-* **อีเมลและรหัสนักศึกษาตาม RFC 2606**: ใช้รหัสสมมติ `65061000x` และอีเมลโดเมนสงวน `@student.example.com` (ภายใต้โดเมนสงวน `example.com` ตาม RFC 2606) โดยไม่มีการอ้างอิงชื่อสถาบันจริงหรือ TLD สาธารณะ
+* **ปีการศึกษา (Academic Year)**: ใช้ปี **พุทธศักราช (พ.ศ.)** เป็น **`2569`** ทั้งระบบ (`2568` สำหรับข้อมูลปีก่อนหน้า) ตามที่ทีมตกลงใช้ เพื่อให้ตรงกับข้อมูล V2 เดิม (`rounds.academic_year` = `2569`, `2570`) และให้การเปรียบเทียบใน Authorization Predicate ของ Staff และ Advisor ทำงานบนมาตรวัดเดียวกัน
+  * Timestamp ทุกตัว (`created_at`, `effective_from`, `end_date` ฯลฯ) ยังเป็น ISO 8601 แบบคริสต์ศักราชตามปกติ เฉพาะ `academic_year` ที่เป็น พ.ศ.
+  * Validator (`isBuddhistEraYear`) รับเฉพาะปีในช่วง `2500`–`2700` ถ้าใส่ปี ค.ศ. เช่น `2026` จะ Validate ไม่ผ่าน
+  * ⚠️ ตัวอย่างใน #53 เขียนว่า `academic_year` เช่น `2026` (ค.ศ.) ทีมควรอัปเดต Decision ใน #53 ให้ตรงกับการใช้ พ.ศ.
+* **อีเมลและรหัสนักศึกษาตาม RFC 2606**: ใช้รหัสสมมติ `TEST000001`–`TEST000005` ซึ่งไม่มีทางซ้ำกับรหัสนักศึกษาจริงของสถาบันใด และอีเมลโดเมนสงวน `@student.example.com` (ภายใต้โดเมนสงวน `example.com` ตาม RFC 2606) โดยไม่มีการอ้างอิงชื่อสถาบันจริงหรือ TLD สาธารณะ
 
 ### 3.3 รอบการเปิดรับและดำเนินงาน (`rounds` / Cycles)
 * คอลัมน์ทั้งหมด (`academic_year`, `semester`, `status`, `end_date`) มีอยู่ใน Migration `001` และ `002` ครบถ้วน
-* **รอบเปิดดำเนินงาน (`status = 'OPEN'`)**: ปีการศึกษา `2026` ภาคเรียนที่ 1 รองรับการทดสอบ Review Actions, Active Queues และ Submissions
-* **รอบปิด (`status = 'CLOSED'`)**: ปีการศึกษา `2026` ภาคเรียนที่ 1 สำหรับทดสอบการปฏิเสธ Action ในรอบที่ปิดแล้ว
+* **รอบเปิดดำเนินงาน (`status = 'OPEN'`)**: ปีการศึกษา `2569` ภาคเรียนที่ 1 รองรับการทดสอบ Review Actions, Active Queues และ Submissions
+* **รอบปิด (`status = 'CLOSED'`)**: ปีการศึกษา `2569` ภาคเรียนที่ 1 สำหรับทดสอบการปฏิเสธ Action ในรอบที่ปิดแล้ว
 * **การกำหนด `end_date` และความสอดคล้องกับ `effective_to`**:
   * ตาม Issue [#53](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/53) ระบบจะใช้ `rounds.end_date` เป็นค่าเริ่มต้น (Default) ให้กับ `advisor_assignments.effective_to` เมื่อ Admin ไม่ได้ระบุมา ดังนั้นใน Fixture ทุกรอบจึงมีการกำหนด `end_date` ไว้อย่างชัดเจน (และในกรณีที่รอบใดมี `end_date` เป็น NULL ระบบจะบังคับให้ Admin ต้องส่ง `effective_to` มาเองเสมอ)
-  * ค่า `rounds.academic_year` ตรงกับ `students.academic_year` (`2026`) สำหรับทุกแผนที่ส่งเข้าสู่รอบ เพื่อป้องกันไม่ให้ผลการประเมินสิทธิ์ Staff ขัดแย้งกันระหว่างระดับ Student และระดับ Plan
+  * ค่า `rounds.academic_year` ตรงกับ `students.academic_year` (`2569`) สำหรับทุกแผนที่ส่งเข้าสู่รอบ เพื่อป้องกันไม่ให้ผลการประเมินสิทธิ์ Staff ขัดแย้งกันระหว่างระดับ Student และระดับ Plan
 
 
 ### 3.4 แผนการฝึกสหกิจศึกษา (`plans`)
@@ -64,16 +67,17 @@
 6. `CANCELLED`: แผนที่ถูกยกเลิก (Version 2) เพื่อทดสอบ Partial Unique Index `(student_id, cycle_id) WHERE status <> 'CANCELLED'`
 
 ### 3.5 การมอบหมายอาจารย์ที่ปรึกษา (`advisor_assignments`)
-* ใช้ปีการศึกษา C.E. (`2026` สำหรับ Active/Revoked และ `2025` สำหรับ Expired)
+* ใช้ปีการศึกษา พ.ศ. (`2569` สำหรับ Active/Revoked และ `2568` สำหรับ Expired)
+* Assignment ที่เป็น `ACTIVE` และรอบที่เป็น `OPEN` ใช้ `effective_to` / `end_date` = `2099-12-31T23:59:59Z` โดยตั้งใจ เพราะ Predicate ของ #53 เทียบกับเวลาปัจจุบัน หากใช้วันที่จริง Fixture จะหมดอายุเองและ Advisor จะได้ `403` ทั้งที่ไม่มีใครแก้โค้ด ส่วน Record ที่เป็น `REVOKED` / `EXPIRED` / `CLOSED` ยังใช้วันที่ในอดีตตามเดิม
 * ครอบคลุมสถานะ `ACTIVE`, `REVOKED` (พร้อม `revoked_at`, `revoked_by`, `revocation_reason`) และ `EXPIRED`
 * ผ่านการตรวจสอบ Exclusion Constraint `btree_gist` ไม่มีการทับซ้อนของช่วงเวลาสำหรับนักศึกษาคนเดียวกันในสถานะ `ACTIVE`
 
 ### 3.6 ขอบเขตสิทธิ์ของเจ้าหน้าที่ (`staff_scopes`)
 * ใช้รหัส `department` ตรงกับ `students.department` (เช่น `'CPE'`, `'EE'`, `'ME'`)
 * แยกบทบาทและ Scope ในการทดสอบ Authorization Predicate ตาม Issue [#53](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/53) ออกเป็น 4 ชุด:
-  1. `Scope 1 (Staff 1)`: `department = 'CPE'`, `program = null`, `academic_year = null`, `status = 'ACTIVE'` -> ครอบคลุมแผน CPE ในรอบ OPEN 2026 สำหรับเคสสำเร็จ **`200 OK`**
+  1. `Scope 1 (Staff 1)`: `department = 'CPE'`, `program = null`, `academic_year = null`, `status = 'ACTIVE'` -> ครอบคลุมแผน CPE ในรอบ OPEN 2569 สำหรับเคสสำเร็จ **`200 OK`**
   2. `Scope 2 (Staff 2)`: `department = 'EE'`, `program = null`, `academic_year = null`, `status = 'ACTIVE'` -> ทดสอบเคสข้ามภาควิชา **`403 Forbidden`** เมื่อเข้าถึงนักศึกษา CPE
-  3. `Scope 3 (Staff 3)`: `department = 'CPE'`, `program = 'CPE'`, `academic_year = 2025`, `status = 'ACTIVE'` -> ทดสอบเคสจำกัดเฉพาะปีการศึกษาเก่า **`403 Forbidden`** เมื่อเข้าถึงรอบ OPEN ปี 2026 ตามเงื่อนไข `(ss.academic_year IS NULL OR ss.academic_year = r.academic_year)`
+  3. `Scope 3 (Staff 3)`: `department = 'CPE'`, `program = 'CPE'`, `academic_year = 2568`, `status = 'ACTIVE'` -> ทดสอบเคสจำกัดเฉพาะปีการศึกษาเก่า **`403 Forbidden`** เมื่อเข้าถึงรอบ OPEN ปี 2569 ตามเงื่อนไข `(ss.academic_year IS NULL OR ss.academic_year = r.academic_year)`
   4. `Scope 4 (Staff 1)`: `department = 'ME'`, `program = null`, `academic_year = null`, `status = 'INACTIVE'` -> ทดสอบเคส Scope ที่ถูกปิดใช้งาน (`status <> 'ACTIVE'`) ได้ **`403 Forbidden`**
 * **Out-of-scope Testability Guarantee**: ระบบ Validator ตรวจสอบให้มั่นใจว่า Staff ทุกคนมี Student อย่างน้อย 1 คนที่อยู่นอก Scope ของตนเองเสมอ เพื่อรองรับการทดสอบเคสปฏิเสธสิทธิ์ (403)
 
@@ -152,9 +156,9 @@ flowchart TD
 1. **Disable Triggers ชั่วคราว**: ปิด Trigger ป้องกันการลบภายใน Transaction ของ Client ที่ได้รับสิทธิ์
 2. **Delete ตามลำดับ Foreign Key (ย้อนกลับ)**:
    - `audit_events` -> `plan_operations` -> `advisor_assignments` -> `staff_scopes` -> `plans` -> `students` -> `external_identity_links` -> `users` -> `document_metadata` -> `rounds` -> `positions` -> `companies`
-3. **Insert V2 Base Data**: ข้อมูลบริษัท, ตำแหน่งงาน และเอกสารพื้นฐาน
-4. **Insert V3 Fixture Data**: ข้อมูล Users, Identity Links, Student Profiles, Cycles, Plans, Assignments, Scopes, Operations และ Audit
-5. **Re-enable Triggers ทันที**: เปิดใช้งาน Triggers ทั้งหมดกลับคืนสู่สถานะเดิม
+3. **Insert V2 Base Data**: ข้อมูลบริษัท, ตำแหน่งงาน, เอกสารพื้นฐาน และ Legacy Plans (ต้องปิด `trg_plans_legacy_compatibility_guard` เพราะ `legacy_compatibility = TRUE`)
+4. **Re-enable Triggers ทันที**: เปิดใช้งาน Triggers ทั้งหมดกลับคืนก่อนเขียนข้อมูล V3
+5. **Insert V3 Fixture Data**: ข้อมูล Users, Identity Links, Student Profiles, Cycles, Plans, Assignments, Scopes, Operations และ Audit โดยผ่าน Trigger ชุดเดียวกับ Application จริง หาก Fixture ผิดกฎ Seed จะล้มเหลวและ Rollback
 6. **Commit Transaction**: ข้อมูลบันทึกเสร็จสมบูรณ์ หากเกิด Error ขั้นตอนใดจะ Rollback ทั้งหมด
 
 ---
@@ -188,7 +192,7 @@ flowchart TD
 
 ### 7.3 การตรวจสอบความถูกต้องของ Fixtures
 ```bash
-# ตรวจสอบความถูกต้องของ JSON Fixtures ตาม RFC 2606, Department และ C.E. Year
+# ตรวจสอบความถูกต้องของ JSON Fixtures ตาม RFC 2606, Department และ B.E. Year
 node scripts/validate-v3-fixtures.mjs
 
 # รัน Automated Test Suite สำหรับ Fixtures และ Seed Guards
