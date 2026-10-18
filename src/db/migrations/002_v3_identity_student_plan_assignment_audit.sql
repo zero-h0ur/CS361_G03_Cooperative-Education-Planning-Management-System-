@@ -379,6 +379,87 @@ CREATE INDEX idx_audit_events_correlation
     ON audit_events (correlation_id)
     WHERE correlation_id IS NOT NULL;
 
+CREATE FUNCTION enforce_student_user_role()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    linked_user_role TEXT;
+BEGIN
+    IF NEW.user_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Serialize linking against a concurrent role change. The foreign key will
+    -- report a missing user; this trigger owns only the cross-table role rule.
+    SELECT role
+    INTO linked_user_role
+    FROM users
+    WHERE id = NEW.user_id
+    FOR UPDATE;
+
+    IF linked_user_role IS NOT NULL AND linked_user_role <> 'STUDENT' THEN
+        RAISE EXCEPTION 'students.user_id must reference a user with role STUDENT'
+            USING ERRCODE = '23514',
+                  CONSTRAINT = 'chk_students_user_role';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION prevent_linked_student_role_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.role <> 'STUDENT' AND EXISTS (
+        SELECT 1
+        FROM students
+        WHERE user_id = NEW.id
+    ) THEN
+        RAISE EXCEPTION 'a user linked to a Student must retain role STUDENT'
+            USING ERRCODE = '23514',
+                  CONSTRAINT = 'chk_students_user_role';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION guard_plan_legacy_compatibility()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF TG_OP = 'INSERT' AND NEW.legacy_compatibility THEN
+        RAISE EXCEPTION 'legacy_compatibility is reserved for Plans backfilled by migration 002'
+            USING ERRCODE = '23514',
+                  CONSTRAINT = 'chk_plans_legacy_compatibility_guard';
+    END IF;
+
+    IF TG_OP = 'UPDATE'
+       AND NOT OLD.legacy_compatibility
+       AND NEW.legacy_compatibility THEN
+        RAISE EXCEPTION 'a V3 Plan cannot be converted into a legacy-compatible Plan'
+            USING ERRCODE = '23514',
+                  CONSTRAINT = 'chk_plans_legacy_compatibility_guard';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION reject_plan_hard_delete()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION 'Plans cannot be hard-deleted; use the CANCELLED workflow state'
+        USING ERRCODE = '55000';
+END;
+$$;
+
 CREATE FUNCTION reject_immutable_row_mutation()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -388,6 +469,22 @@ BEGIN
         USING ERRCODE = '55000';
 END;
 $$;
+
+CREATE TRIGGER trg_students_user_role
+    BEFORE INSERT OR UPDATE ON students
+    FOR EACH ROW EXECUTE FUNCTION enforce_student_user_role();
+
+CREATE TRIGGER trg_users_student_role
+    BEFORE UPDATE OF role ON users
+    FOR EACH ROW EXECUTE FUNCTION prevent_linked_student_role_change();
+
+CREATE TRIGGER trg_plans_legacy_compatibility_guard
+    BEFORE INSERT OR UPDATE ON plans
+    FOR EACH ROW EXECUTE FUNCTION guard_plan_legacy_compatibility();
+
+CREATE TRIGGER trg_plans_no_delete
+    BEFORE DELETE ON plans
+    FOR EACH ROW EXECUTE FUNCTION reject_plan_hard_delete();
 
 CREATE TRIGGER trg_audit_events_immutable
     BEFORE UPDATE OR DELETE ON audit_events

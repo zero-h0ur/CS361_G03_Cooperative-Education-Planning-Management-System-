@@ -30,6 +30,15 @@ async function seed() {
   try {
     await client.query('BEGIN');
 
+    // The V2 compatibility seed intentionally recreates rows that migration 002
+    // would have backfilled. These guards remain enabled for every normal
+    // application path and are disabled only inside this protected reset
+    // transaction (NODE_ENV development/test + ALLOW_DB_RESET=true).
+    await client.query(`
+      ALTER TABLE plans DISABLE TRIGGER trg_plans_no_delete;
+      ALTER TABLE plans DISABLE TRIGGER trg_plans_legacy_compatibility_guard
+    `);
+
     // 1. Load dataset
     console.log('Loading dataset...');
     const datasetPath = path.join(__dirname, '..', '..', 'data', 'v2', 'mock-dataset.json');
@@ -104,6 +113,11 @@ async function seed() {
         [p.id, p.student_id, p.round_id || null, p.source, p.updated_at, p.visibility, p.data_status]
       );
     }
+
+    await client.query(`
+      ALTER TABLE plans ENABLE TRIGGER trg_plans_legacy_compatibility_guard;
+      ALTER TABLE plans ENABLE TRIGGER trg_plans_no_delete
+    `);
 
     // Verify record count
     const tables = ['companies', 'positions', 'rounds', 'document_metadata', 'students', 'plans'];

@@ -164,18 +164,25 @@ JOIN advisor_assignments second_assignment
      );
 
 SELECT
-    'immutable triggers enabled' AS check_name,
-    COUNT(*) = 3 AS passed,
+    'required protection triggers enabled' AS check_name,
+    COUNT(*) = 7 AS passed,
     COUNT(*) AS observed
 FROM pg_trigger
 WHERE NOT tgisinternal
   AND tgenabled <> 'D'
   AND tgrelid IN (
+      'users'::regclass,
+      'students'::regclass,
+      'plans'::regclass,
       'audit_events'::regclass,
       'plan_operations'::regclass,
       'advisor_assignments'::regclass
   )
   AND tgname IN (
+      'trg_students_user_role',
+      'trg_users_student_role',
+      'trg_plans_legacy_compatibility_guard',
+      'trg_plans_no_delete',
       'trg_audit_events_immutable',
       'trg_plan_operations_immutable',
       'trg_advisor_assignments_no_delete'

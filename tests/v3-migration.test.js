@@ -298,6 +298,28 @@ describe('Issue #56 forward-only V3 migration', () => {
     `, [IDS.incompleteUser])).rejects.toMatchObject({ code: '23514' });
   });
 
+  test('requires every linked Student user to retain the STUDENT role', async () => {
+    await expect(testPool.query(`
+      INSERT INTO students (
+        id, anonymous_ref, source, visibility, data_status, user_id,
+        student_number, full_name, institutional_email, department,
+        program, major, academic_year, enrollment_status
+      ) VALUES (
+        '40000000-0000-4000-8000-000000009098',
+        'SYNTHETIC-WRONG-ROLE', 'issue-56-test', 'private', 'mock', $1,
+        'SYNTHETIC-0098', 'Synthetic Wrong Role',
+        'wrong.role@example.invalid', 'Synthetic Department',
+        'Synthetic Program', 'Synthetic Major', 2569, 'ACTIVE'
+      )
+    `, [IDS.advisorUser])).rejects.toMatchObject({ code: '23514' });
+
+    await expect(testPool.query(`
+      UPDATE users
+      SET role = 'ADVISOR'
+      WHERE id = $1
+    `, [IDS.studentUser])).rejects.toMatchObject({ code: '23514' });
+  });
+
   test('enforces V3 Plan references, version, and active cardinality', async () => {
     const plan = await testPool.query(`
       SELECT status, version, legacy_compatibility
@@ -318,6 +340,22 @@ describe('Issue #56 forward-only V3 migration', () => {
         'issue-56-test', 'private', 'mock'
       )
     `, [IDS.v3Student])).rejects.toMatchObject({ code: '23514' });
+
+    await expect(testPool.query(`
+      INSERT INTO plans (
+        id, student_id, legacy_compatibility,
+        source, visibility, data_status
+      ) VALUES (
+        '50000000-0000-4000-8000-000000009089', $1, TRUE,
+        'issue-56-test', 'private', 'mock'
+      )
+    `, [IDS.v3Student])).rejects.toMatchObject({ code: '23514' });
+
+    await expect(testPool.query(`
+      UPDATE plans
+      SET legacy_compatibility = TRUE
+      WHERE id = $1
+    `, [IDS.v3Plan])).rejects.toMatchObject({ code: '23514' });
 
     await expect(testPool.query(`
       INSERT INTO plans (
@@ -417,6 +455,10 @@ describe('Issue #56 forward-only V3 migration', () => {
     await expect(testPool.query(
       `UPDATE plan_operations SET result_version = 3 WHERE operation_id = $1`,
       [IDS.operation]
+    )).rejects.toMatchObject({ code: '55000' });
+    await expect(testPool.query(
+      `DELETE FROM plans WHERE id = $1`,
+      [IDS.v3Plan]
     )).rejects.toMatchObject({ code: '55000' });
   });
 

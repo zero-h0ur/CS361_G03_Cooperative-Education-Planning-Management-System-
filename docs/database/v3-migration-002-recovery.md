@@ -81,11 +81,16 @@ API, session variable, or ordinary database operation that bypasses the trigger.
 
 - Existing Student rows remain unlinked; V3 identity/profile columns stay
   `NULL`. No identity or official profile value is inferred.
+- A linked V3 Student must reference an Internal User whose role is `STUDENT`.
+  Database triggers also reject changing that linked User to another role.
 - Existing Plans retain their IDs and relationships, use `status = DRAFT` and
   `version = 1`, and backfill `cycle_id` only from a non-null `round_id`.
 - An existing Plan without a round keeps `cycle_id = NULL` and is marked
   `legacy_compatibility = TRUE`. It cannot become a valid submitted V3 Plan
   until Cycle, Company, and Position satisfy the accepted Plan contract.
+- Normal inserts cannot set `legacy_compatibility = TRUE`, and a V3 Plan cannot
+  be converted into a legacy-compatible Plan. Hard deletion is rejected; use
+  the `CANCELLED` workflow state so Plan and audit history remain available.
 - Existing rounds are backfilled to `CLOSED` because V2 did not contain an
   approved operational state. An authorized operator must validate a round
   before explicitly opening it.
