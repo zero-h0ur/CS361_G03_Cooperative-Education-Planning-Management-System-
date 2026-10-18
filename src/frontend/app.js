@@ -1,15 +1,31 @@
 import './authenticated-shell.css';
 
+import { createAmplifyAuthClient } from './auth/amplify-client.js';
+import { createSessionClient } from './auth/session-client.js';
+import { createShellApp, renderStartupFailure } from './shell-app.js';
+
 const root = document.getElementById('authenticatedApp');
 
 if (root) {
-  root.replaceChildren();
-  const main = document.createElement('main');
-  main.className = 'shell-boot';
-  main.setAttribute('aria-busy', 'false');
+  try {
+    const config = window.CO_ED_CONFIG || {};
+    const authClient = createAmplifyAuthClient({ config: config.auth });
+    const sessionClient = createSessionClient({
+      apiBaseUrl: config.apiBaseUrl,
+      getAccessToken: authClient.getAccessToken
+    });
+    const app = createShellApp({
+      root,
+      loadSession: sessionClient.loadSession,
+      restartLogin: authClient.restartLogin,
+      logout: authClient.logout,
+      location: window.location,
+      eventTarget: window,
+      storage: window.sessionStorage
+    });
 
-  const message = document.createElement('p');
-  message.textContent = 'พื้นที่ผู้ใช้งานกำลังเชื่อมต่อกับระบบยืนยันตัวตน';
-  main.append(message);
-  root.append(main);
+    app.start();
+  } catch {
+    renderStartupFailure(root);
+  }
 }
