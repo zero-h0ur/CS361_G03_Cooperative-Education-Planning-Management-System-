@@ -1,3 +1,5 @@
+import { parseStaffRouteState } from './staff/staff-route-state.js';
+
 const ROUTE_DEFINITIONS = Object.freeze([
   Object.freeze({
     hash: '#/student/profile',
@@ -18,13 +20,33 @@ const ROUTE_DEFINITIONS = Object.freeze([
     status: 'การจัดการ Plan จริงจะเชื่อมต่อใน Issue #66'
   }),
   Object.freeze({
+    hash: '#/staff/students',
+    staffMode: 'students',
+    role: 'STAFF',
+    navLabel: 'จัดการนักศึกษา',
+    eyebrow: 'STAFF WORKSPACE',
+    title: 'ค้นหานักศึกษา',
+    description: 'ค้นหาข้อมูลนักศึกษาภายในขอบเขตที่คุณมีสิทธิ์อ่าน',
+    status: 'Student search API (#67)'
+  }),
+  Object.freeze({
+    hash: '#/staff/plans',
+    staffMode: 'plans',
+    role: 'STAFF',
+    navLabel: 'ค้นหาแผนสหกิจ',
+    eyebrow: 'STAFF WORKSPACE',
+    title: 'ค้นหาแผนสหกิจ',
+    description: 'เลือกแผนภายในขอบเขตที่รับผิดชอบเพื่อเปิดพื้นที่ตรวจแผน',
+    status: 'Plan search API (#67)'
+  }),
+  Object.freeze({
     hash: '#/staff/review',
     role: 'STAFF',
     navLabel: 'คิวตรวจแผน',
     eyebrow: 'STAFF WORKSPACE',
     title: 'คิวตรวจแผนสหกิจ',
     description: 'พื้นที่สำหรับค้นหาและตรวจแผนภายในขอบเขตที่ระบบมอบหมาย',
-    status: 'คิวตรวจและ Workflow จริงจะเชื่อมต่อใน Issue #67'
+    status: 'คิวตรวจและคำสั่งตรวจแผนจะเชื่อมต่อใน Issue #77'
   }),
   Object.freeze({
     hash: '#/advisor/students',
@@ -41,6 +63,13 @@ const ROUTE_DEFINITIONS = Object.freeze([
 // their parent. A hash with a malformed id is not allowlisted, so it never reaches the API.
 const UUID_SEGMENT = '([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})';
 const DETAIL_ROUTE_DEFINITIONS = Object.freeze([
+  Object.freeze({
+    pattern: new RegExp(`^#/staff/review/${UUID_SEGMENT}$`, 'i'),
+    param: 'planId', navHash: '#/staff/review', role: 'STAFF',
+    eyebrow: 'STAFF WORKSPACE', title: 'เปิดตรวจแผนสหกิจ',
+    description: 'เส้นทางส่งต่อแผนที่เลือกไปยัง Review workspace ของ Issue #77',
+    status: 'รอหน้า Review detail จาก Issue #77'
+  }),
   Object.freeze({
     pattern: new RegExp(`^#/advisor/students/${UUID_SEGMENT}$`, 'i'),
     param: 'studentId',
@@ -78,6 +107,15 @@ const ROLE_LABELS = Object.freeze({
 export function getRoute(hash) {
   if (typeof hash !== 'string') {
     return null;
+  }
+  const [pathname, query = '', ...extra] = hash.split('?');
+  const staffList = ROUTE_DEFINITIONS.find((candidate) => candidate.staffMode && candidate.hash === pathname);
+  if (staffList) {
+    if (extra.length) return null;
+    try {
+      return Object.freeze({ ...staffList, hash, navHash: staffList.hash,
+        filters: parseStaffRouteState(staffList.staffMode, query) });
+    } catch { return null; }
   }
   const route = ROUTE_DEFINITIONS.find((candidate) => candidate.hash === hash);
   if (route) {

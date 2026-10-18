@@ -3,6 +3,7 @@ import './authenticated-shell.css';
 import { createAmplifyAuthClient } from './auth/amplify-client.js';
 import { createSessionClient } from './auth/session-client.js';
 import { createAdvisorClient } from './advisor/advisor-client.js';
+import { createStaffClient } from './staff/staff-client.js';
 import { createShellApp, renderStartupFailure } from './shell-app.js';
 import { createStudentPlanClient } from './student/plan-submission-client.js';
 import { createStudentProfileClient } from './student/profile-client.js';
@@ -29,6 +30,10 @@ if (root) {
       apiBaseUrl: config.apiBaseUrl,
       getAccessToken: authClient.getAccessToken
     });
+    const staffClient = createStaffClient({
+      apiBaseUrl: config.apiBaseUrl,
+      getAccessToken: authClient.getAccessToken
+    });
     const app = createShellApp({
       root,
       loadSession: sessionClient.loadSession,
@@ -40,7 +45,8 @@ if (root) {
       storage: window.sessionStorage,
       studentProfileClient,
       studentPlanClient,
-      advisorClient
+      advisorClient,
+      staffClient
     });
 
     app.start();

@@ -14,6 +14,7 @@ import {
 } from './advisor/advisor-views.js';
 import { renderStudentDashboardView } from './student/student-dashboard-view.js';
 import { renderStudentPlanView } from './student/student-plan-view.js';
+import { renderStaffStudentManagementView, renderStaffReviewHandoff } from './staff/staff-student-management-view.js';
 
 const RETURN_ROUTE_KEY = 'co-ed:return-route';
 const SENSITIVE_QUERY_PARAMS = Object.freeze([
@@ -281,6 +282,7 @@ export function createShellApp({
   history = globalThis.history,
   studentProfileClient = null,
   studentPlanClient = null,
+  staffClient = null,
   advisorClient = null,
   renderRouteContent
 }) {
@@ -473,6 +475,29 @@ export function createShellApp({
         onSessionExpired: handleSessionExpired,
         onAccessDenied: (message) => renderForbidden(message)
       });
+    }
+
+    if (role === 'STAFF') {
+      if (route.staffMode && staffClient) {
+        return renderStaffStudentManagementView({
+          mode: route.staffMode,
+          initialFilters: route.filters,
+          staffClient, signal,
+          onSessionExpired: handleSessionExpired,
+          onAccessDenied: (message) => renderForbidden(message),
+          onRouteStateChange: (hash) => {
+            const target = getRoute(hash);
+            if (destroyed || signal.aborted || currentRole !== 'STAFF' ||
+                !target || target.role !== 'STAFF' || target.staffMode !== route.staffMode) return;
+            try {
+              // Replace the current entry; never put q/names/student numbers in history.
+              history?.replaceState(null, '', `${location.pathname || '/app.html'}${hash}`);
+              renderedHash = hash;
+            } catch { /* History restrictions must not block scoped search. */ }
+          }
+        });
+      }
+      if (route.params?.planId) return renderStaffReviewHandoff({ planId: route.params.planId });
     }
 
     if (role === 'ADVISOR' && advisorClient) {
