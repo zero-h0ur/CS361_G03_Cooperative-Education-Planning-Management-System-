@@ -274,6 +274,10 @@ export function validateFixtures(fixtures, v2Dataset = null) {
     if (r.semester !== undefined && r.semester !== null && (!Number.isInteger(r.semester) || r.semester <= 0)) {
       errors.push(`Invalid round semester "${r.semester}" for round ${r.id}`);
     }
+    // rounds.end_date check to support default advisor_assignment effective_to per Issue #53
+    if (!r.end_date || isNaN(new Date(r.end_date).getTime())) {
+      errors.push(`Round ${r.id} must have a valid end_date timestamp to support default assignment effective_to (#53)`);
+    }
   }
 
   // Optional: load V2 dataset for cross-entity checks
@@ -350,6 +354,20 @@ export function validateFixtures(fixtures, v2Dataset = null) {
         errors.push(`Student ${p.student_id} has multiple active plans in cycle ${p.cycle_id}`);
       }
       activeStudentCycleMap.add(studentCycleKey);
+    }
+
+    // Alignment check between student academic_year and round academic_year per Issue #53:
+    // Predicate checks r.academic_year when plan exists and s.academic_year when reviewing student only.
+    if (p.cycle_id && p.student_id) {
+      const student = studentMap.get(p.student_id);
+      const round = roundMap.get(p.cycle_id);
+      if (student && round && student.academic_year && round.academic_year) {
+        if (student.academic_year !== round.academic_year) {
+          errors.push(
+            `Plan ${p.id}: student academic_year (${student.academic_year}) does not match round academic_year (${round.academic_year}); staff scope predicate outcome would diverge between student and plan evaluation`
+          );
+        }
+      }
     }
   }
 

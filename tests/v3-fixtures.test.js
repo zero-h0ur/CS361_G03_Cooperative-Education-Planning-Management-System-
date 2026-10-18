@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const { seed, seedV3, assertDestructiveResetAllowed } = require('../src/db/seed');
 const { IdentityResolver } = require('../src/auth/identity-resolver');
+const { close } = require('../src/db/connection');
 
 describe('Issue #60 - Anonymized V3 Fixtures and Destructive-Seed Guards', () => {
   const originalEnv = { ...process.env };
@@ -13,8 +14,9 @@ describe('Issue #60 - Anonymized V3 Fixtures and Destructive-Seed Guards', () =>
     process.env = { ...originalEnv };
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     process.env = originalEnv;
+    await close();
   });
 
   describe('Destructive-Seed Guards (assertDestructiveResetAllowed)', () => {
@@ -230,6 +232,7 @@ describe('Issue #60 - Anonymized V3 Fixtures and Destructive-Seed Guards', () =>
 
       afterAll(async () => {
         if (pool) await pool.end();
+        await close();
       });
 
       it('seeds both V2 and V3 data deterministically', async () => {
@@ -304,17 +307,30 @@ describe('Issue #60 - Anonymized V3 Fixtures and Destructive-Seed Guards', () =>
 
         // Student 1
         const studentCtx = await resolver.resolveIdentity(issuer, 'mock-sub-student-001');
+        console.log(JSON.stringify(studentCtx, null, 2));
         expect(studentCtx.role).toBe('STUDENT');
-        expect(studentCtx.student_number).toBe('650610001');
+        expect(studentCtx.userId).toBe('70000000-0000-4000-8000-000000000001');
+        expect(studentCtx.studentId).toBe('40000000-0000-4000-8000-000000000101');
         expect(studentCtx.department).toBe('CPE');
+
+        // Query students directly for PII (student_number) per #50 data minimization
+        const studentRow = (
+          await pool.query('SELECT student_number, department FROM students WHERE id = $1', [
+            studentCtx.studentId,
+          ])
+        ).rows[0];
+        expect(studentRow.student_number).toBe('650610001');
+        expect(studentRow.department).toBe('CPE');
 
         // Advisor 1
         const advisorCtx = await resolver.resolveIdentity(issuer, 'mock-sub-advisor-001');
         expect(advisorCtx.role).toBe('ADVISOR');
+        expect(advisorCtx.userId).toBe('70000000-0000-4000-8000-000000000010');
 
         // Staff 1
         const staffCtx = await resolver.resolveIdentity(issuer, 'mock-sub-staff-001');
         expect(staffCtx.role).toBe('STAFF');
+        expect(staffCtx.userId).toBe('70000000-0000-4000-8000-000000000020');
       });
     });
   });

@@ -49,6 +49,10 @@
 * คอลัมน์ทั้งหมด (`academic_year`, `semester`, `status`, `end_date`) มีอยู่ใน Migration `001` และ `002` ครบถ้วน
 * **รอบเปิดดำเนินงาน (`status = 'OPEN'`)**: ปีการศึกษา `2026` ภาคเรียนที่ 1 รองรับการทดสอบ Review Actions, Active Queues และ Submissions
 * **รอบปิด (`status = 'CLOSED'`)**: ปีการศึกษา `2026` ภาคเรียนที่ 1 สำหรับทดสอบการปฏิเสธ Action ในรอบที่ปิดแล้ว
+* **การกำหนด `end_date` และความสอดคล้องกับ `effective_to`**:
+  * ตาม Issue [#53](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/53) ระบบจะใช้ `rounds.end_date` เป็นค่าเริ่มต้น (Default) ให้กับ `advisor_assignments.effective_to` เมื่อ Admin ไม่ได้ระบุมา ดังนั้นใน Fixture ทุกรอบจึงมีการกำหนด `end_date` ไว้อย่างชัดเจน (และในกรณีที่รอบใดมี `end_date` เป็น NULL ระบบจะบังคับให้ Admin ต้องส่ง `effective_to` มาเองเสมอ)
+  * ค่า `rounds.academic_year` ตรงกับ `students.academic_year` (`2026`) สำหรับทุกแผนที่ส่งเข้าสู่รอบ เพื่อป้องกันไม่ให้ผลการประเมินสิทธิ์ Staff ขัดแย้งกันระหว่างระดับ Student และระดับ Plan
+
 
 ### 3.4 แผนการฝึกสหกิจศึกษา (`plans`)
 ครอบคลุมทุกสถานะหลักของ V3 Plan Workflow:

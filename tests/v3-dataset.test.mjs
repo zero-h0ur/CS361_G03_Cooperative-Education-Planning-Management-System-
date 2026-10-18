@@ -215,3 +215,50 @@ test("validator flags error when a staff member has no out-of-scope students", (
   );
 });
 
+test("all rounds define valid end_date timestamps for default assignment effective_to (#53)", () => {
+  const fixtures = freshFixtures();
+  for (const r of fixtures.rounds) {
+    assert.ok(r.end_date, `Round ${r.id} must define end_date`);
+    assert.ok(!isNaN(new Date(r.end_date).getTime()), `Round ${r.id} end_date must be valid ISO timestamp`);
+  }
+});
+
+test("all active plans have student.academic_year matching round.academic_year for consistent predicate evaluation", () => {
+  const fixtures = freshFixtures();
+  const studentMap = new Map(fixtures.students.map((s) => [s.id, s]));
+  const roundMap = new Map(fixtures.rounds.map((r) => [r.id, r]));
+
+  for (const p of fixtures.plans) {
+    if (p.cycle_id && p.student_id) {
+      const student = studentMap.get(p.student_id);
+      const round = roundMap.get(p.cycle_id);
+      assert.equal(
+        student.academic_year,
+        round.academic_year,
+        `Plan ${p.id} student.academic_year must equal round.academic_year`
+      );
+    }
+  }
+});
+
+test("validator rejects plans where student.academic_year diverges from round.academic_year", () => {
+  const fixtures = freshFixtures();
+  fixtures.students[0].academic_year = 2025; // Diverges from round 2026
+  const errors = validateFixtures(fixtures, freshV2Dataset());
+  assert.ok(
+    errors.some((e) => e.includes("staff scope predicate outcome would diverge")),
+    "Should report error when student and round academic_year diverge"
+  );
+});
+
+test("validator rejects rounds without end_date", () => {
+  const fixtures = freshFixtures();
+  delete fixtures.rounds[0].end_date;
+  const errors = validateFixtures(fixtures, freshV2Dataset());
+  assert.ok(
+    errors.some((e) => e.includes("must have a valid end_date timestamp")),
+    "Should report error when round end_date is missing"
+  );
+});
+
+
