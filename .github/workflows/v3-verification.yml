@@ -1,0 +1,54 @@
+name: V3 verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: coed_v3_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d coed_v3_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      ALLOW_DB_RESET: 'true'
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/coed_unused
+      TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/coed_v3_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Run full regression including auth boundaries and PostgreSQL integration
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee v3-verification.log
+      - name: Preserve verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: v3-verification.log
+          if-no-files-found: warn
+          retention-days: 14
