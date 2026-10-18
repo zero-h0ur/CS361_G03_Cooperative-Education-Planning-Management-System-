@@ -236,6 +236,15 @@ describe('CO-ED V2 public API', () => {
     });
   });
 
+  test('returns 405 for unsupported HTTP methods on unknown routes', async () => {
+    await withServer(makeDal(), async (server) => {
+      const response = await request(server, '/api/unknown', { method: 'POST' });
+      expect(response.status).toBe(405);
+      expect(response.headers.allow).toBe('GET');
+      expect(response.body.error.code).toBe('METHOD_NOT_ALLOWED');
+    });
+  });
+
   test('does not expose private Student or Plan routes', async () => {
     await withServer(makeDal(), async (server) => {
       const studentResponse = await request(server, '/api/students');

@@ -43,6 +43,13 @@ Version 2 พัฒนาต่อจาก Static Website ของ V1 โด�
 
 ## Architecture
 
+### Version 3 security architecture and decision baseline
+
+เอกสาร [V3 architecture, trust boundaries และ privacy baseline](docs/architecture/G03-V3-architecture.md)
+สรุป component/data flow, server-side enforcement points, audit path, V3 scope และ
+Accepted Decisions D01-D08 สำหรับงาน V3 ที่กำลังพัฒนา โดยไม่เปลี่ยน Public V2
+Company Directory ที่ใช้งานอยู่
+
 ### Detailed Architecture and Request Flow
 
 [![CO-ED Version 2 Detailed Architecture](docs/architecture/G03-V2-architecture-full.png)](docs/architecture/G03-V2-architecture-full.png)
