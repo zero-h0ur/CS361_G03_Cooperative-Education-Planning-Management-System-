@@ -201,10 +201,10 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
       ).rejects.toThrow(ForbiddenError);
     });
 
-    it('allows Student A to edit/submit own Plan in DRAFT or NEEDS_REVISION state, and denies in SUBMITTED/APPROVED', async () => {
+    it('authorizes the owner regardless of Plan state; workflow state is checked by the Service (#49 step 6, #52 section 10)', async () => {
       const planRow = (planStatus) => ({
         rows: [{
-          plan_id: 'plan-a-1',
+          plan_id: '50000000-0000-4000-8000-00000000a001',
           student_id: 'student-a-uuid',
           plan_status: planStatus,
           plan_version: 1
@@ -221,29 +221,44 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
       const studentA = makeStudentContext();
 
       const draftEdit = await authz.authorize(studentA, ACTIONS.PLAN_UPDATE_CONTENT, {
-        planId: 'plan-a-1'
+        planId: '50000000-0000-4000-8000-00000000a001'
       });
       expect(draftEdit.authorized).toBe(true);
 
       const revisionSubmit = await authz.authorize(studentA, ACTIONS.PLAN_SUBMIT, {
-        planId: 'plan-a-1'
+        planId: '50000000-0000-4000-8000-00000000a001'
       });
       expect(revisionSubmit.authorized).toBe(true);
 
-      await expect(
-        authz.authorize(studentA, ACTIONS.PLAN_UPDATE_CONTENT, { planId: 'plan-a-1' })
-      ).rejects.toThrow(ForbiddenError);
+      // SUBMITTED / APPROVED still pass ownership; the Service answers 422 INVALID_STATE_TRANSITION
+      const submittedEdit = await authz.authorize(studentA, ACTIONS.PLAN_UPDATE_CONTENT, {
+        planId: '50000000-0000-4000-8000-00000000a001'
+      });
+      expect(submittedEdit.authorized).toBe(true);
 
-      await expect(
-        authz.authorize(studentA, ACTIONS.PLAN_SUBMIT, { planId: 'plan-a-1' })
-      ).rejects.toThrow(ForbiddenError);
+      const approvedSubmit = await authz.authorize(studentA, ACTIONS.PLAN_SUBMIT, {
+        planId: '50000000-0000-4000-8000-00000000a001'
+      });
+      expect(approvedSubmit.authorized).toBe(true);
     });
 
-    it('ignores caller-supplied planStudentId and planStatus and re-reads ownership/state from the database', async () => {
+    it('rejects malformed plan ids with 400 before any database lookup', async () => {
+      const mockPool = { query: jest.fn() };
+      const authz = new AuthorizationService({ pool: mockPool });
+
+      for (const role of [makeStudentContext(), makeAdvisorContext(), makeStaffContext()]) {
+        await expect(
+          authz.authorize(role, ACTIONS.PLAN_LIST_READ, { planId: 'not-a-uuid' })
+        ).rejects.toMatchObject({ statusCode: 400, code: 'VALIDATION_ERROR' });
+      }
+      expect(mockPool.query).not.toHaveBeenCalled();
+    });
+
+    it('ignores caller-supplied planStudentId and re-reads ownership from the database', async () => {
       const mockPool = {
         query: jest.fn().mockResolvedValue({
           rows: [{
-            plan_id: 'plan-b-1',
+            plan_id: '50000000-0000-4000-8000-00000000b001',
             student_id: 'student-b-uuid',
             plan_status: 'SUBMITTED'
           }]
@@ -254,27 +269,26 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
       // Student A claims Student B's plan is theirs
       await expect(
         authz.authorize(makeStudentContext(), ACTIONS.PLAN_LIST_READ, {
-          planId: 'plan-b-1',
+          planId: '50000000-0000-4000-8000-00000000b001',
           planStudentId: 'student-a-uuid'
         })
       ).rejects.toThrow(ForbiddenError);
 
-      // Student B claims their SUBMITTED plan is still a DRAFT
+      // A caller-supplied planStatus is ignored entirely; the decision carries no state claim
       const studentB = makeStudentContext({ userId: 'user-student-b', studentId: 'student-b-uuid' });
-      await expect(
-        authz.authorize(studentB, ACTIONS.PLAN_UPDATE_CONTENT, {
-          planId: 'plan-b-1',
-          planStudentId: 'student-b-uuid',
-          planStatus: 'DRAFT'
-        })
-      ).rejects.toThrow(ForbiddenError);
+      const decision = await authz.authorize(studentB, ACTIONS.PLAN_UPDATE_CONTENT, {
+        planId: '50000000-0000-4000-8000-00000000b001',
+        planStudentId: 'student-b-uuid',
+        planStatus: 'DRAFT'
+      });
+      expect(decision).not.toHaveProperty('planStatus');
     });
 
     it('rejects Student A attempting to read, edit, or submit Student B Plan with 403 Forbidden', async () => {
       const mockPool = {
         query: jest.fn().mockResolvedValue({
           rows: [{
-            plan_id: 'plan-b-1',
+            plan_id: '50000000-0000-4000-8000-00000000b001',
             student_id: 'student-b-uuid',
             plan_status: 'DRAFT'
           }]
@@ -284,11 +298,11 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
       const studentA = makeStudentContext();
 
       await expect(
-        authz.authorize(studentA, ACTIONS.PLAN_LIST_READ, { planId: 'plan-b-1' })
+        authz.authorize(studentA, ACTIONS.PLAN_LIST_READ, { planId: '50000000-0000-4000-8000-00000000b001' })
       ).rejects.toThrow(ForbiddenError);
 
       await expect(
-        authz.authorize(studentA, ACTIONS.PLAN_SUBMIT, { planId: 'plan-b-1' })
+        authz.authorize(studentA, ACTIONS.PLAN_SUBMIT, { planId: '50000000-0000-4000-8000-00000000b001' })
       ).rejects.toThrow(ForbiddenError);
     });
 
@@ -300,7 +314,7 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
       const studentA = makeStudentContext();
 
       await expect(
-        authz.authorize(studentA, ACTIONS.PLAN_LIST_READ, { planId: 'missing-plan-id' })
+        authz.authorize(studentA, ACTIONS.PLAN_LIST_READ, { planId: '50000000-0000-4000-8000-00000000e001' })
       ).rejects.toThrow(NotFoundError);
     });
 
@@ -309,13 +323,13 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
       const studentA = makeStudentContext();
 
       await expect(
-        authz.authorize(studentA, ACTIONS.PLAN_START_REVIEW, { planId: 'plan-a-1' })
+        authz.authorize(studentA, ACTIONS.PLAN_START_REVIEW, { planId: '50000000-0000-4000-8000-00000000a001' })
       ).rejects.toThrow(ForbiddenError);
       await expect(
-        authz.authorize(studentA, ACTIONS.PLAN_RETURN_FOR_REVISION, { planId: 'plan-a-1' })
+        authz.authorize(studentA, ACTIONS.PLAN_RETURN_FOR_REVISION, { planId: '50000000-0000-4000-8000-00000000a001' })
       ).rejects.toThrow(ForbiddenError);
       await expect(
-        authz.authorize(studentA, ACTIONS.PLAN_APPROVE, { planId: 'plan-a-1' })
+        authz.authorize(studentA, ACTIONS.PLAN_APPROVE, { planId: '50000000-0000-4000-8000-00000000a001' })
       ).rejects.toThrow(ForbiddenError);
       await expect(
         authz.authorize(studentA, ACTIONS.STUDENT_SEARCH_LIST)
@@ -359,7 +373,7 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
 
       const planDecision = await authz.authorize(advisor, ACTIONS.PLAN_LIST_READ, {
         studentId: 'student-a-uuid',
-        planId: 'plan-a-1',
+        planId: '50000000-0000-4000-8000-00000000a001',
         academicYear: 2567,
         semester: 1
       });
@@ -384,7 +398,7 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
 
       await expect(
         authz.authorize(advisor, ACTIONS.PLAN_LIST_READ, {
-          planId: 'unassigned-plan-uuid'
+          planId: '50000000-0000-4000-8000-00000000d001'
         })
       ).rejects.toThrow(ForbiddenError);
     });
@@ -392,7 +406,7 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
     it('rejects Advisor assigned to Student A reading a Plan owned by Student B even when studentId=A is supplied', async () => {
       const repository = {
         findPlanById: jest.fn().mockResolvedValue({
-          plan_id: 'plan-b-1',
+          plan_id: '50000000-0000-4000-8000-00000000b001',
           student_id: 'student-b-uuid',
           plan_status: 'SUBMITTED',
           round_academic_year: 2567,
@@ -409,15 +423,54 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
       await expect(
         authz.authorize(makeAdvisorContext(), ACTIONS.PLAN_LIST_READ, {
           studentId: 'student-a-uuid',
-          planId: 'plan-b-1'
+          planId: '50000000-0000-4000-8000-00000000b001'
         })
       ).rejects.toThrow(ForbiddenError);
 
       await expect(
-        authz.authorize(makeAdvisorContext(), ACTIONS.PLAN_LIST_READ, { planId: 'plan-b-1' })
+        authz.authorize(makeAdvisorContext(), ACTIONS.PLAN_LIST_READ, { planId: '50000000-0000-4000-8000-00000000b001' })
       ).rejects.toThrow(ForbiddenError);
       expect(repository.findActiveAdvisorAssignment).toHaveBeenLastCalledWith(
-        expect.objectContaining({ studentId: 'student-b-uuid', academicYear: 2567, semester: 1 })
+        expect.objectContaining({
+          studentId: 'student-b-uuid',
+          academicYear: null,
+          semester: null
+        })
+      );
+    });
+
+    it('allows historical Plan reads across cycles while any current Student assignment is active (#53 section 4.1)', async () => {
+      const repository = {
+        findPlanById: jest.fn().mockResolvedValue({
+          plan_id: '50000000-0000-4000-8000-00000000a001',
+          student_id: 'student-a-uuid',
+          plan_status: 'CANCELLED',
+          round_academic_year: 2564,
+          round_semester: 2
+        }),
+        findActiveAdvisorAssignment: jest.fn().mockResolvedValue({
+          status: 'ACTIVE',
+          user_role: 'ADVISOR',
+          user_account_status: 'ACTIVE',
+          academic_year: 2567,
+          semester: 1
+        })
+      };
+      const authz = new AuthorizationService({ repository, now: () => FIXED_NOW });
+
+      const decision = await authz.authorize(
+        makeAdvisorContext(),
+        ACTIONS.PLAN_LIST_READ,
+        { planId: '50000000-0000-4000-8000-00000000a001' }
+      );
+
+      expect(decision.authorized).toBe(true);
+      expect(repository.findActiveAdvisorAssignment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentId: 'student-a-uuid',
+          academicYear: null,
+          semester: null
+        })
       );
     });
 
@@ -509,7 +562,7 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
 
       for (const action of forbiddenMutations) {
         await expect(
-          authz.authorize(advisor, action, { studentId: 'student-a-uuid', planId: 'plan-a-1' })
+          authz.authorize(advisor, action, { studentId: 'student-a-uuid', planId: '50000000-0000-4000-8000-00000000a001' })
         ).rejects.toThrow(ForbiddenError);
       }
     });
@@ -531,7 +584,7 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
             student_department: 'Computer Science',
             student_program: 'B.Sc.',
             student_academic_year: 2567,
-            plan_id: 'plan-a-1',
+            plan_id: '50000000-0000-4000-8000-00000000a001',
             plan_student_id: 'student-a-uuid',
             round_academic_year: 2567,
             round_status: 'OPEN'
@@ -549,7 +602,7 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
 
       const reviewDecision = await authz.authorize(staff, ACTIONS.PLAN_START_REVIEW, {
         studentId: 'student-a-uuid',
-        planId: 'plan-a-1'
+        planId: '50000000-0000-4000-8000-00000000a001'
       });
       expect(reviewDecision.authorized).toBe(true);
       expect(reviewDecision.isReviewAction).toBe(true);
@@ -567,7 +620,7 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
             user_account_status: 'ACTIVE',
             student_id: 'student-math-uuid',
             student_department: 'Mathematics',
-            plan_id: 'plan-math-1',
+            plan_id: '50000000-0000-4000-8000-00000000c001',
             round_status: 'OPEN'
           }]
         })
@@ -590,7 +643,7 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
             user_account_status: 'ACTIVE',
             student_id: 'student-a-uuid',
             student_department: 'Computer Science',
-            plan_id: 'plan-a-1',
+            plan_id: '50000000-0000-4000-8000-00000000a001',
             round_status: 'CLOSED'
           }]
         })
@@ -599,7 +652,7 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
       await expect(
         authzClosed.authorize(makeStaffContext(), ACTIONS.PLAN_APPROVE, {
           studentId: 'student-a-uuid',
-          planId: 'plan-a-1'
+          planId: '50000000-0000-4000-8000-00000000a001'
         })
       ).rejects.toThrow(ForbiddenError);
     });
@@ -609,10 +662,10 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
       const staff = makeStaffContext();
 
       await expect(
-        authz.authorize(staff, ACTIONS.PLAN_UPDATE_CONTENT, { planId: 'plan-a-1' })
+        authz.authorize(staff, ACTIONS.PLAN_UPDATE_CONTENT, { planId: '50000000-0000-4000-8000-00000000a001' })
       ).rejects.toThrow(ForbiddenError);
       await expect(
-        authz.authorize(staff, ACTIONS.PLAN_SUBMIT, { planId: 'plan-a-1' })
+        authz.authorize(staff, ACTIONS.PLAN_SUBMIT, { planId: '50000000-0000-4000-8000-00000000a001' })
       ).rejects.toThrow(ForbiddenError);
       await expect(
         authz.authorize(staff, ACTIONS.STUDENT_UPDATE_SELF_PROFILE, { studentId: 'student-a-uuid' })
@@ -636,7 +689,7 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
 
       await expect(
         authzWithScope.authorize(makeStaffContext(), ACTIONS.PLAN_LIST_READ, {
-          planId: 'non-existent-plan'
+          planId: '50000000-0000-4000-8000-00000000e002'
         })
       ).rejects.toThrow(NotFoundError);
 
@@ -665,10 +718,10 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
         authz.authorize(admin, ACTIONS.STUDENT_SEARCH_LIST)
       ).rejects.toThrow(ForbiddenError);
       await expect(
-        authz.authorize(admin, ACTIONS.PLAN_LIST_READ, { planId: 'plan-a-1' })
+        authz.authorize(admin, ACTIONS.PLAN_LIST_READ, { planId: '50000000-0000-4000-8000-00000000a001' })
       ).rejects.toThrow(ForbiddenError);
       await expect(
-        authz.authorize(admin, ACTIONS.PLAN_APPROVE, { planId: 'plan-a-1' })
+        authz.authorize(admin, ACTIONS.PLAN_APPROVE, { planId: '50000000-0000-4000-8000-00000000a001' })
       ).rejects.toThrow(ForbiddenError);
     });
 
@@ -815,7 +868,7 @@ describe('Issue #62: Centralized Role, Ownership and Scope Authorization', () =>
       });
       const middleware = createAuthorizationMiddleware(ACTIONS.PLAN_LIST_READ, {
         authorizationService: authz,
-        resolveResource: () => ({ planId: 'plan-a-1' })
+        resolveResource: () => ({ planId: '50000000-0000-4000-8000-00000000a001' })
       });
 
       const req = { headers: {} };
