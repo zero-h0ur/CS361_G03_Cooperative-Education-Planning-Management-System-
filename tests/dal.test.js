@@ -50,9 +50,13 @@ describe('Data Access Layer', () => {
     
     it('should have schema_migrations tracking table', async () => {
       const pool = getPool();
-      const res = await pool.query(`SELECT version FROM schema_migrations ORDER BY version`);
-      expect(res.rows).toHaveLength(1);
+      const res = await pool.query(`SELECT version, checksum FROM schema_migrations ORDER BY version`);
+      expect(res.rows).toHaveLength(2);
       expect(res.rows[0].version).toBe('001_initial_schema.sql');
+      expect(res.rows[1].version).toBe('002_v3_identity_student_plan_assignment_audit.sql');
+      for (const migration of res.rows) {
+        expect(migration.checksum).toMatch(/^[0-9a-f]{64}$/);
+      }
     });
   });
 
