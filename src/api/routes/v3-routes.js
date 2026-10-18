@@ -10,6 +10,7 @@ const {
   createAuthorizationMiddleware
 } = require('../../auth/authorization');
 const { getRequestContext } = require('../context');
+const { registerSessionRoutes } = require('./session-routes');
 
 const VALID_ACTIONS = new Set(Object.values(ACTIONS));
 
@@ -98,7 +99,9 @@ function registerProtectedRoute(router, config = {}) {
  * @param {object} [options.authOptions] Auth/authz dependency overrides (tests)
  */
 function registerV3Routes(router, options = {}) {
-  // Downstream Issue #64: Authenticated /me and session context endpoint
+  // Issue #64: Authenticated /me and session context endpoint
+  registerSessionRoutes(router, registerProtectedRoute, options);
+
   // Downstream Issue #65: Student self-profile API
   // Downstream Issue #66: Own Plan create/read/edit API
   // Downstream Issue #67: Staff Student/Plan search and review queue API

@@ -173,6 +173,67 @@ function registerV3Routes(router, options = {}) {
 | ไม่พบ identity link, link ถูก revoke, account disabled, duplicate link, provisioning ไม่ครบ | `403 FORBIDDEN` (message เดียวกันทุกกรณี) |
 | Database ไม่พร้อมใช้งานระหว่าง resolve identity | `503 SERVICE_UNAVAILABLE` |
 
+### 3.4 Session Bootstrap: `GET /api/v3/me` (#64)
+
+Frontend (#57) เรียก endpoint นี้หลัง Login เพื่ออ่าน Identity, Role และ Capability ที่ Server resolve จาก RDS แล้ว ใช้แสดง Navigation/Controls เท่านั้น Backend ยังตรวจสิทธิ์ซ้ำทุก action (#49)
+
+- Path เดียวคือ `/api/v3/me` ต้องติด API Gateway JWT Authorizer และไม่มี alias อื่น
+- ไม่รับ Query parameter ใดๆ หากส่งมาจะได้ `400 VALIDATION_ERROR`
+- Response ไม่มี token, `iss`, `sub`, identity link ID, ชื่อ หรือ Email
+
+```json
+{
+  "data": {
+    "user": { "id": "<user-uuid>", "role": "STUDENT", "accountStatus": "ACTIVE" },
+    "role": "STUDENT",
+    "studentId": "<student-uuid>",
+    "profile": {
+      "studentId": "<student-uuid>",
+      "department": "Computer Science",
+      "program": "B.Sc.",
+      "major": "Computer Science",
+      "academicYear": 2567,
+      "enrollmentStatus": "ACTIVE"
+    },
+    "capabilities": {
+      "role": "STUDENT",
+      "scopeMode": "OWN",
+      "canMutateStudentProfile": true,
+      "canMutatePlanContent": true,
+      "canSubmitPlan": true,
+      "canReviewPlan": false,
+      "isReadOnly": false,
+      "allowedActions": ["session:read_me", "plan:create", "..."],
+      "permissions": { "session:read_me": "AUTHENTICATED", "plan:create": "OWN" },
+      "navigation": {
+        "canAccessStudentDashboard": true,
+        "canAccessMyProfile": true,
+        "canAccessMyPlan": true,
+        "canAccessAdvisorStudents": false,
+        "canAccessStaffStudentManagement": false,
+        "canAccessStaffReviewQueue": false
+      }
+    },
+    "scope": {
+      "mode": "OWN",
+      "studentId": "<student-uuid>",
+      "operationalScopes": [],
+      "assignedStudents": [],
+      "assignedStudentCount": 0
+    }
+  }
+}
+```
+
+| Field | ค่าตาม Role |
+|---|---|
+| `studentId`, `profile` | มีค่าเฉพาะ `STUDENT` นอกนั้นเป็น `null` |
+| `scope.mode` | `STUDENT` = `OWN`, `ADVISOR` = `ASSIGNED`, `STAFF` = `SCOPED`, `ADMIN` = `DENY` |
+| `scope.operationalScopes` | เฉพาะ `STAFF`: `[{ department, program, academicYear }]` จาก `staff_scopes` ที่ `ACTIVE` |
+| `scope.assignedStudents` | เฉพาะ `ADVISOR`: `[{ studentId, academicYear, semester }]` ที่ assignment มีผล ณ เวลาที่ร้องขอ |
+
+Error: ไม่มี/ผิด/หมดอายุ token → `401`, ไม่พบ link/disabled/provisioning ไม่ครบ → `403`, Method อื่นนอกจาก `GET` → `405`
+
 ---
 
 ## 4. Architectural Boundaries
