@@ -66,13 +66,28 @@ describe('Issue #64: Authenticated /me and Session Context Endpoint', () => {
     });
 
     return createLambdaHandler({
-      tokenValidator,
-      identityResolver,
-      authorizationService
+      authOptions: {
+        tokenValidator,
+        identityResolver,
+        authorizationService
+      }
     });
   }
 
-  describe('1. Positive Role Bootstrap (/api/v3/me, /api/me, /me)', () => {
+  // Production path (#48): API Gateway JWT Authorizer forwards verified claims to Lambda
+  function authorizerRequestContext(claims, method = 'GET') {
+    return {
+      http: { method },
+      authorizer: {
+        jwt: {
+          claims,
+          scopes: ['coed-api/access']
+        }
+      }
+    };
+  }
+
+  describe('1. Positive Role Bootstrap (/api/v3/me)', () => {
     it('returns stable session context, own profile summary, and navigation flags for STUDENT', async () => {
       const mockPool = {
         query: jest.fn().mockResolvedValue({
@@ -97,7 +112,8 @@ describe('Issue #64: Authenticated /me and Session Context Endpoint', () => {
       };
 
       const handler = buildHandlerWithPool(mockPool);
-      const token = signJwt(makeAccessClaims({ sub: 'sub-student-001' }));
+      const claims = makeAccessClaims({ sub: 'sub-student-001' });
+      const token = signJwt(claims);
 
       const response = await handler({
         rawPath: '/api/v3/me',
@@ -106,7 +122,7 @@ describe('Issue #64: Authenticated /me and Session Context Endpoint', () => {
           'x-role': 'ADMIN',
           'x-student-id': 'spoofed-student-id'
         },
-        requestContext: { http: { method: 'GET' } }
+        requestContext: authorizerRequestContext(claims)
       });
 
       expect(response.statusCode).toBe(200);
@@ -185,7 +201,7 @@ describe('Issue #64: Authenticated /me and Session Context Endpoint', () => {
 
       const handler = buildHandlerWithPool(mockPool);
       const response = await handler({
-        rawPath: '/api/me',
+        rawPath: '/api/v3/me',
         requestContext: {
           http: { method: 'GET' },
           authorizer: {
@@ -252,12 +268,11 @@ describe('Issue #64: Authenticated /me and Session Context Endpoint', () => {
       };
 
       const handler = buildHandlerWithPool(mockPool);
-      const token = signJwt(makeAccessClaims({ sub: 'sub-advisor-001' }));
+      const tokenClaims = makeAccessClaims({ sub: 'sub-advisor-001' });
 
       const response = await handler({
-        rawPath: '/me',
-        headers: { authorization: `Bearer ${token}` },
-        requestContext: { http: { method: 'GET' } }
+        rawPath: '/api/v3/me',
+        requestContext: authorizerRequestContext(tokenClaims)
       });
 
       expect(response.statusCode).toBe(200);
@@ -299,12 +314,11 @@ describe('Issue #64: Authenticated /me and Session Context Endpoint', () => {
       };
 
       const handler = buildHandlerWithPool(mockPool);
-      const token = signJwt(makeAccessClaims({ sub: 'sub-admin-001' }));
+      const tokenClaims = makeAccessClaims({ sub: 'sub-admin-001' });
 
       const response = await handler({
         rawPath: '/api/v3/me',
-        headers: { authorization: `Bearer ${token}` },
-        requestContext: { http: { method: 'GET' } }
+        requestContext: authorizerRequestContext(tokenClaims)
       });
 
       expect(response.statusCode).toBe(200);
@@ -343,11 +357,10 @@ describe('Issue #64: Authenticated /me and Session Context Endpoint', () => {
       });
 
       // Expired token
-      const expiredToken = signJwt(makeAccessClaims({ exp: 1000 }));
+      const expiredTokenClaims = makeAccessClaims({ exp: 1000 });
       const resExpired = await handler({
         rawPath: '/api/v3/me',
-        headers: { authorization: `Bearer ${expiredToken}` },
-        requestContext: { http: { method: 'GET' } }
+        requestContext: authorizerRequestContext(expiredTokenClaims)
       });
       expect(resExpired.statusCode).toBe(401);
       expect(JSON.parse(resExpired.body)).toEqual({
@@ -356,6 +369,28 @@ describe('Issue #64: Authenticated /me and Session Context Endpoint', () => {
           message: 'Authentication required.'
         }
       });
+
+      // Validly signed Bearer token without API Gateway authorizer claims (#48 trust boundary)
+      const resBearerOnly = await handler({
+        rawPath: '/api/v3/me',
+        headers: { authorization: `Bearer ${signJwt(makeAccessClaims())}` },
+        requestContext: { http: { method: 'GET' } }
+      });
+      expect(resBearerOnly.statusCode).toBe(401);
+      expect(mockPool.query).not.toHaveBeenCalled();
+    });
+
+    it('serves the session endpoint only at the canonical /api/v3/me path', async () => {
+      const handler = buildHandlerWithPool({ query: jest.fn() });
+
+      for (const legacyPath of ['/api/me', '/me']) {
+        const response = await handler({
+          rawPath: legacyPath,
+          requestContext: authorizerRequestContext(makeAccessClaims())
+        });
+        expect(response.statusCode).toBe(404);
+        expect(JSON.parse(response.body).error.code).toBe('ROUTE_NOT_FOUND');
+      }
     });
 
     it('returns 403 FORBIDDEN for unlinked, revoked, disabled, or incomplete-student identities', async () => {
@@ -364,12 +399,11 @@ describe('Issue #64: Authenticated /me and Session Context Endpoint', () => {
         query: jest.fn().mockResolvedValue({ rows: [] })
       };
       const handlerUnlinked = buildHandlerWithPool(mockPoolUnlinked);
-      const token = signJwt(makeAccessClaims({ sub: 'unlinked-sub' }));
+      const tokenClaims = makeAccessClaims({ sub: 'unlinked-sub' });
 
       const resUnlinked = await handlerUnlinked({
         rawPath: '/api/v3/me',
-        headers: { authorization: `Bearer ${token}` },
-        requestContext: { http: { method: 'GET' } }
+        requestContext: authorizerRequestContext(tokenClaims)
       });
       expect(resUnlinked.statusCode).toBe(403);
       expect(JSON.parse(resUnlinked.body)).toEqual({
@@ -394,8 +428,7 @@ describe('Issue #64: Authenticated /me and Session Context Endpoint', () => {
       const handlerDisabled = buildHandlerWithPool(mockPoolDisabled);
       const resDisabled = await handlerDisabled({
         rawPath: '/api/v3/me',
-        headers: { authorization: `Bearer ${token}` },
-        requestContext: { http: { method: 'GET' } }
+        requestContext: authorizerRequestContext(tokenClaims)
       });
       expect(resDisabled.statusCode).toBe(403);
       expect(JSON.parse(resDisabled.body)).toEqual({
@@ -419,13 +452,12 @@ describe('Issue #64: Authenticated /me and Session Context Endpoint', () => {
         })
       };
       const handler = buildHandlerWithPool(mockPool);
-      const token = signJwt(makeAccessClaims({ sub: 'staff-sub' }));
+      const tokenClaims = makeAccessClaims({ sub: 'staff-sub' });
 
       const response = await handler({
         rawPath: '/api/v3/me',
         rawQueryString: 'role=ADMIN',
-        headers: { authorization: `Bearer ${token}` },
-        requestContext: { http: { method: 'GET' } }
+        requestContext: authorizerRequestContext(tokenClaims)
       });
 
       expect(response.statusCode).toBe(400);
