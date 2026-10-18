@@ -1,9 +1,17 @@
+/**
+ * Student own Plan submission client for CO-ED V3 (#76).
+ * Uses the backend contracts in docs/api/v3-shared-contract.md:
+ * - GET  /api/v3/plans                    own Plans (#66, section 3.7)
+ * - GET  /api/v3/plans/:planId/history    audit-derived history (#76, section 3.10)
+ * - POST /api/v3/plans/:planId/submit     { expected_version, operation_id } (#69, section 3.9)
+ * - GET  /api/companies/:id, /api/positions/:id   public display names (V2 directory)
+ */
+
 export const STUDENT_PLAN_ERROR_CODES = Object.freeze({
   CONFIGURATION: 'CONFIGURATION',
   SESSION_EXPIRED: 'SESSION_EXPIRED',
   ACCESS_DENIED: 'ACCESS_DENIED',
   NOT_FOUND: 'NOT_FOUND',
-  INCOMPLETE_PLAN: 'INCOMPLETE_PLAN',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   STALE_RECORD_CONFLICT: 'STALE_RECORD_CONFLICT',
   INVALID_STATE_TRANSITION: 'INVALID_STATE_TRANSITION',
@@ -11,19 +19,18 @@ export const STUDENT_PLAN_ERROR_CODES = Object.freeze({
   SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE'
 });
 
+// Workflow states from #54
 export const PLAN_STATUSES = Object.freeze({
   DRAFT: 'DRAFT',
   SUBMITTED: 'SUBMITTED',
   UNDER_REVIEW: 'UNDER_REVIEW',
-  RETURNED_FOR_REVISION: 'RETURNED_FOR_REVISION',
+  NEEDS_REVISION: 'NEEDS_REVISION',
   APPROVED: 'APPROVED',
   CANCELLED: 'CANCELLED'
 });
 
-export const SUBMITTABLE_PLAN_STATUS_SET = new Set([
-  PLAN_STATUSES.DRAFT,
-  PLAN_STATUSES.RETURNED_FOR_REVISION
-]);
+// Student may submit (#54) and edit content (#52 section 7) only in these states
+export const SUBMITTABLE_PLAN_STATUS_SET = new Set([PLAN_STATUSES.DRAFT, PLAN_STATUSES.NEEDS_REVISION]);
 
 export const READ_ONLY_PLAN_STATUS_SET = new Set([
   PLAN_STATUSES.SUBMITTED,
@@ -34,40 +41,44 @@ export const READ_ONLY_PLAN_STATUS_SET = new Set([
 
 const VALID_PLAN_STATUS_SET = new Set(Object.values(PLAN_STATUSES));
 
+// Plan response allowlist from #66 plus public display names resolved by this client
 export const ALLOWED_PLAN_FIELDS = Object.freeze([
   'id',
-  'student_id',
+  'cycle_id',
   'company_id',
-  'company_name',
-  'academic_year',
-  'semester',
-  'position_title',
-  'job_description',
-  'start_date',
-  'end_date',
+  'position_id',
+  'notes',
   'status',
-  'return_reason',
-  'submitted_at',
-  'reviewed_at',
-  'approved_at',
-  'cancelled_at',
+  'version',
   'created_at',
-  'updated_at',
-  'version'
+  'updated_at'
 ]);
 
+// Required before submit per #52 section 3. Cycle OPEN and public Company/Position are
+// re-validated by the server at submit time; the UI only checks presence.
 const REQUIRED_READINESS_FIELDS = Object.freeze([
-  { field: 'academic_year', label: 'ปีการศึกษา' },
-  { field: 'semester', label: 'ภาคการศึกษา' },
+  { field: 'cycle_id', label: 'รอบการสมัคร (Cycle)' },
   { field: 'company_id', label: 'สถานประกอบการ' },
-  { field: 'position_title', label: 'ตำแหน่งงานสหกิจ' },
-  { field: 'job_description', label: 'รายละเอียดงานโดยสังเขป' },
-  { field: 'start_date', label: 'วันเริ่มปฏิบัติงาน' },
-  { field: 'end_date', label: 'วันสิ้นสุดการปฏิบัติงาน' }
+  { field: 'position_id', label: 'ตำแหน่งงาน' }
 ]);
 
-const MAX_SUBMIT_NOTE_LENGTH = 500;
-const CONTROL_CHAR_REGEX = /[\u0000-\u001F\u007F]/;
+export const HISTORY_ACTION_LABELS = Object.freeze({
+  PLAN_CREATED: 'สร้างแผน',
+  PLAN_DRAFT_UPDATED: 'แก้ไขข้อมูลแผน',
+  PLAN_SUBMITTED: 'ส่งแผน',
+  PLAN_REVIEW_STARTED: 'เริ่มตรวจแผน',
+  PLAN_RETURNED: 'ส่งกลับให้แก้ไข',
+  PLAN_APPROVED: 'อนุมัติแผน',
+  PLAN_CANCELLED: 'ยกเลิกแผน'
+});
+
+const ACTOR_ROLE_LABELS = Object.freeze({
+  STUDENT: 'นักศึกษา (เจ้าของแผน)',
+  STAFF: 'เจ้าหน้าที่สหกิจศึกษา',
+  ADVISOR: 'อาจารย์ที่ปรึกษา',
+  ADMIN: 'ผู้ดูแลระบบ',
+  SYSTEM: 'ระบบ CO-ED'
+});
 
 export class StudentPlanError extends Error {
   constructor(code, message = 'Student plan request failed.', details = []) {
@@ -79,177 +90,74 @@ export class StudentPlanError extends Error {
 }
 
 function isPresentValue(value) {
-  if (value === null || value === undefined) {
-    return false;
-  }
-  if (typeof value === 'string') {
-    return value.trim().length > 0;
-  }
-  if (typeof value === 'number') {
-    return Number.isFinite(value);
-  }
-  return true;
+  return typeof value === 'string' ? value.trim().length > 0 : value !== null && value !== undefined;
 }
 
 export function evaluatePlanReadiness(plan) {
-  if (!plan || typeof plan !== 'object') {
-    return Object.freeze({
-      isSubmittableStatus: false,
-      isComplete: false,
-      canSubmit: false,
-      isReadOnly: true,
-      missingFields: REQUIRED_READINESS_FIELDS.map((item) => ({
-        field: item.field,
-        label: item.label,
-        issue: `ยังไม่ได้ระบุ${item.label}`
-      }))
-    });
-  }
+  const missingFields = REQUIRED_READINESS_FIELDS
+    .filter((item) => !plan || !isPresentValue(plan[item.field]))
+    .map((item) => ({ field: item.field, label: item.label, issue: `ยังไม่ได้ระบุ${item.label}` }));
 
-  const isSubmittableStatus = SUBMITTABLE_PLAN_STATUS_SET.has(plan.status);
-  const isReadOnly = READ_ONLY_PLAN_STATUS_SET.has(plan.status);
-  const missingFields = [];
-
-  for (const item of REQUIRED_READINESS_FIELDS) {
-    if (!isPresentValue(plan[item.field])) {
-      missingFields.push({
-        field: item.field,
-        label: item.label,
-        issue: `ยังไม่ได้ระบุ${item.label}`
-      });
-    }
-  }
-
-  if (isPresentValue(plan.start_date) && isPresentValue(plan.end_date)) {
-    const startMs = Date.parse(String(plan.start_date));
-    const endMs = Date.parse(String(plan.end_date));
-    if (Number.isNaN(startMs) || Number.isNaN(endMs) || startMs > endMs) {
-      missingFields.push({
-        field: 'end_date',
-        label: 'ช่วงเวลาปฏิบัติงาน',
-        issue: 'วันสิ้นสุดการปฏิบัติงานต้องไม่ก่อนวันเริ่มปฏิบัติงาน'
-      });
-    }
-  }
-
+  const isSubmittableStatus = Boolean(plan) && SUBMITTABLE_PLAN_STATUS_SET.has(plan.status);
   const isComplete = missingFields.length === 0;
   return Object.freeze({
     isSubmittableStatus,
     isComplete,
     canSubmit: isSubmittableStatus && isComplete,
-    isReadOnly,
+    isReadOnly: !plan || READ_ONLY_PLAN_STATUS_SET.has(plan.status),
     missingFields: Object.freeze(missingFields)
   });
 }
 
-export function validateSubmissionNote(rawNote) {
-  if (rawNote === null || rawNote === undefined) {
-    return Object.freeze({ valid: true, value: null, error: null });
-  }
-
-  if (typeof rawNote !== 'string') {
-    return Object.freeze({
-      valid: false,
-      value: null,
-      error: 'หมายเหตุประกอบการส่งแผนต้องเป็นข้อความ'
-    });
-  }
-
-  const trimmed = rawNote.trim();
-  if (CONTROL_CHAR_REGEX.test(trimmed)) {
-    return Object.freeze({
-      valid: false,
-      value: null,
-      error: 'หมายเหตุประกอบการส่งแผนต้องไม่มีอักขระควบคุม'
-    });
-  }
-
-  if (trimmed.length > MAX_SUBMIT_NOTE_LENGTH) {
-    return Object.freeze({
-      valid: false,
-      value: null,
-      error: `หมายเหตุประกอบการส่งแผนต้องไม่เกิน ${MAX_SUBMIT_NOTE_LENGTH} ตัวอักษร`
-    });
-  }
-
-  return Object.freeze({
-    valid: true,
-    value: trimmed.length === 0 ? null : trimmed,
-    error: null
-  });
-}
-
-function inferActorLabel(entry) {
-  if (typeof entry?.actor_label === 'string' && entry.actor_label.trim() !== '') {
-    return entry.actor_label.trim();
-  }
-
-  const role = String(entry?.actor_role || entry?.role || '').toUpperCase();
-  if (role === 'STUDENT') {
-    return 'นักศึกษา (เจ้าของแผน)';
-  }
-  if (role === 'STAFF') {
-    return 'เจ้าหน้าที่สหกิจศึกษา';
-  }
-  if (role === 'ADVISOR') {
-    return 'อาจารย์ที่ปรึกษา';
-  }
-
-  const toStatus = entry?.to_status;
-  if (toStatus === PLAN_STATUSES.SUBMITTED || toStatus === PLAN_STATUSES.DRAFT) {
-    return 'นักศึกษา (เจ้าของแผน)';
-  }
-  if (
-    toStatus === PLAN_STATUSES.UNDER_REVIEW ||
-    toStatus === PLAN_STATUSES.RETURNED_FOR_REVISION ||
-    toStatus === PLAN_STATUSES.APPROVED
-  ) {
-    return 'เจ้าหน้าที่สหกิจศึกษา';
-  }
-
-  return 'ระบบ CO-ED';
-}
-
+/**
+ * Allowlists one history entry from GET /api/v3/plans/:planId/history (#50):
+ * no actor ids, operation ids or correlation ids reach the UI.
+ */
 export function sanitizeStatusHistoryEntry(entry) {
-  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry) || typeof entry.action !== 'string') {
     throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
   }
+  const state = (value) => (typeof value === 'string' && VALID_PLAN_STATUS_SET.has(value) ? value : null);
+  const role = typeof entry.actor_role === 'string' ? entry.actor_role.toUpperCase() : '';
 
-  if (typeof entry.to_status !== 'string' || !VALID_PLAN_STATUS_SET.has(entry.to_status)) {
-    throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
-  }
-
-  // Deliberately omit raw actor_user_id, email, external_subject, or private metadata (#76 AC)
   return Object.freeze({
-    id: typeof entry.id === 'string' ? entry.id : null,
-    plan_id: typeof entry.plan_id === 'string' ? entry.plan_id : null,
-    from_status:
-      typeof entry.from_status === 'string' && VALID_PLAN_STATUS_SET.has(entry.from_status)
-        ? entry.from_status
-        : null,
-    to_status: entry.to_status,
-    actor_label: inferActorLabel(entry),
-    reason: typeof entry.reason === 'string' && entry.reason.trim() !== '' ? entry.reason.trim() : null,
+    id: typeof entry.event_id === 'string' ? entry.event_id : null,
+    action: entry.action,
+    action_label: HISTORY_ACTION_LABELS[entry.action] || entry.action,
+    from_status: state(entry.from_state),
+    to_status: state(entry.to_state),
+    actor_label: ACTOR_ROLE_LABELS[role] || 'ระบบ CO-ED',
+    reason: typeof entry.review_notes === 'string' && entry.review_notes.trim() !== ''
+      ? entry.review_notes.trim()
+      : null,
     created_at: typeof entry.created_at === 'string' ? entry.created_at : null
   });
 }
 
 export function sanitizeStatusHistory(entries) {
   if (!Array.isArray(entries)) {
-    return Object.freeze([]);
-  }
-  return Object.freeze(entries.map((entry) => sanitizeStatusHistoryEntry(entry)));
-}
-
-export function sanitizePlanRecord(rawPlan) {
-  if (!rawPlan || typeof rawPlan !== 'object' || Array.isArray(rawPlan)) {
     throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
   }
+  return Object.freeze(entries.map(sanitizeStatusHistoryEntry));
+}
 
+/** Review comment of the latest return, shown while the Plan is NEEDS_REVISION. */
+export function findLatestReturnReason(statusHistory) {
+  for (let index = statusHistory.length - 1; index >= 0; index -= 1) {
+    if (statusHistory[index].action === 'PLAN_RETURNED') {
+      return statusHistory[index].reason;
+    }
+  }
+  return null;
+}
+
+export function sanitizePlanRecord(rawPlan, display = {}) {
   if (
+    !rawPlan ||
+    typeof rawPlan !== 'object' ||
+    Array.isArray(rawPlan) ||
     typeof rawPlan.id !== 'string' ||
     rawPlan.id.trim() === '' ||
-    typeof rawPlan.status !== 'string' ||
     !VALID_PLAN_STATUS_SET.has(rawPlan.status) ||
     !Number.isInteger(rawPlan.version) ||
     rawPlan.version < 1
@@ -261,19 +169,27 @@ export function sanitizePlanRecord(rawPlan) {
   for (const field of ALLOWED_PLAN_FIELDS) {
     sanitized[field] = rawPlan[field] === undefined ? null : rawPlan[field];
   }
-
+  sanitized.company_name = display.companyName ?? null;
+  sanitized.position_title = display.positionTitle ?? null;
   return Object.freeze(sanitized);
 }
 
-function buildApiUrl(apiBaseUrl, currentOrigin, pathSuffix) {
+/** The Plan to work on: newest non-cancelled one (GET /api/v3/plans is newest first). */
+export function selectCurrentPlan(plans) {
+  if (!Array.isArray(plans) || plans.length === 0) {
+    return null;
+  }
+  return plans.find((plan) => plan?.status !== PLAN_STATUSES.CANCELLED) || plans[0];
+}
+
+function buildApiUrl(apiBaseUrl, currentOrigin, pathSuffix, query = '') {
   if (typeof apiBaseUrl !== 'string' || apiBaseUrl.trim() === '') {
     throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.CONFIGURATION);
   }
-
   try {
     const baseUrl = new URL(apiBaseUrl, currentOrigin);
     baseUrl.pathname = `${baseUrl.pathname.replace(/\/$/, '')}${pathSuffix}`;
-    baseUrl.search = '';
+    baseUrl.search = query;
     baseUrl.hash = '';
     return baseUrl.href;
   } catch {
@@ -281,6 +197,7 @@ function buildApiUrl(apiBaseUrl, currentOrigin, pathSuffix) {
   }
 }
 
+/** Maps the shared error contract (#55, sections 3.7–3.10) to UI error codes. */
 async function parsePlanErrorResponse(response) {
   let payload = null;
   try {
@@ -288,78 +205,40 @@ async function parsePlanErrorResponse(response) {
   } catch {
     payload = null;
   }
-
   const errorCode = payload?.error?.code;
   const details = Array.isArray(payload?.error?.details) ? payload.error.details : [];
 
-  if (response.status === 401) {
-    return new StudentPlanError(STUDENT_PLAN_ERROR_CODES.SESSION_EXPIRED);
-  }
-
-  if (response.status === 403) {
-    return new StudentPlanError(STUDENT_PLAN_ERROR_CODES.ACCESS_DENIED);
-  }
-
-  if (response.status === 404) {
-    return new StudentPlanError(STUDENT_PLAN_ERROR_CODES.NOT_FOUND);
-  }
-
-  if (response.status === 409) {
-    if (errorCode === 'INVALID_STATE_TRANSITION') {
+  switch (response.status) {
+    case 401:
+      return new StudentPlanError(STUDENT_PLAN_ERROR_CODES.SESSION_EXPIRED);
+    case 403:
+      return new StudentPlanError(STUDENT_PLAN_ERROR_CODES.ACCESS_DENIED);
+    case 404:
+      return new StudentPlanError(STUDENT_PLAN_ERROR_CODES.NOT_FOUND);
+    case 409:
+      // STALE_RECORD_CONFLICT or IDEMPOTENCY_KEY_REUSED: either way the UI must reload
+      return new StudentPlanError(
+        STUDENT_PLAN_ERROR_CODES.STALE_RECORD_CONFLICT,
+        errorCode === 'IDEMPOTENCY_KEY_REUSED'
+          ? 'คำขอส่งแผนนี้ถูกใช้ไปแล้ว กรุณาโหลดข้อมูลแผนล่าสุดก่อนดำเนินการใหม่'
+          : 'ข้อมูลแผนสหกิจถูกอัปเดตจากหน้าต่างหรือคำสั่งอื่น กรุณาโหลดข้อมูลล่าสุดก่อนดำเนินการใหม่',
+        details
+      );
+    case 422:
       return new StudentPlanError(
         STUDENT_PLAN_ERROR_CODES.INVALID_STATE_TRANSITION,
-        'สถานะของแผนสหกิจในปัจจุบันไม่อนุญาตให้ส่งแผนซ้ำ กรุณาโหลดข้อมูลแผนล่าสุด',
+        'สถานะของแผนสหกิจในปัจจุบันไม่อนุญาตให้ส่งแผน กรุณาโหลดข้อมูลแผนล่าสุด',
         details
       );
-    }
-
-    return new StudentPlanError(
-      STUDENT_PLAN_ERROR_CODES.STALE_RECORD_CONFLICT,
-      'ข้อมูลแผนสหกิจถูกอัปเดตจากหน้าต่างหรือคำสั่งอื่น กรุณาโหลดข้อมูลล่าสุดก่อนดำเนินการใหม่',
-      details
-    );
-  }
-
-  if (response.status === 400 || response.status === 422) {
-    if (errorCode === 'INCOMPLETE_PLAN') {
+    case 400:
       return new StudentPlanError(
-        STUDENT_PLAN_ERROR_CODES.INCOMPLETE_PLAN,
-        'ข้อมูลแผนสหกิจยังไม่ครบถ้วนตามเงื่อนไขการส่งแผน',
+        STUDENT_PLAN_ERROR_CODES.VALIDATION_ERROR,
+        'ข้อมูลแผนสหกิจยังไม่ผ่านเงื่อนไขการส่งแผน (ต้องมีรอบที่เปิดรับ สถานประกอบการ และตำแหน่งงานที่เปิดเผย)',
         details
       );
-    }
-
-    return new StudentPlanError(
-      STUDENT_PLAN_ERROR_CODES.VALIDATION_ERROR,
-      'ข้อมูลที่ส่งไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง',
-      details
-    );
+    default:
+      return new StudentPlanError(STUDENT_PLAN_ERROR_CODES.SERVICE_UNAVAILABLE);
   }
-
-  return new StudentPlanError(STUDENT_PLAN_ERROR_CODES.SERVICE_UNAVAILABLE);
-}
-
-function normalizePlanBundle(data) {
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
-  }
-
-  const rawPlan = data.plan && typeof data.plan === 'object' ? data.plan : data;
-  const plan = sanitizePlanRecord(rawPlan);
-
-  let rawHistory = [];
-  if (Array.isArray(data.statusHistory)) {
-    rawHistory = data.statusHistory;
-  } else if (Array.isArray(data.history)) {
-    rawHistory = data.history;
-  } else if (data.statusHistory && typeof data.statusHistory === 'object') {
-    rawHistory = [data.statusHistory];
-  } else if (Array.isArray(rawPlan.status_history)) {
-    rawHistory = rawPlan.status_history;
-  }
-
-  const statusHistory = sanitizeStatusHistory(rawHistory);
-  return Object.freeze({ plan, statusHistory });
 }
 
 export function createStudentPlanClient({
@@ -371,8 +250,8 @@ export function createStudentPlanClient({
   if (typeof getAccessToken !== 'function' || typeof fetchImpl !== 'function') {
     throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.CONFIGURATION);
   }
-
-  const ownPlanEndpoint = buildApiUrl(apiBaseUrl, currentOrigin, '/api/v3/plans/me');
+  // Fail fast on a bad configuration
+  buildApiUrl(apiBaseUrl, currentOrigin, '/api/v3/plans');
 
   async function requestToken() {
     try {
@@ -382,120 +261,127 @@ export function createStudentPlanClient({
       }
       return token;
     } catch (error) {
-      if (error instanceof StudentPlanError) {
-        throw error;
-      }
+      if (error instanceof StudentPlanError) throw error;
       throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.SESSION_EXPIRED);
     }
   }
 
+  async function requestJson(url, { method = 'GET', body, signal, authenticated = true } = {}) {
+    const headers = { Accept: 'application/json' };
+    if (authenticated) headers.Authorization = `Bearer ${await requestToken()}`;
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+
+    let response;
+    try {
+      response = await fetchImpl(url, {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal
+      });
+    } catch (error) {
+      if (error?.name === 'AbortError') throw error;
+      throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.SERVICE_UNAVAILABLE);
+    }
+    if (!response || typeof response.ok !== 'boolean' || !Number.isInteger(response.status)) {
+      throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
+    }
+    if (!response.ok) {
+      throw await parsePlanErrorResponse(response);
+    }
+    try {
+      return await response.json();
+    } catch {
+      throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
+    }
+  }
+
+  // Public directory names are display-only; a failure must not block the Plan view
+  async function fetchPublicName(pathSuffix, field, signal) {
+    try {
+      const payload = await requestJson(buildApiUrl(apiBaseUrl, currentOrigin, pathSuffix), {
+        signal,
+        authenticated: false
+      });
+      return typeof payload?.data?.[field] === 'string' ? payload.data[field] : null;
+    } catch (error) {
+      if (error?.name === 'AbortError') throw error;
+      return null;
+    }
+  }
+
+  async function resolveDisplayNames(plan, signal) {
+    const [companyName, positionTitle] = await Promise.all([
+      plan.company_id
+        ? fetchPublicName(`/api/companies/${encodeURIComponent(plan.company_id)}`, 'name', signal)
+        : null,
+      plan.position_id
+        ? fetchPublicName(`/api/positions/${encodeURIComponent(plan.position_id)}`, 'title', signal)
+        : null
+    ]);
+    return { companyName, positionTitle };
+  }
+
   return Object.freeze({
+    /**
+     * Loads the current own Plan and its history from the server.
+     * Resolves { plan: null, statusHistory: [] } when the Student has no Plan yet.
+     */
     async getOwnPlan({ signal } = {}) {
-      const accessToken = await requestToken();
-      let response;
-
-      try {
-        response = await fetchImpl(ownPlanEndpoint, {
-          method: 'GET',
-          headers: {
-            Accept: 'application/json',
-            Authorization: `Bearer ${accessToken}`
-          },
-          signal
-        });
-      } catch (error) {
-        if (error?.name === 'AbortError') {
-          throw error;
-        }
-        throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.SERVICE_UNAVAILABLE);
-      }
-
-      if (!response || typeof response.ok !== 'boolean' || !Number.isInteger(response.status)) {
+      const list = await requestJson(
+        buildApiUrl(apiBaseUrl, currentOrigin, '/api/v3/plans', '?pageSize=100'),
+        { signal }
+      );
+      if (!Array.isArray(list?.data)) {
         throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
       }
-
-      if (!response.ok) {
-        throw await parsePlanErrorResponse(response);
+      const current = selectCurrentPlan(list.data);
+      if (!current) {
+        return Object.freeze({ plan: null, statusHistory: Object.freeze([]) });
       }
 
-      let payload;
-      try {
-        payload = await response.json();
-      } catch {
-        throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
-      }
+      const [historyPayload, display] = await Promise.all([
+        requestJson(
+          buildApiUrl(apiBaseUrl, currentOrigin, `/api/v3/plans/${encodeURIComponent(current.id)}/history`),
+          { signal }
+        ),
+        resolveDisplayNames(current, signal)
+      ]);
 
-      return normalizePlanBundle(payload?.data);
+      return Object.freeze({
+        plan: sanitizePlanRecord(current, display),
+        statusHistory: sanitizeStatusHistory(historyPayload?.data)
+      });
     },
 
-    async submitPlan({ planId, version, reason = null, signal } = {}) {
+    /**
+     * Submits a Plan. The caller owns operationId and must reuse it when retrying the
+     * same click after a network failure (#52 section 9) so the server deduplicates it.
+     */
+    async submitPlan({ planId, expectedVersion, operationId, signal } = {}) {
       if (typeof planId !== 'string' || planId.trim() === '') {
         throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.VALIDATION_ERROR, 'ไม่พบรหัสแผนสหกิจศึกษา');
       }
-
-      if (!Number.isInteger(version) || version < 1) {
-        throw new StudentPlanError(
-          STUDENT_PLAN_ERROR_CODES.VALIDATION_ERROR,
-          'ไม่พบเลขเวอร์ชันของแผนสหกิจศึกษา'
-        );
+      if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
+        throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.VALIDATION_ERROR, 'ไม่พบเลขเวอร์ชันของแผนสหกิจศึกษา');
+      }
+      if (typeof operationId !== 'string' || operationId.trim() === '') {
+        throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.VALIDATION_ERROR, 'ไม่พบรหัสคำขอส่งแผน');
       }
 
-      const noteValidation = validateSubmissionNote(reason);
-      if (!noteValidation.valid) {
-        throw new StudentPlanError(
-          STUDENT_PLAN_ERROR_CODES.VALIDATION_ERROR,
-          noteValidation.error,
-          [{ field: 'reason', issue: noteValidation.error }]
-        );
-      }
-
-      const submitEndpoint = buildApiUrl(
-        apiBaseUrl,
-        currentOrigin,
-        `/api/v3/plans/${encodeURIComponent(planId.trim())}/submit`
-      );
-      const accessToken = await requestToken();
-
-      const requestBody = { version };
-      if (noteValidation.value !== null) {
-        requestBody.reason = noteValidation.value;
-      }
-
-      let response;
-      try {
-        response = await fetchImpl(submitEndpoint, {
+      const payload = await requestJson(
+        buildApiUrl(apiBaseUrl, currentOrigin, `/api/v3/plans/${encodeURIComponent(planId.trim())}/submit`),
+        {
           method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`
-          },
-          body: JSON.stringify(requestBody),
+          body: { expected_version: expectedVersion, operation_id: operationId },
           signal
-        });
-      } catch (error) {
-        if (error?.name === 'AbortError') {
-          throw error;
         }
-        throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.SERVICE_UNAVAILABLE);
-      }
-
-      if (!response || typeof response.ok !== 'boolean' || !Number.isInteger(response.status)) {
-        throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
-      }
-
-      if (!response.ok) {
-        throw await parsePlanErrorResponse(response);
-      }
-
-      let payload;
-      try {
-        payload = await response.json();
-      } catch {
-        throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
-      }
-
-      return normalizePlanBundle(payload?.data);
+      );
+      return Object.freeze({
+        status: payload?.data?.status ?? null,
+        version: payload?.data?.version ?? null,
+        idempotentReplay: Boolean(payload?.data?.idempotent_replay)
+      });
     }
   });
 }

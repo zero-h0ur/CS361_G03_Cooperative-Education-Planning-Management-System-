@@ -3,7 +3,6 @@
 const {
   PLAN_STATUSES,
   STUDENT_PLAN_ERROR_CODES,
-  StudentPlanError,
   createStudentPlanClient,
   evaluatePlanReadiness
 } = require('../tmp/frontend-test-modules/student/plan-submission-client.cjs');
@@ -11,390 +10,335 @@ const {
   createShellApp
 } = require('../tmp/frontend-test-modules/shell-app.cjs');
 
-const READY_DRAFT_PLAN = Object.freeze({
-  id: '30000000-0000-4000-8000-000000000201',
-  student_id: '20000000-0000-4000-8000-000000000101',
-  company_id: '40000000-0000-4000-8000-000000000301',
-  company_name: 'บริษัท เทคโนโลยีไทย จำกัด',
-  academic_year: 2569,
-  semester: 1,
-  position_title: 'Software Engineer Intern',
-  job_description: 'พัฒนาและทดสอบระบบบริการข้อมูลสหกิจศึกษา',
-  start_date: '2026-06-01',
-  end_date: '2026-09-30',
-  status: PLAN_STATUSES.DRAFT,
-  return_reason: null,
-  submitted_at: null,
-  reviewed_at: null,
-  approved_at: null,
-  cancelled_at: null,
-  created_at: '2026-02-01T08:00:00.000Z',
-  updated_at: '2026-02-02T09:00:00.000Z',
-  version: 1
-});
+const API = 'https://api.example.com';
+const ORIGIN = 'https://app.example.com';
+const CYCLE_ID = '30000000-0000-4000-8000-000000000101';
+const COMPANY_ID = '10000000-0000-4000-8000-000000000001';
+const POSITION_ID = '20000000-0000-4000-8000-000000000001';
+const PLAN_ID = '50000000-0000-4000-8000-000000000105';
 
-const INITIAL_HISTORY = Object.freeze([
-  {
-    id: '50000000-0000-4000-8000-000000000501',
-    plan_id: READY_DRAFT_PLAN.id,
-    from_status: null,
-    to_status: PLAN_STATUSES.DRAFT,
-    actor_label: 'นักศึกษา (เจ้าของแผน)',
-    reason: 'สร้างแผนสหกิจศึกษาฉบับร่าง',
-    created_at: '2026-02-01T08:00:00.000Z'
-  }
-]);
-
-function jsonResponse(status, payload) {
+// Plan shape returned by GET /api/v3/plans (#66, contract section 3.7)
+function planRow(overrides = {}) {
   return {
-    ok: status >= 200 && status < 300,
-    status,
-    json: jest.fn().mockResolvedValue(payload)
+    id: PLAN_ID,
+    cycle_id: CYCLE_ID,
+    company_id: COMPANY_ID,
+    position_id: POSITION_ID,
+    notes: 'สนใจงานพัฒนาเว็บ',
+    status: PLAN_STATUSES.DRAFT,
+    version: 1,
+    created_at: '2026-10-01T10:00:00.000Z',
+    updated_at: '2026-10-01T10:00:00.000Z',
+    ...overrides
   };
 }
 
-function flushPromises() {
-  return new Promise((resolve) => setTimeout(resolve, 0));
+function historyRow(overrides = {}) {
+  return {
+    event_id: '91000000-0000-4000-8000-000000000001',
+    action: 'PLAN_CREATED',
+    from_state: null,
+    to_state: PLAN_STATUSES.DRAFT,
+    actor_role: 'STUDENT',
+    review_notes: null,
+    created_at: '2026-10-01T10:00:00.000Z',
+    ...overrides
+  };
 }
 
-function setupStudentPlanShell({
-  hash = '#/student/plan',
-  plan = READY_DRAFT_PLAN,
-  statusHistory = INITIAL_HISTORY,
-  getOwnPlan,
-  submitPlan
-} = {}) {
+function json(status, payload) {
+  return { ok: status >= 200 && status < 300, status, json: async () => payload };
+}
+
+/**
+ * In-memory backend that follows the V3 contracts (sections 3.7, 3.9, 3.10):
+ * version check, idempotent operation_id replay and server-side history.
+ */
+function createFakeBackend({ plans = [planRow()], history = [historyRow()], submitOverride } = {}) {
+  const state = { plans: plans.map((plan) => ({ ...plan })), history: [...history], operations: new Map() };
+  const calls = [];
+
+  const fetchImpl = jest.fn(async (url, init = {}) => {
+    const { pathname, searchParams } = new URL(url);
+    const method = init.method || 'GET';
+    const body = init.body ? JSON.parse(init.body) : undefined;
+    calls.push({ method, pathname, body, auth: init.headers?.Authorization || null, query: searchParams.toString() });
+
+    if (method === 'GET' && pathname === '/api/v3/plans') {
+      return json(200, { data: state.plans, pagination: { page: 1, pageSize: 100, total: state.plans.length, totalPages: 1 } });
+    }
+    const historyMatch = pathname.match(/^\/api\/v3\/plans\/([^/]+)\/history$/);
+    if (method === 'GET' && historyMatch) {
+      return json(200, { data: state.history.filter(() => true) });
+    }
+    // Public V2 directory: company detail has no positions; positions have their own route
+    if (method === 'GET' && pathname === `/api/companies/${COMPANY_ID}`) {
+      return json(200, { data: { id: COMPANY_ID, name: 'Mock Analytics Lab' } });
+    }
+    if (method === 'GET' && pathname === `/api/positions/${POSITION_ID}`) {
+      return json(200, { data: { id: POSITION_ID, company_id: COMPANY_ID, title: 'นักพัฒนาเว็บ' } });
+    }
+    const submitMatch = pathname.match(/^\/api\/v3\/plans\/([^/]+)\/submit$/);
+    if (method === 'POST' && submitMatch) {
+      if (submitOverride) return submitOverride(body, state);
+      const plan = state.plans.find((item) => item.id === submitMatch[1]);
+      const prior = state.operations.get(body.operation_id);
+      if (prior) return json(200, { data: { ...prior, idempotent_replay: true } });
+      if (!['DRAFT', 'NEEDS_REVISION'].includes(plan.status)) {
+        return json(422, { error: { code: 'INVALID_STATE_TRANSITION', message: 'x' } });
+      }
+      if (plan.version !== body.expected_version) {
+        return json(409, { error: { code: 'STALE_RECORD_CONFLICT', message: 'x', details: { expectedVersion: body.expected_version, currentVersion: plan.version } } });
+      }
+      const from = plan.status;
+      Object.assign(plan, { status: PLAN_STATUSES.SUBMITTED, version: plan.version + 1, updated_at: '2026-10-02T10:00:00.000Z' });
+      state.history.push(historyRow({
+        event_id: `91000000-0000-4000-8000-00000000000${state.history.length + 1}`,
+        action: 'PLAN_SUBMITTED',
+        from_state: from,
+        to_state: PLAN_STATUSES.SUBMITTED,
+        created_at: '2026-10-02T10:00:00.000Z'
+      }));
+      const result = { id: plan.id, status: plan.status, version: plan.version, idempotent_replay: false };
+      state.operations.set(body.operation_id, result);
+      return json(200, { data: result });
+    }
+    return json(404, { error: { code: 'ROUTE_NOT_FOUND', message: 'Route not found.' } });
+  });
+
+  return { fetchImpl, calls, state };
+}
+
+function createClient(backend) {
+  return createStudentPlanClient({
+    apiBaseUrl: API,
+    getAccessToken: jest.fn().mockResolvedValue('access-token'),
+    fetchImpl: backend.fetchImpl,
+    currentOrigin: ORIGIN
+  });
+}
+
+function flush(ms = 0) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function mountPlanPage(backend) {
   document.body.innerHTML = '<div id="authenticatedApp" aria-live="polite"></div>';
   window.sessionStorage.clear();
-
   const root = document.getElementById('authenticatedApp');
-  const location = { pathname: '/app.html', search: '', hash };
-  const eventTarget = new EventTarget();
-  const loadSession = jest.fn().mockResolvedValue({ role: 'STUDENT' });
-  const startLogin = jest.fn().mockResolvedValue(undefined);
-  const restartLogin = jest.fn().mockResolvedValue(undefined);
-  const logout = jest.fn().mockResolvedValue(undefined);
-
-  const studentPlanClient = {
-    getOwnPlan:
-      getOwnPlan ||
-      jest.fn().mockResolvedValue({
-        plan,
-        statusHistory
-      }),
-    submitPlan:
-      submitPlan ||
-      jest.fn().mockResolvedValue({
-        plan: {
-          ...plan,
-          status: PLAN_STATUSES.SUBMITTED,
-          submitted_at: '2026-02-10T10:00:00.000Z',
-          version: plan.version + 1
-        },
-        statusHistory: [
-          ...statusHistory,
-          {
-            id: '50000000-0000-4000-8000-000000000502',
-            plan_id: plan.id,
-            from_status: plan.status,
-            to_status: PLAN_STATUSES.SUBMITTED,
-            actor_label: 'นักศึกษา (เจ้าของแผน)',
-            reason: 'ส่งแผนสหกิจศึกษาให้เจ้าหน้าที่ตรวจสอบ',
-            created_at: '2026-02-10T10:00:00.000Z'
-          }
-        ]
-      })
-  };
-
   const app = createShellApp({
     root,
-    loadSession,
-    startLogin,
-    restartLogin,
-    logout,
-    location,
-    eventTarget,
+    loadSession: jest.fn().mockResolvedValue({ role: 'STUDENT' }),
+    startLogin: jest.fn(),
+    restartLogin: jest.fn(),
+    logout: jest.fn(),
+    location: { pathname: '/app.html', search: '', hash: '#/student/plan' },
+    eventTarget: new EventTarget(),
     storage: window.sessionStorage,
-    studentPlanClient
+    studentPlanClient: createClient(backend)
   });
-
-  return {
-    app,
-    root,
-    location,
-    studentPlanClient,
-    restartLogin,
-    logout
-  };
+  await app.start();
+  await flush(10);
+  return { app, root };
 }
 
-describe('Issue #76: Student Plan Submission Client & Readiness', () => {
-  it('evaluates readiness accurately and only allows submit for complete DRAFT or RETURNED_FOR_REVISION plans', () => {
-    expect(evaluatePlanReadiness(READY_DRAFT_PLAN)).toMatchObject({
-      isSubmittableStatus: true,
-      isComplete: true,
-      canSubmit: true,
-      isReadOnly: false,
-      missingFields: []
+const submitButton = (root) => root.querySelector('[data-role="submit-plan-button"]');
+const submitCalls = (backend) => backend.calls.filter((call) => call.method === 'POST');
+
+describe('Issue #76: Student Plan submission client (contract)', () => {
+  it('evaluates readiness from cycle/company/position and submittable states (#52, #54)', () => {
+    expect(evaluatePlanReadiness(planRow()).canSubmit).toBe(true);
+    expect(evaluatePlanReadiness(planRow({ status: PLAN_STATUSES.NEEDS_REVISION })).canSubmit).toBe(true);
+
+    const missing = evaluatePlanReadiness(planRow({ position_id: null }));
+    expect(missing.canSubmit).toBe(false);
+    expect(missing.missingFields.map((field) => field.field)).toEqual(['position_id']);
+
+    for (const status of [PLAN_STATUSES.SUBMITTED, PLAN_STATUSES.UNDER_REVIEW, PLAN_STATUSES.APPROVED, PLAN_STATUSES.CANCELLED]) {
+      const readiness = evaluatePlanReadiness(planRow({ status }));
+      expect(readiness.canSubmit).toBe(false);
+      expect(readiness.isReadOnly).toBe(true);
+    }
+  });
+
+  it('loads the newest non-cancelled own Plan, its history and public display names', async () => {
+    const backend = createFakeBackend({
+      plans: [planRow({ id: '50000000-0000-4000-8000-000000000999', status: 'CANCELLED' }), planRow()],
+      history: [historyRow({ actor_id: 'must-not-leak', operation_id: 'must-not-leak' })]
     });
 
-    const incompleteDraft = {
-      ...READY_DRAFT_PLAN,
-      company_id: null,
-      position_title: '   '
-    };
-    const incompleteResult = evaluatePlanReadiness(incompleteDraft);
-    expect(incompleteResult.canSubmit).toBe(false);
-    expect(incompleteResult.missingFields.map((m) => m.field)).toEqual([
-      'company_id',
-      'position_title'
-    ]);
+    const bundle = await createClient(backend).getOwnPlan();
 
-    const submittedPlan = {
-      ...READY_DRAFT_PLAN,
-      status: PLAN_STATUSES.SUBMITTED
-    };
-    expect(evaluatePlanReadiness(submittedPlan)).toMatchObject({
-      isSubmittableStatus: false,
-      isComplete: true,
-      canSubmit: false,
-      isReadOnly: true
+    expect(bundle.plan.id).toBe(PLAN_ID);
+    expect(bundle.plan.company_name).toBe('Mock Analytics Lab');
+    expect(bundle.plan.position_title).toBe('นักพัฒนาเว็บ');
+    expect(JSON.stringify(bundle.statusHistory)).not.toContain('must-not-leak');
+    expect(backend.calls.map((call) => `${call.method} ${call.pathname}`)).toEqual(expect.arrayContaining([
+      'GET /api/v3/plans',
+      `GET /api/v3/plans/${PLAN_ID}/history`,
+      `GET /api/companies/${COMPANY_ID}`,
+      `GET /api/positions/${POSITION_ID}`
+    ]));
+    // Protected endpoints carry the Access Token; the public directory does not
+    expect(backend.calls.find((call) => call.pathname === '/api/v3/plans').auth).toBe('Bearer access-token');
+    expect(backend.calls.find((call) => call.pathname.startsWith('/api/companies')).auth).toBeNull();
+  });
+
+  it('resolves no Plan when the Student has none yet', async () => {
+    const bundle = await createClient(createFakeBackend({ plans: [] })).getOwnPlan();
+    expect(bundle.plan).toBeNull();
+  });
+
+  it('submits with { expected_version, operation_id } only (#69 contract)', async () => {
+    const backend = createFakeBackend();
+    const result = await createClient(backend).submitPlan({
+      planId: PLAN_ID, expectedVersion: 1, operationId: '92000000-0000-4000-8000-000000000001'
+    });
+    expect(result.status).toBe(PLAN_STATUSES.SUBMITTED);
+    expect(submitCalls(backend)[0].body).toEqual({
+      expected_version: 1,
+      operation_id: '92000000-0000-4000-8000-000000000001'
     });
   });
 
-  it('calls POST /api/v3/plans/:planId/submit with Bearer token and strips private actor fields from history', async () => {
-    const fetchImpl = jest.fn().mockResolvedValue(
-      jsonResponse(200, {
-        data: {
-          plan: {
-            ...READY_DRAFT_PLAN,
-            status: PLAN_STATUSES.SUBMITTED,
-            version: 2,
-            private_internal_note: 'must-not-leak'
-          },
-          statusHistory: {
-            id: '50000000-0000-4000-8000-000000000599',
-            plan_id: READY_DRAFT_PLAN.id,
-            from_status: PLAN_STATUSES.DRAFT,
-            to_status: PLAN_STATUSES.SUBMITTED,
-            actor_user_id: 'secret-actor-uuid-999',
-            actor_role: 'STUDENT',
-            external_subject: 'cognito-sub-secret',
-            reason: 'พร้อมรับการตรวจ',
-            created_at: '2026-02-10T10:00:00.000Z'
-          }
-        }
-      })
-    );
-
-    const client = createStudentPlanClient({
-      apiBaseUrl: 'https://api.example.com',
-      currentOrigin: 'https://app.example.com',
-      getAccessToken: jest.fn().mockResolvedValue('student-token-123'),
-      fetchImpl
-    });
-
-    const result = await client.submitPlan({
-      planId: READY_DRAFT_PLAN.id,
-      version: 1,
-      reason: '  พร้อมรับการตรวจ  '
-    });
-
-    expect(fetchImpl).toHaveBeenCalledWith(
-      `https://api.example.com/api/v3/plans/${READY_DRAFT_PLAN.id}/submit`,
-      expect.objectContaining({
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer student-token-123'
-        },
-        body: JSON.stringify({
-          version: 1,
-          reason: 'พร้อมรับการตรวจ'
-        })
-      })
-    );
-
-    expect(result.plan.status).toBe(PLAN_STATUSES.SUBMITTED);
-    expect(result.plan.version).toBe(2);
-    expect(result.plan.private_internal_note).toBeUndefined();
-    expect(result.statusHistory).toHaveLength(1);
-    expect(result.statusHistory[0].actor_label).toBe('นักศึกษา (เจ้าของแผน)');
-    expect(result.statusHistory[0].actor_user_id).toBeUndefined();
-    expect(result.statusHistory[0].external_subject).toBeUndefined();
+  it.each([
+    [422, 'INVALID_STATE_TRANSITION', STUDENT_PLAN_ERROR_CODES.INVALID_STATE_TRANSITION],
+    [409, 'STALE_RECORD_CONFLICT', STUDENT_PLAN_ERROR_CODES.STALE_RECORD_CONFLICT],
+    [409, 'IDEMPOTENCY_KEY_REUSED', STUDENT_PLAN_ERROR_CODES.STALE_RECORD_CONFLICT],
+    [400, 'VALIDATION_ERROR', STUDENT_PLAN_ERROR_CODES.VALIDATION_ERROR],
+    [401, 'UNAUTHORIZED', STUDENT_PLAN_ERROR_CODES.SESSION_EXPIRED],
+    [403, 'FORBIDDEN', STUDENT_PLAN_ERROR_CODES.ACCESS_DENIED],
+    [503, 'SERVICE_UNAVAILABLE', STUDENT_PLAN_ERROR_CODES.SERVICE_UNAVAILABLE]
+  ])('maps HTTP %i %s to %s', async (status, code, expected) => {
+    const backend = createFakeBackend({ submitOverride: () => json(status, { error: { code, message: 'x' } }) });
+    await expect(createClient(backend).submitPlan({
+      planId: PLAN_ID, expectedVersion: 1, operationId: '92000000-0000-4000-8000-000000000001'
+    })).rejects.toMatchObject({ code: expected });
   });
 });
 
-describe('Issue #76: Student Plan Submission, Current Status & History UI', () => {
-  it('disables submit and highlights missing fields when a DRAFT plan is incomplete', async () => {
-    const incompletePlan = {
-      ...READY_DRAFT_PLAN,
-      company_id: null,
-      company_name: null,
-      job_description: ''
-    };
-    const context = setupStudentPlanShell({ plan: incompletePlan });
+describe('Issue #76: Student Plan submission UI', () => {
+  it('disables submit and lists missing fields for an incomplete DRAFT', async () => {
+    const backend = createFakeBackend({ plans: [planRow({ company_id: null, position_id: null })] });
+    const { root } = await mountPlanPage(backend);
 
-    await context.app.start();
-    await flushPromises();
-
-    const submitButton = context.root.querySelector('[data-role="submit-plan-button"]');
-    expect(submitButton.disabled).toBe(true);
-    expect(context.root.querySelector('[data-role="plan-missing-fields"]').textContent).toContain(
-      'ยังไม่ได้ระบุสถานประกอบการ'
-    );
-    expect(context.root.querySelector('[data-role="plan-missing-fields"]').textContent).toContain(
-      'ยังไม่ได้ระบุรายละเอียดงานโดยสังเขป'
-    );
+    expect(submitButton(root).disabled).toBe(true);
+    expect(root.querySelector('[data-role="plan-missing-fields"]').textContent).toContain('สถานประกอบการ');
   });
 
-  it('prevents accidental duplicate submit while in flight, refreshes state/history from server, and locks fields as read-only after submit', async () => {
-    let resolveSubmit;
-    const pendingSubmit = new Promise((resolve) => {
-      resolveSubmit = resolve;
+  it('submits once while in flight, then refreshes state and history from the server and locks the Plan', async () => {
+    const backend = createFakeBackend();
+    const { root } = await mountPlanPage(backend);
+
+    expect(root.querySelector('[data-plan-field="company_display"]').textContent).toBe('Mock Analytics Lab');
+    const form = submitButton(root).closest('form');
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+    await flush(20);
+
+    expect(submitCalls(backend)).toHaveLength(1);
+    // Server state was re-read after submit (list + history requested again)
+    expect(backend.calls.filter((call) => call.pathname === '/api/v3/plans')).toHaveLength(2);
+    expect(root.querySelector('[data-role="plan-current-status"]').textContent).toContain('SUBMITTED');
+    expect(root.querySelector('.student-plan-workspace').dataset.planReadonly).toBe('true');
+    expect(submitButton(root).disabled).toBe(true);
+    expect(root.querySelector('[data-role="plan-history-list"]').textContent).toContain('ส่งแผน');
+  });
+
+  it('shows the latest return reason from history on NEEDS_REVISION and allows re-submit', async () => {
+    const backend = createFakeBackend({
+      plans: [planRow({ status: PLAN_STATUSES.NEEDS_REVISION, version: 3 })],
+      history: [historyRow({
+        action: 'PLAN_RETURNED',
+        from_state: 'UNDER_REVIEW',
+        to_state: 'NEEDS_REVISION',
+        actor_role: 'STAFF',
+        review_notes: 'กรุณาแนบหนังสือตอบรับ'
+      })]
     });
-    const submitPlan = jest.fn().mockReturnValue(pendingSubmit);
-    const context = setupStudentPlanShell({ submitPlan });
+    const { root } = await mountPlanPage(backend);
 
-    await context.app.start();
-    await flushPromises();
+    expect(root.querySelector('[data-role="plan-return-reason"]').textContent).toContain('กรุณาแนบหนังสือตอบรับ');
+    expect(submitButton(root).disabled).toBe(false);
+  });
 
-    const form = context.root.querySelector('form.student-profile-form');
-    const submitButton = context.root.querySelector('[data-role="submit-plan-button"]');
-    const noteInput = context.root.querySelector('#student-plan-submit-note');
-
-    expect(submitButton.disabled).toBe(false);
-    expect(context.root.querySelector('.student-plan-workspace').dataset.planReadonly).toBe('false');
-
-    noteInput.value = 'ส่งแผนครั้งที่ 1';
-    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    // Second accidental submit while first is still in flight:
-    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-
-    expect(submitPlan).toHaveBeenCalledTimes(1);
-    expect(submitButton.disabled).toBe(true);
-    expect(submitButton.textContent).toBe('กำลังส่งแผนสหกิจ...');
-
-    resolveSubmit({
-      plan: {
-        ...READY_DRAFT_PLAN,
-        status: PLAN_STATUSES.SUBMITTED,
-        version: 2
-      },
-      statusHistory: [
-        {
-          id: '50000000-0000-4000-8000-000000000502',
-          plan_id: READY_DRAFT_PLAN.id,
-          from_status: PLAN_STATUSES.DRAFT,
-          to_status: PLAN_STATUSES.SUBMITTED,
-          actor_label: 'นักศึกษา (เจ้าของแผน)',
-          reason: 'ส่งแผนครั้งที่ 1',
-          created_at: '2026-02-10T10:00:00.000Z'
-        }
-      ]
+  it('never shows a false success on 409 and reloads the latest server Plan on demand', async () => {
+    const backend = createFakeBackend({
+      submitOverride: () => json(409, { error: { code: 'STALE_RECORD_CONFLICT', message: 'x' } })
     });
-    await flushPromises();
+    const { root } = await mountPlanPage(backend);
 
-    // State and history updated strictly from server response
-    expect(context.root.querySelector('[data-role="plan-current-status"]').textContent).toContain(
-      'ส่งแผนแล้ว (SUBMITTED)'
-    );
-    expect(context.root.querySelector('[data-role="plan-version"]').textContent).toContain('v2');
-    expect(context.root.querySelector('.student-plan-workspace').dataset.planReadonly).toBe('true');
-    expect(context.root.querySelector('#student-plan-submit-note').readOnly).toBe(true);
-    expect(context.root.querySelector('[data-role="submit-plan-button"]').disabled).toBe(true);
+    submitButton(root).closest('form').dispatchEvent(new Event('submit', { cancelable: true }));
+    await flush(20);
 
-    const historyItems = context.root.querySelectorAll('.student-plan-history__item');
-    expect(historyItems).toHaveLength(2);
-    expect(historyItems[1].textContent).toContain('ฉบับร่าง (DRAFT) → ส่งแผนแล้ว (SUBMITTED)');
-    expect(historyItems[1].textContent).toContain('ผู้ดำเนินการ: นักศึกษา (เจ้าของแผน)');
-    expect(historyItems[1].textContent).toContain('ส่งแผนครั้งที่ 1');
+    const feedback = root.querySelector('[data-role="plan-submit-feedback"]');
+    expect(feedback.textContent).not.toContain('เรียบร้อยแล้ว');
+    expect(root.querySelector('[data-role="plan-current-status"]').textContent).toContain('DRAFT');
+
+    feedback.querySelector('button').click();
+    await flush(20);
+    expect(backend.calls.filter((call) => call.pathname === '/api/v3/plans')).toHaveLength(2);
   });
 
-  it('shows staff return reason on RETURNED_FOR_REVISION and allows resubmission', async () => {
-    const returnedPlan = {
-      ...READY_DRAFT_PLAN,
-      status: PLAN_STATUSES.RETURNED_FOR_REVISION,
-      return_reason: 'กรุณาระบุขอบเขตงานส่วน Backend ให้ชัดเจนขึ้น',
-      version: 3
-    };
-    const context = setupStudentPlanShell({ plan: returnedPlan });
+  it('reuses the same operation_id when retrying after a network failure', async () => {
+    let attempt = 0;
+    const backend = createFakeBackend();
+    const realFetch = backend.fetchImpl.getMockImplementation();
+    backend.fetchImpl.mockImplementation(async (url, init = {}) => {
+      if ((init.method || 'GET') === 'POST') {
+        attempt += 1;
+        backend.calls.push({ method: 'POST', body: JSON.parse(init.body) });
+        if (attempt === 1) throw new TypeError('Failed to fetch');
+        backend.calls.pop();
+      }
+      return realFetch(url, init);
+    });
+    const { root } = await mountPlanPage(backend);
+    const form = submitButton(root).closest('form');
 
-    await context.app.start();
-    await flushPromises();
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+    await flush(20);
+    expect(root.querySelector('[data-role="plan-submit-feedback"]').textContent).toContain('ไม่สำเร็จ');
 
-    expect(context.root.querySelector('[data-role="plan-return-reason"]').textContent).toContain(
-      'กรุณาระบุขอบเขตงานส่วน Backend ให้ชัดเจนขึ้น'
-    );
-    expect(context.root.querySelector('[data-role="submit-plan-button"]').disabled).toBe(false);
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+    await flush(20);
+
+    const posts = submitCalls(backend);
+    expect(posts).toHaveLength(2);
+    expect(posts[1].body.operation_id).toBe(posts[0].body.operation_id);
+    expect(root.querySelector('[data-role="plan-current-status"]').textContent).toContain('SUBMITTED');
   });
 
-  it('does not show a false success state on 409 conflict and allows reloading latest server plan', async () => {
-    const getOwnPlan = jest
-      .fn()
-      .mockResolvedValueOnce({
-        plan: READY_DRAFT_PLAN,
-        statusHistory: INITIAL_HISTORY
-      })
-      .mockResolvedValueOnce({
-        plan: {
-          ...READY_DRAFT_PLAN,
-          status: PLAN_STATUSES.SUBMITTED,
-          version: 2
-        },
-        statusHistory: INITIAL_HISTORY
-      });
-    const submitPlan = jest.fn().mockRejectedValue(
-      new StudentPlanError(
-        STUDENT_PLAN_ERROR_CODES.STALE_RECORD_CONFLICT,
-        'ข้อมูลแผนสหกิจถูกอัปเดตจากหน้าต่างหรือคำสั่งอื่น กรุณาโหลดข้อมูลล่าสุดก่อนดำเนินการใหม่'
-      )
-    );
+  it('shows a state message on 422 without claiming success', async () => {
+    const backend = createFakeBackend({
+      submitOverride: () => json(422, { error: { code: 'INVALID_STATE_TRANSITION', message: 'x' } })
+    });
+    const { root } = await mountPlanPage(backend);
 
-    const context = setupStudentPlanShell({ getOwnPlan, submitPlan });
-    await context.app.start();
-    await flushPromises();
+    submitButton(root).closest('form').dispatchEvent(new Event('submit', { cancelable: true }));
+    await flush(20);
 
-    const form = context.root.querySelector('form.student-profile-form');
-    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    await flushPromises();
-
-    // Still shows DRAFT (never shows false SUBMITTED state)
-    expect(context.root.querySelector('[data-role="plan-current-status"]').textContent).toContain(
-      'ฉบับร่าง (DRAFT)'
-    );
-    const feedback = context.root.querySelector('[data-role="plan-submit-feedback"]');
-    expect(feedback.getAttribute('role')).toBe('alert');
-    expect(feedback.textContent).toContain('กรุณาโหลดข้อมูลล่าสุดก่อนดำเนินการใหม่');
-
-    const reloadBtn = feedback.querySelector('button');
-    expect(reloadBtn.textContent).toBe('โหลดข้อมูลแผนล่าสุด');
-    reloadBtn.click();
-    await flushPromises();
-
-    expect(getOwnPlan).toHaveBeenCalledTimes(2);
-    expect(context.root.querySelector('[data-role="plan-current-status"]').textContent).toContain(
-      'ส่งแผนแล้ว (SUBMITTED)'
-    );
+    const feedback = root.querySelector('[data-role="plan-submit-feedback"]').textContent;
+    expect(feedback).toContain('สถานะของแผนสหกิจในปัจจุบันไม่อนุญาต');
+    expect(feedback).not.toContain('เรียบร้อยแล้ว');
   });
 
-  it('immediately clears private plan data and shows the shell expired-session alert when submit returns 401', async () => {
-    const submitPlan = jest.fn().mockRejectedValue(
-      new StudentPlanError(STUDENT_PLAN_ERROR_CODES.SESSION_EXPIRED)
-    );
-    const context = setupStudentPlanShell({ submitPlan });
+  it('clears private Plan data and shows the expired-session alert when submit returns 401', async () => {
+    const backend = createFakeBackend({
+      submitOverride: () => json(401, { error: { code: 'UNAUTHORIZED', message: 'x' } })
+    });
+    const { root } = await mountPlanPage(backend);
 
-    await context.app.start();
-    await flushPromises();
-    expect(context.root.textContent).toContain('บริษัท เทคโนโลยีไทย จำกัด');
+    submitButton(root).closest('form').dispatchEvent(new Event('submit', { cancelable: true }));
+    await flush(20);
 
-    const form = context.root.querySelector('form.student-profile-form');
-    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    await flushPromises();
+    expect(root.textContent).toContain('Session หมดอายุ');
+    expect(root.textContent).not.toContain('Mock Analytics Lab');
+    expect(root.textContent).not.toContain('สนใจงานพัฒนาเว็บ');
+  });
 
-    expect(context.root.textContent).not.toContain('บริษัท เทคโนโลยีไทย จำกัด');
-    expect(context.root.textContent).toContain('Session หมดอายุ');
-    expect(window.sessionStorage.getItem('co-ed:return-route')).toBe('#/student/plan');
+  it('shows an empty state when the Student has no Plan', async () => {
+    const { root } = await mountPlanPage(createFakeBackend({ plans: [] }));
+    expect(root.querySelector('[data-role="plan-empty"]').textContent).toContain('ยังไม่มีแผนสหกิจศึกษา');
   });
 });

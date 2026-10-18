@@ -2,7 +2,7 @@ import {
   PLAN_STATUSES,
   STUDENT_PLAN_ERROR_CODES,
   evaluatePlanReadiness,
-  validateSubmissionNote
+  findLatestReturnReason
 } from './plan-submission-client.js';
 
 const STATUS_META = Object.freeze({
@@ -21,8 +21,8 @@ const STATUS_META = Object.freeze({
     badgeClass: 'student-badge--status',
     description: 'เจ้าหน้าที่กำลังตรวจสอบแผนสหกิจของคุณ ข้อมูลถูกล็อกเป็นแบบอ่านอย่างเดียว'
   },
-  [PLAN_STATUSES.RETURNED_FOR_REVISION]: {
-    label: 'ส่งกลับให้แก้ไข (RETURNED_FOR_REVISION)',
+  [PLAN_STATUSES.NEEDS_REVISION]: {
+    label: 'ส่งกลับให้แก้ไข (NEEDS_REVISION)',
     badgeClass: 'student-badge--warning',
     description: 'เจ้าหน้าที่ส่งแผนกลับมาให้ปรับปรุง กรุณาตรวจสอบเหตุผลการส่งกลับ แก้ไขข้อมูลให้ครบถ้วน แล้วกดส่งแผนอีกครั้ง'
   },
@@ -38,14 +38,12 @@ const STATUS_META = Object.freeze({
   }
 });
 
+// Plan fields from #52; Company/Position names come from the public directory
 const PLAN_DETAIL_FIELDS = Object.freeze([
-  { key: 'academic_year', label: 'ปีการศึกษา' },
-  { key: 'semester', label: 'ภาคการศึกษา' },
+  { key: 'cycle_id', label: 'รอบการสมัคร (Cycle)' },
   { key: 'company_display', label: 'สถานประกอบการ' },
-  { key: 'position_title', label: 'ตำแหน่งงานสหกิจ' },
-  { key: 'job_description', label: 'รายละเอียดงานโดยสังเขป' },
-  { key: 'start_date', label: 'วันเริ่มปฏิบัติงาน' },
-  { key: 'end_date', label: 'วันสิ้นสุดการปฏิบัติงาน' }
+  { key: 'position_display', label: 'ตำแหน่งงาน' },
+  { key: 'notes', label: 'บันทึกของนักศึกษา' }
 ]);
 
 function element(tagName, className, text) {
@@ -70,6 +68,16 @@ function formatPlanFieldValue(plan, key) {
     return 'ยังไม่ได้ระบุ';
   }
 
+  if (key === 'position_display') {
+    if (typeof plan.position_title === 'string' && plan.position_title.trim() !== '') {
+      return plan.position_title.trim();
+    }
+    if (typeof plan.position_id === 'string' && plan.position_id.trim() !== '') {
+      return `รหัสตำแหน่งงาน ${plan.position_id.trim()}`;
+    }
+    return 'ยังไม่ได้ระบุ';
+  }
+
   const raw = plan[key];
   if (raw === null || raw === undefined || String(raw).trim() === '') {
     return 'ยังไม่ได้ระบุ';
@@ -82,9 +90,11 @@ function formatStatusLabel(status) {
 }
 
 function formatTransitionAction(entry) {
+  if (!entry.to_status || entry.from_status === entry.to_status) {
+    return entry.action_label;
+  }
   const fromLabel = entry.from_status ? formatStatusLabel(entry.from_status) : 'เริ่มต้น';
-  const toLabel = formatStatusLabel(entry.to_status);
-  return `${fromLabel} → ${toLabel}`;
+  return `${entry.action_label}: ${fromLabel} → ${formatStatusLabel(entry.to_status)}`;
 }
 
 function formatTimestamp(isoString) {
@@ -94,31 +104,16 @@ function formatTimestamp(isoString) {
   return isoString;
 }
 
-function mergeHistoryLists(existingHistory, incomingHistory) {
-  if (!Array.isArray(incomingHistory) || incomingHistory.length === 0) {
-    return Array.isArray(existingHistory) ? existingHistory : [];
-  }
-
-  // If the server returned the full history array (more than 1 item or no prior history), use it directly
-  if (incomingHistory.length > 1 || !Array.isArray(existingHistory) || existingHistory.length === 0) {
-    return incomingHistory;
-  }
-
-  const newest = incomingHistory[0];
-  const alreadyPresent = existingHistory.some(
-    (item) =>
-      (newest.id && item.id === newest.id) ||
-      (item.to_status === newest.to_status && item.created_at === newest.created_at)
-  );
-
-  return alreadyPresent ? existingHistory : [...existingHistory, newest];
+function defaultOperationId() {
+  return globalThis.crypto.randomUUID();
 }
 
 export function renderStudentPlanView({
   planClient,
   signal,
   onSessionExpired,
-  onAccessDenied
+  onAccessDenied,
+  createOperationId = defaultOperationId
 } = {}) {
   const container = element('div', 'student-workspace student-plan-workspace');
 
@@ -136,6 +131,9 @@ export function renderStudentPlanView({
   let currentPlan = null;
   let currentHistory = [];
   let isSubmitting = false;
+  // One operation_id per submit click, reused only when retrying after a network
+  // failure so the server deduplicates the request instead of submitting twice (#52 section 9)
+  let pendingOperationId = null;
 
   function isAborted() {
     return Boolean(signal?.aborted);
@@ -169,6 +167,22 @@ export function renderStudentPlanView({
       element('h2', 'student-card__title', 'โหลดแผนสหกิจศึกษาไม่สำเร็จ'),
       element('p', 'student-card__description', message),
       retryBtn
+    );
+    container.replaceChildren(card);
+  }
+
+  function renderNoPlanState() {
+    container.setAttribute('aria-busy', 'false');
+    const card = element('section', 'student-card');
+    card.dataset.role = 'plan-empty';
+    const refreshBtn = element('button', 'shell-button shell-button--secondary', 'รีเฟรชสถานะล่าสุด');
+    refreshBtn.type = 'button';
+    refreshBtn.addEventListener('click', () => loadPlanBundle());
+    card.append(
+      element('p', 'student-card__eyebrow', 'NO PLAN YET'),
+      element('h2', 'student-card__title', 'ยังไม่มีแผนสหกิจศึกษา'),
+      element('p', 'student-card__description', 'สร้างแผนและเลือกสถานประกอบการกับตำแหน่งงานก่อน จากนั้นกลับมาส่งแผนที่หน้านี้'),
+      refreshBtn
     );
     container.replaceChildren(card);
   }
@@ -213,11 +227,14 @@ export function renderStudentPlanView({
     const statusDescription = element('p', 'student-card__description', statusInfo.description);
     statusSection.append(statusTitle, statusBadgeRow, statusDescription);
 
-    if (plan.status === PLAN_STATUSES.RETURNED_FOR_REVISION && plan.return_reason) {
+    const returnReason = plan.status === PLAN_STATUSES.NEEDS_REVISION
+      ? findLatestReturnReason(currentHistory)
+      : null;
+    if (returnReason) {
       const returnCallout = element('div', 'student-profile-feedback student-profile-feedback--warning');
       returnCallout.dataset.role = 'plan-return-reason';
       returnCallout.append(
-        element('p', 'student-profile-feedback__text', `เหตุผลที่เจ้าหน้าที่ส่งกลับให้แก้ไข: ${plan.return_reason}`)
+        element('p', 'student-profile-feedback__text', `เหตุผลที่เจ้าหน้าที่ส่งกลับให้แก้ไข: ${returnReason}`)
       );
       statusSection.append(returnCallout);
     }
@@ -311,58 +328,14 @@ export function renderStudentPlanView({
     const form = element('form', 'student-profile-form');
     form.noValidate = true;
 
-    const noteFieldGroup = element('div', 'student-form__field');
-    const noteLabel = element('label', 'student-form__label', 'หมายเหตุประกอบการส่งแผน (ถ้ามี)');
-    noteLabel.htmlFor = 'student-plan-submit-note';
-
-    const noteInput = element('textarea', 'student-form__input');
-    noteInput.id = 'student-plan-submit-note';
-    noteInput.name = 'reason';
-    noteInput.rows = 3;
-    noteInput.readOnly = readiness.isReadOnly;
-    noteInput.disabled = readiness.isReadOnly;
-    noteInput.setAttribute('aria-describedby', 'student-plan-submit-note-hint student-plan-submit-note-error');
-    noteInput.setAttribute('aria-invalid', 'false');
-
-    const noteHint = element(
+    const submitHint = element(
       'p',
       'student-form__hint',
       readiness.isReadOnly
         ? 'แผนสหกิจถูกล็อกเป็นแบบอ่านอย่างเดียว ไม่สามารถแก้ไขหรือส่งซ้ำได้ในสถานะนี้'
-        : 'ระบุข้อความเพิ่มเติมถึงเจ้าหน้าที่สหกิจศึกษา (ไม่เกิน 500 ตัวอักษร หรือเว้นว่างได้)'
+        : 'ระบบจะตรวจซ้ำตอนส่งว่ารอบการสมัครยังเปิดอยู่ และสถานประกอบการกับตำแหน่งงานยังเปิดเผยอยู่'
     );
-    noteHint.id = 'student-plan-submit-note-hint';
-
-    const noteError = element('p', 'student-form__error');
-    noteError.id = 'student-plan-submit-note-error';
-    noteError.setAttribute('role', 'alert');
-    noteError.setAttribute('aria-live', 'polite');
-    noteError.hidden = true;
-
-    function setNoteError(message) {
-      if (message) {
-        noteInput.setAttribute('aria-invalid', 'true');
-        noteError.textContent = message;
-        noteError.hidden = false;
-      } else {
-        noteInput.setAttribute('aria-invalid', 'false');
-        noteError.textContent = '';
-        noteError.hidden = true;
-      }
-    }
-
-    noteInput.addEventListener('blur', () => {
-      const check = validateSubmissionNote(noteInput.value);
-      if (!check.valid) {
-        setNoteError(check.error);
-      }
-    });
-
-    noteInput.addEventListener('input', () => {
-      if (noteInput.getAttribute('aria-invalid') === 'true') {
-        setNoteError(null);
-      }
-    });
+    submitHint.dataset.role = 'plan-submit-hint';
 
     const submitActions = element('div', 'student-form__actions');
     const submitButton = element('button', 'shell-button', 'ส่งแผนสหกิจศึกษา');
@@ -381,8 +354,7 @@ export function renderStudentPlanView({
     });
 
     submitActions.append(submitButton, refreshButton);
-    noteFieldGroup.append(noteLabel, noteInput, noteHint, noteError);
-    form.append(noteFieldGroup, submitActions);
+    form.append(submitHint, submitActions);
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -401,15 +373,8 @@ export function renderStudentPlanView({
         return;
       }
 
-      const noteValidation = validateSubmissionNote(noteInput.value);
-      if (!noteValidation.valid) {
-        setNoteError(noteValidation.error);
-        noteInput.focus();
-        return;
-      }
-
-      setNoteError(null);
       showFeedback(null);
+      pendingOperationId = pendingOperationId || createOperationId();
 
       // Prevent accidental duplicate submit while request is in flight (#76 Scope & AC)
       isSubmitting = true;
@@ -417,13 +382,12 @@ export function renderStudentPlanView({
       submitButton.setAttribute('aria-busy', 'true');
       submitButton.textContent = 'กำลังส่งแผนสหกิจ...';
       refreshButton.disabled = true;
-      noteInput.readOnly = true;
 
       try {
         const result = await planClient.submitPlan({
           planId: currentPlan.id,
-          version: currentPlan.version,
-          reason: noteValidation.value,
+          expectedVersion: currentPlan.version,
+          operationId: pendingOperationId,
           signal
         });
 
@@ -432,11 +396,11 @@ export function renderStudentPlanView({
         }
 
         isSubmitting = false;
-        const mergedHistory = mergeHistoryLists(currentHistory, result.statusHistory);
-        // Strictly use server response for new state and history (#76 Coordination note)
-        renderPlanExperience(result.plan, mergedHistory, {
+        pendingOperationId = null;
+        // Re-read state and history from the server instead of guessing (#76 coordination note)
+        await loadPlanBundle({
           tone: 'status',
-          message: `ส่งแผนสหกิจศึกษาเรียบร้อยแล้ว สถานะปัจจุบันคือ ${formatStatusLabel(result.plan.status)}`
+          message: `ส่งแผนสหกิจศึกษาเรียบร้อยแล้ว สถานะปัจจุบันคือ ${formatStatusLabel(result.status)}`
         });
       } catch (error) {
         if (isAborted() || error?.name === 'AbortError') {
@@ -448,7 +412,10 @@ export function renderStudentPlanView({
         submitButton.removeAttribute('aria-busy');
         submitButton.textContent = 'ส่งแผนสหกิจศึกษา';
         refreshButton.disabled = false;
-        noteInput.readOnly = evaluatePlanReadiness(currentPlan).isReadOnly;
+        // Keep the operation_id only for a network failure, so retrying the same click is deduplicated
+        if (error?.code !== STUDENT_PLAN_ERROR_CODES.SERVICE_UNAVAILABLE) {
+          pendingOperationId = null;
+        }
 
         if (error?.code === STUDENT_PLAN_ERROR_CODES.SESSION_EXPIRED) {
           onSessionExpired?.();
@@ -478,10 +445,7 @@ export function renderStudentPlanView({
           return;
         }
 
-        if (
-          error?.code === STUDENT_PLAN_ERROR_CODES.INCOMPLETE_PLAN ||
-          error?.code === STUDENT_PLAN_ERROR_CODES.VALIDATION_ERROR
-        ) {
+        if (error?.code === STUDENT_PLAN_ERROR_CODES.VALIDATION_ERROR) {
           const detailIssues = Array.isArray(error.details) && error.details.length > 0
             ? ` (${error.details.map((d) => d.field || d.issue).join(', ')})`
             : '';
@@ -538,7 +502,7 @@ export function renderStudentPlanView({
 
         if (entry.reason) {
           item.append(
-            element('p', 'student-plan-history__reason', `หมายเหตุ/เหตุผล: ${entry.reason}`)
+            element('p', 'student-plan-history__reason', `ความเห็นจากเจ้าหน้าที่: ${entry.reason}`)
           );
         }
 
@@ -557,6 +521,10 @@ export function renderStudentPlanView({
     try {
       const bundle = await planClient.getOwnPlan({ signal });
       if (isAborted()) {
+        return;
+      }
+      if (!bundle.plan) {
+        renderNoPlanState();
         return;
       }
       renderPlanExperience(bundle.plan, bundle.statusHistory, postLoadFeedback);
