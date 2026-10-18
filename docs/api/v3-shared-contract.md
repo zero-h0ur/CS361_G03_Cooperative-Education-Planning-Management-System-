@@ -285,6 +285,66 @@ Update payload:
 | `version` ไม่ตรงกับข้อมูลปัจจุบัน | `409 STALE_RECORD_CONFLICT` พร้อม `details: { expectedVersion, currentVersion }` |
 | Database ไม่พร้อมใช้งาน | `503 SERVICE_UNAVAILABLE` |
 
+### 3.6 Staff Search และ Review Queue: `/api/v3/staff/*` (#67)
+
+Read-only API สำหรับ Role `STAFF` ที่มี `staff_scopes` สถานะ `ACTIVE` อย่างน้อย 1 รายการ คำสั่ง `start-review`, `return` และ `approve` อยู่ใน #70 (`POST /api/v3/plans/:id/...`)
+
+| Endpoint | หน้าที่ | ลำดับเริ่มต้น |
+|---|---|---|
+| `GET /api/v3/staff/students` | ค้นหา Student ที่ Link กับ V3 Identity ภายใน Scope | `student_number ASC, id ASC` |
+| `GET /api/v3/staff/plans` | ค้นหา Plan ทุกสถานะภายใน Scope | `updated_at DESC, id DESC` |
+| `GET /api/v3/staff/review-queue` | Plan สถานะ `SUBMITTED`, `UNDER_REVIEW`, `NEEDS_REVISION` ในรอบที่ `OPEN` | `updated_at ASC, id ASC` (รอนานที่สุดก่อน) |
+
+**Scope (#53 ข้อ 3.2):** กรองใน SQL ด้วย Predicate เดียวกับ `is_in_staff_scope` คือ `department` ตรงกัน, `program` ตรงกันหรือ Scope เป็น `null` และ `academic_year` ของ Scope เป็น `null` หรือตรงกับปีของ Round (สำหรับ Plan) / ปีของ Student (สำหรับ Student) ค่า `pagination.total` นับเฉพาะ Record ใน Scope และ Client ขยาย Scope ผ่าน Query ไม่ได้ (Parameter อื่นนอก Allowlist ได้ `400`)
+
+**Query parameters** (ค่าว่างถือว่าไม่ได้ส่ง, ส่งซ้ำได้ `400`):
+
+| Parameter | ใช้กับ | รูปแบบ |
+|---|---|---|
+| `page`, `pageSize` | ทุก Endpoint | Integer ≥ 1, `pageSize` ไม่เกิน 100 (ค่าเริ่มต้น `1`, `20`) |
+| `q` | ทุก Endpoint | ค้นหา `student_number`, `full_name`, `preferred_name` แบบ Case-insensitive ไม่เกิน 100 ตัวอักษร (ห้าม Log ค่านี้ตาม #50) |
+| `academic_year` | ทุก Endpoint | ปี พ.ศ. เช่น `2569` (ปี ค.ศ. ได้ `400`) |
+| `advisor_id` | ทุก Endpoint | UUID ของ Advisor ที่มี Assignment `ACTIVE` ณ เวลาที่ร้องขอ |
+| `round_id`, `company_id` | `plans`, `review-queue` | UUID |
+| `status` | `plans`, `review-queue` | สถานะตาม #54 (`review-queue` รับเฉพาะ `SUBMITTED`, `UNDER_REVIEW`, `NEEDS_REVISION`) |
+| `sort`, `order` | `plans`, `review-queue` | `sort` = `updated_at` / `created_at` / `student_number`, `order` = `asc` / `desc` (ใช้ `id` เป็น Tiebreaker เสมอ) |
+
+**Response:** `{ data: [...], pagination: { page, pageSize, total, totalPages } }` ส่งเฉพาะ Field ใน Allowlist ตาม #50 ไม่มี `institutional_email`, Plan `notes`, Review comment, `user_id` หรือ Legacy columns
+
+```json
+{
+  "data": [
+    {
+      "id": "<plan-uuid>",
+      "status": "UNDER_REVIEW",
+      "version": 2,
+      "created_at": "2026-10-02T10:00:00.000Z",
+      "updated_at": "2026-10-03T11:00:00.000Z",
+      "cycle": { "id": "<round-uuid>", "name": "รอบที่ 1 ภาคเรียนที่ 1/2569", "academic_year": 2569, "semester": 1, "status": "OPEN" },
+      "company": { "id": "<company-uuid>", "name": "Mock Analytics Lab" },
+      "position": { "id": "<position-uuid>", "title": "นักวิเคราะห์ข้อมูล" },
+      "student": {
+        "id": "<student-uuid>", "student_number": "TEST000002", "full_name": "วิภา จำลอง",
+        "preferred_name": "วิภา", "department": "CPE", "program": "ISNE", "academic_year": 2569
+      }
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 20, "total": 1, "totalPages": 1 }
+}
+```
+
+`/api/v3/staff/students` คืน `{ id, student_number, full_name, preferred_name, department, program, major, academic_year, enrollment_status }` ส่วน `company.name` / `position.title` เป็น `null` ถ้า Record นั้นไม่ใช่ `public` (#49: ห้ามอ่าน Private Company)
+
+| กรณี | Response |
+|---|---|
+| Filter ผิดรูปแบบ, Parameter ที่ไม่รองรับ หรือส่งซ้ำ | `400 VALIDATION_ERROR` พร้อม `details: [{ field, issue }]` |
+| ไม่มี/ผิด/หมดอายุ token | `401 UNAUTHORIZED` |
+| ไม่ใช่ `STAFF` หรือไม่มี Scope ที่ `ACTIVE` | `403 FORBIDDEN` |
+| Method อื่นนอกจาก `GET` | `405 METHOD_NOT_ALLOWED` |
+| Database ไม่พร้อมใช้งาน | `503 SERVICE_UNAVAILABLE` |
+
+Query ใช้ Index จาก Migration 002 ได้แก่ `idx_students_staff_scope`, `idx_staff_scopes_active_lookup`, `uq_plans_active_student_cycle` / `idx_plans_cycle_status` และ Primary keys ของ `rounds`, `companies`, `positions` (ตรวจด้วย `EXPLAIN` บน Fixture ของ #60)
+
 ### 3.7 Student Own Plan: `/api/v3/plans` (#66)
 
 ใช้ได้เฉพาะ Role `STUDENT` เจ้าของ Plan มาจาก Trusted Identity Context เสมอ (#52 ข้อ 1)

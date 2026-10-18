@@ -90,7 +90,12 @@ const ACTIONS = Object.freeze({
   // Advisor-assignment permissions (#49 & #53)
   ASSIGNMENT_READ_OWN: 'assignment:read_own',
   ASSIGNMENT_READ_SCOPED: 'assignment:read_scoped',
-  ASSIGNMENT_MANAGE: 'assignment:manage'
+  ASSIGNMENT_MANAGE: 'assignment:manage',
+
+  // Staff read-only search and review queue (#53 section 3.3, #67)
+  STAFF_STUDENT_SEARCH: 'staff:search_students',
+  STAFF_PLAN_SEARCH: 'staff:search_plans',
+  STAFF_REVIEW_QUEUE_READ: 'staff:read_review_queue'
 });
 
 const REVIEW_MUTATION_ACTIONS = new Set([
@@ -297,6 +302,17 @@ const PERMISSION_MATRIX = Object.freeze({
   }),
   [ACTIONS.ASSIGNMENT_MANAGE]: Object.freeze({
     [ROLES.ADMIN]: PERMISSION_SCOPES.OPS
+  }),
+
+  // Staff-only read APIs; Advisor search belongs to #68, so every other role is DENY
+  [ACTIONS.STAFF_STUDENT_SEARCH]: Object.freeze({
+    [ROLES.STAFF]: PERMISSION_SCOPES.SCOPED
+  }),
+  [ACTIONS.STAFF_PLAN_SEARCH]: Object.freeze({
+    [ROLES.STAFF]: PERMISSION_SCOPES.SCOPED
+  }),
+  [ACTIONS.STAFF_REVIEW_QUEUE_READ]: Object.freeze({
+    [ROLES.STAFF]: PERMISSION_SCOPES.SCOPED
   })
 });
 
