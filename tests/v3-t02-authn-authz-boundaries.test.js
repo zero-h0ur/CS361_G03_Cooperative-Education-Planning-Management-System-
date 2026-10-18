@@ -9,6 +9,8 @@ const crypto = require('node:crypto');
 const { createApiServer } = require('../src/api/app');
 const { TokenValidator } = require('../src/auth/token-validator');
 const { IdentityResolver } = require('../src/auth/identity-resolver');
+const { Router } = require('../src/api/router');
+const { registerV3Routes } = require('../src/api/routes/v3-routes');
 const {
   ROLES,
   ACTIONS,
@@ -108,6 +110,14 @@ const ACTORS = Object.freeze({
     userId: '70000000-0000-4000-8000-000000000010',
     studentId: null,
     role: ROLES.ADVISOR,
+    accountStatus: 'ACTIVE',
+    linkStatus: 'ACTIVE'
+  },
+  admin: {
+    sub: 'sub-admin',
+    userId: '70000000-0000-4000-8000-000000000030',
+    studentId: null,
+    role: ROLES.ADMIN,
     accountStatus: 'ACTIVE',
     linkStatus: 'ACTIVE'
   },
@@ -212,8 +222,16 @@ const PLANS = Object.freeze({
   }
 });
 
+const ADVISOR_READ_ENDPOINTS = [
+  '/api/v3/advisor/students',
+  `/api/v3/advisor/students/${ACTORS.studentA.studentId}`,
+  `/api/v3/advisor/students/${ACTORS.studentA.studentId}/plans`,
+  `/api/v3/advisor/plans/${PLANS.planA_Draft.id}`
+];
+
 function createBoundaryTestEnvironment() {
   const auditLogs = [];
+  let advisorAssignmentActive = true;
   const actorsBySub = new Map(Object.values(ACTORS).map((a) => [a.sub, a]));
   const plansById = new Map(Object.values(PLANS).map((p) => [p.id, { ...p }]));
 
@@ -280,13 +298,14 @@ function createBoundaryTestEnvironment() {
       return [];
     },
     async listActiveAdvisorAssignments(advisorUserId) {
-      if (advisorUserId === ACTORS.advisorAssigned.userId) {
+      if (advisorAssignmentActive && advisorUserId === ACTORS.advisorAssigned.userId) {
         return [{ student_id: ACTORS.studentA.studentId, academic_year: 2569, semester: 1 }];
       }
       return [];
     },
     async findActiveAdvisorAssignment({ advisorUserId, studentId }) {
       if (
+        advisorAssignmentActive &&
         advisorUserId === ACTORS.advisorAssigned.userId &&
         studentId === ACTORS.studentA.studentId
       ) {
@@ -531,28 +550,63 @@ function createBoundaryTestEnvironment() {
     auditLogger: (entry) => auditLogs.push(entry)
   };
 
+  // Exercise real handlers/services/serializers; SQL scoping is separately tested
+  // against PostgreSQL in test:advisor. Include private columns to detect leaks.
+  const advisorStudentRow = {
+    id: ACTORS.studentA.studentId,
+    student_number: ACTORS.studentA.studentNumber,
+    full_name: ACTORS.studentA.fullName,
+    institutional_email: ACTORS.studentA.institutionalEmail,
+    external_subject: ACTORS.studentA.sub,
+    user_id: ACTORS.studentA.userId
+  };
+  const advisorPlanRow = {
+    ...PLANS.planA_Draft,
+    review_notes: 'PRIVATE_REVIEW_SENTINEL',
+    external_subject: ACTORS.studentA.sub,
+    operation_id: 'PRIVATE_OPERATION_SENTINEL'
+  };
+  const advisorReadRepository = {
+    listAssignedStudents: jest.fn(async () => ({
+      rows: advisorAssignmentActive ? [advisorStudentRow] : [],
+      total: advisorAssignmentActive ? 1 : 0
+    })),
+    findAssignedStudent: jest.fn(async () => advisorAssignmentActive ? advisorStudentRow : null),
+    listAssignedStudentPlans: jest.fn(async () => ({ rows: [advisorPlanRow], total: 1 })),
+    findAssignedPlan: jest.fn(async () => advisorAssignmentActive ? advisorPlanRow : null)
+  };
+
   const server = createApiServer({
     dal,
     authOptions,
     sessionRepository,
     studentProfileRepository,
-    workflowRepository
+    workflowRepository,
+    advisorReadRepository
   });
 
   return {
     server,
     authOptions,
     authorizationService,
-    auditLogs
+    auditLogs,
+    advisorReadRepository,
+    revokeAdvisorAssignment: () => { advisorAssignmentActive = false; }
   };
 }
 
 describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries', () => {
   let env;
   let baseUrl;
+  let consoleSpies;
 
   beforeEach(async () => {
     env = createBoundaryTestEnvironment();
+    consoleSpies = ['log', 'warn', 'error'].map((level) =>
+      jest.spyOn(console, level).mockImplementation((...args) => {
+        env.auditLogs.push({ level, args });
+      })
+    );
     await new Promise((resolve) => {
       env.server.listen(0, '127.0.0.1', () => {
         const address = env.server.address();
@@ -563,10 +617,15 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
   });
 
   afterEach(async () => {
-    await new Promise((resolve) => env.server.close(resolve));
+    try {
+      await new Promise((resolve) => env.server.close(resolve));
+    } finally {
+      for (const spy of consoleSpies) spy.mockRestore();
+    }
   });
 
   const PROTECTED_ENDPOINTS = [
+    ...ADVISOR_READ_ENDPOINTS.map((path) => ({ method: 'GET', path })),
     { method: 'GET', path: '/api/v3/me' },
     { method: 'GET', path: '/api/v3/students/me' },
     { method: 'PATCH', path: '/api/v3/students/me', body: { preferred_name: 'ชาย', version: 1 } },
@@ -610,6 +669,17 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
   ];
 
   describe('1. Unauthenticated & Invalid Token Rejection Across All Protected Endpoints', () => {
+    it('keeps the permission matrix synchronized with every registered V3 method and path', () => {
+      const router = new Router();
+      registerV3Routes(router);
+      const uncovered = router.routes.filter((route) => !PROTECTED_ENDPOINTS.some((endpoint) =>
+        endpoint.method === route.method && (typeof route.pattern === 'string'
+          ? route.pattern === endpoint.path : route.pattern.test(endpoint.path))
+      ));
+      expect(uncovered.map(({ method, pattern }) => `${method} ${pattern}`)).toEqual([]);
+      expect(router.routes).toHaveLength(PROTECTED_ENDPOINTS.length);
+    });
+
     it.each(PROTECTED_ENDPOINTS)(
       'rejects unauthenticated $method $path with 401 UNAUTHORIZED',
       async ({ method, path: routePath, body }) => {
@@ -656,16 +726,17 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
         )
       ]
     ])('rejects %s with 401 and never leaks raw token in response or logs', async (_label, badToken) => {
-      const response = await fetch(`${baseUrl}/api/v3/me`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${badToken}`
-        }
-      });
-      const text = await response.text();
-
-      expect(response.status).toBe(401);
-      expect(text).not.toContain(badToken);
+      for (const { method, path: routePath, body } of PROTECTED_ENDPOINTS) {
+        const response = await fetch(`${baseUrl}${routePath}`, {
+          method,
+          headers: { Authorization: `Bearer ${badToken}`, 'Content-Type': 'application/json' },
+          body: body ? JSON.stringify(body) : undefined
+        });
+        const text = await response.text();
+        expect({ method, routePath, status: response.status }).toMatchObject({ status: 401 });
+        expect(JSON.parse(text).error.code).toBe('UNAUTHORIZED');
+        expect(text).not.toContain(badToken);
+      }
       expect(JSON.stringify(env.auditLogs)).not.toContain(badToken);
     });
   });
@@ -678,16 +749,18 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
       ['student role missing linked student record', ACTORS.unlinkedStudentRole.sub]
     ])('denies %s with uniform sanitized 403 FORBIDDEN without leaking account existence', async (_label, sub) => {
       const token = signJwt(makeClaims(sub));
-      const response = await fetch(`${baseUrl}/api/v3/me`, {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const payload = await response.json();
-
-      expect(response.status).toBe(403);
-      expect(payload.error.code).toBe('FORBIDDEN');
-      expect(JSON.stringify(payload)).not.toContain(sub);
-      expect(JSON.stringify(payload)).not.toContain(ACTORS.studentA.institutionalEmail);
+      for (const { method, path: routePath, body } of PROTECTED_ENDPOINTS) {
+        const response = await fetch(`${baseUrl}${routePath}`, {
+          method,
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: body ? JSON.stringify(body) : undefined
+        });
+        const payload = await response.json();
+        expect({ method, routePath, status: response.status }).toMatchObject({ status: 403 });
+        expect(payload.error.code).toBe('FORBIDDEN');
+        expect(JSON.stringify(payload)).not.toContain(sub);
+        expect(JSON.stringify(payload)).not.toContain(ACTORS.studentA.institutionalEmail);
+      }
       expect(JSON.stringify(env.auditLogs)).not.toContain(ACTORS.studentA.institutionalEmail);
       expect(JSON.stringify(env.auditLogs)).not.toContain(ACTORS.studentA.studentNumber);
     });
@@ -862,6 +935,11 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
           body: { preferred_name: 'Hack', version: 1 }
         },
         {
+          method: 'PUT',
+          path: '/api/v3/students/me',
+          body: { preferred_name: 'Hack', version: 1 }
+        },
+        {
           method: 'POST',
           path: '/api/v3/plans',
           body: { company_id: PLANS.planA_Draft.company_id }
@@ -907,7 +985,81 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
     });
   });
 
-  describe('5. Public V2 Company Directory Regression', () => {
+  describe('5. Advisor HTTP assignment, privacy, and cross-role boundaries (#68)', () => {
+    it.each(ADVISOR_READ_ENDPOINTS)('allows assigned Advisor GET %s with a privacy allowlist', async (routePath) => {
+      const token = signJwt(makeClaims(ACTORS.advisorAssigned.sub));
+      const response = await fetch(`${baseUrl}${routePath}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      expect(response.status).toBe(200);
+      const payload = await response.json();
+      const rows = Array.isArray(payload.data) ? payload.data : [payload.data];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe(routePath.includes('plans') ? PLANS.planA_Draft.id : ACTORS.studentA.studentId);
+      if (payload.pagination) expect(payload.pagination.total).toBe(1);
+      for (const value of [
+        'institutional_email', 'external_subject', 'user_id', 'review_notes',
+        'operation_id', ACTORS.studentA.institutionalEmail,
+        'PRIVATE_REVIEW_SENTINEL', 'PRIVATE_OPERATION_SENTINEL'
+      ]) {
+        expect(JSON.stringify(payload)).not.toContain(value);
+        expect(JSON.stringify(env.auditLogs)).not.toContain(value);
+      }
+    });
+
+    it.each([
+      `/api/v3/advisor/students/${ACTORS.studentB.studentId}`,
+      `/api/v3/advisor/students/${ACTORS.studentB.studentId}/plans`,
+      `/api/v3/advisor/plans/${PLANS.planB_Draft.id}`,
+      '/api/v3/advisor/students/40000000-0000-4000-8000-000000009999',
+      '/api/v3/advisor/plans/50000000-0000-4000-8000-000000009999'
+    ])('denies unassigned or guessed GET %s before calling the read repository', async (routePath) => {
+      const response = await fetch(`${baseUrl}${routePath}`, {
+        headers: { Authorization: `Bearer ${signJwt(makeClaims(ACTORS.advisorAssigned.sub))}` }
+      });
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ error: { code: 'FORBIDDEN', message: 'Access denied.' } });
+      for (const read of Object.values(env.advisorReadRepository)) expect(read).not.toHaveBeenCalled();
+    });
+
+    it.each([ACTORS.studentA, ACTORS.staffCpe, ACTORS.admin])(
+      'denies $role access to every Advisor endpoint even with spoofed headers and JWT role claims', async (actor) => {
+        const token = signJwt(makeClaims(actor.sub, {
+          role: 'ADVISOR', user_id: ACTORS.advisorAssigned.userId,
+          'cognito:groups': ['ADVISOR']
+        }));
+        for (const routePath of ADVISOR_READ_ENDPOINTS) {
+          const response = await fetch(`${baseUrl}${routePath}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'X-User-Id': ACTORS.advisorAssigned.userId,
+              'X-Role': 'ADVISOR', 'X-Staff-Scope': 'CPE'
+            }
+          });
+          expect({ routePath, status: response.status }).toMatchObject({ status: 403 });
+        }
+        for (const read of Object.values(env.advisorReadRepository)) expect(read).not.toHaveBeenCalled();
+      }
+    );
+
+    it('rechecks assignment on the next HTTP request with the same valid access token', async () => {
+      const headers = { Authorization: `Bearer ${signJwt(makeClaims(ACTORS.advisorAssigned.sub))}` };
+      const studentPath = ADVISOR_READ_ENDPOINTS[1];
+      expect((await fetch(`${baseUrl}${studentPath}`, { headers })).status).toBe(200);
+      env.revokeAdvisorAssignment();
+      for (const routePath of ADVISOR_READ_ENDPOINTS.slice(1)) {
+        const response = await fetch(`${baseUrl}${routePath}`, { headers });
+        expect(response.status).toBe(403);
+      }
+      const list = await fetch(`${baseUrl}${ADVISOR_READ_ENDPOINTS[0]}`, { headers });
+      expect(list.status).toBe(200);
+      expect(await list.json()).toEqual({
+        data: [], pagination: { page: 1, pageSize: 10, total: 0, totalPages: 0 }
+      });
+    });
+  });
+
+  describe('6. Public V2 Company Directory Regression', () => {
     it.each([
       '/api/health',
       '/api/companies',

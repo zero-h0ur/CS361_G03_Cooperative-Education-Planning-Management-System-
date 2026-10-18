@@ -104,6 +104,16 @@ const REVIEW_MUTATION_ACTIONS = new Set([
   ACTIONS.PLAN_APPROVE
 ]);
 
+// Issue #53 section 4.1: while a current Student assignment is active, an
+// Advisor may read that Student's Plan history across every cycle. Assignment
+// academic_year/semester describe the assignment itself; they do not narrow
+// historical Plan reads.
+const ADVISOR_HISTORICAL_PLAN_READ_ACTIONS = new Set([
+  ACTIONS.PLAN_LIST_READ,
+  ACTIONS.AUDIT_READ_ASSIGNED_PLAN_HISTORY,
+  ACTIONS.AUDIT_READ_PLAN_HISTORY
+]);
+
 const MUTATION_ACTIONS = new Set([
   ACTIONS.COMPANY_CREATE,
   ACTIONS.COMPANY_UPDATE,
@@ -700,8 +710,11 @@ class AuthorizationService {
       let targetSemester = resource.semester ?? null;
       let planRecord = null;
 
-      // A plan's owner and round always come from the database (#53): the assignment
-      // check must target the student who actually owns the requested plan.
+      // A Plan owner always comes from the database (#53): the assignment check
+      // must target the Student who actually owns the requested Plan. For
+      // historical Plan reads, any current assignment to that Student grants
+      // read-only history access across cycles, so the Plan round must not
+      // narrow the assignment query.
       if (isNonEmptyString(resource.planId)) {
         planRecord = await this.findPlanResource(resource.planId);
         if (!planRecord) {
@@ -711,11 +724,13 @@ class AuthorizationService {
           throw createForbiddenError('ADVISOR_PLAN_STUDENT_MISMATCH');
         }
         targetStudentId = planRecord.student_id;
-        if (planRecord.round_academic_year !== undefined && planRecord.round_academic_year !== null) {
-          targetAcademicYear = planRecord.round_academic_year;
-        }
-        if (planRecord.round_semester !== undefined && planRecord.round_semester !== null) {
-          targetSemester = planRecord.round_semester;
+        if (!ADVISOR_HISTORICAL_PLAN_READ_ACTIONS.has(action)) {
+          if (planRecord.round_academic_year !== undefined && planRecord.round_academic_year !== null) {
+            targetAcademicYear = planRecord.round_academic_year;
+          }
+          if (planRecord.round_semester !== undefined && planRecord.round_semester !== null) {
+            targetSemester = planRecord.round_semester;
+          }
         }
       }
 
