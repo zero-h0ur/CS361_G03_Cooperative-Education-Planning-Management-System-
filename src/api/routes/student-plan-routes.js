@@ -33,6 +33,19 @@ function registerStudentPlanRoutes(router, registerProtectedRoute, options = {})
     repository: options.studentPlanRepository
   });
 
+  // #73: existing public rounds, for an active linked Student's Plan editor.
+  registerProtectedRoute(router, {
+    method: 'GET',
+    pattern: '/api/v3/plan-options/cycles',
+    action: ACTIONS.PLAN_CREATE,
+    resolveResource: resolveOwnStudent,
+    authOptions,
+    handler: async (_request, response, context) => {
+      assertAllowedQueryParameters(context.url.searchParams, NO_QUERY_PARAMS);
+      sendSuccess(response, await service.listCycleOptions(context.authContext));
+    }
+  });
+
   registerProtectedRoute(router, {
     method: 'POST',
     pattern: OWN_PLANS_PATH,

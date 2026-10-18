@@ -357,6 +357,14 @@ Query ใช้ Index จาก Migration 002 ได้แก่ `idx_students_s
 | `GET` | `/api/v3/plans` | รายการ Plan ของตนเอง รวม `CANCELLED` (Query: `page`, `pageSize` ค่าเริ่มต้น 10 สูงสุด 100, `cycle_id`, `status`) | `200` + `pagination` |
 | `GET` | `/api/v3/plans/:planId` | รายละเอียด Plan ของตนเอง | `200` |
 | `PATCH` | `/api/v3/plans/:planId` | แก้ Content เฉพาะสถานะ `DRAFT` / `NEEDS_REVISION` (`update_draft`) | `200` |
+| `GET` | `/api/v3/plan-options/cycles` | ตัวเลือกรอบสมัครสำหรับ Student ที่ Active และเชื่อม Student record แล้ว (#73) | `200` |
+
+Cycle options (#73): ไม่รับ Query parameters และคืน `{ data: [{ id, name,
+academic_year, semester, status }] }` เฉพาะ `rounds.visibility = 'public'`.
+เรียง `academic_year DESC, semester DESC NULLS LAST, name ASC, id ASC`.
+รอบ `CLOSED` ใช้บันทึก Draft ได้ แต่ยังส่งแผนไม่ได้ตาม Workflow contract.
+ไม่สร้างหรือคัดลอก Cycle; `id` คือ Foreign Key `cycle_id` ของ Plan.
+Role อื่นหรือ Student ที่ไม่ Active/ไม่ linked ได้ `403`, ไม่มี Login ได้ `401`.
 
 Request body:
 

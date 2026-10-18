@@ -19,6 +19,22 @@ const PLAN_COLUMNS = `
 `;
 
 class StudentPlanRepository extends WorkflowRepository {
+  async listCycleOptions({ userId, studentId }) {
+    const result = await this.query(`
+      SELECT r.id, r.name, r.academic_year, r.semester, r.status
+      FROM rounds r
+      WHERE r.visibility = 'public'
+        AND EXISTS (
+          SELECT 1 FROM students s
+          JOIN users u ON u.id = s.user_id
+          WHERE s.id = $1 AND u.id = $2
+            AND u.role = 'STUDENT' AND u.account_status = 'ACTIVE'
+        )
+      ORDER BY r.academic_year DESC, r.semester DESC NULLS LAST, r.name ASC, r.id ASC
+    `, [studentId, userId]);
+    return result.rows || [];
+  }
+
   async findActiveStudentLink(client, { userId, studentId }) {
     const result = await this.query(`
       SELECT s.id, s.user_id, u.role, u.account_status
