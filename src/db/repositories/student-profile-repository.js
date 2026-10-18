@@ -6,6 +6,9 @@
  */
 
 const { getPool } = require('../connection');
+const { ServiceUnavailableError } = require('../../api/errors');
+
+const UNAVAILABLE_DB_ERROR_CODES = new Set(['ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', '42P01']);
 
 class StudentProfileRepository {
   /**
@@ -20,6 +23,18 @@ class StudentProfileRepository {
     return this.pool || getPool();
   }
 
+  async query(text, params) {
+    try {
+      return await this.getDbPool().query(text, params);
+    } catch (err) {
+      // Match DAL behavior: connection/schema failures are 503, anything else is a sanitized 500
+      if (UNAVAILABLE_DB_ERROR_CODES.has(err?.code)) {
+        throw new ServiceUnavailableError();
+      }
+      throw err;
+    }
+  }
+
   /**
    * Loads the Student profile row owned by the given (studentId, userId).
    *
@@ -29,7 +44,6 @@ class StudentProfileRepository {
    * @returns {Promise<object|null>}
    */
   async findOwnStudentProfile({ studentId, userId }) {
-    const pool = this.getDbPool();
     const query = `
       SELECT
         s.id,
@@ -52,7 +66,7 @@ class StudentProfileRepository {
       LIMIT 1
     `;
 
-    const result = await pool.query(query, [studentId, userId]);
+    const result = await this.query(query, [studentId, userId]);
     return result?.rows?.[0] || null;
   }
 
@@ -72,7 +86,6 @@ class StudentProfileRepository {
     preferredName,
     expectedVersion = null
   }) {
-    const pool = this.getDbPool();
     const query = `
       UPDATE students AS s
       SET
@@ -99,7 +112,7 @@ class StudentProfileRepository {
         s.version
     `;
 
-    const result = await pool.query(query, [
+    const result = await this.query(query, [
       studentId,
       userId,
       preferredName,

@@ -84,6 +84,13 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
     nowSeconds = Math.floor(Date.now() / 1000);
   });
 
+  // Production path (#48): API Gateway's JWT Authorizer verifies the token and forwards
+  // its claims to Lambda, which trusts only requestContext.authorizer.jwt.claims (#61).
+  function authorizerFromToken(token) {
+    const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
+    return { jwt: { claims, scopes: ['coed-api/access'] } };
+  }
+
   function buildEvent(path, token, options = {}) {
     return {
       version: '2.0',
@@ -104,7 +111,8 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
         http: {
           method: options.method || 'GET',
           path
-        }
+        },
+        ...(token ? { authorizer: authorizerFromToken(token) } : {})
       }
     };
   }
@@ -210,9 +218,11 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
 
     const handler = createLambdaHandler({
       dal,
-      tokenValidator,
-      identityResolver,
-      authorizationService,
+      authOptions: {
+        tokenValidator,
+        identityResolver,
+        authorizationService
+      },
       studentProfileRepository
     });
 
@@ -289,7 +299,7 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
       });
     });
 
-    test('supports path aliases /api/students/me and /students/me', async () => {
+    test('serves the self-profile only at the canonical /api/v3/students/me path', async () => {
       const { handler } = createAuthDependencies({
         'sub-student-a': STUDENT_A_IDENTITY
       });
@@ -306,9 +316,8 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
 
       for (const path of ['/api/students/me', '/students/me']) {
         const response = await handler(buildEvent(path, token));
-        expect(response.statusCode).toBe(200);
-        const body = JSON.parse(response.body);
-        expect(body.data.id).toBe(STUDENT_A_ROW.id);
+        expect(response.statusCode).toBe(404);
+        expect(JSON.parse(response.body).error.code).toBe('ROUTE_NOT_FOUND');
       }
     });
 
@@ -557,7 +566,7 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
   });
 
   describe('4. Cross-User & Role Access Control (403 FORBIDDEN / 401 UNAUTHORIZED)', () => {
-    test('rejects Student A attempting to read or update Student B via /api/v3/students/:studentId with 403 FORBIDDEN', async () => {
+    test('rejects Student A attempting to read or update Student B via /api/v3/students/:studentId', async () => {
       const { handler, mockFindOwnStudentProfile, mockUpdateOwnPreferredName } =
         createAuthDependencies({
           'sub-student-a': STUDENT_A_IDENTITY
@@ -578,8 +587,9 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
           method: 'GET'
         })
       );
-      expect(getOtherResponse.statusCode).toBe(403);
-      expect(JSON.parse(getOtherResponse.body).error.code).toBe('FORBIDDEN');
+      // No endpoint lets a Student select a profile owner by studentId (#65 coordination note)
+      expect(getOtherResponse.statusCode).toBe(404);
+      expect(JSON.parse(getOtherResponse.body).error.code).toBe('ROUTE_NOT_FOUND');
 
       const patchOtherResponse = await handler(
         buildEvent(`/api/v3/students/${STUDENT_B_ID}`, token, {
@@ -587,8 +597,9 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
           body: { preferred_name: 'Hacked' }
         })
       );
-      expect(patchOtherResponse.statusCode).toBe(403);
-      expect(JSON.parse(patchOtherResponse.body).error.code).toBe('FORBIDDEN');
+      // Non-GET on an unregistered path keeps the V2 405 behavior from #55
+      expect(patchOtherResponse.statusCode).toBe(405);
+      expect(JSON.parse(patchOtherResponse.body).error.code).toBe('METHOD_NOT_ALLOWED');
 
       expect(mockFindOwnStudentProfile).not.toHaveBeenCalled();
       expect(mockUpdateOwnPreferredName).not.toHaveBeenCalled();
@@ -659,6 +670,48 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
         })
       );
       expect(patchRes.statusCode).toBe(401);
+    });
+
+    test('rejects a signed Bearer token without API Gateway authorizer claims with 401 (#48)', async () => {
+      const { handler, mockFindOwnStudentProfile } = createAuthDependencies({
+        'sub-student-a': STUDENT_A_IDENTITY
+      });
+      const token = signJwt(
+        { iss: ISSUER, sub: 'sub-student-a', aud: AUDIENCE, exp: nowSeconds + 3600 },
+        keyPair.privateKey
+      );
+
+      const response = await handler({
+        rawPath: '/api/v3/students/me',
+        headers: { authorization: `Bearer ${token}` },
+        requestContext: { http: { method: 'GET' } }
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(mockFindOwnStudentProfile).not.toHaveBeenCalled();
+    });
+
+    test('returns 503 when the profile database is unavailable', async () => {
+      const { StudentProfileRepository } = require('../src/db/repositories/student-profile-repository');
+      const connectionError = Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
+      const unavailableRepository = new StudentProfileRepository({
+        pool: { query: jest.fn().mockRejectedValue(connectionError) }
+      });
+      const { handler } = createAuthDependencies(
+        { 'sub-student-a': STUDENT_A_IDENTITY },
+        {
+          findOwnStudentProfile: (params) => unavailableRepository.findOwnStudentProfile(params)
+        }
+      );
+      const token = signJwt(
+        { iss: ISSUER, sub: 'sub-student-a', aud: AUDIENCE, exp: nowSeconds + 3600 },
+        keyPair.privateKey
+      );
+
+      const response = await handler(buildEvent('/api/v3/students/me', token));
+
+      expect(response.statusCode).toBe(503);
+      expect(JSON.parse(response.body).error.code).toBe('SERVICE_UNAVAILABLE');
     });
 
     test('returns 405 METHOD_NOT_ALLOWED for DELETE or POST on /api/v3/students/me', async () => {
