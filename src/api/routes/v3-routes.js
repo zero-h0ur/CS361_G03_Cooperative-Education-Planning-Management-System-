@@ -12,6 +12,7 @@ const {
 const { getRequestContext } = require('../context');
 const { registerSessionRoutes } = require('./session-routes');
 const { registerStudentProfileRoutes } = require('./student-profile-routes');
+const { registerStudentPlanRoutes } = require('./student-plan-routes');
 
 const VALID_ACTIONS = new Set(Object.values(ACTIONS));
 
@@ -106,7 +107,9 @@ function registerV3Routes(router, options = {}) {
   // Issue #65: Student self-profile read/update API
   registerStudentProfileRoutes(router, registerProtectedRoute, options);
 
-  // Downstream Issue #66: Own Plan create/read/edit API
+  // Issue #66: Student own Plan create/read/edit API
+  registerStudentPlanRoutes(router, registerProtectedRoute, options);
+
   // Downstream Issue #67: Staff Student/Plan search and review queue API
   // Downstream Issue #68: Advisor assigned-scope read-only API
   // Downstream Issue #69: Student Plan submission transaction
