@@ -721,4 +721,40 @@ describe('Issue #70: Staff start-review, return and approve commands', () => {
       expect(missingRes.statusCode).toBe(404);
     });
   });
+
+  describe('5. Route contract', () => {
+    test('serves return only at /return; the /return-for-revision alias is not registered', async () => {
+      const { handler, tokenFor, plansStore, auditsStore } = createTestSetup({
+        initialPlan: { status: 'UNDER_REVIEW', version: 3 }
+      });
+
+      const response = await handler(
+        buildEvent(`/api/v3/plans/${PLAN_CPE_ID}/return-for-revision`, tokenFor('sub-staff-cpe'), {
+          body: { expected_version: 3, operation_id: OP_ID_1, review_notes: 'alias' }
+        })
+      );
+
+      // Non-GET to an unregistered path keeps the V2 405 behavior from #55
+      expect(response.statusCode).toBe(405);
+      expect(plansStore.get(PLAN_CPE_ID).status).toBe('UNDER_REVIEW');
+      expect(auditsStore).toHaveLength(0);
+    });
+
+    test('returns cycle_id but never the legacy round_id', async () => {
+      const { handler, tokenFor } = createTestSetup({
+        initialPlan: { status: 'UNDER_REVIEW', version: 3 }
+      });
+
+      const response = await handler(
+        buildEvent(`/api/v3/plans/${PLAN_CPE_ID}/approve`, tokenFor('sub-staff-cpe'), {
+          body: { expected_version: 3, operation_id: OP_ID_2 }
+        })
+      );
+
+      expect(response.statusCode).toBe(200);
+      const { data } = JSON.parse(response.body);
+      expect(data).toHaveProperty('cycle_id');
+      expect(data).not.toHaveProperty('round_id');
+    });
+  });
 });
