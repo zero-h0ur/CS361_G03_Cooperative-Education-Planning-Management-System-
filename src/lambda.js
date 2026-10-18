@@ -18,7 +18,11 @@ function createLambdaHandler({ dal } = {}) {
     const method = event.requestContext?.http?.method || event.httpMethod || 'GET';
     const request = {
       method,
-      url: buildRequestUrl(event)
+      url: buildRequestUrl(event),
+      headers: event.headers && typeof event.headers === 'object' ? event.headers : {},
+      requestContext: event.requestContext && typeof event.requestContext === 'object'
+        ? event.requestContext
+        : {}
     };
 
     return new Promise((resolve, reject) => {
