@@ -103,8 +103,10 @@ export function createAmplifyAuthClient({ config, currentOrigin = window.locatio
         const session = await fetchAuthSession({ forceRefresh });
         const accessToken = session.tokens?.accessToken?.toString();
 
+        // No stored tokens means the user has not signed in yet in this tab
+        // (sessionStorage); a failed refresh of existing tokens is an expiry.
         if (!accessToken) {
-          throw new AuthShellError(AUTH_ERROR_CODES.SESSION_EXPIRED);
+          throw new AuthShellError(AUTH_ERROR_CODES.NOT_SIGNED_IN);
         }
 
         return accessToken;

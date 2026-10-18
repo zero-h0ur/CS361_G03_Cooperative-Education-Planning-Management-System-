@@ -2,6 +2,8 @@ import { AUTH_ERROR_CODES, AuthShellError } from './auth-errors.js';
 
 export const SUPPORTED_ROLES = Object.freeze(['STUDENT', 'STAFF', 'ADVISOR']);
 const SUPPORTED_ROLE_SET = new Set(SUPPORTED_ROLES);
+// Valid backend roles (#49) that have no area in the V3 shell, e.g. ADMIN uses OPS only
+const SHELL_DENIED_ROLE_SET = new Set(['ADMIN']);
 
 function buildMeEndpoint(apiBaseUrl, currentOrigin) {
   if (typeof apiBaseUrl !== 'string' || apiBaseUrl.trim() === '') {
@@ -29,6 +31,9 @@ async function parseSuccessResponse(response) {
   }
 
   const role = payload?.data?.role;
+  if (SHELL_DENIED_ROLE_SET.has(role)) {
+    throw new AuthShellError(AUTH_ERROR_CODES.ACCESS_DENIED);
+  }
   if (typeof role !== 'string' || !SUPPORTED_ROLE_SET.has(role)) {
     throw new AuthShellError(AUTH_ERROR_CODES.INVALID_RESPONSE);
   }

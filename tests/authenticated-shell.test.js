@@ -18,12 +18,14 @@ function setup({ hash = '', session = { role: 'STUDENT' }, error } = {}) {
   const loadSession = error
     ? jest.fn().mockRejectedValue(error)
     : jest.fn().mockResolvedValue(session);
+  const startLogin = jest.fn().mockResolvedValue(undefined);
   const restartLogin = jest.fn().mockResolvedValue(undefined);
   const logout = jest.fn().mockResolvedValue(undefined);
   const root = document.getElementById('authenticatedApp');
   const app = createShellApp({
     root,
     loadSession,
+    startLogin,
     restartLogin,
     logout,
     location,
@@ -31,7 +33,7 @@ function setup({ hash = '', session = { role: 'STUDENT' }, error } = {}) {
     storage: window.sessionStorage
   });
 
-  return { app, root, location, eventTarget, loadSession, restartLogin, logout };
+  return { app, root, location, eventTarget, loadSession, startLogin, restartLogin, logout };
 }
 
 describe('authenticated V3 shell and route guards', () => {
@@ -144,6 +146,45 @@ describe('authenticated V3 shell and route guards', () => {
     await context.app.start();
 
     expect(window.sessionStorage.getItem('co-ed:return-route')).toBeNull();
+  });
+
+  it('asks a first-time visitor to sign in instead of reporting an expired session', async () => {
+    const context = setup({
+      hash: '#/student/plan',
+      error: { code: AUTH_ERROR_CODES.NOT_SIGNED_IN }
+    });
+
+    await context.app.start();
+
+    expect(context.root.textContent).toContain('กรุณาเข้าสู่ระบบ');
+    expect(context.root.textContent).not.toContain('Session หมดอายุ');
+    expect(context.startLogin).not.toHaveBeenCalled();
+    expect(context.root.querySelector('a').getAttribute('href')).toBe('company-directory.html');
+
+    const loginButton = [...context.root.querySelectorAll('button')]
+      .find((button) => button.textContent === 'เข้าสู่ระบบ');
+    loginButton.click();
+    await Promise.resolve();
+
+    expect(context.startLogin).toHaveBeenCalledTimes(1);
+    expect(context.restartLogin).not.toHaveBeenCalled();
+    expect(window.sessionStorage.getItem('co-ed:return-route')).toBe('#/student/plan');
+  });
+
+  it('offers logout on access-denied and unavailable states so users can switch accounts', async () => {
+    for (const code of [AUTH_ERROR_CODES.ACCESS_DENIED, AUTH_ERROR_CODES.SERVICE_UNAVAILABLE]) {
+      const context = setup({ error: { code } });
+      await context.app.start();
+
+      const logoutButton = [...context.root.querySelectorAll('button')]
+        .find((button) => button.textContent === 'ออกจากระบบ');
+      expect(logoutButton).toBeDefined();
+      logoutButton.click();
+      await Promise.resolve();
+
+      expect(context.logout).toHaveBeenCalledTimes(1);
+      context.app.destroy();
+    }
   });
 
   it('shows 403 as access denied without starting login', async () => {

@@ -53,7 +53,6 @@ describe('authenticated V3 session client', () => {
 
   it.each([
     [{ data: {} }],
-    [{ data: { role: 'ADMIN' } }],
     [{ data: { role: 'student' } }],
     [{ role: 'STUDENT' }]
   ])('fails closed for malformed or unsupported session payload %#', async (payload) => {
@@ -66,6 +65,19 @@ describe('authenticated V3 session client', () => {
 
     await expect(client.loadSession()).rejects.toMatchObject({
       code: AUTH_ERROR_CODES.INVALID_RESPONSE
+    });
+  });
+
+  it('treats a valid ADMIN session as access denied because the shell has no ADMIN area', async () => {
+    const client = createSessionClient({
+      apiBaseUrl: 'https://api.example.com',
+      currentOrigin: 'https://app.example.com',
+      getAccessToken: jest.fn().mockResolvedValue('token'),
+      fetchImpl: jest.fn().mockResolvedValue(response(200, { data: { role: 'ADMIN' } }))
+    });
+
+    await expect(client.loadSession()).rejects.toMatchObject({
+      code: AUTH_ERROR_CODES.ACCESS_DENIED
     });
   });
 

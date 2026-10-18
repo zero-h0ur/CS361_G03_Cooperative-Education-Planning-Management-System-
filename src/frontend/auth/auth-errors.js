@@ -1,5 +1,6 @@
 export const AUTH_ERROR_CODES = Object.freeze({
   CONFIGURATION: 'AUTH_CONFIGURATION_ERROR',
+  NOT_SIGNED_IN: 'NOT_SIGNED_IN',
   SESSION_EXPIRED: 'SESSION_EXPIRED',
   ACCESS_DENIED: 'ACCESS_DENIED',
   SERVICE_UNAVAILABLE: 'SESSION_SERVICE_UNAVAILABLE',
@@ -8,6 +9,7 @@ export const AUTH_ERROR_CODES = Object.freeze({
 
 const SAFE_MESSAGES = Object.freeze({
   [AUTH_ERROR_CODES.CONFIGURATION]: 'Authentication is not configured.',
+  [AUTH_ERROR_CODES.NOT_SIGNED_IN]: 'Please sign in to continue.',
   [AUTH_ERROR_CODES.SESSION_EXPIRED]: 'Your session has expired.',
   [AUTH_ERROR_CODES.ACCESS_DENIED]: 'You do not have permission to access this area.',
   [AUTH_ERROR_CODES.SERVICE_UNAVAILABLE]: 'The session service is temporarily unavailable.',

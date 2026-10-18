@@ -17,6 +17,7 @@ if (root) {
     const app = createShellApp({
       root,
       loadSession: sessionClient.loadSession,
+      startLogin: authClient.startLogin,
       restartLogin: authClient.restartLogin,
       logout: authClient.logout,
       location: window.location,

@@ -189,13 +189,20 @@ export function renderStartupFailure(root) {
 export function createShellApp({
   root,
   loadSession,
+  startLogin,
   restartLogin,
   logout,
   location,
   eventTarget,
   storage
 }) {
-  if (!root || typeof loadSession !== 'function' || typeof restartLogin !== 'function' || typeof logout !== 'function') {
+  if (
+    !root ||
+    typeof loadSession !== 'function' ||
+    typeof startLogin !== 'function' ||
+    typeof restartLogin !== 'function' ||
+    typeof logout !== 'function'
+  ) {
     throw new TypeError('Shell dependencies are incomplete.');
   }
 
@@ -210,6 +217,33 @@ export function createShellApp({
       description: 'ระบบกำลังยืนยันสถานะการเข้าสู่ระบบก่อนแสดงพื้นที่ส่วนตัว',
       tone: 'loading',
       busy: true
+    });
+  }
+
+  // First visit in this tab: ask the user to sign in explicitly. No automatic redirect,
+  // so a failed or cancelled Cognito login cannot cause a redirect loop.
+  function renderSignIn() {
+    safelyRememberReturnRoute(storage, location.hash);
+    const publicDirectory = element('a', 'shell-button shell-button--secondary', 'ดูรายชื่อสถานประกอบการ');
+    publicDirectory.href = 'company-directory.html';
+
+    renderState(root, {
+      eyebrow: 'SIGN IN',
+      title: 'กรุณาเข้าสู่ระบบ',
+      description: 'เข้าสู่ระบบด้วยบัญชีที่มหาวิทยาลัยจัดเตรียมให้ เพื่อเปิดพื้นที่ผู้ใช้งานของคุณ',
+      tone: 'neutral',
+      actions: [
+        createActionButton('เข้าสู่ระบบ', async () => {
+          safelyRememberReturnRoute(storage, location.hash);
+          renderLoading('กำลังไปยังหน้าเข้าสู่ระบบ');
+          try {
+            await startLogin();
+          } catch {
+            renderUnavailable();
+          }
+        }),
+        publicDirectory
+      ]
     });
   }
 
@@ -241,6 +275,8 @@ export function createShellApp({
         location.hash = defaultRoute;
       }, true));
     }
+    // Let a user signed in with the wrong account switch accounts
+    actions.push(createActionButton('ออกจากระบบ', handleLogout, true));
 
     renderState(root, {
       eyebrow: 'ACCESS DENIED',
@@ -259,7 +295,10 @@ export function createShellApp({
       description: 'ระบบยืนยันตัวตนหรือ Session API ยังไม่พร้อม กรุณาลองใหม่อีกครั้ง',
       tone: 'error',
       alert: true,
-      actions: [createActionButton('ลองอีกครั้ง', bootstrap)]
+      actions: [
+        createActionButton('ลองอีกครั้ง', bootstrap),
+        createActionButton('ออกจากระบบ', handleLogout, true)
+      ]
     });
   }
 
@@ -328,7 +367,9 @@ export function createShellApp({
         return;
       }
 
-      if (error?.code === AUTH_ERROR_CODES.SESSION_EXPIRED) {
+      if (error?.code === AUTH_ERROR_CODES.NOT_SIGNED_IN) {
+        renderSignIn();
+      } else if (error?.code === AUTH_ERROR_CODES.SESSION_EXPIRED) {
         renderExpired();
       } else if (error?.code === AUTH_ERROR_CODES.ACCESS_DENIED) {
         renderForbidden('Session ถูกต้อง แต่บัญชีนี้ไม่มีสิทธิ์เข้าใช้งานพื้นที่ดังกล่าว');
