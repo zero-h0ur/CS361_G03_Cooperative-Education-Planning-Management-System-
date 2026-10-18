@@ -20,6 +20,7 @@
     "test:lambda": "jest --runInBand tests/lambda.test.js",
     "test:dataset": "node --test tests/v2-dataset.test.mjs",
     "test:fixtures": "node --test tests/v3-dataset.test.mjs && jest --runInBand tests/v3-fixtures.test.js",
+    "test:v3-t01": "node --test tests/v3-dataset.test.mjs && jest --runInBand tests/v3-fixtures.test.js tests/v3-t01-migrations-constraints-fixtures.test.js",
     "test:dal": "jest --runInBand tests/dal.test.js",
     "test:frontend": "jest --runInBand tests/company-directory.test.js",
     "test:migration": "jest --runInBand tests/v3-migration.test.js",
