@@ -11,8 +11,7 @@ const {
   decodePathParameter,
   parseJsonBody
 } = require('../router');
-const { getRequestContext } = require('../context');
-const { ValidationError, ForbiddenError } = require('../errors');
+const { ValidationError } = require('../errors');
 const { sendSuccess } = require('../response');
 
 const PLAN_SUBMIT_PATTERN = /^\/api\/v3\/plans\/([^/]+)\/submit$/;
@@ -51,8 +50,8 @@ function toPlanWorkflowResponse(result = {}) {
   return Object.freeze({
     id: plan.id ?? null,
     student_id: plan.student_id ?? null,
+    // V3 uses cycle_id as the contract name; legacy round_id is not exposed (#52 section 12)
     cycle_id: plan.cycle_id ?? null,
-    round_id: plan.round_id ?? null,
     company_id: plan.company_id ?? null,
     position_id: plan.position_id ?? null,
     notes: plan.notes ?? null,
@@ -96,8 +95,10 @@ function assertNoBodyOverrides(body) {
   }
 }
 
-function resolveOwnStudent(request) {
-  return { studentId: getRequestContext(request).studentId || null };
+// Pass the target Plan to the central policy (#62) so it validates the UUID (400),
+// existence (404) and Student ownership (403) before the workflow runs.
+function resolveOwnPlan(_request, context) {
+  return { planId: decodePathParameter(context.params[0]) };
 }
 
 /**
@@ -123,13 +124,10 @@ function registerPlanSubmissionRoutes(router, registerProtectedRoute, options = 
     method: 'POST',
     pattern: PLAN_SUBMIT_PATTERN,
     action: ACTIONS.PLAN_SUBMIT,
-    resolveResource: resolveOwnStudent,
+    resolveResource: resolveOwnPlan,
     authOptions,
+    // Role (Student owner only; Advisor/Staff denied) is enforced by the central policy action
     handler: async (request, response, context) => {
-      if (context.authContext?.role !== 'STUDENT') {
-        throw new ForbiddenError('Access denied.', 'FORBIDDEN');
-      }
-
       assertAllowedQueryParameters(
         context.url.searchParams,
         ALLOWED_SUBMIT_QUERY_PARAMS
