@@ -1,193 +1,379 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" class="scroll-smooth">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CO-ED ระบบข้อมูลสหกิจศึกษา</title>
+  <title>CO-ED TU ระบบข้อมูลสหกิจศึกษา มหาวิทยาลัยธรรมศาสตร์</title>
   
   <link rel="icon" href="resources/images/logomini.png" type="image/png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body class="relative">
+
+  <!-- Ambient Blurs -->
+  <div class="blur-blob -top-20 -right-20" aria-hidden="true"></div>
+  <div class="blur-blob-gold top-[550px] -left-28" aria-hidden="true"></div>
 
   <!-- Navigation -->
-<header class="header">
-  <div class="container header-container">
-    <div class="header-main-group">
-      <a href="index.html" class="logo">
-        <img src="resources/images/logo.png" alt="logo" class="nav-logo">
-      </a>
-      <nav class="nav-links">
-        <a href="index.html" class="active">หน้าแรก</a>
-        <a href="requirements.html">ข้อกำหนดสหกิจและขั้นตอน</a>
-        <a href="company-directory.html">รายชื่อสถานประกอบการ</a>
-        <a href="faq.html">คำถามที่พบบ่อย</a>
-      </nav>
-    </div>
-
-    <div class="auth-buttons">
-      <a href="#" class="btn-login">Login</a>
-      <a href="#" class="btn-signup">Sign Up</a>
-    </div>
-  </div>
-  <nav class="mobile-nav-links" aria-label="เมนูหลักสำหรับหน้าจอขนาดเล็ก">
-    <a href="index.html" class="active" aria-current="page">หน้าแรก</a>
-    <a href="requirements.html">ข้อกำหนดและขั้นตอน</a>
-    <a href="company-directory.html">สถานประกอบการ</a>
-    <a href="faq.html">คำถามที่พบบ่อย</a>
-  </nav>
-</header>
-
-  <!-- Hero Section -->
-  <section class="hero-section">
-    <div class="container hero-grid">
-      <div>
-        <h1 class="hero-title">
-          ระบบข้อมูล<br>
-          <span class="hero-highlight">
-            สหกิจศึกษา
-            <svg class="underline-svg" viewBox="0 0 200 24" fill="none" preserveAspectRatio="none" style="position: absolute; bottom: -0.1em; left: -5%; width: 110%; height: 0.4em;">
-              <path d="M5 10 Q 100 6 195 10" stroke="#0EA5E9" stroke-width="6" stroke-linecap="round"/>
-              <path d="M25 19 Q 100 15 175 19" stroke="#0EA5E9" stroke-width="6" stroke-linecap="round"/>
-            </svg>
-          </span>
-        </h1>
-        <p class="hero-subtitle">
-          ศูนย์รวมข้อมูลขั้นตอน กำหนดการ และสถานประกอบการ เพื่อเตรียมความพร้อมสู่การปฏิบัติงานจริง
-        </p>
-
-        <div class="search-box">
-          <div class="search-input-group">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" placeholder="ตำแหน่งงาน..." />
+  <header class="header">
+    <div class="container header-container">
+      <div class="header-main-group">
+        <a href="index.html" class="logo" aria-label="CO-ED หน้าแรก">
+          <div class="logo-tu-mark">
+            <img src="resources/images/logomini.png" alt="CO-ED Logo" class="logo-tu-img" />
           </div>
-          <div class="search-input-group">
-            <i class="fa-solid fa-location-dot"></i>
-            <select>
-              
-              <option value="bkk">กรุงเทพมหานคร</option>
-              <option value="nonthaburi">นนทบุรี</option>
-              <option value="pathum">ปทุมธานี</option>
-            </select>
+          <div class="logo-text-block">
+            <span class="logo-text-main">CO-ED TU</span>
+            <span class="logo-text-sub">ระบบข้อมูลสหกิจศึกษา</span>
           </div>
-          <button class="btn-search">ค้นหาตำแหน่งงาน</button>
-        </div>
-
-        <div class="popular-tags">
-          <span>คำค้นยอดนิยม :</span> UI Designer, UX Researcher, Android, Admin
-        </div>
+        </a>
+        <nav class="nav-links" aria-label="เมนูหลัก">
+          <a href="index.html" class="active" aria-current="page">หน้าแรก</a>
+          <a href="requirements.html">ข้อกำหนดสหกิจและขั้นตอน</a>
+          <a href="company-directory.html">รายชื่อสถานประกอบการ</a>
+          <a href="faq.html">คำถามที่พบบ่อย</a>
+        </nav>
       </div>
 
-      <div class="hero-image-wrapper">
-        <div class="hero-image-box">
-          <div class="bg-frame"></div>
-          <img src="resources/images/student.png" alt="Student" />
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Announcement Banner -->
-  <section class="container announcement-section-new">
-    <div class="banner-card-new">
-      <div class="banner-img-new">
-        <img src="resources/images/annoucement.png" alt="Announcement" />
-      </div>
-      <div class="banner-content-new">
-        <h2 class="announcement-heading-red">ประกาศสำคัญ!!!</h2>
-        <p class="announcement-desc">ระบบเปิดให้นักศึกษาตรวจสอบรายชื่อสถานประกอบการและข้อกำหนดเบื้องต้น สำหรับการออกปฏิบัติงานสหกิจศึกษาแล้ว โปรดศึกษากำหนดการและเตรียมเอกสารประกอบการยื่นแผนให้พร้อมก่อนถึงวันเปิดรับสมัคร</p>
+      <div class="auth-buttons">
+        <a href="#" class="btn-login">Login</a>
+        <a href="#" class="btn-signup">Sign Up</a>
       </div>
     </div>
-  </section>
+    <nav class="mobile-nav-links" aria-label="เมนูหลักสำหรับหน้าจอขนาดเล็ก">
+      <a href="index.html" class="active" aria-current="page">หน้าแรก</a>
+      <a href="requirements.html">ข้อกำหนดและขั้นตอน</a>
+      <a href="company-directory.html">สถานประกอบการ</a>
+      <a href="faq.html">คำถามที่พบบ่อย</a>
+    </nav>
+  </header>
 
-  <!-- Timeline Section -->
-  <section class="container timeline-section">
-    <h2 class="timeline-heading"><span>กำหนดการ</span>และกิจกรรมสำคัญ</h2>
-    <div class="timeline-container">
-      <div class="timeline-line"></div>
+  <!-- Hero Section (Centered Editorial Layout matching Image 1) -->
+  <section class="hero-section dot-grid">
+    <div class="container hero-content-centered">
       
-      <!-- Item 1 -->
-      <div class="timeline-item left">
-        <div class="timeline-content">
-          <div class="timeline-box">
-             <div class="timeline-box-header">
-                <div>
-                  <h3>ปฐมนิเทศนักศึกษาสหกิจศึกษา</h3>
-                  <p>นักศึกษาเข้ารับฟังการชี้แจงรายละเอียดและข้อกำหนดการปฏิบัติงาน</p>
-                </div>
-                <div class="timeline-icon">📢</div>
-             </div>
-             <div class="timeline-footer">
-               <div class="timeline-tags">
-                 <span class="tag-pill tag-green">Mandatory</span>
-                 <span class="tag-pill tag-lightgreen">All Students</span>
-               </div>
-               <button class="btn-detail">ดูรายละเอียด</button>
-             </div>
-          </div>
-        </div>
-        <div class="timeline-circle">
-           <span>Oct<br>15</span>
-        </div>
+      <!-- Top Editorial Badge -->
+      <div class="hero-badge fade-up-init">
+        <i class="fa-solid fa-sparkles"></i>
+        <span>ระบบข้อมูลสหกิจศึกษา มหาวิทยาลัยธรรมศาสตร์</span>
       </div>
 
-      <!-- Item 2 -->
-      <div class="timeline-item right">
-        <div class="timeline-circle">
-           <span>Nov<br>1</span>
+      <!-- Main Headline with Animated Curved Underline -->
+      <h1 class="hero-title fade-up-init">
+        ระบบข้อมูล<br>
+        <span class="hero-highlight">
+          สหกิจศึกษา
+          <svg class="hero-underline-svg" viewBox="0 0 340 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path class="hero-underline-path" d="M4 18C75 6 245 4 336 17" stroke="url(#heroCoralGrad)" stroke-width="6" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="heroCoralGrad" x1="0" y1="0" x2="340" y2="0" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#C8102E" />
+                <stop offset="0.65" stop-color="#E51838" />
+                <stop offset="1" stop-color="#F1B521" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </span>
+      </h1>
+
+      <p class="hero-subtitle fade-up-init">
+        ศูนย์รวมข้อมูลขั้นตอน กำหนดการ และสถานประกอบการ เพื่อเตรียมความพร้อมสู่การปฏิบัติงานจริง
+      </p>
+
+      <!-- Pill Search Box Form (Direct from Image 1) -->
+      <form class="pill-search-box fade-up-init" id="homeSearchForm" onsubmit="handleHomeSearch(event)">
+        <div class="search-input-group">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="homeSearchInput" placeholder="ตำแหน่งงาน หรือทักษะที่สนใจ..." autocomplete="off" />
         </div>
-        <div class="timeline-content">
-          <div class="timeline-box">
-             <div class="timeline-box-header">
-                <div class="timeline-icon">🏢</div>
-                <div>
-                  <h3>ยื่นเลือกสถานประกอบการ</h3>
-                  <p>เปิดระบบให้นักศึกษายื่นความจำนงและเลือกสถานประกอบการ</p>
-                </div>
-             </div>
-             <div class="timeline-footer">
-               <div class="timeline-tags">
-                 <span class="tag-pill tag-green">Application</span>
-               </div>
-               <button class="btn-detail">เลือกสถานที่</button>
-             </div>
-          </div>
+        <div class="search-input-group">
+          <i class="fa-solid fa-location-dot"></i>
+          <select id="homeLocationSelect">
+            <option value="">ทุกสถานที่</option>
+            <option value="กรุงเทพมหานคร">กรุงเทพมหานคร</option>
+            <option value="ปทุมธานี">ปทุมธานี</option>
+            <option value="นนทบุรี">นนทบุรี</option>
+          </select>
         </div>
+        <button type="submit" class="btn-search-tu">ค้นหาตำแหน่งงาน</button>
+      </form>
+
+      <!-- Popular Search Tags -->
+      <div class="popular-tags fade-up-init">
+        <span>คำค้นยอดนิยม :</span>
+        <button type="button" class="popular-tag-item" onclick="searchTag('UI Designer')">UI Designer</button>
+        <button type="button" class="popular-tag-item" onclick="searchTag('UX Researcher')">UX Researcher</button>
+        <button type="button" class="popular-tag-item" onclick="searchTag('Android')">Android</button>
+        <button type="button" class="popular-tag-item" onclick="searchTag('Admin')">Admin</button>
       </div>
 
-      <!-- Item 3 -->
-      <div class="timeline-item left">
-        <div class="timeline-content">
-          <div class="timeline-box">
-             <div class="timeline-box-header">
-                <div>
-                  <h3>ประกาศผลและทำหนังสือส่งตัว</h3>
-                  <p>ประกาศรายชื่อผู้ผ่านการคัดเลือกและจัดทำหนังสือส่งตัวให้สถานประกอบการ</p>
-                </div>
-                <div class="timeline-icon">📄</div>
-             </div>
-             <div class="timeline-footer">
-               <div class="timeline-tags">
-                 <span class="tag-pill tag-green">Announcement</span>
-               </div>
-               <button class="btn-detail">ตรวจสอบรายชื่อ</button>
-             </div>
-          </div>
+    </div>
+  </section>
+
+  <!-- Announcement Banner (Compact 2-Column Split Card matching Image 5) -->
+  <section class="container announcement-section-modern fade-up-init">
+    <div class="announcement-card-split">
+      <div class="announcement-media">
+        <img src="resources/images/annoucement.jpeg" alt="ประกาศสำคัญ สหกิจศึกษา" class="announcement-img-cover" />
+      </div>
+      <div class="announcement-body">
+        <div class="announcement-badge">
+          <i class="fa-solid fa-bullhorn"></i>
+          <span>ประกาศสำหรับนักศึกษา</span>
         </div>
-        <div class="timeline-circle">
-           <span>Nov<br>15</span>
+        <h2 class="announcement-title">ประกาศสำคัญ!</h2>
+        <p class="announcement-desc">ระบบเปิดให้นักศึกษาตรวจสอบรายชื่อสถานประกอบการและข้อกำหนดเบื้องต้น สำหรับการออกปฏิบัติงานสหกิจศึกษาแล้ว โปรดศึกษากำหนดการและเตรียมเอกสารประกอบการยื่นแผนให้พร้อมก่อนถึงวันเปิดรับสมัคร</p>
+        <div class="announcement-actions">
+          <a href="company-directory.html" class="btn-announcement-primary">
+            ตรวจสอบสถานประกอบการ <i class="fa-solid fa-arrow-right"></i>
+          </a>
+          <a href="requirements.html" class="btn-announcement-secondary">
+            อ่านข้อกำหนดสหกิจ
+          </a>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- 6-Step Vertical Timeline with SVG Journey Line Animation -->
+  <section class="timeline-section-modern" id="timelineRoadmap">
+    <div class="container">
+      
+      <div class="timeline-header-modern fade-up-init">
+        <div class="timeline-badge">
+          <i class="fa-solid fa-route"></i>
+          <span>Co-op Journey Roadmap</span>
+        </div>
+        <h2 class="timeline-title-modern">
+          6 ขั้นตอนสู่ <span>สหกิจศึกษาคุณภาพ</span>
+        </h2>
+        <p class="timeline-subtitle-modern">
+          ลำดับขั้นตอนตั้งแต่การลงทะเบียน การตรวจสอบคุณสมบัติ จนถึงการบรรจุงานจริง ณ สถานประกอบการ
+        </p>
+      </div>
+
+      <div class="timeline-roadmap-wrapper" id="timelineRoadmapWrapper">
+        
+        <!-- SVG Journey Line Background & Active Drawn Path -->
+        <div class="timeline-svg-container" id="timelineSvgContainer">
+          <svg width="4" height="100%" class="h-full w-full overflow-visible" xmlns="http://www.w3.org/2000/svg">
+            <line x1="2" y1="0" x2="2" y2="100%" class="timeline-svg-line-bg" />
+            <line id="journeySvgLine" x1="2" y1="0" x2="2" y2="100%" class="timeline-svg-line-active" />
+          </svg>
+        </div>
+
+        <div class="steps-timeline-list">
+
+          <!-- STEP 1: Register and Create Account -->
+          <div class="step-row-item fade-up-init">
+            <!-- Left on Desktop -->
+            <div class="step-card-box">
+              <div class="step-card-header-flex">
+                <div class="step-icon-modern">
+                  <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <div>
+                  <span class="step-tag-pill">ขั้นตอนที่ 01</span>
+                  <h3 class="step-card-title">Register and Create Account</h3>
+                </div>
+              </div>
+              <p class="step-card-desc">
+                สร้างบัญชีผู้ใช้และลงทะเบียนข้อมูลส่วนตัวในระบบ CO-ED กรอกประวัติการศึกษา ทักษะเด่น และระบุสายงานที่สนใจเพื่อเปิดใช้งานโปรไฟล์นักศึกษา
+              </p>
+              <div>
+                <span class="step-tag-pill">Personal Info</span>
+                <span class="step-tag-pill">Skills Profile</span>
+                <span class="step-tag-pill step-tag-highlight">Online Portal</span>
+              </div>
+            </div>
+
+            <!-- Center Node Marker -->
+            <div class="step-node-center step-node-red step-number-node">
+              01
+            </div>
+
+            <!-- Empty right column on desktop -->
+            <div class="hidden lg:block"></div>
+          </div>
+
+          <!-- STEP 2: Verify Requirements -->
+          <div class="step-row-item fade-up-init">
+            <!-- Empty left column on desktop -->
+            <div class="hidden lg:block"></div>
+
+            <!-- Center Node Marker -->
+            <div class="step-node-center step-node-ink step-number-node">
+              02
+            </div>
+
+            <!-- Right on Desktop -->
+            <div class="step-card-box">
+              <div class="step-card-header-flex">
+                <div class="step-icon-modern">
+                  <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                  <span class="step-tag-pill">ขั้นตอนที่ 02</span>
+                  <h3 class="step-card-title">Verify Requirements</h3>
+                </div>
+              </div>
+              <p class="step-card-desc">
+                ตรวจสอบคุณสมบัติตามเงื่อนไขของโครงการ เช่น เกรดเฉลี่ยสะสม (GPAX ไม่ต่ำกว่า 2.75) จำนวนหน่วยกิตสะสม และวิชาบังคับก่อนตามหลักสูตร คพ.
+              </p>
+              <div>
+                <span class="step-tag-pill">GPAX ≥ 2.75</span>
+                <span class="step-tag-pill">Core Prerequisites</span>
+                <span class="step-tag-pill">Curriculum 61/66</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 3: Prepare Documents -->
+          <div class="step-row-item fade-up-init">
+            <!-- Left on Desktop -->
+            <div class="step-card-box">
+              <div class="step-card-header-flex">
+                <div class="step-icon-modern">
+                  <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <div>
+                  <span class="step-tag-pill">ขั้นตอนที่ 03</span>
+                  <h3 class="step-card-title">Prepare Documents</h3>
+                </div>
+              </div>
+              <p class="step-card-desc">
+                เตรียมเอกสารที่จำเป็นให้พร้อมสมบูรณ์ ทั้ง Resume/CV ภาษาไทยและอังกฤษ, ใบแสดงผลการเรียนล่าสุด (Transcript), และ Portfolio แฟ้มสะสมงาน
+              </p>
+              <div>
+                <span class="step-tag-pill">Resume / CV</span>
+                <span class="step-tag-pill">Official Transcript</span>
+                <span class="step-tag-pill">Digital Portfolio</span>
+              </div>
+            </div>
+
+            <!-- Center Node Marker -->
+            <div class="step-node-center step-node-red step-number-node">
+              03
+            </div>
+
+            <!-- Empty right column on desktop -->
+            <div class="hidden lg:block"></div>
+          </div>
+
+          <!-- STEP 4: Apply to Company -->
+          <div class="step-row-item fade-up-init">
+            <!-- Empty left column on desktop -->
+            <div class="hidden lg:block"></div>
+
+            <!-- Center Node Marker -->
+            <div class="step-node-center step-node-ink step-number-node">
+              04
+            </div>
+
+            <!-- Right on Desktop -->
+            <div class="step-card-box">
+              <div class="step-card-header-flex">
+                <div class="step-icon-modern">
+                  <i class="fa-solid fa-briefcase"></i>
+                </div>
+                <div>
+                  <span class="step-tag-pill">ขั้นตอนที่ 04</span>
+                  <h3 class="step-card-title">Apply to Company</h3>
+                </div>
+              </div>
+              <p class="step-card-desc">
+                เลือกสถานประกอบการและส่งใบสมัครผ่านระบบ CO-ED (เลือกได้สูงสุด 3 อันดับ) พร้อมแนบเอกสารที่จำเป็นให้ตรงตามตำแหน่งงานที่ต้องการ
+              </p>
+              <div>
+                <span class="step-tag-pill">Top 3 Choices</span>
+                <span class="step-tag-pill">Partner Directory</span>
+                <span class="step-tag-pill step-tag-highlight">120+ Companies</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 5: Interview Process -->
+          <div class="step-row-item fade-up-init">
+            <!-- Left on Desktop -->
+            <div class="step-card-box">
+              <div class="step-card-header-flex">
+                <div class="step-icon-modern">
+                  <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                  <span class="step-tag-pill">ขั้นตอนที่ 05</span>
+                  <h3 class="step-card-title">Interview Process</h3>
+                </div>
+              </div>
+              <p class="step-card-desc">
+                เข้าสัมภาษณ์กับบริษัท (อาจเป็นรอบ 1-3 ตามนโยบายของแต่ละองค์กร) ทดสอบข้อเขียนหรือ Coding Test พร้อมรับฟังข้อเสนอและลักษณะงานจริง
+              </p>
+              <div>
+                <span class="step-tag-pill">Technical Interview</span>
+                <span class="step-tag-pill">Culture Fit</span>
+                <span class="step-tag-pill">On-site / Online</span>
+              </div>
+            </div>
+
+            <!-- Center Node Marker -->
+            <div class="step-node-center step-node-red step-number-node">
+              05
+            </div>
+
+            <!-- Empty right column on desktop -->
+            <div class="hidden lg:block"></div>
+          </div>
+
+          <!-- STEP 6: Placement and Start -->
+          <div class="step-row-item fade-up-init">
+            <!-- Empty left column on desktop -->
+            <div class="hidden lg:block"></div>
+
+            <!-- Center Node Marker -->
+            <div class="step-node-center step-node-ink step-number-node">
+              06
+            </div>
+
+            <!-- Right on Desktop -->
+            <div class="step-card-box">
+              <div class="step-card-header-flex">
+                <div class="step-icon-modern">
+                  <i class="fa-solid fa-flag-checkered"></i>
+                </div>
+                <div>
+                  <span class="step-tag-pill">ขั้นตอนที่ 06</span>
+                  <h3 class="step-card-title">Placement and Start</h3>
+                </div>
+              </div>
+              <p class="step-card-desc">
+                ได้รับการยืนยันตำแหน่งและเริ่มปฏิบัติงานตามกำหนดการ (ปฏิบัติงานเต็มเวลา 16 สัปดาห์) ส่งแบบแจ้งแผนงาน และส่งรายงานความก้าวหน้าอย่างต่อเนื่อง
+              </p>
+              <div>
+                <span class="step-tag-pill step-tag-highlight">16 Weeks Full-Time</span>
+                <span class="step-tag-pill">Weekly Report</span>
+                <span class="step-tag-pill">Final Defense</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
     </div>
   </section>
 
   <!-- Company Directory -->
-  <section id="company-directory-preview" class="container">
-    <div class="section-header">
-      <h2 class="section-title">รายชื่อสถานประกอบการ</h2>
-      <a href="company-directory.html" class="see-all-link">ดูทั้งหมด <i class="fa-solid fa-arrow-right"></i></a>
-    </div>
+  <section id="company-directory-preview" class="company-directory-preview-section">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <span class="section-kicker" style="color: var(--tu-red); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;">PARTNER DIRECTORY</span>
+          <h2 class="section-title">รายชื่อสถานประกอบการ</h2>
+        </div>
+        <a href="company-directory.html" class="see-all-link">ดูทั้งหมด <i class="fa-solid fa-arrow-right"></i></a>
+      </div>
 
     <!-- เมื่อกดการ์ด จะเรียก openModal พร้อมส่ง ID บริษัท -->
     <div class="directory-grid">
@@ -311,14 +497,17 @@
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
   <footer class="footer">
     <div class="container footer-grid">
       <div>
-        <div class="footer-logo">
-          <i class="fa-solid fa-graduation-cap"></i>
-          <span>CO-ED</span>
+        <div class="footer-logo" style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+          <div class="logo-tu-mark" style="width: 36px; height: 36px; border-radius: 10px; background: #FFF;">
+            <img src="resources/images/logomini.png" alt="CO-ED Logo" style="width: 24px; height: 24px; object-fit: contain;" />
+          </div>
+          <span style="font-family: var(--font-serif); font-size: 22px; font-weight: 700; color: #fff;">CO-ED TU</span>
         </div>
         <p style="max-width: 280px; line-height: 1.6;">
           ระบบสารสนเทศเพื่อการจัดการข้อมูลสหกิจศึกษา ช่วยให้นักศึกษาเตรียมความพร้อมสู่การทำงานจริงได้อย่างมีประสิทธิภาพ
@@ -495,6 +684,135 @@
       if (event.target.id === 'companyModal') {
         closeModal();
       }
+    }
+
+    // จัดการค้นหาตำแหน่งงานจากหน้าแรกแล้วส่ง query parameter ไปยัง company-directory.html
+    function handleHomeSearch(e) {
+      if (e) e.preventDefault();
+      const searchInput = document.getElementById('homeSearchInput');
+      const locationSelect = document.getElementById('homeLocationSelect');
+      const term = searchInput ? searchInput.value.trim() : '';
+      const loc = locationSelect ? locationSelect.value : '';
+      const params = new URLSearchParams();
+      if (term) params.set('search', term);
+      if (loc) params.set('location', loc);
+      const query = params.toString();
+      window.location.href = query ? `company-directory.html?${query}` : 'company-directory.html';
+    }
+
+    function searchTag(term) {
+      window.location.href = `company-directory.html?search=${encodeURIComponent(term)}`;
+    }
+
+    // Header scroll background transition
+    window.addEventListener('scroll', () => {
+      const header = document.querySelector('.header');
+      if (header) {
+        if (window.scrollY > 30) {
+          header.classList.add('scrolled');
+        } else {
+          header.classList.remove('scrolled');
+        }
+      }
+    });
+
+    // Intersection Observer for scroll reveal animations
+    const scrollObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('fade-up-active');
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.fade-up-init').forEach(el => {
+      scrollObserver.observe(el);
+    });
+
+    // SVG Journey Line Scroll Animation
+    const journeySvgLine = document.getElementById('journeySvgLine');
+    const timelineRoadmapWrapper = document.getElementById('timelineRoadmapWrapper');
+
+    function updateJourneyLine() {
+      if (!journeySvgLine || !timelineRoadmapWrapper) return;
+      const rect = timelineRoadmapWrapper.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      const totalHeight = timelineRoadmapWrapper.offsetHeight;
+      
+      journeySvgLine.style.strokeDasharray = `${totalHeight} ${totalHeight}`;
+      const startTrigger = windowHeight * 0.70;
+      const progress = (startTrigger - rect.top) / (rect.height * 0.85);
+      const clamped = Math.min(Math.max(progress, 0), 1);
+      journeySvgLine.style.strokeDashoffset = totalHeight * (1 - clamped);
+    }
+
+    window.addEventListener('DOMContentLoaded', updateJourneyLine);
+    window.addEventListener('scroll', () => {
+      requestAnimationFrame(updateJourneyLine);
+    });
+    window.addEventListener('resize', updateJourneyLine);
+
+    // Custom Animated Typing Cursor for Search Placeholder
+    const searchInput = document.getElementById('homeSearchInput');
+    if (searchInput) {
+      const searchPhrases = [
+        "Software Engineer...",
+        "UX/UI Designer...",
+        "Agoda, SCG, G-Able...",
+        "Data Analyst...",
+        "Mobile App Developer...",
+        "ตำแหน่งงาน หรือทักษะที่สนใจ..."
+      ];
+      let phraseIdx = 0;
+      let charIdx = 0;
+      let isDeleting = false;
+      let isPaused = false;
+      let typingTimeout = null;
+
+      function typeLoop() {
+        if (isPaused) return;
+
+        const currentPhrase = searchPhrases[phraseIdx];
+        const cursor = "|";
+
+        if (isDeleting) {
+          charIdx--;
+          searchInput.setAttribute('placeholder', currentPhrase.substring(0, charIdx) + cursor);
+        } else {
+          charIdx++;
+          searchInput.setAttribute('placeholder', currentPhrase.substring(0, charIdx) + cursor);
+        }
+
+        let delay = isDeleting ? 40 : 80;
+
+        if (!isDeleting && charIdx === currentPhrase.length) {
+          delay = 1800;
+          isDeleting = true;
+        } else if (isDeleting && charIdx === 0) {
+          isDeleting = false;
+          phraseIdx = (phraseIdx + 1) % searchPhrases.length;
+          delay = 450;
+        }
+
+        typingTimeout = setTimeout(typeLoop, delay);
+      }
+
+      typingTimeout = setTimeout(typeLoop, 500);
+
+      searchInput.addEventListener('focus', () => {
+        isPaused = true;
+        clearTimeout(typingTimeout);
+        searchInput.setAttribute('placeholder', 'ตำแหน่งงาน หรือทักษะที่สนใจ...');
+      });
+
+      searchInput.addEventListener('blur', () => {
+        if (searchInput.value.trim() === '') {
+          isPaused = false;
+          isDeleting = false;
+          charIdx = 0;
+          typingTimeout = setTimeout(typeLoop, 400);
+        }
+      });
     }
   </script>
 </body>

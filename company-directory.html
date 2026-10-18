@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CO-ED ระบบข้อมูลสหกิจศึกษา</title>
+  <title>รายชื่อสถานประกอบการ - CO-ED TU สหกิจศึกษา มหาวิทยาลัยธรรมศาสตร์</title>
 
   <link rel="icon" href="resources/images/logomini.png" type="image/png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -14,12 +14,22 @@
 </head>
 <body class="requirements-page directory-page">
 
+  <!-- Ambient Blurs -->
+  <div class="blur-blob -top-24 -right-24" aria-hidden="true"></div>
+  <div class="blur-blob-gold top-[500px] -left-28" aria-hidden="true"></div>
+
   <!-- Header Navigation มาตรฐาน -->
   <header class="header">
     <div class="container header-container">
       <div class="header-main-group">
         <a href="index.html" class="logo" aria-label="CO-ED หน้าแรก">
-          <img src="resources/images/logo.png" alt="CO-ED" class="nav-logo" />
+          <div class="logo-tu-mark">
+            <img src="resources/images/logomini.png" alt="CO-ED Logo" class="logo-tu-img" />
+          </div>
+          <div class="logo-text-block">
+            <span class="logo-text-main">CO-ED TU</span>
+            <span class="logo-text-sub">ระบบข้อมูลสหกิจศึกษา</span>
+          </div>
         </a>
         <nav class="nav-links" aria-label="เมนูหลัก">
           <a href="index.html">หน้าแรก</a>
@@ -44,16 +54,30 @@
     </nav>
   </header>
 
-  
   <main class="directory-main">
     <section class="hero-section">
     <div class="container">
       <div class="directory-heading-row">
         <div>
-          <p class="directory-eyebrow">CO-ED PARTNERS</p>
-          <h1>รายชื่อสถานประกอบการ</h1>
-          <span class="directory-title-stroke" aria-hidden="true"></span>
-          <p class="directory-intro">ค้นหาและสำรวจสถานประกอบการที่เปิดรับนักศึกษาสหกิจศึกษา</p>
+          <div class="hero-badge fade-up-init" style="margin-bottom: 12px; display: inline-flex;">
+            <i class="fa-solid fa-building"></i>
+            <span>CO-ED PARTNERS DIRECTORY</span>
+          </div>
+          <h1 class="fade-up-init">
+            รายชื่อ<span class="hero-highlight" style="font-family: var(--font-serif); font-style: italic; color: var(--tu-red);">สถานประกอบการ
+              <svg class="hero-underline-svg" viewBox="0 0 340 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path class="hero-underline-path" d="M4 18C75 6 245 4 336 17" stroke="url(#heroCoralGradDir)" stroke-width="6" stroke-linecap="round"/>
+                <defs>
+                  <linearGradient id="heroCoralGradDir" x1="0" y1="0" x2="340" y2="0" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#C8102E" />
+                    <stop offset="0.65" stop-color="#E51838" />
+                    <stop offset="1" stop-color="#F1B521" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </span>
+          </h1>
+          <p class="directory-intro fade-up-init">ค้นหาและสำรวจสถานประกอบการชั้นนำที่เปิดรับนักศึกษาสหกิจศึกษา มหาวิทยาลัยธรรมศาสตร์</p>
         </div>
       </div>
       
@@ -262,12 +286,14 @@
   </main>
   
 
-<footer class="footer">
+  <footer class="footer">
     <div class="container footer-grid">
       <div>
-        <div class="footer-logo">
-          <i class="fa-solid fa-graduation-cap"></i>
-          <span>CO-ED</span>
+        <div class="footer-logo" style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+          <div class="logo-tu-mark" style="width: 36px; height: 36px; border-radius: 10px; background: #FFF;">
+            <img src="resources/images/logomini.png" alt="CO-ED Logo" style="width: 24px; height: 24px; object-fit: contain;" />
+          </div>
+          <span style="font-family: var(--font-serif); font-size: 22px; font-weight: 700; color: #fff;">CO-ED TU</span>
         </div>
         <p style="max-width: 280px; line-height: 1.6;">
           ระบบสารสนเทศเพื่อการจัดการข้อมูลสหกิจศึกษา ช่วยให้นักศึกษาเตรียมความพร้อมสู่การทำงานจริงได้อย่างมีประสิทธิภาพ
@@ -297,7 +323,7 @@
     </div>
 
     <div class="container footer-bottom">
-      <p>© 2026 CO-ED Cooperative Education. All rights reserved.</p>
+      <p>© 2026 CO-ED TU Cooperative Education. All rights reserved.</p>
       <div class="social-links">
         <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
         <a href="#"><i class="fa-brands fa-youtube"></i></a>
@@ -306,5 +332,30 @@
       </div>
     </div>
   </footer>
+
+  <script>
+    window.addEventListener('scroll', () => {
+      const header = document.querySelector('.header');
+      if (header) {
+        if (window.scrollY > 30) {
+          header.classList.add('scrolled');
+        } else {
+          header.classList.remove('scrolled');
+        }
+      }
+    });
+
+    const scrollObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('fade-up-active');
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.fade-up-init').forEach(el => {
+      scrollObserver.observe(el);
+    });
+  </script>
 </body>
 </html>
