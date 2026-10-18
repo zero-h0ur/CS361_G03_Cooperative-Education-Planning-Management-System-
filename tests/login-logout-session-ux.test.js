@@ -78,8 +78,12 @@ describe('Issue #71: Login, Logout and expired-session UX', () => {
       search: '?code=oauth-auth-code&state=csrf-state-token',
       hash: ''
     };
+    // Like a browser, replaceState updates the Location the shell reads afterwards
     const history = {
-      replaceState: jest.fn()
+      replaceState: jest.fn((_state, _title, nextUrl) => {
+        const parsed = new URL(nextUrl, 'https://app.example.com');
+        callbackLocation.search = parsed.search;
+      })
     };
     const root = document.getElementById('authenticatedApp');
     const callbackApp = createShellApp({
@@ -139,9 +143,36 @@ describe('Issue #71: Login, Logout and expired-session UX', () => {
 
     scrubAuthCallbackUrl(location, history);
 
-    expect(location.hash).toBe('');
-    expect(location.search).toBe('?view=compact');
+    // Query and hash are cleaned in one replaceState call; Location is never assigned,
+    // because assigning location.search reloads the page in a real browser.
+    expect(history.replaceState).toHaveBeenCalledTimes(1);
     expect(history.replaceState).toHaveBeenCalledWith(null, '', '/app.html?view=compact');
+    expect(location.search).toContain('code=secret-code');
+    expect(location.hash).toContain('access_token');
+  });
+
+  it('never assigns location.search or location.hash, so the browser does not reload or fire hashchange', () => {
+    const assignments = [];
+    const location = {
+      pathname: '/app.html',
+      get search() { return '?code=abc&state=xyz'; },
+      set search(value) { assignments.push(['search', value]); },
+      get hash() { return '#/student/plan'; },
+      set hash(value) { assignments.push(['hash', value]); }
+    };
+    const history = { replaceState: jest.fn() };
+
+    scrubAuthCallbackUrl(location, history);
+
+    expect(assignments).toEqual([]);
+    // A legitimate shell route in the hash is preserved
+    expect(history.replaceState).toHaveBeenCalledWith(null, '', '/app.html#/student/plan');
+  });
+
+  it('leaves the URL untouched when there is nothing sensitive to remove', () => {
+    const history = { replaceState: jest.fn() };
+    scrubAuthCallbackUrl({ pathname: '/app.html', search: '?view=compact', hash: '#/staff/review' }, history);
+    expect(history.replaceState).not.toHaveBeenCalled();
   });
 
   it('clears stored return route, aborts route work, and removes private content immediately on logout', async () => {
