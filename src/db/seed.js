@@ -159,6 +159,17 @@ async function seed(options = {}) {
       );
     }
 
+    // Re-enable triggers before any V3 row is written. Only the reset and the V2
+    // legacy-compatibility rows need them disabled; V3 fixtures must pass the same
+    // guards as real application writes so an invalid fixture fails the seed (#56, #60).
+    await client.query(`
+      ALTER TABLE plans ENABLE TRIGGER trg_plans_legacy_compatibility_guard;
+      ALTER TABLE plans ENABLE TRIGGER trg_plans_no_delete;
+      ALTER TABLE advisor_assignments ENABLE TRIGGER trg_advisor_assignments_no_delete;
+      ALTER TABLE plan_operations ENABLE TRIGGER trg_plan_operations_immutable;
+      ALTER TABLE audit_events ENABLE TRIGGER trg_audit_events_immutable;
+    `);
+
     let totalV3Records = 0;
 
     // 3. Seed V3 synthetic fixtures if requested
@@ -394,15 +405,6 @@ async function seed(options = {}) {
         totalV3Records += 1;
       }
     }
-
-    // Re-enable triggers
-    await client.query(`
-      ALTER TABLE plans ENABLE TRIGGER trg_plans_legacy_compatibility_guard;
-      ALTER TABLE plans ENABLE TRIGGER trg_plans_no_delete;
-      ALTER TABLE advisor_assignments ENABLE TRIGGER trg_advisor_assignments_no_delete;
-      ALTER TABLE plan_operations ENABLE TRIGGER trg_plan_operations_immutable;
-      ALTER TABLE audit_events ENABLE TRIGGER trg_audit_events_immutable;
-    `);
 
     // Verify record counts
     if (!includeV3) {
