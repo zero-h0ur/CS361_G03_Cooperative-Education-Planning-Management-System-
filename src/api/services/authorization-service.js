@@ -9,6 +9,7 @@
  */
 
 const {
+  ValidationError,
   UnauthorizedError,
   ForbiddenError,
   NotFoundError
@@ -16,6 +17,8 @@ const {
 const {
   AuthorizationRepository
 } = require('../../db/repositories/authorization-repository');
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const ROLES = Object.freeze({
   PUBLIC: 'PUBLIC',
@@ -87,7 +90,12 @@ const ACTIONS = Object.freeze({
   // Advisor-assignment permissions (#49 & #53)
   ASSIGNMENT_READ_OWN: 'assignment:read_own',
   ASSIGNMENT_READ_SCOPED: 'assignment:read_scoped',
-  ASSIGNMENT_MANAGE: 'assignment:manage'
+  ASSIGNMENT_MANAGE: 'assignment:manage',
+
+  // Staff read-only search and review queue (#53 section 3.3, #67)
+  STAFF_STUDENT_SEARCH: 'staff:search_students',
+  STAFF_PLAN_SEARCH: 'staff:search_plans',
+  STAFF_REVIEW_QUEUE_READ: 'staff:read_review_queue'
 });
 
 const REVIEW_MUTATION_ACTIONS = new Set([
@@ -304,6 +312,17 @@ const PERMISSION_MATRIX = Object.freeze({
   }),
   [ACTIONS.ASSIGNMENT_MANAGE]: Object.freeze({
     [ROLES.ADMIN]: PERMISSION_SCOPES.OPS
+  }),
+
+  // Staff-only read APIs; Advisor search belongs to #68, so every other role is DENY
+  [ACTIONS.STAFF_STUDENT_SEARCH]: Object.freeze({
+    [ROLES.STAFF]: PERMISSION_SCOPES.SCOPED
+  }),
+  [ACTIONS.STAFF_PLAN_SEARCH]: Object.freeze({
+    [ROLES.STAFF]: PERMISSION_SCOPES.SCOPED
+  }),
+  [ACTIONS.STAFF_REVIEW_QUEUE_READ]: Object.freeze({
+    [ROLES.STAFF]: PERMISSION_SCOPES.SCOPED
   })
 });
 
@@ -585,6 +604,12 @@ class AuthorizationService {
       throw new UnauthorizedError('Authentication required.', 'UNAUTHORIZED');
     }
 
+    // Reject malformed Plan ids before any database lookup; otherwise PostgreSQL raises
+    // 22P02 (invalid uuid) and every /api/v3/plans/:id route would answer 500.
+    if (resource.planId !== undefined && resource.planId !== null && !UUID_REGEX.test(resource.planId)) {
+      throw new ValidationError('Invalid plan id.', [{ field: 'planId', issue: 'must be a UUID' }]);
+    }
+
     if (authContext.accountStatus !== 'ACTIVE') {
       throw createForbiddenError('ACCOUNT_DISABLED');
     }
@@ -635,27 +660,18 @@ class AuthorizationService {
         throw createForbiddenError('CROSS_STUDENT_ACCESS_DENIED');
       }
 
-      // Ownership and plan state always come from the database, never from caller-supplied fields
-      let planRecord = null;
+      // Ownership always comes from the database, never from caller-supplied fields.
+      // Workflow state is deliberately NOT checked here: per #49 enforcement order the
+      // Service checks state (step 6) after policy checks ownership (step 5), so a
+      // non-editable state answers 422 INVALID_STATE_TRANSITION (#52 section 10), not 403.
       if (isNonEmptyString(resource.planId)) {
-        planRecord = await this.findPlanResource(resource.planId);
+        const planRecord = await this.findPlanResource(resource.planId);
         if (!planRecord) {
           throw createNotFoundError('PLAN_NOT_FOUND');
         }
         if (planRecord.student_id !== authContext.studentId) {
           throw createForbiddenError('CROSS_STUDENT_PLAN_ACCESS_DENIED');
         }
-      }
-
-      const planStatus = planRecord?.plan_status || null;
-      if (
-        (action === ACTIONS.PLAN_UPDATE_CONTENT ||
-          action === ACTIONS.PLAN_SELECT_COMPANY_POSITION ||
-          action === ACTIONS.PLAN_SUBMIT) &&
-        isNonEmptyString(planStatus) &&
-        !STUDENT_EDITABLE_PLAN_STATES.has(planStatus)
-      ) {
-        throw createForbiddenError('PLAN_STATE_NOT_EDITABLE_BY_STUDENT');
       }
 
       return Object.freeze({

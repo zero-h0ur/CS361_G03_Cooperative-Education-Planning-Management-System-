@@ -1,4 +1,7 @@
 const { Router } = require('../src/api/router');
+const { createLambdaHandler } = require('../src/lambda');
+const { TokenValidator } = require('../src/auth/token-validator');
+const { IdentityResolver } = require('../src/auth/identity-resolver');
 const { attachRequestContext } = require('../src/api/context');
 const { registerProtectedRoute } = require('../src/api/routes/v3-routes');
 const {
@@ -398,6 +401,145 @@ describe('Issue #68 Advisor assigned-scope read-only API', () => {
         expect(sql).toContain("advisor_user.account_status = 'ACTIVE'");
         expect(sql).not.toMatch(/\b(?:INSERT|UPDATE|DELETE)\b/i);
       }
+    });
+  });
+
+  (process.env.TEST_DATABASE_URL ? describe : describe.skip)('PostgreSQL and Lambda integration', () => {
+    const { Pool } = require('pg');
+    const { seedV3 } = require('../src/db/seed');
+    const { close } = require('../src/db/connection');
+    const fixtures = require('../data/v3/fixtures.json');
+    const link = fixtures.external_identity_links.find((row) => row.user_id === ADVISOR_ID);
+    const unassignedStudent = fixtures.students.find((row) => row.id.endsWith('103'));
+    const unassignedPlan = fixtures.plans.find((row) => row.student_id === unassignedStudent.id);
+    let pool;
+    let client;
+    let handler;
+    let requestTime;
+
+    function event(path, sub = link.external_subject, method = 'GET') {
+      return {
+        rawPath: path,
+        requestContext: {
+          http: { method },
+          ...(sub ? { authorizer: { jwt: { claims: {
+            iss: link.external_issuer, sub, client_id: 'advisor-test-client',
+            token_use: 'access', scope: 'coed-api/access',
+            exp: Math.floor(Date.now() / 1000) + 3600
+          } } } } : {})
+        }
+      };
+    }
+
+    beforeAll(async () => {
+      const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+      try { await seedV3(); } finally { log.mockRestore(); }
+      pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL });
+    }, 60000);
+
+    beforeEach(async () => {
+      client = await pool.connect();
+      await client.query('BEGIN');
+      requestTime = NOW;
+      handler = createLambdaHandler({
+        now: () => requestTime,
+        authOptions: {
+          pool: client,
+          tokenValidator: new TokenValidator({
+            expectedIssuer: link.external_issuer,
+            expectedClientId: 'advisor-test-client', requiredScope: 'coed-api/access'
+          }),
+          identityResolver: new IdentityResolver({ pool: client }),
+          authorizationService: new AuthorizationService({ pool: client })
+        },
+        advisorReadRepository: new AdvisorReadRepository({ pool: client })
+      });
+    });
+
+    afterEach(async () => {
+      if (client) { await client.query('ROLLBACK'); client.release(); }
+    });
+    afterAll(async () => { if (pool) await pool.end(); await close(); });
+
+    test('all four real routes enforce assignment and strip private fields', async () => {
+      const list = await handler(event('/api/v3/advisor/students'));
+      expect(list.statusCode).toBe(200);
+      const payload = JSON.parse(list.body);
+      expect(payload.pagination.total).toBe(2);
+      expect(payload.data.map((row) => row.id).sort()).toEqual(
+        fixtures.advisor_assignments.filter((row) => row.advisor_id === ADVISOR_ID && row.status === 'ACTIVE')
+          .map((row) => row.student_id).sort()
+      );
+      for (const path of [
+        `/api/v3/advisor/students/${STUDENT_ID}`,
+        `/api/v3/advisor/students/${STUDENT_ID}/plans`,
+        `/api/v3/advisor/plans/${PLAN_ID}`
+      ]) {
+        const response = await handler(event(path));
+        expect(response.statusCode).toBe(200);
+        expect(response.body).not.toMatch(/institutional_email|external_subject|user_id|review_notes|operation_id/);
+      }
+      for (const path of [
+        `/api/v3/advisor/students/${unassignedStudent.id}`,
+        `/api/v3/advisor/students/${unassignedStudent.id}/plans`,
+        `/api/v3/advisor/plans/${unassignedPlan.id}`,
+        '/api/v3/advisor/plans/50000000-0000-4000-8000-000000009999'
+      ]) {
+        const response = await handler(event(path));
+        expect(response.statusCode).toBe(403);
+        expect(JSON.parse(response.body).error.message).toBe('Access denied.');
+      }
+    });
+
+    test('reads historical CANCELLED plans across cycles and paginates consistently', async () => {
+      const historical = fixtures.plans.find((row) => row.status === 'CANCELLED');
+      const olderCycle = fixtures.rounds.find((row) => row.id !== historical.cycle_id);
+      await client.query('UPDATE plans SET cycle_id = $1, round_id = $1 WHERE id = $2', [olderCycle.id, historical.id]);
+      const response = await handler(event(`/api/v3/advisor/plans/${historical.id}`));
+      expect(response.statusCode).toBe(200);
+      expect(JSON.parse(response.body).data.cycle_id).toBe(olderCycle.id);
+      const repository = new AdvisorReadRepository({ pool: client });
+      const input = { advisorUserId: ADVISOR_ID, timestampIso: NOW.toISOString(), limit: 1 };
+      const first = await repository.listAssignedStudents({ ...input, offset: 0 });
+      const second = await repository.listAssignedStudents({ ...input, offset: 1 });
+      expect(first.total).toBe(2);
+      expect(first.rows[0].id).not.toBe(second.rows[0].id);
+      expect((await repository.listAssignedStudents({ ...input, offset: 0 })).rows).toEqual(first.rows);
+    });
+
+    test('revocation denies the very next request through policy and repository', async () => {
+      const path = `/api/v3/advisor/students/${STUDENT_ID}`;
+      expect((await handler(event(path))).statusCode).toBe(200);
+      await client.query(`UPDATE advisor_assignments SET status = 'REVOKED',
+        revoked_at = $1, revoked_by = assigned_by WHERE advisor_id = $2 AND student_id = $3 AND status = 'ACTIVE'`,
+      [NOW, ADVISOR_ID, STUDENT_ID]);
+      expect((await handler(event(path))).statusCode).toBe(403);
+      expect(await new AdvisorReadRepository({ pool: client }).findAssignedStudent({
+        advisorUserId: ADVISOR_ID, studentId: STUDENT_ID, timestampIso: NOW.toISOString()
+      })).toBeNull();
+    });
+
+    test('enforces the exact half-open assignment time interval', async () => {
+      const assignment = fixtures.advisor_assignments.find((row) => row.advisor_id === ADVISOR_ID && row.status === 'ACTIVE');
+      const path = `/api/v3/advisor/students/${assignment.student_id}`;
+      requestTime = new Date(new Date(assignment.effective_from).getTime() - 1);
+      expect((await handler(event(path))).statusCode).toBe(403);
+      requestTime = new Date(assignment.effective_from);
+      expect((await handler(event(path))).statusCode).toBe(200);
+      requestTime = new Date(assignment.effective_to);
+      expect((await handler(event(path))).statusCode).toBe(403);
+    });
+
+    test('rejects anonymous, other roles, and a disabled Advisor account', async () => {
+      const path = `/api/v3/advisor/students/${STUDENT_ID}`;
+      expect((await handler(event(path, null))).statusCode).toBe(401);
+      for (const userId of [fixtures.students[0].user_id,
+        '70000000-0000-4000-8000-000000000020', '70000000-0000-4000-8000-000000000030']) {
+        const identity = fixtures.external_identity_links.find((row) => row.user_id === userId && row.status === 'ACTIVE');
+        expect((await handler(event(path, identity.external_subject))).statusCode).toBe(403);
+      }
+      await client.query("UPDATE users SET account_status = 'DISABLED' WHERE id = $1", [ADVISOR_ID]);
+      expect((await handler(event(path))).statusCode).toBe(403);
     });
   });
 });
