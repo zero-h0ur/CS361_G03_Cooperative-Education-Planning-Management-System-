@@ -390,6 +390,40 @@ Response (`data`): `{ id, cycle_id, company_id, position_id, notes, status, vers
 
 Retry ด้วย `operation_id` เดิมและ Payload เดิมคืนผลสำเร็จเดิมโดยไม่เพิ่ม `version` และไม่สร้าง Audit ซ้ำ ส่วน Company/Position ที่ใช้เลือกให้อ่านจาก Public Directory เดิม (`GET /api/companies`, `GET /api/companies/:id/positions`)
 
+### 3.8 Staff Review Commands: `POST /api/v3/plans/:planId/{start-review,return,approve}` (#70)
+
+ใช้ได้เฉพาะ Role `STAFF` ที่ Plan อยู่ใน Visibility Scope และรอบของ Plan เป็น `OPEN` (#53 ข้อ 3.2) Advisor เป็น Read-only ทุกคำสั่งได้ `403` ทุกคำสั่งผ่าน `WorkflowService` (#63) ซึ่งเปลี่ยนสถานะ เพิ่ม `version` และบันทึก `plan_operations` + `audit_events` ใน Transaction เดียวกัน
+
+| Path | Transition (#54) | `review_notes` | Audit action |
+|---|---|---|---|
+| `/start-review` | `SUBMITTED` → `UNDER_REVIEW` | ไม่ใช้ | `PLAN_REVIEW_STARTED` |
+| `/return` | `UNDER_REVIEW` → `NEEDS_REVISION` | **จำเป็น** (ไม่ว่าง) | `PLAN_RETURNED` |
+| `/approve` | `UNDER_REVIEW` → `APPROVED` | Optional | `PLAN_APPROVED` |
+
+Request body:
+
+```json
+{ "expected_version": 3, "operation_id": "<uuid>", "review_notes": "กรุณาแนบที่อยู่บริษัท", "correlation_id": "<uuid>" }
+```
+
+- `expected_version` และ `operation_id` จำเป็นทุกคำสั่ง ใช้ `operation_id` เดิมเมื่อ Retry (#52 ข้อ 8–9)
+- `review_notes`: Plain text ไม่เกิน 2,000 ตัวอักษร เก็บใน `notes` ของ Audit event เท่านั้น ไม่เขียนทับ `plans.notes` ของ Student (#52)
+- Body ห้ามมี `actor`, `action`, `plan_id`, `student_id`, `status` หรือ Field อื่นนอก Contract (`400`)
+- ไม่มี Alias อื่น เช่น `/return-for-revision` (แต่ละ Path ต้องติด API Gateway JWT Authorizer)
+
+Response (`data`): `{ id, student_id, cycle_id, company_id, position_id, notes, status, version, created_at, updated_at, operation_id, idempotent_replay, audit_reference: { event_id, action, from_state, to_state, notes, operation_id, correlation_id, created_at } }`
+
+| กรณี | Response |
+|---|---|
+| Body ผิด, ไม่มี `review_notes` ตอน `/return`, `planId` ไม่ใช่ UUID | `400 VALIDATION_ERROR` |
+| ไม่มี/ผิด/หมดอายุ token | `401 UNAUTHORIZED` |
+| ไม่ใช่ `STAFF`, นอก Scope หรือรอบ `CLOSED` | `403 FORBIDDEN` |
+| ไม่พบ Plan | `404 RECORD_NOT_FOUND` |
+| `expected_version` เก่า หรือมี Reviewer อื่นทำก่อน | `409 STALE_RECORD_CONFLICT` พร้อม `details: { expectedVersion, currentVersion }` |
+| ใช้ `operation_id` เดิมกับคำสั่งหรือ Payload อื่น | `409 IDEMPOTENCY_KEY_REUSED` |
+| สถานะปัจจุบันไม่อนุญาตคำสั่งนี้ (เช่น `/approve` จาก `SUBMITTED`) | `422 INVALID_STATE_TRANSITION` |
+| Database ไม่พร้อมใช้งาน | `503 SERVICE_UNAVAILABLE` |
+
 ---
 
 ## 4. Architectural Boundaries
