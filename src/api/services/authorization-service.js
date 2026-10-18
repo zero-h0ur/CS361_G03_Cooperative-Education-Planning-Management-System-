@@ -9,6 +9,7 @@
  */
 
 const {
+  ValidationError,
   UnauthorizedError,
   ForbiddenError,
   NotFoundError
@@ -16,6 +17,8 @@ const {
 const {
   AuthorizationRepository
 } = require('../../db/repositories/authorization-repository');
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const ROLES = Object.freeze({
   PUBLIC: 'PUBLIC',
@@ -591,6 +594,12 @@ class AuthorizationService {
       throw new UnauthorizedError('Authentication required.', 'UNAUTHORIZED');
     }
 
+    // Reject malformed Plan ids before any database lookup; otherwise PostgreSQL raises
+    // 22P02 (invalid uuid) and every /api/v3/plans/:id route would answer 500.
+    if (resource.planId !== undefined && resource.planId !== null && !UUID_REGEX.test(resource.planId)) {
+      throw new ValidationError('Invalid plan id.', [{ field: 'planId', issue: 'must be a UUID' }]);
+    }
+
     if (authContext.accountStatus !== 'ACTIVE') {
       throw createForbiddenError('ACCOUNT_DISABLED');
     }
@@ -641,27 +650,18 @@ class AuthorizationService {
         throw createForbiddenError('CROSS_STUDENT_ACCESS_DENIED');
       }
 
-      // Ownership and plan state always come from the database, never from caller-supplied fields
-      let planRecord = null;
+      // Ownership always comes from the database, never from caller-supplied fields.
+      // Workflow state is deliberately NOT checked here: per #49 enforcement order the
+      // Service checks state (step 6) after policy checks ownership (step 5), so a
+      // non-editable state answers 422 INVALID_STATE_TRANSITION (#52 section 10), not 403.
       if (isNonEmptyString(resource.planId)) {
-        planRecord = await this.findPlanResource(resource.planId);
+        const planRecord = await this.findPlanResource(resource.planId);
         if (!planRecord) {
           throw createNotFoundError('PLAN_NOT_FOUND');
         }
         if (planRecord.student_id !== authContext.studentId) {
           throw createForbiddenError('CROSS_STUDENT_PLAN_ACCESS_DENIED');
         }
-      }
-
-      const planStatus = planRecord?.plan_status || null;
-      if (
-        (action === ACTIONS.PLAN_UPDATE_CONTENT ||
-          action === ACTIONS.PLAN_SELECT_COMPANY_POSITION ||
-          action === ACTIONS.PLAN_SUBMIT) &&
-        isNonEmptyString(planStatus) &&
-        !STUDENT_EDITABLE_PLAN_STATES.has(planStatus)
-      ) {
-        throw createForbiddenError('PLAN_STATE_NOT_EDITABLE_BY_STUDENT');
       }
 
       return Object.freeze({

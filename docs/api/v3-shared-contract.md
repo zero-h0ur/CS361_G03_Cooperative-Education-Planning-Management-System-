@@ -345,6 +345,51 @@ Read-only API สำหรับ Role `STAFF` ที่มี `staff_scopes` ส
 
 Query ใช้ Index จาก Migration 002 ได้แก่ `idx_students_staff_scope`, `idx_staff_scopes_active_lookup`, `uq_plans_active_student_cycle` / `idx_plans_cycle_status` และ Primary keys ของ `rounds`, `companies`, `positions` (ตรวจด้วย `EXPLAIN` บน Fixture ของ #60)
 
+### 3.7 Student Own Plan: `/api/v3/plans` (#66)
+
+ใช้ได้เฉพาะ Role `STUDENT` เจ้าของ Plan มาจาก Trusted Identity Context เสมอ (#52 ข้อ 1)
+
+> **Path ownership:** `/api/v3/plans` และ `/api/v3/plans/:planId` เป็นของ Student เท่านั้น Staff ใช้ `/api/v3/staff/*` (#67) และ Advisor ต้องใช้ `/api/v3/advisor/*` (#68) ส่วนคำสั่ง Workflow อยู่ที่ `POST /api/v3/plans/:planId/{submit,start-review,return,approve}` (#69, #70)
+
+| Method | Path | หน้าที่ | Success |
+|---|---|---|---|
+| `POST` | `/api/v3/plans` | สร้าง Plan สถานะ `DRAFT` (`create_draft`) | `201` |
+| `GET` | `/api/v3/plans` | รายการ Plan ของตนเอง รวม `CANCELLED` (Query: `page`, `pageSize` ค่าเริ่มต้น 10 สูงสุด 100, `cycle_id`, `status`) | `200` + `pagination` |
+| `GET` | `/api/v3/plans/:planId` | รายละเอียด Plan ของตนเอง | `200` |
+| `PATCH` | `/api/v3/plans/:planId` | แก้ Content เฉพาะสถานะ `DRAFT` / `NEEDS_REVISION` (`update_draft`) | `200` |
+
+Request body:
+
+```json
+// POST /api/v3/plans
+{ "cycle_id": "<uuid>", "company_id": "<uuid|null>", "position_id": "<uuid|null>", "notes": "ข้อความ", "operation_id": "<uuid>", "correlation_id": "<uuid>" }
+
+// PATCH /api/v3/plans/:planId  (ต้องมี Content field อย่างน้อย 1 ตัว)
+{ "notes": "ข้อความใหม่", "expected_version": 3, "operation_id": "<uuid>" }
+```
+
+- `operation_id` จำเป็นทุก Mutation และต้องใช้ค่าเดิมเมื่อ Retry (#52 ข้อ 9) ส่วน `correlation_id` เป็น Optional
+- `expected_version` จำเป็นสำหรับ `PATCH` ให้ใช้ `version` ล่าสุดที่อ่านมา
+- `notes`: Plain text, Trim, สูงสุด 2,000 ตัวอักษร, ค่าว่างเก็บเป็น `null`
+- ถ้าส่ง `company_id` ต้องส่ง `position_id` มาใน Request เดียวกัน Company/Position ต้องเป็น `public` และ Position ต้องอยู่ภายใต้ Company นั้น
+- Field อื่น (`status`, `version`, `student_id`, timestamps ฯลฯ) ได้ `400` ทั้ง Request
+
+Response (`data`): `{ id, cycle_id, company_id, position_id, notes, status, version, created_at, updated_at }`
+
+| กรณี | Response |
+|---|---|
+| Body/Query ผิด, Field ที่ไม่อนุญาต, `planId` ไม่ใช่ UUID, Reference ไม่ถูกต้อง | `400 VALIDATION_ERROR` |
+| ไม่มี/ผิด/หมดอายุ token | `401 UNAUTHORIZED` |
+| ไม่ใช่ `STUDENT` หรือ Plan ของคนอื่น | `403 FORBIDDEN` |
+| ไม่พบ Plan | `404 RECORD_NOT_FOUND` |
+| `expected_version` เก่า | `409 STALE_RECORD_CONFLICT` |
+| ใช้ `operation_id` เดิมกับ Payload อื่น | `409 IDEMPOTENCY_KEY_REUSED` |
+| มี Plan ที่ไม่ใช่ `CANCELLED` ใน Cycle เดียวกันอยู่แล้ว | `409 PLAN_ALREADY_EXISTS_FOR_CYCLE` |
+| แก้ Plan ในสถานะที่ไม่อนุญาต (`SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, `CANCELLED`) | `422 INVALID_STATE_TRANSITION` |
+| Database ไม่พร้อมใช้งาน | `503 SERVICE_UNAVAILABLE` |
+
+Retry ด้วย `operation_id` เดิมและ Payload เดิมคืนผลสำเร็จเดิมโดยไม่เพิ่ม `version` และไม่สร้าง Audit ซ้ำ ส่วน Company/Position ที่ใช้เลือกให้อ่านจาก Public Directory เดิม (`GET /api/companies`, `GET /api/companies/:id/positions`)
+
 ---
 
 ## 4. Architectural Boundaries
