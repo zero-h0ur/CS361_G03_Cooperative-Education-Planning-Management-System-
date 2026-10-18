@@ -136,10 +136,10 @@ describe('Issue #60 - Anonymized V3 Fixtures and Destructive-Seed Guards', () =>
     const fixturesPath = path.join(__dirname, '..', 'data', 'v3', 'fixtures.json');
     const fixtures = JSON.parse(fs.readFileSync(fixturesPath, 'utf8'));
 
-    it('contains no production or personal email domains', () => {
+    it('strictly uses RFC 2606 reserved domains (@student.example.com)', () => {
       for (const student of fixtures.students) {
-        expect(student.institutional_email).toMatch(/@cmu\.example\.ac\.th$|@.*example/);
-        expect(student.institutional_email).not.toMatch(/@gmail\.com|@hotmail\.com|@yahoo\.com/);
+        expect(student.institutional_email).toMatch(/@student\.example\.com$/);
+        expect(student.institutional_email).not.toMatch(/@cmu\.ac\.th|@gmail\.com|@hotmail\.com|@yahoo\.com/);
       }
     });
 
@@ -175,10 +175,23 @@ describe('Issue #60 - Anonymized V3 Fixtures and Destructive-Seed Guards', () =>
       expect(planStatuses).toContain('CANCELLED');
     });
 
-    it('satisfies department requirement on all linked student profiles (#51 and #53)', () => {
+    it('satisfies standardized department requirement ("CPE", "EE") per #51 and #53', () => {
+      const allowedDepts = new Set(['CPE', 'EE', 'ME']);
       for (const s of fixtures.students) {
-        expect(s.department).toBeTruthy();
+        expect(allowedDepts.has(s.department)).toBe(true);
         expect(s.department).toBe(s.department.trim());
+      }
+      for (const sc of fixtures.staff_scopes) {
+        expect(allowedDepts.has(sc.department)).toBe(true);
+      }
+    });
+
+    it('uses the unified Common Era calendar (2026/2025) for academic_year', () => {
+      for (const s of fixtures.students) {
+        expect(s.academic_year).toBe(2026);
+      }
+      for (const r of fixtures.rounds) {
+        expect(r.academic_year).toBe(2026);
       }
     });
   });
@@ -275,7 +288,7 @@ describe('Issue #60 - Anonymized V3 Fixtures and Destructive-Seed Guards', () =>
         const studentCtx = await resolver.resolveIdentity(issuer, 'mock-sub-student-001');
         expect(studentCtx.role).toBe('STUDENT');
         expect(studentCtx.student_number).toBe('650610001');
-        expect(studentCtx.department).toBe('Computer Engineering');
+        expect(studentCtx.department).toBe('CPE');
 
         // Advisor 1
         const advisorCtx = await resolver.resolveIdentity(issuer, 'mock-sub-advisor-001');

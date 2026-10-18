@@ -53,17 +53,42 @@ test("all entity IDs in V3 fixtures are deterministic UUID v4 values", () => {
   for (const ev of fixtures.audit_events) assert.match(ev.event_id, uuidV4);
 });
 
-test("all students have synthetic reserved emails containing 'example' and no production domains", () => {
+test("all students strictly use RFC 2606 reserved domains (@student.example.com)", () => {
   const fixtures = freshFixtures();
   for (const s of fixtures.students) {
-    assert.ok(
-      s.institutional_email.includes("example"),
-      `Email must use synthetic example domain: ${s.institutional_email}`
+    assert.match(
+      s.institutional_email,
+      /@student\.example\.com$/,
+      `Email must end with @student.example.com per RFC 2606: ${s.institutional_email}`
     );
     assert.ok(
-      !/@(gmail|hotmail|yahoo|outlook)\.com$/i.test(s.institutional_email),
-      `Email must not be a public mail provider: ${s.institutional_email}`
+      !/@(cmu\.ac\.th|gmail\.com|hotmail\.com|yahoo\.com)$/i.test(s.institutional_email),
+      `Email must not use real institutional or public mail domains: ${s.institutional_email}`
     );
+  }
+});
+
+test("students and staff_scopes strictly use standardized department codes ('CPE', 'EE') per Issue #53", () => {
+  const fixtures = freshFixtures();
+  const allowed = new Set(["CPE", "EE", "ME"]);
+  for (const s of fixtures.students) {
+    assert.ok(allowed.has(s.department), `Student department must be one of CPE/EE: ${s.department}`);
+  }
+  for (const sc of fixtures.staff_scopes) {
+    assert.ok(allowed.has(sc.department), `Staff scope department must be standard code: ${sc.department}`);
+  }
+});
+
+test("all academic_year values use the unified Common Era calendar (2026/2025)", () => {
+  const fixtures = freshFixtures();
+  for (const r of fixtures.rounds) {
+    assert.ok(r.academic_year >= 2020 && r.academic_year <= 2030, `Round year must be C.E.: ${r.academic_year}`);
+  }
+  for (const s of fixtures.students) {
+    assert.equal(s.academic_year, 2026, `Student year must be C.E. 2026: ${s.academic_year}`);
+  }
+  for (const a of fixtures.advisor_assignments) {
+    assert.ok(a.academic_year === 2026 || a.academic_year === 2025, `Assignment year must be C.E.: ${a.academic_year}`);
   }
 });
 
@@ -102,21 +127,27 @@ test("V3 fixtures cover staff scopes with active and inactive statuses", () => {
   assert.ok(statuses.has("INACTIVE"), "Must cover INACTIVE scope");
 });
 
-test("rejects invalid role in validator", () => {
+test("rejects non-RFC2606 email domain in validator", () => {
   const fixtures = freshFixtures();
-  fixtures.users[0].role = "SUPERUSER";
+  fixtures.students[0].institutional_email = "sommut@cmu.ac.th";
   const errors = validateFixtures(fixtures, freshV2Dataset());
-  assert.ok(errors.some((e) => e.includes("Invalid user role")));
+  assert.ok(errors.some((e) => e.includes("RFC 2606")));
+});
+
+test("rejects unstandardized department string in validator", () => {
+  const fixtures = freshFixtures();
+  fixtures.students[0].department = "Computer Engineering Department";
+  const errors = validateFixtures(fixtures, freshV2Dataset());
+  assert.ok(errors.some((e) => e.includes("must be one of standard codes")));
 });
 
 test("rejects overlapping active advisor assignments for the same student", () => {
   const fixtures = freshFixtures();
-  // Duplicate assignment 1 with another active one on the same dates for the same student
   fixtures.advisor_assignments.push({
     id: "90000000-0000-4000-8000-000000000099",
     advisor_id: "70000000-0000-4000-8000-000000000011",
     student_id: "40000000-0000-4000-8000-000000000101",
-    academic_year: 2568,
+    academic_year: 2026,
     semester: 1,
     status: "ACTIVE",
     effective_from: "2026-07-01T00:00:00Z",

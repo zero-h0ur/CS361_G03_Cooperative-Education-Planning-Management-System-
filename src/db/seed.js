@@ -27,7 +27,8 @@ function assertDestructiveResetAllowed() {
     );
   }
 
-  // Guard against connection strings pointing to staging or production instances
+  // Heuristic defense-in-depth: Guard against connection strings clearly named staging/production.
+  // Note: RDS hostnames typically use random hashes; authoritative protection relies on NODE_ENV and ALLOW_DB_RESET.
   const targetUrl = env === 'test' ? (process.env.TEST_DATABASE_URL || '') : (process.env.DATABASE_URL || '');
   if (/(prod|production|staging)/i.test(targetUrl)) {
     throw new Error(

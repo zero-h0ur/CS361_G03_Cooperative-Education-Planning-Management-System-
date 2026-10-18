@@ -32,6 +32,12 @@ const ALLOWED_PLAN_STATUS = new Set([
 const ALLOWED_ASSIGNMENT_STATUS = new Set(["ACTIVE", "REVOKED", "EXPIRED"]);
 const ALLOWED_STAFF_SCOPE_STATUS = new Set(["ACTIVE", "INACTIVE"]);
 
+// RFC 2606 reserved domain regex: example.com, example.net, example.org or TLD .example
+const RFC2606_EMAIL_PATTERN = /@(?:[a-z0-9-]+\.)*(?:example\.(?:com|net|org)|example)$/i;
+
+// Standard department codes used in Issue #53 and engineering curriculum
+const ALLOWED_DEPARTMENTS = new Set(["CPE", "EE", "ME"]);
+
 const TOP_LEVEL_KEYS = new Set([
   "dataset_metadata",
   "users",
@@ -211,6 +217,18 @@ export function validateFixtures(fixtures, v2Dataset = null) {
         }
       }
 
+      // Exact department matching per Issue #53: must be standard department code (e.g. 'CPE', 'EE')
+      if (s.department && !ALLOWED_DEPARTMENTS.has(s.department)) {
+        errors.push(
+          `Student department "${s.department}" must be one of standard codes: ${Array.from(ALLOWED_DEPARTMENTS).join(', ')}`
+        );
+      }
+
+      // Academic year calendar check: C.E. year (e.g. 2026) per Issue #53
+      if (s.academic_year && (s.academic_year < 2000 || s.academic_year > 2100)) {
+        errors.push(`Student academic_year "${s.academic_year}" must be a Common Era year (e.g. 2026)`);
+      }
+
       if (s.student_number) {
         if (studentNumberSet.has(s.student_number)) {
           errors.push(`Duplicate student_number: "${s.student_number}"`);
@@ -222,9 +240,11 @@ export function validateFixtures(fixtures, v2Dataset = null) {
         errors.push(`Invalid enrollment_status "${s.enrollment_status}" for student ${s.id}`);
       }
 
-      // Privacy / PII check on email: must be synthetic (e.g., end in .example or .example.ac.th)
-      if (s.institutional_email && !s.institutional_email.includes("example")) {
-        errors.push(`Student email must use a synthetic reserved domain containing "example": "${s.institutional_email}"`);
+      // RFC 2606 privacy check on email: must end in an RFC 2606 reserved domain (e.g. @student.example.com or .example)
+      if (s.institutional_email && !RFC2606_EMAIL_PATTERN.test(s.institutional_email)) {
+        errors.push(
+          `Student email must strictly use an RFC 2606 reserved domain (e.g. @student.example.com, @example.com, .example): "${s.institutional_email}"`
+        );
       }
     }
   }
@@ -247,8 +267,9 @@ export function validateFixtures(fixtures, v2Dataset = null) {
     if (!ALLOWED_ROUND_STATUS.has(r.status)) {
       errors.push(`Invalid round status "${r.status}" for round ${r.id}`);
     }
-    if (!Number.isInteger(r.academic_year) || r.academic_year <= 0) {
-      errors.push(`Invalid round academic_year "${r.academic_year}" for round ${r.id}`);
+    // Academic year calendar check: C.E. year (e.g. 2026)
+    if (!Number.isInteger(r.academic_year) || r.academic_year < 2000 || r.academic_year > 2100) {
+      errors.push(`Round academic_year "${r.academic_year}" must be a Common Era year (e.g. 2026) in round ${r.id}`);
     }
     if (r.semester !== undefined && r.semester !== null && (!Number.isInteger(r.semester) || r.semester <= 0)) {
       errors.push(`Invalid round semester "${r.semester}" for round ${r.id}`);
@@ -371,6 +392,11 @@ export function validateFixtures(fixtures, v2Dataset = null) {
       errors.push(`Invalid assignment status "${a.status}" in assignment ${a.id}`);
     }
 
+    // Academic year calendar check: C.E. year (e.g. 2026)
+    if (!Number.isInteger(a.academic_year) || a.academic_year < 2000 || a.academic_year > 2100) {
+      errors.push(`Assignment academic_year "${a.academic_year}" must be a Common Era year (e.g. 2026) in assignment ${a.id}`);
+    }
+
     const fromDate = new Date(a.effective_from);
     const toDate = new Date(a.effective_to);
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime()) || toDate <= fromDate) {
@@ -412,6 +438,7 @@ export function validateFixtures(fixtures, v2Dataset = null) {
   }
   const scopeIdSet = new Set();
   const scopeUniqueKeySet = new Set();
+  const staffScopeDepartments = new Set();
 
   for (const sc of scopes) {
     if (!sc.id || !UUID_V4_PATTERN.test(sc.id)) {
@@ -431,6 +458,20 @@ export function validateFixtures(fixtures, v2Dataset = null) {
 
     if (!sc.department || sc.department !== sc.department.trim()) {
       errors.push(`staff_scope department must be a trimmed non-empty string in ${sc.id}`);
+    } else if (!ALLOWED_DEPARTMENTS.has(sc.department)) {
+      errors.push(
+        `Staff scope department "${sc.department}" must be one of standard codes: ${Array.from(ALLOWED_DEPARTMENTS).join(', ')}`
+      );
+    }
+
+    if (sc.status === "ACTIVE") {
+      staffScopeDepartments.add(sc.department);
+    }
+
+    if (sc.academic_year !== null && sc.academic_year !== undefined) {
+      if (!Number.isInteger(sc.academic_year) || sc.academic_year < 2000 || sc.academic_year > 2100) {
+        errors.push(`Staff scope academic_year "${sc.academic_year}" must be a Common Era year in ${sc.id}`);
+      }
     }
 
     if (!ALLOWED_STAFF_SCOPE_STATUS.has(sc.status)) {
@@ -442,6 +483,15 @@ export function validateFixtures(fixtures, v2Dataset = null) {
       errors.push(`Duplicate staff scope unique key: "${uniqueKey}" in ${sc.id}`);
     }
     scopeUniqueKeySet.add(uniqueKey);
+  }
+
+  // Cross-entity check: every student's department must have matching staff scope representation
+  for (const s of students) {
+    if (s.department && !staffScopeDepartments.has(s.department)) {
+      errors.push(
+        `Student ${s.id} department "${s.department}" has no matching active staff_scope to test Issue #53 predicate`
+      );
+    }
   }
 
   // 9. Validate plan operations
