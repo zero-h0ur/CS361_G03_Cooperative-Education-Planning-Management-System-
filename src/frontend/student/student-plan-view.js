@@ -186,6 +186,7 @@ export function renderStudentPlanView({
       if (editorDirty || editorBusy || isSubmitting) return;
       editorController?.abort();
       selectedPlanId = null;
+      pendingOperationId = null;
       renderNoPlanState();
     });
     picker.append(label, select, create);
@@ -245,6 +246,8 @@ export function renderStudentPlanView({
 
   function renderNoPlanState() {
     container.setAttribute('aria-busy', 'false');
+    container.dataset.planStatus = 'DRAFT';
+    container.dataset.planReadonly = 'false';
     const card = element('section', 'student-card');
     card.dataset.role = 'plan-empty';
     const refreshBtn = element('button', 'shell-button shell-button--secondary', 'รีเฟรชสถานะล่าสุด');
@@ -612,6 +615,7 @@ export function renderStudentPlanView({
     editorDirty = false;
     editorBusy = false;
     submitNeedsRefresh = false;
+    pendingOperationId = null;
     renderLoadingState();
 
     try {

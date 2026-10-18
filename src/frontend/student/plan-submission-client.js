@@ -183,7 +183,7 @@ export function selectCurrentPlan(plans) {
   return plans.find((plan) => plan?.status !== PLAN_STATUSES.CANCELLED) || plans[0];
 }
 
-export function buildApiUrl(apiBaseUrl, currentOrigin, pathSuffix, query = '') {
+function buildApiUrl(apiBaseUrl, currentOrigin, pathSuffix, query = '') {
   if (typeof apiBaseUrl !== 'string' || apiBaseUrl.trim() === '') {
     throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.CONFIGURATION);
   }

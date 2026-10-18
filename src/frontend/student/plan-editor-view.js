@@ -235,6 +235,8 @@ export function renderPlanEditor({
     searchSequence += 1;
     companyRequest?.abort();
     companyRequest = null;
+    more.disabled = true;
+    more.hidden = true;
     timer = setTimeout(() => searchCompanies(fields.search.value, 1), 300);
   });
 
@@ -285,6 +287,7 @@ export function renderPlanEditor({
       const seen = new Set([...fields.company_id.options].map((item) => item.value));
       for (const item of result.items) {
         if (!seen.has(item.id)) { option(fields.company_id, item.id, item.name); seen.add(item.id); }
+        if (item.id === values.company_id) selectedCompany = item;
       }
       fields.company_id.value = values.company_id || '';
       searchPage = page;
