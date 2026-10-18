@@ -6,7 +6,8 @@ frontend:
         - npm ci
     build:
       commands:
-        - CO_ED_REQUIRE_AUTH_CONFIG=1 npm run build
+        # NODE_ENV is scoped to the build step only so `npm ci` still installs esbuild/aws-amplify
+        - NODE_ENV=production CO_ED_REQUIRE_AUTH_CONFIG=1 npm run build
   artifacts:
     baseDirectory: dist
     files:

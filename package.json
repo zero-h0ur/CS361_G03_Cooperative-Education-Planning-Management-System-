@@ -23,11 +23,11 @@
     "seed": "node src/db/seed.js"
   },
   "dependencies": {
-    "aws-amplify": "^6.22.2",
     "dotenv": "^16.3.1",
     "pg": "^8.11.3"
   },
   "devDependencies": {
+    "aws-amplify": "^6.22.2",
     "esbuild": "^0.28.2",
     "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.2"
