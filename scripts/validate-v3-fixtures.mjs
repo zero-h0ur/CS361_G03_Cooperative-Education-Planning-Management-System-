@@ -485,11 +485,25 @@ export function validateFixtures(fixtures, v2Dataset = null) {
     scopeUniqueKeySet.add(uniqueKey);
   }
 
-  // Cross-entity check: every student's department must have matching staff scope representation
-  for (const s of students) {
-    if (s.department && !staffScopeDepartments.has(s.department)) {
+  // Cross-entity check per Issue #60 & #53:
+  // Ensure that every active Staff member has at least one student outside their scope
+  // to guarantee testability of 403 Forbidden authorization failure.
+  const activeStaffMembers = users.filter((u) => u.role === "STAFF" && u.account_status === "ACTIVE");
+  for (const staff of activeStaffMembers) {
+    const staffActiveScopes = scopes.filter((sc) => sc.staff_id === staff.id && sc.status === "ACTIVE");
+    const hasOutOfScopeStudent = students.some((s) => {
+      const isInScope = staffActiveScopes.some((sc) => {
+        const deptMatch = sc.department === s.department;
+        const progMatch = !sc.program || sc.program === s.program;
+        const yearMatch = !sc.academic_year || sc.academic_year === s.academic_year;
+        return deptMatch && progMatch && yearMatch;
+      });
+      return !isInScope;
+    });
+
+    if (!hasOutOfScopeStudent && students.length > 0) {
       errors.push(
-        `Student ${s.id} department "${s.department}" has no matching active staff_scope to test Issue #53 predicate`
+        `Staff ${staff.id} has no out-of-scope students to test 403 Forbidden authorization failure`
       );
     }
   }

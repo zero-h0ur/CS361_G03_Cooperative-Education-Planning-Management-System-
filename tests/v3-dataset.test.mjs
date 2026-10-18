@@ -25,8 +25,8 @@ test("canonical V3 fixtures pass full validation against V2 base dataset", () =>
 test("canonical V3 fixtures have declared record counts and deterministic structure", () => {
   const fixtures = freshFixtures();
   assert.deepEqual(fixtures.dataset_metadata.expected_counts, {
-    users: 10,
-    external_identity_links: 10,
+    users: 11,
+    external_identity_links: 11,
     students: 5,
     rounds: 2,
     plans: 6,
@@ -163,3 +163,55 @@ test("rejects overlapping active advisor assignments for the same student", () =
   const errors = validateFixtures(fixtures, freshV2Dataset());
   assert.ok(errors.some((e) => e.includes("overlaps with")));
 });
+
+test("fixtures provide both in-scope (200 OK) and out-of-year (403 Forbidden) staff test cases for OPEN round 2026", () => {
+  const fixtures = freshFixtures();
+  const openRound = fixtures.rounds.find((r) => r.status === "OPEN");
+  assert.ok(openRound, "Must have an OPEN round");
+  assert.equal(openRound.academic_year, 2026, "OPEN round must be 2026");
+
+  // Check Staff 1: has NULL academic_year -> covers 2026 OPEN round (200 OK)
+  const staff1Scopes = fixtures.staff_scopes.filter(
+    (sc) => sc.staff_id === "70000000-0000-4000-8000-000000000020" && sc.status === "ACTIVE"
+  );
+  const staff1Covers2026 = staff1Scopes.some(
+    (sc) => sc.academic_year === null || sc.academic_year === openRound.academic_year
+  );
+  assert.ok(staff1Covers2026, "Must have at least one Staff whose scope covers 2026 OPEN round for 200 OK tests");
+
+  // Check Staff 3: strictly restricted to 2025 -> does NOT cover 2026 OPEN round (403 Forbidden)
+  const staff3Scopes = fixtures.staff_scopes.filter(
+    (sc) => sc.staff_id === "70000000-0000-4000-8000-000000000022" && sc.status === "ACTIVE"
+  );
+  assert.ok(staff3Scopes.length > 0, "Staff 3 must have active scope");
+  const staff3All2025 = staff3Scopes.every((sc) => sc.academic_year === 2025);
+  assert.ok(staff3All2025, "Staff 3 must be strictly restricted to academic_year 2025 for 403 Forbidden tests");
+});
+
+test("every staff member has at least one student outside their scope to guarantee 403 test coverage", () => {
+  const fixtures = freshFixtures();
+  const errors = validateFixtures(fixtures, freshV2Dataset());
+  assert.deepEqual(errors, []);
+});
+
+test("validator flags error when a staff member has no out-of-scope students", () => {
+  const fixtures = freshFixtures();
+  // Give Staff 1 a universal scope covering all departments
+  fixtures.staff_scopes.push({
+    id: "91000000-0000-4000-8000-000000000099",
+    staff_id: "70000000-0000-4000-8000-000000000020",
+    department: "EE",
+    program: null,
+    academic_year: null,
+    status: "ACTIVE",
+    created_at: "2026-10-01T08:00:00Z",
+    updated_at: "2026-10-01T08:00:00Z",
+  });
+  fixtures.dataset_metadata.expected_counts.staff_scopes += 1;
+  const errors = validateFixtures(fixtures, freshV2Dataset());
+  assert.ok(
+    errors.some((e) => e.includes("has no out-of-scope students")),
+    "Should report error when staff member covers all students"
+  );
+});
+

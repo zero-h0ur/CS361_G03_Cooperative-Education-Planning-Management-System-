@@ -32,9 +32,12 @@
 ### 3.1 บัญชีผู้ใช้และตัวตน (`users` และ `external_identity_links`)
 * **STUDENT (5 บัญชี)**: บัญชีนักศึกษาสำหรับทดสอบ Flow ต่างๆ (Active 4 บัญชี, Disabled 1 บัญชีสำหรับทดสอบ Authorization Failure `ACCOUNT_DISABLED`)
 * **ADVISOR (2 บัญชี)**: อาจารย์ที่ปรึกษาสหกิจศึกษา สำหรับทดสอบการมองเห็นแบบ Scoped Advisor Visibility
-* **STAFF (2 บัญชี)**: เจ้าหน้าที่ประจำคณะ/ภาควิชา สำหรับทดสอบ Staff Scoped Authorization ข้ามภาควิชา
+* **STAFF (3 บัญชี)**: เจ้าหน้าที่ประจำคณะ/ภาควิชา ครอบคลุมทั้งกรณี In-scope, Out-of-department, และ Out-of-year:
+  1. `Staff 1 (70000000-0000-4000-8000-000000000020)`: ภาควิชา CPE, Scope ภาพรวม (`academic_year = null`) ครอบคลุมรอบ OPEN 2026 สำหรับทดสอบ `200 OK` (Review/Approve Plan)
+  2. `Staff 2 (70000000-0000-4000-8000-000000000021)`: ภาควิชา EE, สำหรับทดสอบข้ามภาควิชา Out-of-department (`403 Forbidden` เมื่อพยายามดู/รีวิวข้อมูลนักศึกษาภาค CPE)
+  3. `Staff 3 (70000000-0000-4000-8000-000000000022)`: ภาควิชา CPE เฉพาะปีการศึกษา 2025 (`academic_year = 2025`), สำหรับทดสอบ Out-of-year (`403 Forbidden` เมื่อเข้าถึงแผนในรอบ OPEN ปี 2026 ตาม Predicate ของ Issue #53)
 * **ADMIN (1 บัญชี)**: ผู้ดูแลระบบที่มีสิทธิ์จัดการ Advisor Assignment และ Staff Scope
-* **External Identity Links (10 รายการ)**: จำลอง Issuer ของ AWS Cognito (`mockPool`) พร้อม Subject strings แบบคงที่ และมีตัวอย่างสถานะ `REVOKED`
+* **External Identity Links (11 รายการ)**: จำลอง Issuer ของ AWS Cognito (`mockPool`) พร้อม Subject strings แบบคงที่ และมีตัวอย่างสถานะ `REVOKED`
 
 ### 3.2 ข้อมูลประวัตินักศึกษา (`students`)
 * ข้อมูลจำลอง 5 รายการที่เชื่อมโยงกับ `users` (`user_id NOT NULL`)
@@ -43,7 +46,7 @@
 * **อีเมลและรหัสนักศึกษาตาม RFC 2606**: ใช้รหัสสมมติ `65061000x` และอีเมลโดเมนสงวน `@student.example.com` (ภายใต้โดเมนสงวน `example.com` ตาม RFC 2606) โดยไม่มีการอ้างอิงชื่อสถาบันจริงหรือ TLD สาธารณะ
 
 ### 3.3 รอบการเปิดรับและดำเนินงาน (`rounds` / Cycles)
-* คอลัมน์ทั้งหมด (`academic_year`, `semester`, `status`, `end_date`) มีอยู่ใน Migration `001` และ `002` อยู่แล้ว
+* คอลัมน์ทั้งหมด (`academic_year`, `semester`, `status`, `end_date`) มีอยู่ใน Migration `001` และ `002` ครบถ้วน
 * **รอบเปิดดำเนินงาน (`status = 'OPEN'`)**: ปีการศึกษา `2026` ภาคเรียนที่ 1 รองรับการทดสอบ Review Actions, Active Queues และ Submissions
 * **รอบปิด (`status = 'CLOSED'`)**: ปีการศึกษา `2026` ภาคเรียนที่ 1 สำหรับทดสอบการปฏิเสธ Action ในรอบที่ปิดแล้ว
 
@@ -63,12 +66,31 @@
 
 ### 3.6 ขอบเขตสิทธิ์ของเจ้าหน้าที่ (`staff_scopes`)
 * ใช้รหัส `department` ตรงกับ `students.department` (เช่น `'CPE'`, `'EE'`, `'ME'`)
-* กำหนด Scope ทั้งระดับภาควิชาภาพรวม (`program = null`, `academic_year = null`), ระดับหลักสูตร (`program = 'CPE'`), และระดับปีการศึกษา (`academic_year = 2025`)
-* ครอบคลุมทั้งสถานะ `ACTIVE` และ `INACTIVE` สำหรับทดสอบ Filter Predicate
+* แยกบทบาทและ Scope ในการทดสอบ Authorization Predicate ตาม Issue [#53](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/53) ออกเป็น 4 ชุด:
+  1. `Scope 1 (Staff 1)`: `department = 'CPE'`, `program = null`, `academic_year = null`, `status = 'ACTIVE'` -> ครอบคลุมแผน CPE ในรอบ OPEN 2026 สำหรับเคสสำเร็จ **`200 OK`**
+  2. `Scope 2 (Staff 2)`: `department = 'EE'`, `program = null`, `academic_year = null`, `status = 'ACTIVE'` -> ทดสอบเคสข้ามภาควิชา **`403 Forbidden`** เมื่อเข้าถึงนักศึกษา CPE
+  3. `Scope 3 (Staff 3)`: `department = 'CPE'`, `program = 'CPE'`, `academic_year = 2025`, `status = 'ACTIVE'` -> ทดสอบเคสจำกัดเฉพาะปีการศึกษาเก่า **`403 Forbidden`** เมื่อเข้าถึงรอบ OPEN ปี 2026 ตามเงื่อนไข `(ss.academic_year IS NULL OR ss.academic_year = r.academic_year)`
+  4. `Scope 4 (Staff 1)`: `department = 'ME'`, `program = null`, `academic_year = null`, `status = 'INACTIVE'` -> ทดสอบเคส Scope ที่ถูกปิดใช้งาน (`status <> 'ACTIVE'`) ได้ **`403 Forbidden`**
+* **Out-of-scope Testability Guarantee**: ระบบ Validator ตรวจสอบให้มั่นใจว่า Staff ทุกคนมี Student อย่างน้อย 1 คนที่อยู่นอก Scope ของตนเองเสมอ เพื่อรองรับการทดสอบเคสปฏิเสธสิทธิ์ (403)
 
 ### 3.7 ประวัติการทำงานและ Audit Log (`plan_operations` และ `audit_events`)
 * บันทึกประวัติครบทุก Action หลัก: `SUBMIT_PLAN`, `REVIEW_PLAN`, `APPROVE_PLAN`, `REQUEST_REVISION`, และ `ASSIGN_ADVISOR`
 * ข้อมูลเป็นแบบ Append-only ไม่ละเมิด Trigger ป้องกันการแก้ไขหรือลบ
+
+### 3.8 การยืนยันความครบถ้วนของ Schema Columns ระหว่าง Migration 001 และ 002
+ตารางตรวจสอบการมีอยู่จริงของคอลัมน์ใน Migration Files:
+
+| คอลัมน์ที่ Issue #53 กำหนด | ไฟล์ Migration ต้นทาง | บรรทัด | คำสั่ง DDL จริงในไฟล์ |
+|---|---|---|---|
+| `rounds.academic_year` | `src/db/migrations/001_initial_schema.sql` | Line 31 | `academic_year INTEGER NOT NULL` |
+| `rounds.semester` | `src/db/migrations/002_v3_identity_student_plan_assignment_audit.sql` | Line 121 | `ADD COLUMN semester INTEGER,` |
+| `rounds.status` | `src/db/migrations/002_v3_identity_student_plan_assignment_audit.sql` | Line 122 | `ADD COLUMN status TEXT,` |
+| `rounds.end_date` | `src/db/migrations/002_v3_identity_student_plan_assignment_audit.sql` | Line 123 | `ADD COLUMN end_date TIMESTAMPTZ;` |
+| `students.academic_year` | `src/db/migrations/002_v3_identity_student_plan_assignment_audit.sql` | Line 70 | `ADD COLUMN academic_year INTEGER,` |
+| `students.department` | `src/db/migrations/002_v3_identity_student_plan_assignment_audit.sql` | Line 67 | `ADD COLUMN department TEXT,` |
+
+> [!NOTE]
+> คอลัมน์ `rounds.academic_year` มีมาตั้งแต่ Migration `001_initial_schema.sql` (Line 31) ของ V2 อยู่แล้ว Migration `002` ของ Issue #56 จึงเพิ่มเฉพาะ `semester`, `status`, และ `end_date` เข้ากับ `rounds` และเพิ่ม `department` กับ `academic_year` เข้ากับ `students` อย่างครบถ้วนสมบูรณ์ โดย Fixtures ชุดนี้ไม่ได้สร้าง Schema หรือ Field เพิ่มเติมเองแม้แต่ฟิลด์เดียว
 
 ---
 
