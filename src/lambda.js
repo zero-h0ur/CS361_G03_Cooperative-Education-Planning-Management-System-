@@ -11,8 +11,8 @@ function buildRequestUrl(event = {}) {
   return rawQueryString ? `${rawPath}?${rawQueryString}` : rawPath;
 }
 
-function createLambdaHandler({ dal } = {}) {
-  const requestHandler = createRequestHandler(dal);
+function createLambdaHandler({ dal, ...options } = {}) {
+  const requestHandler = createRequestHandler(dal, options);
 
   return async function lambdaHandler(event = {}) {
     const method = event.requestContext?.http?.method || event.httpMethod || 'GET';
@@ -22,7 +22,9 @@ function createLambdaHandler({ dal } = {}) {
       headers: event.headers && typeof event.headers === 'object' ? event.headers : {},
       requestContext: event.requestContext && typeof event.requestContext === 'object'
         ? event.requestContext
-        : {}
+        : {},
+      body: event.body,
+      isBase64Encoded: Boolean(event.isBase64Encoded)
     };
 
     return new Promise((resolve, reject) => {
@@ -30,11 +32,18 @@ function createLambdaHandler({ dal } = {}) {
       let headers = {};
 
       const response = {
+        // Mirrors Node's ServerResponse: the router stops the middleware chain once a
+        // response has ended. Without this flag a 401/403 from auth/authz middleware is
+        // returned to the client but the protected route handler still runs.
+        writableEnded: false,
         writeHead(nextStatusCode, nextHeaders = {}) {
+          if (this.writableEnded) return;
           statusCode = nextStatusCode;
           headers = { ...headers, ...nextHeaders };
         },
         end(body = '') {
+          if (this.writableEnded) return;
+          this.writableEnded = true;
           resolve({
             statusCode,
             headers,

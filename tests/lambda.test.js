@@ -103,4 +103,38 @@ describe('API Gateway HTTP API Lambda adapter', () => {
     expect(response.headers.Allow).toBe('GET');
     expect(JSON.parse(response.body).error.code).toBe('METHOD_NOT_ALLOWED');
   });
+
+  it('stops protected route handlers after auth/authz middleware rejects the request', async () => {
+    const { attachRequestContext } = require('../src/api/context');
+    const studentPlanService = {
+      createOwnPlan: jest.fn(),
+      listOwnPlans: jest.fn(),
+      getOwnPlan: jest.fn(),
+      updateOwnPlan: jest.fn()
+    };
+    const advisor = {
+      isAuthenticated: true,
+      userId: '70000000-0000-4000-8000-000000000010',
+      role: 'ADVISOR',
+      accountStatus: 'ACTIVE',
+      studentId: null
+    };
+    const handler = createLambdaHandler({
+      dal: makeDal(),
+      authOptions: {
+        authMiddleware: async (request) => attachRequestContext(request, advisor)
+      },
+      studentPlanService
+    });
+
+    // Advisor mutation is denied by the central policy (#49) before any database lookup
+    const response = await handler({
+      ...httpApiEvent('/api/v3/plans/50000000-0000-4000-8000-000000000101', '', 'PATCH'),
+      body: JSON.stringify({ notes: 'x', expected_version: 1, operation_id: '92000000-0000-4000-8000-000000000099' })
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(response.statusCode).toBe(403);
+    expect(studentPlanService.updateOwnPlan).not.toHaveBeenCalled();
+  });
 });
