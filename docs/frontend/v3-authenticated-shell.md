@@ -98,12 +98,67 @@ role ถูก Bundle เข้า Production
 
 | กรณี | ผลที่หน้าเว็บต้องแสดง |
 | --- | --- |
-| ไม่มี Session หรือ API ตอบ `401` | “Session หมดอายุ”; Redirect ไป Login เมื่อผู้ใช้กดปุ่มเท่านั้น |
-| API ตอบ `403` | “ไม่มีสิทธิ์เข้าถึง”; ไม่ Redirect ไป Login |
-| API/Network ไม่พร้อม หรือ Response ผิดรูปแบบ | Safe unavailable state พร้อม Retry |
+| ยังไม่เคย Login ใน Tab นี้ (ไม่มี Token ใน `sessionStorage`) | “กรุณาเข้าสู่ระบบ”; Redirect ไป Login เมื่อผู้ใช้กดปุ่มเท่านั้น |
+| Refresh Session ไม่สำเร็จ หรือ API ตอบ `401` | “Session หมดอายุ”; Redirect ไป Login เมื่อผู้ใช้กดปุ่มเท่านั้น |
+| API ตอบ `403` หรือ Role เป็น `ADMIN` | “ไม่มีสิทธิ์เข้าถึง” พร้อมปุ่มออกจากระบบเพื่อเปลี่ยนบัญชี; ไม่ Redirect ไป Login |
+| API/Network ไม่พร้อม หรือ Response ผิดรูปแบบ | Safe unavailable state พร้อม Retry และปุ่มออกจากระบบ |
 | Role/Route ไม่อยู่ใน Allowlist | Access denied โดยไม่แสดง Protected content |
 | Auth configuration ไม่ครบ | Configuration required พร้อม Link กลับ Public Directory |
 
 ก่อนเปิด PR ให้ตรวจ `npm run build`, `npm run test:frontend`, Browser console,
 Keyboard navigation และหน้าจอ Mobile/Tablet/Desktop พร้อมยืนยันว่า Public Company
 Directory ยังเปิดแบบ Anonymous ได้
+
+## สิ่งที่ต้องทำใน AWS Console ก่อน Merge
+
+รายการนี้แก้ด้วยโค้ดใน Repository ไม่ได้ ต้องให้ผู้ดูแล AWS ทำให้เสร็จก่อนหรือพร้อมกับการ Merge PR นี้
+
+### 1. อัปเดต Callback และ Sign-out URL ของ Cognito App Client
+
+ตอนนี้ Cognito App Client ที่ตั้งไว้ใน #58 Allowlist เฉพาะ
+`https://main.d1d9qrqnsi5nl6.amplifyapp.com/` ทั้ง Callback และ Sign-out แต่ Shell นี้
+Redirect ไปที่ `/app.html` และ `/index.html` เมื่อ URL ไม่ตรงแบบ Exact match ตาม #48
+Cognito จะตอบ `redirect_mismatch` ทำให้ Login บน Production ใช้งานไม่ได้
+
+ให้แก้ใน Cognito > User pool > App client > Login pages ดังนี้:
+
+- Allowed callback URLs: `https://main.d1d9qrqnsi5nl6.amplifyapp.com/app.html`
+- Allowed sign-out URLs: `https://main.d1d9qrqnsi5nl6.amplifyapp.com/index.html`
+- ยังคงเป็น Exact URL ห้ามใช้ Wildcard และห้ามเพิ่ม Origin อื่น
+- อัปเดตบันทึกค่า `AUTH_CALLBACK_URL` และ `AUTH_LOGOUT_URL` ใน #58 ให้ตรงกัน
+
+### 2. ตั้ง Environment variables ใน Amplify Hosting
+
+`amplify.yml` ใน PR นี้ใช้ Strict build (`CO_ED_REQUIRE_AUTH_CONFIG=1`) ถ้ายังไม่ได้ตั้งค่า
+Build ของ `main` จะล้มเหลวทุกครั้งหลัง Merge รวมถึงการแก้หน้า Public ด้วย
+(เว็บที่ Deploy ไว้แล้วยังเปิดได้ แต่จะค้างอยู่ที่เวอร์ชันเดิม)
+
+ให้ตั้งค่าใน Amplify > App settings > Environment variables ของ Branch `main`:
+
+| Variable | ค่า |
+| --- | --- |
+| `CO_ED_API_BASE_URL` | `https://qtqlsb1aec.execute-api.us-east-1.amazonaws.com` |
+| `CO_ED_COGNITO_USER_POOL_ID` | User Pool ID จาก #58 |
+| `CO_ED_COGNITO_CLIENT_ID` | SPA App Client ID จาก #58 (ค่าเดียวกับ `AUTH_AUDIENCE`) |
+| `CO_ED_COGNITO_DOMAIN` | Cognito domain แบบ Host name |
+| `CO_ED_APP_ORIGIN` | `https://main.d1d9qrqnsi5nl6.amplifyapp.com` |
+
+ข้อควรรู้เพิ่มเติม:
+
+- `amplify.yml` ใน Repository จะ Override Build settings ที่ตั้งไว้ใน Amplify Console
+- Artifact ที่ Deploy เปลี่ยนจาก Root ของ Repository เป็น `dist/`
+- ห้ามตั้ง `NODE_ENV=production` ที่ระดับ Environment variables เพราะจะทำให้ `npm ci`
+  ไม่ติดตั้ง `esbuild` และ `aws-amplify` ซึ่งเป็น `devDependencies` ใน `amplify.yml`
+  กำหนด `NODE_ENV` เฉพาะขั้น Build ไว้แล้ว
+
+### 3. Smoke test หลัง Deploy
+
+หลังจากข้อ 1 และ 2 เสร็จ และ Deploy แล้ว ให้ทดสอบตาม Smoke procedure ของ #58 โดยใช้บัญชีทดสอบ
+ที่ Link กับ Internal user ใน RDS แล้ว:
+
+1. เปิด `index.html` แล้วกด “เข้าสู่ระบบ” ต้องเห็นหน้า “กรุณาเข้าสู่ระบบ”
+2. กดเข้าสู่ระบบ ต้องไปที่ Cognito Managed Login และกลับมาที่ `/app.html` โดยไม่มี `redirect_mismatch`
+3. หลัง Login ต้องเห็นเมนูตาม Role ที่ `/api/v3/me` คืนมา
+4. กดออกจากระบบ ต้องกลับไปที่ `index.html` และเปิด `app.html` อีกครั้งต้องขอให้ Login ใหม่
+5. เปิด Company Directory โดยไม่ Login ต้องใช้งานได้ตามปกติ
+6. แนบ Screenshot ของ Desktop, Mobile และ Failure states ใน PR
