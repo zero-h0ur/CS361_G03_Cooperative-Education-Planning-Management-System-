@@ -16,6 +16,7 @@ const { registerStudentPlanRoutes } = require('./student-plan-routes');
 const { registerStaffRoutes } = require('./staff-routes');
 const { registerStaffReviewRoutes } = require('./staff-review-routes');
 const { registerPlanSubmissionRoutes } = require('./plan-submission-routes');
+const { registerPlanHistoryRoutes } = require('./plan-history-routes');
 
 const VALID_ACTIONS = new Set(Object.values(ACTIONS));
 
@@ -120,6 +121,9 @@ function registerV3Routes(router, options = {}) {
 
   // Issue #69: Student Plan submission transaction
   registerPlanSubmissionRoutes(router, registerProtectedRoute, options);
+
+  // Issue #76: Student own Plan audit-derived history
+  registerPlanHistoryRoutes(router, registerProtectedRoute, options);
 
   // Issue #70: Staff review commands
   registerStaffReviewRoutes(router, registerProtectedRoute, options);
