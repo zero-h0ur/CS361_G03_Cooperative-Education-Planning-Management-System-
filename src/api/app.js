@@ -32,41 +32,43 @@ const {
   COMPANY_PUBLIC_FIELDS,
   POSITION_PUBLIC_FIELDS
 } = require('./routes/public-company-routes');
-const { registerV3Routes } = require('./routes/v3-routes');
+const { registerV3Routes, registerProtectedRoute } = require('./routes/v3-routes');
 const {
   extractBearerToken,
   attachRequestContext,
   getRequestContext
 } = require('./context');
 
-function createAppRouter() {
+function createAppRouter(options = {}) {
   const router = new Router();
 
   // Register public company & health routes
   registerPublicCompanyRoutes(router);
 
   // Register V3 protected extension routes
-  registerV3Routes(router);
+  registerV3Routes(router, options);
 
   return router;
 }
 
-function createRequestHandler(dal = defaultDal) {
-  const router = createAppRouter();
+function createRequestHandler(dal = defaultDal, options = {}) {
+  const router = createAppRouter(options);
 
   return async function requestHandler(request, response) {
     await router.handle(request, response, dal);
   };
 }
 
-function createApiServer({ dal = defaultDal } = {}) {
-  return http.createServer(createRequestHandler(dal));
+function createApiServer({ dal = defaultDal, ...options } = {}) {
+  return http.createServer(createRequestHandler(dal, options));
 }
 
 module.exports = {
   createApiServer,
   createRequestHandler,
   createAppRouter,
+  registerV3Routes,
+  registerProtectedRoute,
   toPublicCompany,
   toPublicPosition,
   mapError,

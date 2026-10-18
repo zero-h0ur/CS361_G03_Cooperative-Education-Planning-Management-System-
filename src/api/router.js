@@ -126,7 +126,13 @@ class Router {
       // 3. Execute global middlewares, then route-scoped middlewares (e.g. authentication)
       const middlewares = [...this.middlewares, ...methodMatch.route.middlewares];
       for (const middleware of middlewares) {
-        await middleware(request, response, { pathname, url, method, dal });
+        await middleware(request, response, {
+          pathname,
+          url,
+          method,
+          params: methodMatch.params,
+          dal
+        });
         // If middleware ended the response (e.g. auth failure), stop
         if (response.writableEnded) {
           return;
