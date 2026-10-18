@@ -19,6 +19,11 @@ Accepted Decisions #48, #49 และ shared response/error contract จาก #
 
 ## Routes
 
+Issue #74 เพิ่มเมนู Staff ที่ `#/staff/students` และ `#/staff/plans` โดยใช้
+Scoped read API ของ #67 แล้ว ส่วน `#/staff/review/:planId` เป็น Route ส่งต่อ
+ให้ #77 ดู Contract, URL-state privacy และวิธีทดสอบใน
+[Staff Student/Plan search](v3-staff-student-management.md)
+
 | Role | Route | สถานะปัจจุบัน |
 | --- | --- | --- |
 | `STUDENT` | `#/student/profile` | Dashboard และข้อมูลของฉัน (#72) |
