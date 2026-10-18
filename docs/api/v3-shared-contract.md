@@ -459,7 +459,7 @@ Request body:
 
 ### 3.10 Student Plan History: `GET /api/v3/plans/:planId/history` (#76)
 
-ประวัติของ Plan ที่ได้จาก `audit_events` แบบ Append-only ใช้ได้เฉพาะ Student เจ้าของ Plan ผ่าน Action `audit:read_own_plan_history` (#49) Policy กลางตรวจ UUID (`400`), การมีอยู่ (`404`) และ Ownership (`403`) ส่วน Advisor / Staff ได้ `403` (ประวัติสำหรับ Role อื่นอยู่ใน #75 / #77)
+ประวัติของ Plan ที่ได้จาก `audit_events` แบบ Append-only ใช้ได้เฉพาะ Student เจ้าของ Plan ผ่าน Action `audit:read_own_plan_history` (#49) Policy กลางตรวจ UUID (`400`), การมีอยู่ (`404`) และ Ownership (`403`) ส่วน Advisor / Staff ได้ `403` (Advisor read API ใน #68 ไม่เปิดประวัติของแผน ส่วนของ Staff อยู่ใน #77)
 
 Response (`data`) เรียงตามเวลาเก่าไปใหม่:
 
@@ -475,6 +475,32 @@ Response (`data`) เรียงตามเวลาเก่าไปให�
 - ไม่ส่ง `actor_id`, `operation_id`, `correlation_id` หรือ Resource id ออกมา
 - ไม่รับ Query parameter ใดๆ (`400`) และ Method อื่นนอกจาก `GET` ได้ `405`
 - ใช้ Index `idx_audit_events_plan_created`
+
+### 3.11 Advisor Assigned-Scope Read API: `/api/v3/advisor/*` (#68)
+
+ใช้ได้เฉพาะ Role `ADVISOR` ที่บัญชีเป็น `ACTIVE` และมี Assignment ที่มีผล ณ เวลาที่ร้องขอ (`effective_from <= now < effective_to`, #53) ทุก Route เป็น `GET` และ Method อื่นได้ `405` ส่วนคำสั่ง Workflow ของ Advisor ได้ `403` จาก Policy กลาง Frontend ของ #75 ใช้หัวข้อนี้
+
+| Method | Path | Query | Response (`data`) |
+|---|---|---|---|
+| `GET` | `/api/v3/advisor/students` | `page`, `pageSize` (≤ 100) | Student[] + `pagination` |
+| `GET` | `/api/v3/advisor/students/:studentId` | ไม่มี | Student |
+| `GET` | `/api/v3/advisor/students/:studentId/plans` | `page`, `pageSize`, `cycle_id`, `status` | PlanSummary[] + `pagination` |
+| `GET` | `/api/v3/advisor/plans/:planId` | ไม่มี | PlanDetail |
+
+Allowlist (`src/api/services/advisor-read-serializers.js`):
+
+- **Student:** `id, student_number, full_name, preferred_name, department, program, major, academic_year, enrollment_status`
+- **PlanSummary:** `id, cycle_id, company { id, name }, position { id, title }, status, updated_at` (`company` / `position` เป็น `null` ถ้ายังไม่ได้เลือก)
+- **PlanDetail:** PlanSummary + `notes, version, created_at`
+- ไม่ส่ง Institutional email, Identity fields, Review comment หรือ Operation id
+
+| กรณี | ผลลัพธ์ |
+|---|---|
+| ไม่มี Token | `401 UNAUTHORIZED` |
+| ไม่ใช่ Advisor, บัญชีไม่ `ACTIVE` | `403 FORBIDDEN` |
+| Student / Plan นอก Assignment หรือไม่มีอยู่จริง | `403 FORBIDDEN` แบบเดียวกัน (ไม่เปิดเผยว่ามี Record หรือไม่) |
+| UUID / Pagination / Filter ผิดรูปแบบ, Query นอก Allowlist | `400 VALIDATION_ERROR` |
+| Method อื่นนอกจาก `GET` | `405 METHOD_NOT_ALLOWED` |
 
 ---
 

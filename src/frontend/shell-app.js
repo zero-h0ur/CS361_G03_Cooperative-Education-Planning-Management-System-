@@ -7,6 +7,11 @@ import {
   getRoutesForRole,
   isAllowlistedRoute
 } from './routes.js';
+import {
+  renderAdvisorPlanView,
+  renderAdvisorStudentDetailView,
+  renderAdvisorStudentListView
+} from './advisor/advisor-views.js';
 import { renderStudentDashboardView } from './student/student-dashboard-view.js';
 import { renderStudentPlanView } from './student/student-plan-view.js';
 
@@ -172,16 +177,19 @@ function createBrand() {
   return brand;
 }
 
-function createNavigation(role, activeHash) {
+function createNavigation(role, activeRoute) {
   const navigation = element('nav', 'shell-nav');
   navigation.setAttribute('aria-label', 'เมนูพื้นที่ผู้ใช้งาน');
 
   for (const route of getRoutesForRole(role)) {
     const link = element('a', 'shell-nav__link', route.navLabel);
     link.href = route.hash;
-    if (route.hash === activeHash) {
+    if (route.hash === activeRoute.hash) {
       link.classList.add('shell-nav__link--active');
       link.setAttribute('aria-current', 'page');
+    } else if (route.hash === activeRoute.navHash) {
+      // Detail page: highlight its parent menu entry without claiming it is the current page
+      link.classList.add('shell-nav__link--active');
     }
     navigation.append(link);
   }
@@ -214,7 +222,7 @@ function createProtectedLayout({ role, route, onLogout, bodyNode }) {
   const publicLink = element('a', 'shell-sidebar__public-link', 'ดูรายชื่อสถานประกอบการ');
   publicLink.href = 'company-directory.html';
 
-  sidebar.append(createBrand(), identity, createNavigation(role, route.hash), publicLink);
+  sidebar.append(createBrand(), identity, createNavigation(role, route), publicLink);
 
   const mainColumn = element('div', 'shell-main-column');
   const topbar = element('header', 'shell-topbar');
@@ -273,6 +281,7 @@ export function createShellApp({
   history = globalThis.history,
   studentProfileClient = null,
   studentPlanClient = null,
+  advisorClient = null,
   renderRouteContent
 }) {
   if (
@@ -464,6 +473,24 @@ export function createShellApp({
         onSessionExpired: handleSessionExpired,
         onAccessDenied: (message) => renderForbidden(message)
       });
+    }
+
+    if (role === 'ADVISOR' && advisorClient) {
+      const advisorViewOptions = {
+        advisorClient,
+        signal,
+        onSessionExpired: handleSessionExpired,
+        onAccessDenied: (message) => renderForbidden(message)
+      };
+      if (route.hash === '#/advisor/students') {
+        return renderAdvisorStudentListView(advisorViewOptions);
+      }
+      if (route.params?.studentId) {
+        return renderAdvisorStudentDetailView({ ...advisorViewOptions, studentId: route.params.studentId });
+      }
+      if (route.params?.planId) {
+        return renderAdvisorPlanView({ ...advisorViewOptions, planId: route.params.planId });
+      }
     }
 
     return null;

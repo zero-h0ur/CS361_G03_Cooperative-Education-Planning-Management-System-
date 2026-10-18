@@ -32,8 +32,34 @@ const ROUTE_DEFINITIONS = Object.freeze([
     navLabel: 'นักศึกษาที่ดูแล',
     eyebrow: 'ADVISOR VIEW',
     title: 'นักศึกษาที่ได้รับมอบหมาย',
-    description: 'พื้นที่อ่านข้อมูลนักศึกษาและแผนที่อยู่ใน Assignment ของคุณ',
-    status: 'Assigned-scope API จริงจะเชื่อมต่อใน Issue #68'
+    description: 'รายชื่อนักศึกษาที่อยู่ใน Assignment ของคุณ ณ ตอนนี้ (อ่านอย่างเดียว)',
+    status: 'Assigned-scope API (#68)'
+  })
+]);
+
+// Detail routes carry one UUID path segment. They are not menu entries; the menu highlights
+// their parent. A hash with a malformed id is not allowlisted, so it never reaches the API.
+const UUID_SEGMENT = '([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})';
+const DETAIL_ROUTE_DEFINITIONS = Object.freeze([
+  Object.freeze({
+    pattern: new RegExp(`^#/advisor/students/${UUID_SEGMENT}$`, 'i'),
+    param: 'studentId',
+    navHash: '#/advisor/students',
+    role: 'ADVISOR',
+    eyebrow: 'ADVISOR VIEW · READ-ONLY',
+    title: 'ข้อมูลนักศึกษาที่ได้รับมอบหมาย',
+    description: 'ข้อมูลนักศึกษาและแผนสหกิจที่คุณมีสิทธิ์อ่านตาม Assignment',
+    status: 'Assigned-scope API (#68)'
+  }),
+  Object.freeze({
+    pattern: new RegExp(`^#/advisor/plans/${UUID_SEGMENT}$`, 'i'),
+    param: 'planId',
+    navHash: '#/advisor/students',
+    role: 'ADVISOR',
+    eyebrow: 'ADVISOR VIEW · READ-ONLY',
+    title: 'แผนสหกิจของนักศึกษา',
+    description: 'รายละเอียดแผนสหกิจแบบอ่านอย่างเดียว',
+    status: 'Assigned-scope API (#68)'
   })
 ]);
 
@@ -50,7 +76,21 @@ const ROLE_LABELS = Object.freeze({
 });
 
 export function getRoute(hash) {
-  return ROUTE_DEFINITIONS.find((route) => route.hash === hash) || null;
+  if (typeof hash !== 'string') {
+    return null;
+  }
+  const route = ROUTE_DEFINITIONS.find((candidate) => candidate.hash === hash);
+  if (route) {
+    return route;
+  }
+  for (const definition of DETAIL_ROUTE_DEFINITIONS) {
+    const match = definition.pattern.exec(hash);
+    if (match) {
+      const { pattern, param, ...rest } = definition;
+      return Object.freeze({ ...rest, hash, params: Object.freeze({ [param]: match[1].toLowerCase() }) });
+    }
+  }
+  return null;
 }
 
 export function getRoutesForRole(role) {
