@@ -96,6 +96,27 @@ describe('Issue #60 - Anonymized V3 Fixtures and Destructive-Seed Guards', () =>
       );
     });
 
+    it('blocks an RDS/remote target by default even when its name has no production keyword', () => {
+      process.env.NODE_ENV = 'development';
+      process.env.ALLOW_DB_RESET = 'true';
+      process.env.DATABASE_URL = 'postgres://user:pass@coed-postgres.abc123.us-east-1.rds.amazonaws.com:5432/coed';
+
+      expect(() => assertDestructiveResetAllowed()).toThrow(/remote target/);
+    });
+
+    it('requires an exact target fingerprint before allowing an explicitly opted-in remote reset', () => {
+      process.env.NODE_ENV = 'development';
+      process.env.ALLOW_DB_RESET = 'true';
+      process.env.ALLOW_REMOTE_DB_RESET = 'true';
+      process.env.DATABASE_URL = 'postgres://user:pass@dev-db.internal:5432/coed_dev';
+
+      process.env.DB_RESET_TARGET = 'different-db.internal/coed_dev';
+      expect(() => assertDestructiveResetAllowed()).toThrow(/exact DB_RESET_TARGET/);
+
+      process.env.DB_RESET_TARGET = 'dev-db.internal/coed_dev';
+      expect(() => assertDestructiveResetAllowed()).not.toThrow();
+    });
+
     it('in test mode, requires TEST_DATABASE_URL differing from DATABASE_URL', () => {
       process.env.NODE_ENV = 'test';
       process.env.ALLOW_DB_RESET = 'true';

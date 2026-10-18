@@ -27,20 +27,48 @@ function assertDestructiveResetAllowed() {
     );
   }
 
-  // Heuristic defense-in-depth: Guard against connection strings clearly named staging/production.
-  // Note: RDS hostnames typically use random hashes; authoritative protection relies on NODE_ENV and ALLOW_DB_RESET.
-  const targetUrl = env === 'test' ? (process.env.TEST_DATABASE_URL || '') : (process.env.DATABASE_URL || '');
+  if (
+    env === 'test' &&
+    (!process.env.TEST_DATABASE_URL || process.env.TEST_DATABASE_URL === process.env.DATABASE_URL)
+  ) {
+    throw new Error(
+      'Destructive seed/reset blocked: Test reset requires a TEST_DATABASE_URL that differs from DATABASE_URL.'
+    );
+  }
+
+  const targetUrl = env === 'test' ? process.env.TEST_DATABASE_URL : (process.env.DATABASE_URL || '');
+  let parsedTarget;
+  try {
+    parsedTarget = new URL(targetUrl);
+  } catch {
+    throw new Error('Destructive seed/reset blocked: target database URL is missing or invalid.');
+  }
+
+  if (!['postgres:', 'postgresql:'].includes(parsedTarget.protocol)) {
+    throw new Error('Destructive seed/reset blocked: target database must use PostgreSQL.');
+  }
+
+  // Defense-in-depth: reject targets clearly identified as production/staging before remote opt-in.
   if (/(prod|production|staging)/i.test(targetUrl)) {
     throw new Error(
       'Destructive seed/reset blocked: Target database URL appears to match a production or staging instance.'
     );
   }
 
-  if (env === 'test') {
-    if (!process.env.TEST_DATABASE_URL || process.env.TEST_DATABASE_URL === process.env.DATABASE_URL) {
-      throw new Error('Test reset requires a TEST_DATABASE_URL that differs from DATABASE_URL.');
+  const localHosts = new Set(['localhost', '127.0.0.1', '[::1]', 'host.docker.internal']);
+  if (!localHosts.has(parsedTarget.hostname)) {
+    const targetFingerprint = `${parsedTarget.hostname}/${parsedTarget.pathname.replace(/^\//, '')}`;
+    if (
+      process.env.ALLOW_REMOTE_DB_RESET !== 'true' ||
+      process.env.DB_RESET_TARGET !== targetFingerprint
+    ) {
+      throw new Error(
+        `Destructive seed/reset blocked: remote target '${targetFingerprint}' requires ` +
+        'ALLOW_REMOTE_DB_RESET=true and an exact DB_RESET_TARGET confirmation.'
+      );
     }
   }
+
 }
 
 /**

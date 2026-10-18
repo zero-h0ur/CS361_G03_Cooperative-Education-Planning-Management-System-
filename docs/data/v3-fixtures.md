@@ -128,11 +128,15 @@ flowchart TD
     CheckFlag -- ไม่ใช่ --> Block2["บล็อกการทำงาน (Error: Missing Flag)"]
     CheckFlag -- ใช่ --> CheckStage{"STAGE / APP_ENV มีคำว่า prod หรือ staging?"}
     CheckStage -- ใช่ --> Block3["บล็อกการทำงาน (Error: Staging/Prod Blocked)"]
-    CheckStage -- ไม่ใช่ --> CheckURL{"DATABASE_URL มีคำว่า prod หรือ staging? (Heuristic)"}
-    CheckURL -- ใช่ --> Block4["บล็อกการทำงาน (Error: Prod/Staging Host)"]
-    CheckURL -- ไม่ใช่ --> CheckTestIsolation{"หาก NODE_ENV === 'test' ให้ตรวจ TEST_DATABASE_URL"}
+    CheckStage -- ไม่ใช่ --> CheckTestIsolation{"หาก NODE_ENV === 'test' ให้ตรวจ TEST_DATABASE_URL"}
     CheckTestIsolation -- ซ้ำกับ dev หรือว่าง --> Block5["บล็อกการทำงาน (Error: URL Conflict)"]
-    CheckTestIsolation -- ถูกต้อง --> Execute["อนุญาตให้รัน Seed / Reset ได้"]
+    CheckTestIsolation -- ถูกต้อง --> CheckTarget{"Target เป็น PostgreSQL บนเครื่อง local?"}
+    CheckTarget -- ไม่ใช่ --> CheckRemote{"เปิด ALLOW_REMOTE_DB_RESET และ DB_RESET_TARGET ตรงแบบ exact match?"}
+    CheckRemote -- ไม่ใช่ --> Block4["บล็อก Remote Database"]
+    CheckRemote -- ใช่ --> CheckURL{"URL มีคำว่า prod หรือ staging?"}
+    CheckTarget -- ใช่ --> CheckURL
+    CheckURL -- ใช่ --> Block6["บล็อก Production/Staging Target"]
+    CheckURL -- ไม่ใช่ --> Execute["อนุญาตให้รัน Seed / Reset ได้"]
 ```
 
 ### การจัดลำดับความน่าเชื่อถือของการป้องกัน (Defense Hierarchy):
@@ -142,10 +146,12 @@ flowchart TD
 > 1. **`NODE_ENV`**: ต้องเป็น `'development'` หรือ `'test'` เท่านั้น หากเป็นค่าว่าง, `'production'`, หรือ `'staging'` ระบบจะบล็อกทันที
 > 2. **`ALLOW_DB_RESET`**: ต้องระบุเป็นตัวอักษร `'true'` อย่างเจาะจง ซึ่งบน Staging และ Production จะไม่มีการตั้งค่า Environment Variable นี้เด็ดขาด
 > 3. **`TEST_DATABASE_URL`**: ใน Test Mode ต้องมีค่าและต้องไม่ตรงกับ `DATABASE_URL` เพื่อป้องกันการลบ Development DB
+> 4. **Local-only by default**: อนุญาตเฉพาะ `localhost`, `127.0.0.1`, IPv6 loopback และ `host.docker.internal` โดยค่าเริ่มต้น
+> 5. **Remote target confirmation**: หากจำเป็นต้องใช้ Remote Development Database ต้องตั้งทั้ง `ALLOW_REMOTE_DB_RESET=true` และ `DB_RESET_TARGET=<hostname>/<database>` ให้ตรงกับปลายทางทุกตัวอักษร
 
 > [!NOTE]
 > **Heuristic Defense Layer (ชั้นเสริม)**:
-> การตรวจคำว่า `prod` หรือ `staging` ใน Database Connection URL และตัวแปร `STAGE` / `APP_ENV` เป็นเพียงมาตรการเสริม (Defense-in-depth heuristic) เพื่อช่วยเตือนหากมีการตั้งชื่อไว้อย่างชัดเจน แต่ **ไม่สามารถใช้เป็นหลักประกันหลักได้** เนื่องจาก RDS Hostname บน AWS มักเป็นรหัสสุ่ม (เช่น `xxx.ap-southeast-1.rds.amazonaws.com`) ที่ไม่มีคำว่า prod/staging ดังนั้นจึงต้องพึ่งพา `NODE_ENV` และ `ALLOW_DB_RESET` เป็นหลักเสมอ
+> การตรวจคำว่า `prod` หรือ `staging` ใน Database Connection URL และตัวแปร `STAGE` / `APP_ENV` เป็นมาตรการเสริมเท่านั้น ส่วน RDS ที่มีชื่อสุ่มจะถูกบล็อกด้วยกฎ Local-only และต้องยืนยัน Remote Target แบบ exact match ก่อนเสมอ
 
 ---
 
@@ -177,6 +183,17 @@ flowchart TD
   NODE_ENV=development ALLOW_DB_RESET=true npm run seed:v3
   ```
   *(หมายเหตุ: Script `seed` และ `seed:v3` ใน `package.json` จะโหลด V3 Fixtures เป็นค่าเริ่มต้น เพื่อให้ Developer ได้รับข้อมูล V3 ครบถ้วนทันที)*
+
+* **Remote Development Database (ใช้เฉพาะเมื่อจำเป็นและต้องยืนยันปลายทางให้ตรง)**:
+  ```bash
+  NODE_ENV=development \
+  ALLOW_DB_RESET=true \
+  ALLOW_REMOTE_DB_RESET=true \
+  DB_RESET_TARGET=dev-db.internal/coed_dev \
+  DATABASE_URL=postgres://user:password@dev-db.internal:5432/coed_dev \
+  npm run seed:v3
+  ```
+  ห้ามใช้ค่านี้กับ Production หรือ Staging และไม่ควรบันทึก credential ลงใน repository
 
 * **Seed เฉพาะข้อมูล V2 (Legacy-only 53 records)**:
   ```bash
