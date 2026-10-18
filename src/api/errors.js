@@ -48,8 +48,8 @@ class MethodNotAllowedError extends AppError {
 }
 
 class ConflictError extends AppError {
-  constructor(message = 'Resource conflict or concurrent update.', code = 'CONFLICT') {
-    super(message, code, 409);
+  constructor(message = 'Resource conflict or concurrent update.', code = 'CONFLICT', details = null) {
+    super(message, code, 409, details);
   }
 }
 
