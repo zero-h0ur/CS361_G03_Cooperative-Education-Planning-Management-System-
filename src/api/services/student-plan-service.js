@@ -189,7 +189,8 @@ class StudentPlanService {
       throw new ValidationError('position_id requires company_id.');
     }
 
-    const action = 'plan:create';
+    // plan_operations records domain commands; authorization uses plan:create.
+    const action = 'create_draft';
     const requestHash = stableHash({ cycleId, companyId, positionId, notes });
     const client = await this.repository.getClient();
     try {
@@ -309,7 +310,8 @@ class StudentPlanService {
     if (hasOwn(body, 'company_id')) normalizedPatch.company_id = requireUuid(body.company_id, 'company_id', { nullable: true });
     if (hasOwn(body, 'position_id')) normalizedPatch.position_id = requireUuid(body.position_id, 'position_id', { nullable: true });
     if (hasOwn(body, 'notes')) normalizedPatch.notes = normalizeNotes(body.notes);
-    const action = 'plan:update_content';
+    // plan_operations records domain commands; authorization uses plan:update_content.
+    const action = 'update_draft';
     const requestHash = stableHash({ planId: id, expectedVersion: body.expected_version, ...normalizedPatch });
     const client = await this.repository.getClient();
     try {

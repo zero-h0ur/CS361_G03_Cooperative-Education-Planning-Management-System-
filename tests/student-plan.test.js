@@ -168,7 +168,7 @@ describe('Issue #66 Student Own Plan service', () => {
       operation_id: OPERATION_ID,
       plan_id: PLAN_ID,
       actor_id: USER_ID,
-      action: 'plan:create',
+      action: 'create_draft',
       request_hash: operationCall.requestHash,
       response_payload: storedPlan
     });
@@ -186,7 +186,7 @@ describe('Issue #66 Student Own Plan service', () => {
         operation_id: OPERATION_ID,
         plan_id: PLAN_ID,
         actor_id: USER_ID,
-        action: 'plan:create',
+        action: 'create_draft',
         request_hash: 'a'.repeat(64),
         response_payload: planRow()
       }))
