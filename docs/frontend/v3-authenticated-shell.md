@@ -23,13 +23,23 @@ Accepted Decisions #48, #49 และ shared response/error contract จาก #
 | --- | --- | --- |
 | `STUDENT` | `#/student/profile` | Dashboard และข้อมูลของฉัน (#72) |
 | `STUDENT` | `#/student/plan` | สถานะและการส่งแผน (#76) |
-| `STAFF` | `#/staff/review` | Shell/Placeholder สำหรับ #77 |
+| `STAFF` | `#/staff/review` | คิวตรวจแผน (#77) |
+| `STAFF` | `#/staff/plans/:planId` | รายละเอียด ประวัติ และคำสั่งตรวจแผน (#77) ไม่อยู่ในเมนู |
 | `ADVISOR` | `#/advisor/students` | รายชื่อนักศึกษาที่ได้รับมอบหมาย (#75) |
 | `ADVISOR` | `#/advisor/students/:studentId` | ข้อมูลนักศึกษาและรายการแผน (#75) ไม่อยู่ในเมนู |
 | `ADVISOR` | `#/advisor/plans/:planId` | รายละเอียดแผนแบบอ่านอย่างเดียว (#75) ไม่อยู่ในเมนู |
 
 Role หรือ Route อื่นถูกปฏิเสธโดยค่าเริ่มต้น Route ที่มี `:studentId` / `:planId`
 ต้องเป็น UUID เท่านั้น ถ้ารูปแบบผิดจะถือว่าไม่อยู่ใน Allowlist และไม่เรียก API
+
+### Staff review workspace (#77)
+
+- คิวใช้ `GET /api/v3/staff/review-queue` (contract หัวข้อ 3.6) กรองด้วยสถานะและคำค้นได้ ส่วนหน้าแผนใช้ `GET /api/v3/staff/plans/:planId` และ `/history` (หัวข้อ 3.12)
+- ปุ่ม Start review / Approve / Return แสดงเมื่อเงื่อนไขครบทั้งสามข้อ: `capabilities.canReviewPlan` ของ Session, สถานะของแผน (`SUBMITTED` → Start review, `UNDER_REVIEW` → Approve / Return) และรอบเป็น `OPEN` ส่วน Backend ตรวจซ้ำทุกคำสั่ง (หัวข้อ 3.8)
+- ทุกคำสั่งต้องยืนยันใน Panel ก่อน Focus จะย้ายเข้า Panel และกลับมาที่ปุ่มเดิมเมื่อกดยกเลิกหรือ Escape การ Return บังคับให้ใส่เหตุผล (ไม่เกิน 2,000 ตัวอักษร) ส่วนความเห็นตอน Approve ไม่บังคับ
+- ไม่ทำ Optimistic update หลังสำเร็จจะโหลด State และ History ใหม่จาก Server ถ้าเจอ `409` / `422` / `403` จะแจ้งว่าคำสั่งยังไม่ถูกบันทึก และมีปุ่มโหลดข้อมูลล่าสุด
+- ถ้า Network ล้มเหลว Panel และความเห็นที่พิมพ์ไว้ยังอยู่ กดยืนยันอีกครั้งจะใช้ `operation_id` เดิม แต่ถ้าแก้ความเห็นจะใช้ `operation_id` ใหม่
+- Advisor view ไม่ Import Module นี้ และ Route ของ Staff ปฏิเสธ Role อื่นตั้งแต่ Shell
 
 ### Advisor pages (#75)
 
