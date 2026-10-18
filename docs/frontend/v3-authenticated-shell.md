@@ -45,8 +45,10 @@ Plan, review หรือ assignment data จริง
 Access Token, Refresh Token หรือ Credential ใด ๆ ใน Environment ที่ถูกเขียนลง
 frontend artifact
 
-`amplify.yml` เปิด Strict build ด้วย `CO_ED_REQUIRE_AUTH_CONFIG=1` ถ้าค่าที่จำเป็น
-ไม่ครบ Build ต้องล้มเหลวแทนการ Deploy หน้า Login ที่ตั้งค่าผิด
+Strict build (`CO_ED_REQUIRE_AUTH_CONFIG=1`) ทำให้ Build ล้มเหลวเมื่อค่าที่จำเป็นไม่ครบ
+แทนการ Deploy หน้า Login ที่ตั้งค่าผิด **ตอนนี้ปิดไว้ชั่วคราวใน `amplify.yml`** จนกว่า
+รายการในหัวข้อ "สิ่งที่ต้องทำใน AWS Console" จะเสร็จ ระหว่างนี้ `app.html` แสดงสถานะ
+Configuration required แบบ Fail-closed ส่วนหน้า Public ยัง Deploy ได้ตามปกติ
 
 Cognito App Client ต้อง Allowlist URL ต่อไปนี้ให้ตรงกับ `CO_ED_APP_ORIGIN`:
 
@@ -109,9 +111,17 @@ role ถูก Bundle เข้า Production
 Keyboard navigation และหน้าจอ Mobile/Tablet/Desktop พร้อมยืนยันว่า Public Company
 Directory ยังเปิดแบบ Anonymous ได้
 
-## สิ่งที่ต้องทำใน AWS Console ก่อน Merge
+## สิ่งที่ต้องทำใน AWS Console (ค้างอยู่หลัง Merge)
 
-รายการนี้แก้ด้วยโค้ดใน Repository ไม่ได้ ต้องให้ผู้ดูแล AWS ทำให้เสร็จก่อนหรือพร้อมกับการ Merge PR นี้
+PR นี้ Merge ก่อนที่รายการด้านล่างจะเสร็จ โดยปิด Strict build ไว้ชั่วคราว รายการนี้แก้ด้วยโค้ดใน
+Repository ไม่ได้ ต้องให้ผู้ดูแล AWS ทำให้เสร็จ ระหว่างนี้ Login บน Production ยังใช้งานไม่ได้
+
+สถานะ:
+
+- [ ] 1. อัปเดต Callback และ Sign-out URL ของ Cognito App Client
+- [ ] 2. ตั้ง Environment variables ใน Amplify Hosting
+- [ ] 3. เปิด Strict build กลับใน `amplify.yml`
+- [ ] 4. Smoke test หลัง Deploy
 
 ### 1. อัปเดต Callback และ Sign-out URL ของ Cognito App Client
 
@@ -129,9 +139,9 @@ Cognito จะตอบ `redirect_mismatch` ทำให้ Login บน Product
 
 ### 2. ตั้ง Environment variables ใน Amplify Hosting
 
-`amplify.yml` ใน PR นี้ใช้ Strict build (`CO_ED_REQUIRE_AUTH_CONFIG=1`) ถ้ายังไม่ได้ตั้งค่า
-Build ของ `main` จะล้มเหลวทุกครั้งหลัง Merge รวมถึงการแก้หน้า Public ด้วย
-(เว็บที่ Deploy ไว้แล้วยังเปิดได้ แต่จะค้างอยู่ที่เวอร์ชันเดิม)
+ถ้าไม่ตั้งค่าเหล่านี้ `app.html` จะใช้ Login ไม่ได้ (Configuration required) ต้องตั้งให้ครบ
+**ก่อน** เปิด Strict build กลับในข้อ 3 ไม่อย่างนั้น Build ของ `main` จะล้มเหลวทุกครั้ง
+รวมถึงการแก้หน้า Public ด้วย
 
 ให้ตั้งค่าใน Amplify > App settings > Environment variables ของ Branch `main`:
 
@@ -151,9 +161,19 @@ Build ของ `main` จะล้มเหลวทุกครั้งหล
   ไม่ติดตั้ง `esbuild` และ `aws-amplify` ซึ่งเป็น `devDependencies` ใน `amplify.yml`
   กำหนด `NODE_ENV` เฉพาะขั้น Build ไว้แล้ว
 
-### 3. Smoke test หลัง Deploy
+### 3. เปิด Strict build กลับ
 
-หลังจากข้อ 1 และ 2 เสร็จ และ Deploy แล้ว ให้ทดสอบตาม Smoke procedure ของ #58 โดยใช้บัญชีทดสอบ
+หลังข้อ 1 และ 2 เสร็จ ให้แก้บรรทัด Build ใน `amplify.yml` กลับเป็น
+
+```yaml
+        - NODE_ENV=production CO_ED_REQUIRE_AUTH_CONFIG=1 npm run build
+```
+
+แล้วลบ Comment `TEMPORARY` ออก ตรวจว่า Build บน Amplify ผ่านด้วย Env จริงก่อนปิด Checklist นี้
+
+### 4. Smoke test หลัง Deploy
+
+หลังจากข้อ 1–3 เสร็จ และ Deploy แล้ว ให้ทดสอบตาม Smoke procedure ของ #58 โดยใช้บัญชีทดสอบ
 ที่ Link กับ Internal user ใน RDS แล้ว:
 
 1. เปิด `index.html` แล้วกด “เข้าสู่ระบบ” ต้องเห็นหน้า “กรุณาเข้าสู่ระบบ”
