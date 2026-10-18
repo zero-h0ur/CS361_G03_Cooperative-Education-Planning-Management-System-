@@ -19,15 +19,30 @@ Accepted Decisions #48, #49 และ shared response/error contract จาก #
 
 ## Routes
 
-| Role | Route | สถานะใน Issue #57 |
+| Role | Route | สถานะปัจจุบัน |
 | --- | --- | --- |
-| `STUDENT` | `#/student/profile` | Shell/Placeholder สำหรับ #65 |
-| `STUDENT` | `#/student/plan` | Shell/Placeholder สำหรับ #66 |
-| `STAFF` | `#/staff/review` | Shell/Placeholder สำหรับ #67 |
-| `ADVISOR` | `#/advisor/students` | Shell/Placeholder สำหรับ #68 |
+| `STUDENT` | `#/student/profile` | Dashboard และข้อมูลของฉัน (#72) |
+| `STUDENT` | `#/student/plan` | สถานะและการส่งแผน (#76) |
+| `STAFF` | `#/staff/review` | Shell/Placeholder สำหรับ #77 |
+| `ADVISOR` | `#/advisor/students` | รายชื่อนักศึกษาที่ได้รับมอบหมาย (#75) |
+| `ADVISOR` | `#/advisor/students/:studentId` | ข้อมูลนักศึกษาและรายการแผน (#75) ไม่อยู่ในเมนู |
+| `ADVISOR` | `#/advisor/plans/:planId` | รายละเอียดแผนแบบอ่านอย่างเดียว (#75) ไม่อยู่ในเมนู |
 
-Role หรือ Route อื่นถูกปฏิเสธโดยค่าเริ่มต้น หน้าเหล่านี้ยังไม่เรียก Student,
-Plan, review หรือ assignment data จริง
+Role หรือ Route อื่นถูกปฏิเสธโดยค่าเริ่มต้น Route ที่มี `:studentId` / `:planId`
+ต้องเป็น UUID เท่านั้น ถ้ารูปแบบผิดจะถือว่าไม่อยู่ใน Allowlist และไม่เรียก API
+
+### Advisor pages (#75)
+
+- ใช้เฉพาะ `GET /api/v3/advisor/*` (#68, contract หัวข้อ 3.11) Client ไม่มี Method
+  ที่ส่ง Mutation และ Backend ปฏิเสธ Mutation ของ Advisor อยู่แล้ว (`405` / `403`)
+- ไม่ Render Form, Input หรือปุ่ม Start review / Return / Approve / แก้ไข ทุกหน้ามี
+  Badge และข้อความแจ้งว่าเป็น Read-only
+- `403` และ `404` ของ Resource รายตัวแสดงข้อความเดียวกันว่า "ไม่พบหรือไม่อยู่ในขอบเขต"
+  เพื่อไม่เปิดเผยว่า Record มีอยู่จริงหรือไม่ ส่วน `403` ของรายการ (ไม่มี id) ส่งให้ Shell
+  แสดงหน้า Access denied
+- รองรับ Loading, No assignment, ไม่มีแผน, Session หมดอายุ และ Service unavailable
+  (มีปุ่มลองใหม่) ตารางอยู่ใน Region ที่ Focus ได้เพื่อเลื่อนด้วยคีย์บอร์ดบนจอเล็ก
+- ไม่แสดงประวัติ/Review comment ของแผน เพราะ Advisor read API (#68) ไม่เปิดข้อมูลนี้
 
 ## Public build configuration
 
