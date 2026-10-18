@@ -15,6 +15,7 @@ const { registerStudentProfileRoutes } = require('./student-profile-routes');
 const { registerStudentPlanRoutes } = require('./student-plan-routes');
 const { registerStaffRoutes } = require('./staff-routes');
 const { registerStaffReviewRoutes } = require('./staff-review-routes');
+const { registerPlanSubmissionRoutes } = require('./plan-submission-routes');
 
 const VALID_ACTIONS = new Set(Object.values(ACTIONS));
 
@@ -116,7 +117,9 @@ function registerV3Routes(router, options = {}) {
   registerStaffRoutes(router, registerProtectedRoute, options);
 
   // Downstream Issue #68: Advisor assigned-scope read-only API
-  // Downstream Issue #69: Student Plan submission transaction
+
+  // Issue #69: Student Plan submission transaction
+  registerPlanSubmissionRoutes(router, registerProtectedRoute, options);
 
   // Issue #70: Staff review commands
   registerStaffReviewRoutes(router, registerProtectedRoute, options);

@@ -424,6 +424,38 @@ Response (`data`): `{ id, student_id, cycle_id, company_id, position_id, notes, 
 | สถานะปัจจุบันไม่อนุญาตคำสั่งนี้ (เช่น `/approve` จาก `SUBMITTED`) | `422 INVALID_STATE_TRANSITION` |
 | Database ไม่พร้อมใช้งาน | `503 SERVICE_UNAVAILABLE` |
 
+
+### 3.9 Student Submit: `POST /api/v3/plans/:planId/submit` (#69)
+
+ใช้ได้เฉพาะ Student เจ้าของ Plan Policy กลาง (#62) ตรวจรูปแบบ UUID (`400`), การมีอยู่ (`404`) และ Ownership (`403`) ก่อนเรียก `WorkflowService.submitPlan` (#63) ส่วน Advisor และ Staff ได้ `403`
+
+| Transition (#54) | เงื่อนไขก่อน Submit (#52 ข้อ 3) | Audit action |
+|---|---|---|
+| `DRAFT` → `SUBMITTED` และ `NEEDS_REVISION` → `SUBMITTED` (Re-submit) | มี `cycle_id`, `company_id`, `position_id` ครบ, Cycle เป็น `OPEN`, Company/Position เป็น `public` และ Position อยู่ภายใต้ Company นั้น | `PLAN_SUBMITTED` |
+
+Request body:
+
+```json
+{ "expected_version": 2, "operation_id": "<uuid>", "correlation_id": "<uuid>" }
+```
+
+- `expected_version` และ `operation_id` จำเป็น และใช้ `operation_id` เดิมเมื่อ Retry
+- Student ส่ง `review_notes` ไม่ได้ (`400`) เพราะ `review_notes` เป็น Input ของ Staff เท่านั้น
+- Response ใช้รูปแบบเดียวกับหัวข้อ 3.8
+
+| กรณี | Response |
+|---|---|
+| ข้อมูลไม่ครบ, Cycle ปิด, Company/Position ไม่ Public หรือไม่สัมพันธ์กัน, Body ผิด, `planId` ไม่ใช่ UUID | `400 VALIDATION_ERROR` พร้อม `details` |
+| ไม่มี/ผิด/หมดอายุ token | `401 UNAUTHORIZED` |
+| ไม่ใช่เจ้าของ Plan, Advisor หรือ Staff | `403 FORBIDDEN` |
+| ไม่พบ Plan | `404 RECORD_NOT_FOUND` |
+| `expected_version` เก่า | `409 STALE_RECORD_CONFLICT` |
+| ใช้ `operation_id` เดิมกับ Payload อื่น | `409 IDEMPOTENCY_KEY_REUSED` |
+| สถานะไม่ใช่ `DRAFT` / `NEEDS_REVISION` | `422 INVALID_STATE_TRANSITION` |
+| Database ไม่พร้อมใช้งาน | `503 SERVICE_UNAVAILABLE` |
+
+> หลัง Plan ถูก Submit ครั้งแรก (`NEEDS_REVISION`) `PATCH /api/v3/plans/:planId` จะล้าง `company_id` / `position_id` เป็น `null` ไม่ได้ (`400`) ตาม Constraint `chk_plans_submittable_fields`
+
 ---
 
 ## 4. Architectural Boundaries
