@@ -150,20 +150,20 @@ class WorkflowRepository {
   }
 
   /**
-   * Updates Plan status, version, notes, and timestamp with optimistic lock condition.
+   * Updates Plan status, version, and timestamp with optimistic lock condition.
+   * Student-authored Plan notes are intentionally not writable by workflow commands.
    * @param {object} client Active database client
    * @param {object} params
    * @returns {Promise<object|null>}
    */
-  async updatePlanStatus(client, { planId, status, nextVersion, expectedVersion, notes }) {
+  async updatePlanStatus(client, { planId, status, nextVersion, expectedVersion }) {
     const sql = `
       UPDATE plans
       SET
         status = $1,
         version = $2,
-        notes = $3,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $4 AND version = $5
+      WHERE id = $3 AND version = $4
       RETURNING
         id,
         student_id,
@@ -177,7 +177,7 @@ class WorkflowRepository {
         created_at,
         updated_at
     `;
-    const result = await this.query(sql, [status, nextVersion, notes, planId, expectedVersion], client);
+    const result = await this.query(sql, [status, nextVersion, planId, expectedVersion], client);
     return result?.rows?.[0] || null;
   }
 

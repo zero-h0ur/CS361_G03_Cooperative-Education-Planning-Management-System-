@@ -211,11 +211,10 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         };
       }),
 
-      updatePlanStatus: jest.fn().mockImplementation(async (client, { planId, status, nextVersion, expectedVersion, notes }) => {
+      updatePlanStatus: jest.fn().mockImplementation(async (client, { planId, status, nextVersion, expectedVersion }) => {
         if (currentPlan.id === planId && Number(currentPlan.version) === Number(expectedVersion)) {
           currentPlan.status = status;
           currentPlan.version = nextVersion;
-          currentPlan.notes = notes;
           currentPlan.updated_at = new Date();
           return { ...currentPlan };
         }
@@ -325,10 +324,20 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         from_state: PLAN_STATES.SUBMITTED,
         to_state: PLAN_STATES.UNDER_REVIEW
       });
+      expect(repo.findStaffScopeMatch).toHaveBeenCalledWith(expect.objectContaining({
+        client: repo.mockClient,
+        staffUserId: USER_STAFF_1,
+        planId: TEST_PLAN_ID,
+        isReviewAction: true
+      }));
     });
 
     it('allows Staff to return UNDER_REVIEW Plan for revision with mandatory notes -> NEEDS_REVISION', async () => {
-      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.UNDER_REVIEW, version: 3 }));
+      const repo = createMockRepo(createMockPlanRow({
+        status: PLAN_STATES.UNDER_REVIEW,
+        version: 3,
+        notes: 'Student-authored plan note'
+      }));
       const service = new WorkflowService({ repository: repo });
       const staff = makeStaffContext();
 
@@ -342,13 +351,17 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
 
       expect(result.plan.status).toBe(PLAN_STATES.NEEDS_REVISION);
       expect(result.plan.version).toBe(4);
-      expect(result.plan.notes).toBe('Please add more details regarding project responsibilities.');
+      expect(result.plan.notes).toBe('Student-authored plan note');
       expect(repo.auditLogs[0].action).toBe('PLAN_RETURNED');
       expect(repo.auditLogs[0].notes).toBe('Please add more details regarding project responsibilities.');
     });
 
     it('allows Student to resubmit a NEEDS_REVISION Plan -> SUBMITTED', async () => {
-      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.NEEDS_REVISION, version: 4 }));
+      const repo = createMockRepo(createMockPlanRow({
+        status: PLAN_STATES.NEEDS_REVISION,
+        version: 4,
+        notes: 'Updated project responsibilities.'
+      }));
       const service = new WorkflowService({ repository: repo });
       const student = makeStudentContext();
 
@@ -356,8 +369,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         actor: student,
         plan_id: TEST_PLAN_ID,
         expected_version: 4,
-        operation_id: makeOperationId(),
-        review_notes: 'Updated project responsibilities.'
+        operation_id: makeOperationId()
       });
 
       expect(result.plan.status).toBe(PLAN_STATES.SUBMITTED);
@@ -425,8 +437,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           actor: student,
           plan_id: TEST_PLAN_ID,
           expected_version: 1,
-          operation_id: makeOperationId(),
-          review_notes: 'Cancelling this plan.'
+          operation_id: makeOperationId()
         });
 
         expect(result.plan.status).toBe(PLAN_STATES.CANCELLED);
@@ -446,8 +457,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           actor: student,
           plan_id: TEST_PLAN_ID,
           expected_version: 2,
-          operation_id: makeOperationId(),
-          review_notes: 'Attempting to cancel under review plan'
+          operation_id: makeOperationId()
         })
       ).rejects.toThrow(InvalidStateTransitionError);
 
@@ -475,16 +485,17 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
             ? makeStudentContext()
             : makeStaffContext();
 
-          await expect(
-            service.executeTransition({
+          const transitionParams = {
               actor,
               plan_id: TEST_PLAN_ID,
               action: act,
               expected_version: 10,
-              operation_id: makeOperationId(),
-              review_notes: 'Attempting invalid move'
-            })
-          ).rejects.toThrow(InvalidStateTransitionError);
+              operation_id: makeOperationId()
+          };
+          if (act === ACTIONS.PLAN_RETURN_FOR_REVISION || act === ACTIONS.PLAN_APPROVE) {
+            transitionParams.review_notes = 'Attempting invalid move';
+          }
+          await expect(service.executeTransition(transitionParams)).rejects.toThrow(InvalidStateTransitionError);
 
           // Acceptance criterion: illegal transition must NOT change Plan and NOT create audit event
           expect(repo.getCurrentPlan().status).toBe(st);
@@ -600,6 +611,46 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         ).rejects.toThrow(ValidationError);
 
         expect(repo.getCurrentPlan().status).toBe(PLAN_STATES.DRAFT);
+        expect(repo.auditLogs).toHaveLength(0);
+      }
+    });
+
+    it('rejects submitPlan when the referenced cycle is missing or not OPEN', async () => {
+      for (const round_status of [null, 'CLOSED']) {
+        const repo = createMockRepo(createMockPlanRow({
+          status: PLAN_STATES.DRAFT,
+          version: 1,
+          round_status
+        }));
+        const service = new WorkflowService({ repository: repo });
+
+        await expect(service.submitPlan({
+          actor: makeStudentContext(),
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1,
+          operation_id: makeOperationId()
+        })).rejects.toThrow(ValidationError);
+
+        expect(repo.getCurrentPlan().status).toBe(PLAN_STATES.DRAFT);
+        expect(repo.auditLogs).toHaveLength(0);
+      }
+    });
+
+    it('rejects review_notes on Student submit/cancel workflow actions', async () => {
+      for (const action of [ACTIONS.PLAN_SUBMIT, ACTIONS.PLAN_CANCEL]) {
+        const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.DRAFT, version: 1 }));
+        const service = new WorkflowService({ repository: repo });
+
+        await expect(service.executeTransition({
+          actor: makeStudentContext(),
+          plan_id: TEST_PLAN_ID,
+          action,
+          expected_version: 1,
+          operation_id: makeOperationId(),
+          review_notes: 'Student cannot write review notes'
+        })).rejects.toThrow(ValidationError);
+
+        expect(repo.getCurrentPlan().version).toBe(1);
         expect(repo.auditLogs).toHaveLength(0);
       }
     });
@@ -1035,8 +1086,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         actor: student,
         plan_id: TEST_PLAN_ID,
         expected_version: 1,
-        operation_id: testOperationId,
-        review_notes: 'Initial submit'
+        operation_id: testOperationId
       });
 
       expect(firstResult.plan.status).toBe(PLAN_STATES.SUBMITTED);
@@ -1049,8 +1099,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         actor: student,
         plan_id: TEST_PLAN_ID,
         expected_version: 1,
-        operation_id: testOperationId,
-        review_notes: 'Initial submit'
+        operation_id: testOperationId
       });
 
       expect(retryResult.idempotentReplay).toBe(true);
@@ -1063,14 +1112,14 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
     });
 
     it('rejects with 409 IDEMPOTENCY_KEY_REUSED when same operation_id is reused with different payload (#52 ข้อ 9)', async () => {
-      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.DRAFT, version: 1 }));
+      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.UNDER_REVIEW, version: 1 }));
       const service = new WorkflowService({ repository: repo });
-      const student = makeStudentContext();
+      const staff = makeStaffContext();
       const testOperationId = makeOperationId();
 
       // 1. First call with payload A
-      await service.submitPlan({
-        actor: student,
+      await service.approvePlan({
+        actor: staff,
         plan_id: TEST_PLAN_ID,
         expected_version: 1,
         operation_id: testOperationId,
@@ -1080,8 +1129,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       // 2. Second call with same operation_id but different payload (review_notes: 'Notes B')
       let caughtErr = null;
       try {
-        await service.submitPlan({
-          actor: student,
+        await service.approvePlan({
+          actor: staff,
           plan_id: TEST_PLAN_ID,
           expected_version: 1,
           operation_id: testOperationId,
@@ -1348,11 +1397,10 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           round_status: 'OPEN'
         }),
 
-        updatePlanStatus: jest.fn().mockImplementation(async (client, { status, nextVersion, expectedVersion, notes }) => {
+        updatePlanStatus: jest.fn().mockImplementation(async (client, { status, nextVersion, expectedVersion }) => {
           if (Number(planState.version) === Number(expectedVersion)) {
             planState.status = status;
             planState.version = nextVersion;
-            planState.notes = notes;
             return { ...planState };
           }
           return null;
@@ -1485,8 +1533,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           actor: studentActor,
           plan_id: realPlanId,
           expected_version: 1,
-          operation_id: testOperationId,
-          review_notes: 'Real integration submit'
+          operation_id: testOperationId
         });
 
         expect(submitResult.plan.status).toBe('SUBMITTED');
@@ -1503,7 +1550,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         expect(auditRes.rows[0].action).toBe('PLAN_SUBMITTED');
         expect(auditRes.rows[0].from_state).toBe('DRAFT');
         expect(auditRes.rows[0].to_state).toBe('SUBMITTED');
-        expect(auditRes.rows[0].notes).toBe('Real integration submit');
+        expect(auditRes.rows[0].notes).toBeNull();
 
         // Verify plan_operations row
         const opRes = await pool.query('SELECT * FROM plan_operations WHERE plan_id = $1', [realPlanId]);
@@ -1517,8 +1564,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           actor: studentActor,
           plan_id: realPlanId,
           expected_version: 1,
-          operation_id: testOperationId,
-          review_notes: 'Real integration submit'
+          operation_id: testOperationId
         });
 
         expect(retryResult.idempotentReplay).toBe(true);

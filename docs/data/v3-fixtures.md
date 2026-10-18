@@ -1,0 +1,233 @@
+# CO-ED V3 Synthetic Fixtures & Destructive-Seed Guards
+
+เอกสารนี้อธิบายชุดข้อมูลสังเคราะห์ (Synthetic Fixtures) และระบบป้องกันคำสั่งทำลายข้อมูล (Destructive-Seed Guards) สำหรับระบบ CO-ED Version 3 ตามข้อกำหนดใน Issue [#60](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/60) ภายใต้สถาปัตยกรรมและ Schema จาก Issue [#56](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/56)
+
+---
+
+## 1. จุดประสงค์ (Goal)
+
+1. จัดเตรียมชุดข้อมูลตัวอย่างที่จำเป็นสำหรับพัฒนาระบบและทดสอบ UI / API ใน CO-ED V3 ให้มีโครงสร้างครบถ้วน
+2. รักษาความปลอดภัยของข้อมูลขั้นสูงสุด: **ปราศจาก PII (ข้อมูลส่วนบุคคลจริง), รหัสผ่าน/Credential และข้อมูลคัดลอกจาก Production อย่างเด็ดขาด** โดยปฏิบัติตามมาตรฐาน RFC 2606 อย่างเคร่งครัด
+3. ป้องกันการลบหรือ Reset ข้อมูลโดยไม่ตั้งใจ (Accidental Data Wipe) บน Staging และ Production ด้วยการบล็อกผ่าน **Multi-layered Environment Guards** โดยค่าเริ่มต้น
+4. ทำให้กระบวนการ Seed เป็นแบบ **Deterministic และ Rerunnable (Idempotent)** สามารถรันซ้ำได้โดยไม่เกิดข้อผิดพลาดด้าน Database Constraints หรือคีย์ซ้ำ
+
+---
+
+## 2. โครงสร้างไฟล์ (Files & Assets)
+
+| ไฟล์ / เส้นทาง | หน้าที่และคำอธิบาย |
+|---|---|
+| `data/v3/fixtures.json` | ไฟล์ข้อมูลจำลอง Canonical V3 Synthetic Fixtures ในรูปแบบ JSON |
+| `src/db/seed.js` | สคริปต์รัน Seed & Reset พร้อม Destructive-Seed Guards และการจัดการ Triggers |
+| `scripts/validate-v3-fixtures.mjs` | ตัวตรวจสอบความถูกต้องของ Fixtures (RFC 2606 Email, Exact Department Code, B.E. Year, UUID v4, Foreign Keys, Overlap) |
+| `tests/v3-dataset.test.mjs` | ชุดการทดสอบโครงสร้างข้อมูลและความปลอดภัยของ Fixtures ด้วย `node:test` |
+| `tests/v3-fixtures.test.js` | ชุดการทดสอบ Integration ของ Environment Guards และ Database Seeding ด้วย `jest` |
+
+---
+
+## 3. ขอบเขตข้อมูลจำลอง (Synthetic Fixture Inventory)
+
+ข้อมูลใน `data/v3/fixtures.json` สอดคล้องกับตารางและข้อจำกัดตาม Migration `001_initial_schema.sql` และ `002_v3_identity_student_plan_assignment_audit.sql` โดยไม่มีการเพิ่ม Field หรือ Schema นอกเหนือจากที่ระบุใน Issue [#56](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/56) ดังนี้:
+
+### 3.1 บัญชีผู้ใช้และตัวตน (`users` และ `external_identity_links`)
+* **STUDENT (5 บัญชี)**: บัญชีนักศึกษาสำหรับทดสอบ Flow ต่างๆ (Active 4 บัญชี, Disabled 1 บัญชีสำหรับทดสอบ Authorization Failure `ACCOUNT_DISABLED`)
+* **ADVISOR (2 บัญชี)**: อาจารย์ที่ปรึกษาสหกิจศึกษา สำหรับทดสอบการมองเห็นแบบ Scoped Advisor Visibility
+* **STAFF (3 บัญชี)**: เจ้าหน้าที่ประจำคณะ/ภาควิชา ครอบคลุมทั้งกรณี In-scope, Out-of-department, และ Out-of-year:
+  1. `Staff 1 (70000000-0000-4000-8000-000000000020)`: ภาควิชา CPE, Scope ภาพรวม (`academic_year = null`) ครอบคลุมรอบ OPEN 2569 สำหรับทดสอบ `200 OK` (Review/Approve Plan)
+  2. `Staff 2 (70000000-0000-4000-8000-000000000021)`: ภาควิชา EE, สำหรับทดสอบข้ามภาควิชา Out-of-department (`403 Forbidden` เมื่อพยายามดู/รีวิวข้อมูลนักศึกษาภาค CPE)
+  3. `Staff 3 (70000000-0000-4000-8000-000000000022)`: ภาควิชา CPE เฉพาะปีการศึกษา 2568 (`academic_year = 2568`), สำหรับทดสอบ Out-of-year (`403 Forbidden` เมื่อเข้าถึงแผนในรอบ OPEN ปี 2569 ตาม Predicate ของ Issue #53)
+* **ADMIN (1 บัญชี)**: ผู้ดูแลระบบที่มีสิทธิ์จัดการ Advisor Assignment และ Staff Scope
+* **External Identity Links (12 รายการ)**: จำลอง Issuer ของ AWS Cognito (`mockPool`) พร้อม Subject strings แบบคงที่ เป็น `ACTIVE` 11 รายการ และ `REVOKED` 1 รายการ (`mock-sub-student-001-revoked`) สำหรับทดสอบ Relink flow ตาม #51: Subject เดิมที่ถูก Revoke ต้องได้ `403` ส่วน User เดียวกันยังมี Active link เดียว
+
+### 3.2 ข้อมูลประวัตินักศึกษา (`students`)
+* ข้อมูลจำลอง 5 รายการที่เชื่อมโยงกับ `users` (`user_id NOT NULL`)
+* **Department Code แบบมาตรฐาน**: กำหนดค่า `department` เป็นรหัสตัวย่อตัวพิมพ์ใหญ่ตรงกันทั้งระบบ (เช่น `'CPE'`, `'EE'`) ตามตัวอย่างใน Issue [#53](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/53) เพื่อให้ตรงกับ `staff_scopes.department` แบบตัวอักษรต่อตัวอักษร (`s.department = ss.department`)
+* **ปีการศึกษา (Academic Year)**: ใช้ปี **พุทธศักราช (พ.ศ.)** เป็น **`2569`** ทั้งระบบ (`2568` สำหรับข้อมูลปีก่อนหน้า) ตามที่ทีมตกลงใช้ เพื่อให้ตรงกับข้อมูล V2 เดิม (`rounds.academic_year` = `2569`, `2570`) และให้การเปรียบเทียบใน Authorization Predicate ของ Staff และ Advisor ทำงานบนมาตรวัดเดียวกัน
+  * Timestamp ทุกตัว (`created_at`, `effective_from`, `end_date` ฯลฯ) ยังเป็น ISO 8601 แบบคริสต์ศักราชตามปกติ เฉพาะ `academic_year` ที่เป็น พ.ศ.
+  * Validator (`isBuddhistEraYear`) รับเฉพาะปีในช่วง `2500`–`2700` ถ้าใส่ปี ค.ศ. เช่น `2026` จะ Validate ไม่ผ่าน
+  * ⚠️ ตัวอย่างใน #53 เขียนว่า `academic_year` เช่น `2026` (ค.ศ.) ทีมควรอัปเดต Decision ใน #53 ให้ตรงกับการใช้ พ.ศ.
+* **อีเมลและรหัสนักศึกษาตาม RFC 2606**: ใช้รหัสสมมติ `TEST000001`–`TEST000005` ซึ่งไม่มีทางซ้ำกับรหัสนักศึกษาจริงของสถาบันใด และอีเมลโดเมนสงวน `@student.example.com` (ภายใต้โดเมนสงวน `example.com` ตาม RFC 2606) โดยไม่มีการอ้างอิงชื่อสถาบันจริงหรือ TLD สาธารณะ
+
+### 3.3 รอบการเปิดรับและดำเนินงาน (`rounds` / Cycles)
+* คอลัมน์ทั้งหมด (`academic_year`, `semester`, `status`, `end_date`) มีอยู่ใน Migration `001` และ `002` ครบถ้วน
+* **รอบเปิดดำเนินงาน (`status = 'OPEN'`)**: ปีการศึกษา `2569` ภาคเรียนที่ 1 รองรับการทดสอบ Review Actions, Active Queues และ Submissions
+* **รอบปิด (`status = 'CLOSED'`)**: ปีการศึกษา `2569` ภาคเรียนที่ 1 สำหรับทดสอบการปฏิเสธ Action ในรอบที่ปิดแล้ว
+* **การกำหนด `end_date` และความสอดคล้องกับ `effective_to`**:
+  * ตาม Issue [#53](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/53) ระบบจะใช้ `rounds.end_date` เป็นค่าเริ่มต้น (Default) ให้กับ `advisor_assignments.effective_to` เมื่อ Admin ไม่ได้ระบุมา ดังนั้นใน Fixture ทุกรอบจึงมีการกำหนด `end_date` ไว้อย่างชัดเจน (และในกรณีที่รอบใดมี `end_date` เป็น NULL ระบบจะบังคับให้ Admin ต้องส่ง `effective_to` มาเองเสมอ)
+  * ค่า `rounds.academic_year` ตรงกับ `students.academic_year` (`2569`) สำหรับทุกแผนที่ส่งเข้าสู่รอบ เพื่อป้องกันไม่ให้ผลการประเมินสิทธิ์ Staff ขัดแย้งกันระหว่างระดับ Student และระดับ Plan
+
+
+### 3.4 แผนการฝึกสหกิจศึกษา (`plans`)
+ครอบคลุมทุกสถานะหลักของ V3 Plan Workflow:
+1. `APPROVED`: แผนได้รับการอนุมัติแล้ว (Version 4)
+2. `UNDER_REVIEW`: แผนอยู่ระหว่างรอ Staff ตรวจสอบ (Version 2)
+3. `SUBMITTED`: แผนยื่นเข้าสู่ระบบเรียบร้อย (Version 2)
+4. `NEEDS_REVISION`: แผนที่ถูกส่งกลับให้แก้ไขพร้อมบันทึกหมายเหตุ (Version 3)
+5. `DRAFT`: แผนฉบับร่างของนักศึกษา (Version 1)
+6. `CANCELLED`: แผนที่ถูกยกเลิก (Version 2) เพื่อทดสอบ Partial Unique Index `(student_id, cycle_id) WHERE status <> 'CANCELLED'`
+
+### 3.5 การมอบหมายอาจารย์ที่ปรึกษา (`advisor_assignments`)
+* ใช้ปีการศึกษา พ.ศ. (`2569` สำหรับ Active/Revoked และ `2568` สำหรับ Expired)
+* Assignment ที่เป็น `ACTIVE` และรอบที่เป็น `OPEN` ใช้ `effective_to` / `end_date` = `2099-12-31T23:59:59Z` โดยตั้งใจ เพราะ Predicate ของ #53 เทียบกับเวลาปัจจุบัน หากใช้วันที่จริง Fixture จะหมดอายุเองและ Advisor จะได้ `403` ทั้งที่ไม่มีใครแก้โค้ด ส่วน Record ที่เป็น `REVOKED` / `EXPIRED` / `CLOSED` ยังใช้วันที่ในอดีตตามเดิม
+* ครอบคลุมสถานะ `ACTIVE`, `REVOKED` (พร้อม `revoked_at`, `revoked_by`, `revocation_reason`) และ `EXPIRED`
+* ผ่านการตรวจสอบ Exclusion Constraint `btree_gist` ไม่มีการทับซ้อนของช่วงเวลาสำหรับนักศึกษาคนเดียวกันในสถานะ `ACTIVE`
+
+### 3.6 ขอบเขตสิทธิ์ของเจ้าหน้าที่ (`staff_scopes`)
+* ใช้รหัส `department` ตรงกับ `students.department` (เช่น `'CPE'`, `'EE'`, `'ME'`)
+* แยกบทบาทและ Scope ในการทดสอบ Authorization Predicate ตาม Issue [#53](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/53) ออกเป็น 4 ชุด:
+  1. `Scope 1 (Staff 1)`: `department = 'CPE'`, `program = null`, `academic_year = null`, `status = 'ACTIVE'` -> ครอบคลุมแผน CPE ในรอบ OPEN 2569 สำหรับเคสสำเร็จ **`200 OK`**
+  2. `Scope 2 (Staff 2)`: `department = 'EE'`, `program = null`, `academic_year = null`, `status = 'ACTIVE'` -> ทดสอบเคสข้ามภาควิชา **`403 Forbidden`** เมื่อเข้าถึงนักศึกษา CPE
+  3. `Scope 3 (Staff 3)`: `department = 'CPE'`, `program = 'CPE'`, `academic_year = 2568`, `status = 'ACTIVE'` -> ทดสอบเคสจำกัดเฉพาะปีการศึกษาเก่า **`403 Forbidden`** เมื่อเข้าถึงรอบ OPEN ปี 2569 ตามเงื่อนไข `(ss.academic_year IS NULL OR ss.academic_year = r.academic_year)`
+  4. `Scope 4 (Staff 1)`: `department = 'ME'`, `program = null`, `academic_year = null`, `status = 'INACTIVE'` -> ทดสอบเคส Scope ที่ถูกปิดใช้งาน (`status <> 'ACTIVE'`) ได้ **`403 Forbidden`**
+* **Out-of-scope Testability Guarantee**: ระบบ Validator ตรวจสอบให้มั่นใจว่า Staff ทุกคนมี Student อย่างน้อย 1 คนที่อยู่นอก Scope ของตนเองเสมอ เพื่อรองรับการทดสอบเคสปฏิเสธสิทธิ์ (403)
+
+### 3.7 ประวัติการทำงานและ Audit Log (`plan_operations` และ `audit_events`)
+* บันทึกประวัติครบทุก Action หลัก: `SUBMIT_PLAN`, `REVIEW_PLAN`, `APPROVE_PLAN`, `REQUEST_REVISION`, และ `ASSIGN_ADVISOR`
+* ข้อมูลเป็นแบบ Append-only ไม่ละเมิด Trigger ป้องกันการแก้ไขหรือลบ
+
+### 3.8 การยืนยันความครบถ้วนของ Schema Columns ระหว่าง Migration 001 และ 002
+ตารางตรวจสอบการมีอยู่จริงของคอลัมน์ใน Migration Files:
+
+| คอลัมน์ที่ Issue #53 กำหนด | ไฟล์ Migration ต้นทาง | บรรทัด | คำสั่ง DDL จริงในไฟล์ |
+|---|---|---|---|
+| `rounds.academic_year` | `src/db/migrations/001_initial_schema.sql` | Line 31 | `academic_year INTEGER NOT NULL` |
+| `rounds.semester` | `src/db/migrations/002_v3_identity_student_plan_assignment_audit.sql` | Line 121 | `ADD COLUMN semester INTEGER,` |
+| `rounds.status` | `src/db/migrations/002_v3_identity_student_plan_assignment_audit.sql` | Line 122 | `ADD COLUMN status TEXT,` |
+| `rounds.end_date` | `src/db/migrations/002_v3_identity_student_plan_assignment_audit.sql` | Line 123 | `ADD COLUMN end_date TIMESTAMPTZ;` |
+| `students.academic_year` | `src/db/migrations/002_v3_identity_student_plan_assignment_audit.sql` | Line 70 | `ADD COLUMN academic_year INTEGER,` |
+| `students.department` | `src/db/migrations/002_v3_identity_student_plan_assignment_audit.sql` | Line 67 | `ADD COLUMN department TEXT,` |
+
+> [!NOTE]
+> คอลัมน์ `rounds.academic_year` มีมาตั้งแต่ Migration `001_initial_schema.sql` (Line 31) ของ V2 อยู่แล้ว Migration `002` ของ Issue #56 จึงเพิ่มเฉพาะ `semester`, `status`, และ `end_date` เข้ากับ `rounds` และเพิ่ม `department` กับ `academic_year` เข้ากับ `students` อย่างครบถ้วนสมบูรณ์ โดย Fixtures ชุดนี้ไม่ได้สร้าง Schema หรือ Field เพิ่มเติมเองแม้แต่ฟิลด์เดียว
+
+---
+
+## 4. มาตรการความปลอดภัยของข้อมูล (Data Safety & Privacy)
+
+1. **RFC 2606 Reserved Domains**:
+   - สงวนเฉพาะ `example.com`, `example.net`, `example.org` และ TLD `.example` ตามมาตรฐาน RFC 2606
+   - อีเมลสังเคราะห์ทั้งหมดลงท้ายด้วย `@student.example.com` ห้ามใช้โดเมนมหาวิทยาลัยจริงหรือบริการอีเมลสาธารณะ
+2. **ไม่มี PII จริง**:
+   - ชื่อ-นามสกุลทั้งหมดเป็นชื่อสมมติ (เช่น "สมมุติ เรียนดี", "วิภา จำลอง")
+3. **ไม่มี Credential / Secret**:
+   - ปราศจากรหัสผ่าน, AWS Access Key (`AKIA...`), หรือ Private Token ในทุกตาราง
+4. **Deterministic UUIDs**:
+   - ใช้ UUID v4 แบบคงที่โดยแยกช่วง Prefix ชัดเจน (เช่น Users: `7000...`, Students: `4000...010x`, Plans: `5000...010x`) เพื่อป้องกัน ID ชนกับข้อมูล V2 เดิม
+
+---
+
+## 5. ระบบป้องกันการลบข้อมูล (Destructive-Seed Guards)
+
+ฟังก์ชัน `assertDestructiveResetAllowed()` ใน `src/db/seed.js` บังคับใช้เงื่อนไขความปลอดภัยแบบหลายชั้น:
+
+```mermaid
+flowchart TD
+    Start["เรียกคำสั่ง Seed / Reset"] --> CheckEnv{"NODE_ENV เป็น development หรือ test?"}
+    CheckEnv -- ไม่ใช่ --> Block1["บล็อกการทำงานทันที (Error: Invalid NODE_ENV)"]
+    CheckEnv -- ใช่ --> CheckFlag{"ALLOW_DB_RESET === 'true'?"}
+    CheckFlag -- ไม่ใช่ --> Block2["บล็อกการทำงาน (Error: Missing Flag)"]
+    CheckFlag -- ใช่ --> CheckStage{"STAGE / APP_ENV มีคำว่า prod หรือ staging?"}
+    CheckStage -- ใช่ --> Block3["บล็อกการทำงาน (Error: Staging/Prod Blocked)"]
+    CheckStage -- ไม่ใช่ --> CheckTestIsolation{"หาก NODE_ENV === 'test' ให้ตรวจ TEST_DATABASE_URL"}
+    CheckTestIsolation -- ซ้ำกับ dev หรือว่าง --> Block5["บล็อกการทำงาน (Error: URL Conflict)"]
+    CheckTestIsolation -- ถูกต้อง --> CheckTarget{"Target เป็น PostgreSQL บนเครื่อง local?"}
+    CheckTarget -- ไม่ใช่ --> CheckRemote{"เปิด ALLOW_REMOTE_DB_RESET และ DB_RESET_TARGET ตรงแบบ exact match?"}
+    CheckRemote -- ไม่ใช่ --> Block4["บล็อก Remote Database"]
+    CheckRemote -- ใช่ --> CheckURL{"URL มีคำว่า prod หรือ staging?"}
+    CheckTarget -- ใช่ --> CheckURL
+    CheckURL -- ใช่ --> Block6["บล็อก Production/Staging Target"]
+    CheckURL -- ไม่ใช่ --> Execute["อนุญาตให้รัน Seed / Reset ได้"]
+```
+
+### การจัดลำดับความน่าเชื่อถือของการป้องกัน (Defense Hierarchy):
+
+> [!IMPORTANT]
+> **ชั้นที่เชื่อถือได้จริงในการบังคับใช้ความปลอดภัย (Authoritative Enforcement Layer)**:
+> 1. **`NODE_ENV`**: ต้องเป็น `'development'` หรือ `'test'` เท่านั้น หากเป็นค่าว่าง, `'production'`, หรือ `'staging'` ระบบจะบล็อกทันที
+> 2. **`ALLOW_DB_RESET`**: ต้องระบุเป็นตัวอักษร `'true'` อย่างเจาะจง ซึ่งบน Staging และ Production จะไม่มีการตั้งค่า Environment Variable นี้เด็ดขาด
+> 3. **`TEST_DATABASE_URL`**: ใน Test Mode ต้องมีค่าและต้องไม่ตรงกับ `DATABASE_URL` เพื่อป้องกันการลบ Development DB
+> 4. **Local-only by default**: อนุญาตเฉพาะ `localhost`, `127.0.0.1`, IPv6 loopback และ `host.docker.internal` โดยค่าเริ่มต้น
+> 5. **Remote target confirmation**: หากจำเป็นต้องใช้ Remote Development Database ต้องตั้งทั้ง `ALLOW_REMOTE_DB_RESET=true` และ `DB_RESET_TARGET=<hostname>/<database>` ให้ตรงกับปลายทางทุกตัวอักษร
+
+> [!NOTE]
+> **Heuristic Defense Layer (ชั้นเสริม)**:
+> การตรวจคำว่า `prod` หรือ `staging` ใน Database Connection URL และตัวแปร `STAGE` / `APP_ENV` เป็นมาตรการเสริมเท่านั้น ส่วน RDS ที่มีชื่อสุ่มจะถูกบล็อกด้วยกฎ Local-only และต้องยืนยัน Remote Target แบบ exact match ก่อนเสมอ
+
+---
+
+## 6. ลำดับการ Reset และ Trigger Handling
+
+เนื่องจาก V3 Database มี Trigger ป้องกันการลบข้อมูลแบบ Append-only (`trg_plans_no_delete`, `trg_advisor_assignments_no_delete`, `trg_plan_operations_immutable`, `trg_audit_events_immutable`) การ Reset ข้อมูลใน Environment ที่ปลอดภัยจะทำภายใน Transaction ดังนี้:
+
+1. **Disable Triggers ชั่วคราว**: ปิด Trigger ป้องกันการลบภายใน Transaction ของ Client ที่ได้รับสิทธิ์
+2. **Delete ตามลำดับ Foreign Key (ย้อนกลับ)**:
+   - `audit_events` -> `plan_operations` -> `advisor_assignments` -> `staff_scopes` -> `plans` -> `students` -> `external_identity_links` -> `users` -> `document_metadata` -> `rounds` -> `positions` -> `companies`
+3. **Insert V2 Base Data**: ข้อมูลบริษัท, ตำแหน่งงาน, เอกสารพื้นฐาน และ Legacy Plans (ต้องปิด `trg_plans_legacy_compatibility_guard` เพราะ `legacy_compatibility = TRUE`)
+4. **Re-enable Triggers ทันที**: เปิดใช้งาน Triggers ทั้งหมดกลับคืนก่อนเขียนข้อมูล V3
+5. **Insert V3 Fixture Data**: ข้อมูล Users, Identity Links, Student Profiles, Cycles, Plans, Assignments, Scopes, Operations และ Audit โดยผ่าน Trigger ชุดเดียวกับ Application จริง หาก Fixture ผิดกฎ Seed จะล้มเหลวและ Rollback
+6. **Commit Transaction**: ข้อมูลบันทึกเสร็จสมบูรณ์ หากเกิด Error ขั้นตอนใดจะ Rollback ทั้งหมด
+
+---
+
+## 7. วิธีใช้งานคำสั่ง (Usage Instructions)
+
+ความสอดคล้องระหว่างการรันผ่าน **CLI** และการเรียกใช้ผ่าน **Programmatic API**:
+
+### 7.1 การรันผ่าน Command Line Interface (CLI)
+* **Seed ข้อมูลสำหรับ Development (รวม V2 Base + V3 Fixtures อัตโนมัติ)**:
+  ```bash
+  NODE_ENV=development ALLOW_DB_RESET=true npm run seed
+  ```
+  หรือสั่งแบบเจาะจง:
+  ```bash
+  NODE_ENV=development ALLOW_DB_RESET=true npm run seed:v3
+  ```
+  *(หมายเหตุ: Script `seed` และ `seed:v3` ใน `package.json` จะโหลด V3 Fixtures เป็นค่าเริ่มต้น เพื่อให้ Developer ได้รับข้อมูล V3 ครบถ้วนทันที)*
+
+* **Remote Development Database (ใช้เฉพาะเมื่อจำเป็นและต้องยืนยันปลายทางให้ตรง)**:
+  ```bash
+  NODE_ENV=development \
+  ALLOW_DB_RESET=true \
+  ALLOW_REMOTE_DB_RESET=true \
+  DB_RESET_TARGET=dev-db.internal/coed_dev \
+  DATABASE_URL=postgres://user:password@dev-db.internal:5432/coed_dev \
+  npm run seed:v3
+  ```
+  ห้ามใช้ค่านี้กับ Production หรือ Staging และไม่ควรบันทึก credential ลงใน repository
+
+* **Seed เฉพาะข้อมูล V2 (Legacy-only 53 records)**:
+  ```bash
+  NODE_ENV=development ALLOW_DB_RESET=true npm run seed:v2
+  ```
+  *(หมายเหตุ: ส่ง flag `--v2-only` เพื่อจำกัดการ Seed ไว้เฉพาะ 53 แถวเดิม)*
+
+### 7.2 การเรียกใช้ผ่าน Programmatic Code (ใน Unit/Integration Tests)
+* **`seed()` หรือ `seed({ includeV3: false })`**:
+  โหลดเฉพาะ V2 canonical dataset (53 แถว) เพื่อคงความถูกต้องและการ Backward-compatibility ให้กับ Unit Tests เดิมของ V2 (เช่น `tests/dal.test.js`) โดยไม่ทำให้ Assertion ล้มเหลว
+* **`seed({ includeV3: true })` หรือ `seedV3()`**:
+  โหลดข้อมูลครบทั้ง V2 Base Dataset และ V3 Synthetic Fixtures สำหรับใช้ใน Integration Tests ของ V3 (เช่น `tests/v3-fixtures.test.js`)
+
+### 7.3 การตรวจสอบความถูกต้องของ Fixtures
+```bash
+# ตรวจสอบความถูกต้องของ JSON Fixtures ตาม RFC 2606, Department และ B.E. Year
+node scripts/validate-v3-fixtures.mjs
+
+# รัน Automated Test Suite สำหรับ Fixtures และ Seed Guards
+npm run test:fixtures
+```
+
+---
+
+## 8. ข้อควรระวัง (Precautions & Caveats)
+
+> [!CAUTION]
+> **ห้ามรันคำสั่ง Seed / Reset ใน Production หรือ Staging Database เป็นอันขาด**
+> แม้ระบบจะมี Guard ป้องกันไว้ แต่เพื่อความปลอดภัยสูงสุด ไม่ควรตั้งค่า `ALLOW_DB_RESET=true` บนเครื่องเซิร์ฟเวอร์จริง
+
+> [!WARNING]
+> **ห้ามคัดลอกข้อมูลส่วนบุคคลจริง (PII) มาใส่ในไฟล์ `data/v3/fixtures.json`**
+> หากต้องการเพิ่มข้อมูลสำหรับทดสอบ Use Case ใหม่ ให้ใช้ชื่อสมมติและอีเมลโดเมนสงวน `@student.example.com` เท่านั้น
+
+> [!NOTE]
+> **การคงความสอดคล้องกับ Migration 002 (Issue #56)**:
+> Fixture ชุดนี้ใช้เฉพาะคอลัมน์และตารางที่มีอยู่จริงใน `001_initial_schema.sql` และ `002_v3_identity_student_plan_assignment_audit.sql` โดยไม่มีการเพิ่ม Field ใหม่ตามข้อตกลง Coordination Note

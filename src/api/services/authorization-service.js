@@ -453,6 +453,7 @@ class AuthorizationService {
   }
 
   async isInStaffScope({
+    client = null,
     staffUserId,
     studentId,
     planId = null,
@@ -466,12 +467,15 @@ class AuthorizationService {
       return false;
     }
 
-    const row = await this.repository.findStaffScopeMatch({
+    const scopeQuery = {
       staffUserId,
       studentId,
       planId,
       isReviewAction: Boolean(isReviewAction)
-    });
+    };
+    if (client) scopeQuery.client = client;
+
+    const row = await this.repository.findStaffScopeMatch(scopeQuery);
 
     if (!row) {
       return false;

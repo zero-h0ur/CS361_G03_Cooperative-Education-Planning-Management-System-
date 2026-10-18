@@ -23,9 +23,9 @@ class AuthorizationRepository {
     return this.pool || getPool();
   }
 
-  async query(text, params) {
+  async query(text, params, client = null) {
     try {
-      return await this.getDbPool().query(text, params);
+      return await (client || this.getDbPool()).query(text, params);
     } catch (err) {
       // Match DAL behavior: connection/schema failures are 503, anything else is a sanitized 500
       if (UNAVAILABLE_DB_ERROR_CODES.has(err?.code)) {
@@ -82,6 +82,7 @@ class AuthorizationRepository {
   }
 
   async findStaffScopeMatch({
+    client = null,
     staffUserId,
     studentId,
     planId = null,
@@ -133,7 +134,7 @@ class AuthorizationRepository {
       studentId,
       planId,
       Boolean(isReviewAction)
-    ]);
+    ], client);
 
     return result?.rows?.[0] || null;
   }

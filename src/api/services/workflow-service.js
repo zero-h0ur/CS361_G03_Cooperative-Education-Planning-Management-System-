@@ -90,9 +90,12 @@ const TRANSITION_RULES = Object.freeze({
     allowedRoles: Object.freeze(['STUDENT']),
     isReviewAction: false,
     validatePreconditions: (plan) => {
-      const cycleId = plan.cycle_id || plan.round_id;
       const details = [];
-      if (!cycleId) details.push({ field: 'cycle_id', issue: 'cycle_id is required to submit' });
+      if (!plan.cycle_id) {
+        details.push({ field: 'cycle_id', issue: 'cycle_id is required to submit' });
+      } else if (plan.round_status !== 'OPEN') {
+        details.push({ field: 'cycle_id', issue: 'cycle must exist and be open for submission' });
+      }
       if (!plan.company_id) details.push({ field: 'company_id', issue: 'company_id is required to submit' });
       if (!plan.position_id) details.push({ field: 'position_id', issue: 'position_id is required to submit' });
 
@@ -431,6 +434,15 @@ class WorkflowService {
     };
     const payloadHash = crypto.createHash('sha256').update(JSON.stringify(normalizedPayloadObj)).digest('hex');
 
+    if (
+      (canonicalAction === ACTIONS.PLAN_SUBMIT || canonicalAction === ACTIONS.PLAN_CANCEL) &&
+      rawNotes !== undefined
+    ) {
+      throw new ValidationError('review_notes is not allowed for Student workflow actions.', [
+        { field: 'review_notes', issue: 'field is only allowed for Staff review actions' }
+      ]);
+    }
+
     // 10. Begin Database Transaction
     const client = await this.repository.getClient();
     try {
@@ -451,6 +463,7 @@ class WorkflowService {
       } else if (actor.role === 'STAFF') {
         // Enforces full predicate of #53 via centralized AuthorizationService
         const inScope = await this.authorizationService.isInStaffScope({
+          client,
           staffUserId: actor.userId,
           studentId: lockedPlan.student_id,
           planId: lockedPlan.id,
@@ -514,24 +527,14 @@ class WorkflowService {
       // 15. Check Preconditions (#52 ข้อ 3)
       rule.validatePreconditions(lockedPlan, { review_notes: trimmedNotes, notes: trimmedNotes });
 
-      // 16. Prepare Plan Notes
-      let planNotesToUpdate = lockedPlan.notes;
-      if (canonicalAction === ACTIONS.PLAN_RETURN_FOR_REVISION) {
-        planNotesToUpdate = trimmedNotes;
-      } else if (trimmedNotes !== null) {
-        planNotesToUpdate = trimmedNotes;
-      } else if (rawNotes === null) {
-        planNotesToUpdate = null;
-      }
-
-      // 17. Increment Version and Apply Update
+      // 16. Increment Version and Apply status only. Review notes belong exclusively
+      // to immutable audit events and must never overwrite Student-authored Plan notes.
       const nextVersion = Number(lockedPlan.version) + 1;
       const updatedPlan = await this.repository.updatePlanStatus(client, {
         planId: lockedPlan.id,
         status: rule.targetState,
         nextVersion,
-        expectedVersion: lockedPlan.version,
-        notes: planNotesToUpdate
+        expectedVersion: lockedPlan.version
       });
 
       if (!updatedPlan) {
@@ -630,27 +633,6 @@ class WorkflowService {
     return this.executeTransition({ ...params, action: ACTIONS.PLAN_CANCEL });
   }
 
-  // --- Read Helpers ---
-
-  async getAuditHistory(planId) {
-    const id = typeof planId === 'object' ? (planId?.plan_id || planId?.planId) : planId;
-    if (!id || typeof id !== 'string' || !UUID_REGEX.test(id)) {
-      throw new ValidationError('Invalid planId: must be a valid UUID.', [
-        { field: 'plan_id', issue: 'must be a valid UUID string' }
-      ]);
-    }
-    return this.repository.listAuditEventsByPlanId(null, id);
-  }
-
-  async getPlanOperations(planId) {
-    const id = typeof planId === 'object' ? (planId?.plan_id || planId?.planId) : planId;
-    if (!id || typeof id !== 'string' || !UUID_REGEX.test(id)) {
-      throw new ValidationError('Invalid planId: must be a valid UUID.', [
-        { field: 'plan_id', issue: 'must be a valid UUID string' }
-      ]);
-    }
-    return this.repository.listPlanOperationsByPlanId(null, id);
-  }
 }
 
 module.exports = {
