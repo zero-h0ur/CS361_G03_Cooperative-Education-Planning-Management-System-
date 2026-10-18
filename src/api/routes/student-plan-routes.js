@@ -7,6 +7,7 @@
 const { ACTIONS } = require('../services/authorization-service');
 const { StudentPlanService } = require('../services/student-plan-service');
 const { assertAllowedQueryParameters, parseJsonBody } = require('../router');
+const { getRequestContext } = require('../context');
 const { sendSuccess } = require('../response');
 
 const OWN_PLANS_PATH = '/api/v3/plans';
@@ -14,9 +15,9 @@ const OWN_PLAN_DETAIL_PATTERN = /^\/api\/v3\/plans\/([^/]+)$/;
 const ALLOWED_LIST_QUERY_PARAMS = new Set(['page', 'pageSize', 'cycle_id', 'status']);
 const NO_QUERY_PARAMS = new Set([]);
 
-function resolveOwnStudent(_request, context) {
+function resolveOwnStudent(request) {
   return {
-    studentId: context?.authContext?.studentId || null,
+    studentId: getRequestContext(request).studentId || null,
     listOnly: true
   };
 }
