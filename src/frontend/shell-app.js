@@ -124,17 +124,17 @@ export function scrubAuthCallbackUrl(location, history = globalThis.history) {
   if (!location || typeof location !== 'object') {
     return;
   }
-
-  if (typeof location.hash === 'string' && SENSITIVE_HASH_PATTERNS.some((pattern) => pattern.test(location.hash))) {
-    location.hash = '';
-  }
-
-  if (typeof location.search !== 'string' || location.search === '') {
+  // Never assign location.search/hash: in a real browser the search setter always
+  // navigates (a full reload) and the hash setter leaves "#" and fires hashchange.
+  // history.replaceState rewrites the address bar without either side effect.
+  if (!history || typeof history.replaceState !== 'function') {
     return;
   }
 
   try {
-    const params = new URLSearchParams(location.search);
+    const search = typeof location.search === 'string' ? location.search : '';
+    const hash = typeof location.hash === 'string' ? location.hash : '';
+    const params = new URLSearchParams(search);
     let modified = false;
 
     for (const key of SENSITIVE_QUERY_PARAMS) {
@@ -144,24 +144,17 @@ export function scrubAuthCallbackUrl(location, history = globalThis.history) {
       }
     }
 
-    if (!modified) {
+    const hashHasSecrets = SENSITIVE_HASH_PATTERNS.some((pattern) => pattern.test(hash));
+    if (!modified && !hashHasSecrets) {
       return;
     }
 
     const nextSearch = params.toString();
     const cleanSearch = nextSearch ? `?${nextSearch}` : '';
+    const cleanHash = hashHasSecrets ? '' : hash;
     const pathname = typeof location.pathname === 'string' ? location.pathname : 'app.html';
-    const hash = typeof location.hash === 'string' ? location.hash : '';
 
-    if (history && typeof history.replaceState === 'function') {
-      history.replaceState(null, '', `${pathname}${cleanSearch}${hash}`);
-    }
-
-    try {
-      location.search = cleanSearch;
-    } catch {
-      // Browser Location objects update search via history.replaceState above.
-    }
+    history.replaceState(null, '', `${pathname}${cleanSearch}${cleanHash}`);
   } catch {
     // Never fail closed on URL cleanup alone.
   }
