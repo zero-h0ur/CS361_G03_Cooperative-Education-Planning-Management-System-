@@ -1,5 +1,6 @@
 const { createLambdaHandler } = require('../src/lambda');
 const { attachRequestContext } = require('../src/api/context');
+const { AuthorizationService } = require('../src/api/services/authorization-service');
 const {
   StudentPlanService,
   RESPONSE_FIELDS
@@ -255,7 +256,7 @@ describe('Issue #66 Student Own Plan service', () => {
     const submittedService = new StudentPlanService({ repository: submitted.repository });
     await expect(submittedService.updateOwnPlan(ACTOR, PLAN_ID, {
       notes: 'blocked', expected_version: 1, operation_id: OPERATION_ID
-    })).rejects.toMatchObject({ statusCode: 403, code: 'PLAN_STATE_NOT_EDITABLE' });
+    })).rejects.toMatchObject({ statusCode: 422, code: 'INVALID_STATE_TRANSITION' });
     expect(submitted.repository.updateOwnPlan).not.toHaveBeenCalled();
   });
 
@@ -372,6 +373,42 @@ describe('Issue #66 HTTP route contract', () => {
     expect(studentPlanService.updateOwnPlan).toHaveBeenCalledWith(
       expect.objectContaining({ studentId: STUDENT_ID }), PLAN_ID, body
     );
+  });
+
+  test('rejects malformed plan ids with 400 through the real policy without querying the database', async () => {
+    const policyPool = { query: jest.fn() };
+    const { studentPlanService } = createHandler();
+    const realPolicyHandler = createLambdaHandler({
+      authOptions: {
+        authMiddleware: async (request) => attachRequestContext(request, ACTOR),
+        authorizationService: new AuthorizationService({ pool: policyPool })
+      },
+      studentPlanService
+    });
+
+    for (const [method, body] of [['GET'], ['PATCH', { notes: 'x', expected_version: 1, operation_id: OPERATION_ID }]]) {
+      const response = await realPolicyHandler(buildEvent('/api/v3/plans/not-a-uuid', { method, body }));
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.body).error.code).toBe('VALIDATION_ERROR');
+    }
+    expect(policyPool.query).not.toHaveBeenCalled();
+    expect(studentPlanService.getOwnPlan).not.toHaveBeenCalled();
+    expect(studentPlanService.updateOwnPlan).not.toHaveBeenCalled();
+  });
+
+  test('answers 422 INVALID_STATE_TRANSITION when the Plan state is not editable', async () => {
+    const { InvalidStateTransitionError } = require('../src/api/errors');
+    const { handler } = createHandler({
+      updateOwnPlan: jest.fn(async () => {
+        throw new InvalidStateTransitionError('Plan content is not editable in its current state.');
+      })
+    });
+    const response = await handler(buildEvent(`/api/v3/plans/${PLAN_ID}`, {
+      method: 'PATCH',
+      body: { notes: 'late edit', expected_version: 2, operation_id: OPERATION_ID }
+    }));
+    expect(response.statusCode).toBe(422);
+    expect(JSON.parse(response.body).error.code).toBe('INVALID_STATE_TRANSITION');
   });
 
   test('keeps the existing public Company Directory available without authentication', async () => {

@@ -10,7 +10,8 @@ const {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
-  ConflictError
+  ConflictError,
+  InvalidStateTransitionError
 } = require('../errors');
 const {
   StudentPlanRepository
@@ -33,6 +34,9 @@ const UPDATE_FIELDS = new Set([
   'operation_id', 'correlation_id'
 ]);
 const CONTENT_FIELDS = ['cycle_id', 'company_id', 'position_id', 'notes'];
+// Stable codes (#55): 404 uses the shared code; duplicate active Plan per cycle is distinct (#52 section 5)
+const PLAN_NOT_FOUND_CODE = 'RECORD_NOT_FOUND';
+const PLAN_EXISTS_FOR_CYCLE_CODE = 'PLAN_ALREADY_EXISTS_FOR_CYCLE';
 
 function hasOwn(value, key) {
   return Object.prototype.hasOwnProperty.call(value, key);
@@ -243,7 +247,7 @@ class StudentPlanService {
     } catch (error) {
       await client.query('ROLLBACK');
       if (error?.code === '23505') {
-        throw new ConflictError('An active Plan already exists for this cycle.', 'CONFLICT');
+        throw new ConflictError('An active Plan already exists for this cycle.', PLAN_EXISTS_FOR_CYCLE_CODE);
       }
       throw error;
     } finally {
@@ -282,7 +286,7 @@ class StudentPlanService {
     assertStudentActor(actor);
     const id = requireUuid(planId, 'planId');
     const row = await this.repository.findOwnPlanById(actor.studentId, id);
-    if (!row) throw new NotFoundError('Plan not found.', 'PLAN_NOT_FOUND');
+    if (!row) throw new NotFoundError('Plan not found.', PLAN_NOT_FOUND_CODE);
     return toOwnPlan(row);
   }
 
@@ -318,7 +322,7 @@ class StudentPlanService {
       await client.query('BEGIN');
       await this.assertActiveStudent(client, actor);
       const current = await this.repository.findPlanByIdForUpdate(client, id);
-      if (!current) throw new NotFoundError('Plan not found.', 'PLAN_NOT_FOUND');
+      if (!current) throw new NotFoundError('Plan not found.', PLAN_NOT_FOUND_CODE);
       if (current.student_id !== actor.studentId) throw new ForbiddenError('Access denied.', 'FORBIDDEN');
 
       const prior = await this.repository.findOperationById(client, operationId);
@@ -328,8 +332,9 @@ class StudentPlanService {
         return replay;
       }
 
+      // #52 section 10: a state that does not allow the action is 422, not 403
       if (!EDITABLE_STATES.has(current.status)) {
-        throw new ForbiddenError('Plan content is not editable in its current state.', 'PLAN_STATE_NOT_EDITABLE');
+        throw new InvalidStateTransitionError('Plan content is not editable in its current state.');
       }
       if (Number(current.version) !== body.expected_version) {
         throw new ConflictError('Plan has been updated by another request.', 'STALE_RECORD_CONFLICT');
@@ -380,7 +385,7 @@ class StudentPlanService {
       return { plan, idempotentReplay: false };
     } catch (error) {
       await client.query('ROLLBACK');
-      if (error?.code === '23505') throw new ConflictError('An active Plan already exists for this cycle.', 'CONFLICT');
+      if (error?.code === '23505') throw new ConflictError('An active Plan already exists for this cycle.', PLAN_EXISTS_FOR_CYCLE_CODE);
       throw error;
     } finally {
       client.release();
