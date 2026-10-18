@@ -286,6 +286,15 @@ describe('Issue #55 - V3 Modular API and Shared Response/Error Contract', () => 
       });
     });
 
+    it('returns 405 with Allow: GET for non-GET requests to unregistered routes (V2 compatibility)', async () => {
+      const router = new Router();
+      const res = createMockResponse();
+      await router.handle({ method: 'POST', url: '/api/unknown' }, res);
+      expect(res.statusCode).toBe(405);
+      expect(res.headers.Allow).toBe('GET');
+      expect(res.body.error.code).toBe('METHOD_NOT_ALLOWED');
+    });
+
     it('executes middleware pipeline and respects early termination', async () => {
       const router = new Router();
       router.use((req, res) => {

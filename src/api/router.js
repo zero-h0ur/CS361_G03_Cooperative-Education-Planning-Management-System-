@@ -3,7 +3,7 @@
  * Provides route dispatching, parameter parsing, and middleware extension points.
  */
 
-const { NotFoundError, MethodNotAllowedError } = require('./errors');
+const { NotFoundError, MethodNotAllowedError, ValidationError } = require('./errors');
 const { sendError } = require('./response');
 
 class Router {
@@ -101,6 +101,10 @@ class Router {
       const matchedRoutes = this.findMatches(pathname);
 
       if (matchedRoutes.length === 0) {
+        // Preserve V2 behavior: non-GET requests to unknown paths return 405 with Allow: GET.
+        if (method !== 'GET') {
+          throw new MethodNotAllowedError('Method not allowed.', ['GET'], 'METHOD_NOT_ALLOWED');
+        }
         throw new NotFoundError('Route not found.', 'ROUTE_NOT_FOUND');
       }
 
@@ -141,7 +145,6 @@ function decodePathParameter(value, InvalidInputError) {
     if (InvalidInputError) {
       throw new InvalidInputError('Invalid path parameter.');
     }
-    const { ValidationError } = require('./errors');
     throw new ValidationError('Invalid path parameter.');
   }
 }
@@ -152,7 +155,6 @@ function assertAllowedQueryParameters(searchParams, allowed, InvalidInputError) 
       if (InvalidInputError) {
         throw new InvalidInputError(`Unsupported query parameter: ${key}.`);
       }
-      const { ValidationError } = require('./errors');
       throw new ValidationError(`Unsupported query parameter: ${key}.`);
     }
   }
