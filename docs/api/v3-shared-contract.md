@@ -137,18 +137,35 @@ router.post('/api/plans', async (req, res, { dal }) => {
 
 ### 3.3 การดึง Auth Context จาก Request (#61, #62)
 
+Protected route ต้องใส่ `authenticate` เป็น route-scoped middleware ใน `registerV3Routes()` ห้ามใช้ `router.use()` เพราะจะบังคับ Login กับ Public routes ด้วย
+
 ```javascript
-const { getRequestContext, extractBearerToken } = require('./context');
+// src/api/routes/v3-routes.js
+const { getRequestContext } = require('../context');
+const { sendSuccess } = require('../response');
 
-// 1. ดึง Bearer Token
-const token = extractBearerToken(req);
-
-// 2. อ่านข้อมูล Context ที่ผ่านการ Verify แล้ว
-const { user, role, isAuthenticated } = getRequestContext(req);
-if (!isAuthenticated) {
-  throw new UnauthorizedError();
+function registerV3Routes(router, { authenticate = createAuthMiddleware() } = {}) {
+  router.get('/api/v3/me', authenticate, async (req, res) => {
+    // อ่าน Trusted Identity ที่ middleware resolve จาก RDS แล้วเท่านั้น
+    const { userId, role, studentId } = getRequestContext(req);
+    sendSuccess(res, { userId, role, studentId });
+  });
 }
 ```
+
+ข้อกำหนด:
+
+- Handler และ Service ห้าม parse token หรืออ่าน `Authorization` header เอง (#61 coordination note)
+- ห้ามเชื่อ `role`, `userId`, `studentId` จาก body, query หรือ header ที่ client ส่งมา
+- Production รับ identity จาก `requestContext.authorizer.jwt.claims` ของ API Gateway JWT Authorizer เท่านั้น (#48) การตรวจ Bearer token ใน Lambda (`allowBearerFallback: true`) ใช้ได้เฉพาะ local development และ test
+- Middleware ต้องตั้งค่า `AUTH_ISSUER` และ `AUTH_AUDIENCE` (#58) ถ้าไม่ตั้ง ทุก request จะได้ `401`
+- Role `SYSTEM` ไม่สามารถ authenticate ผ่าน token ได้
+
+| กรณี | Response |
+|---|---|
+| ไม่มี token, token ผิด, หมดอายุ, scope ไม่ครบ | `401 UNAUTHORIZED` |
+| ไม่พบ identity link, link ถูก revoke, account disabled, duplicate link, provisioning ไม่ครบ | `403 FORBIDDEN` (message เดียวกันทุกกรณี) |
+| Database ไม่พร้อมใช้งานระหว่าง resolve identity | `503 SERVICE_UNAVAILABLE` |
 
 ---
 
