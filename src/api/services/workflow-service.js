@@ -286,16 +286,46 @@ class WorkflowService {
       );
     }
 
+    // 0.1 Reject conflicting duplicate aliases (#52)
+    const duplicatePairs = [
+      ['plan_id', 'planId'],
+      ['expected_version', 'expectedVersion'],
+      ['operation_id', 'operationId'],
+      ['review_notes', 'notes'],
+      ['review_notes', 'reviewNotes'],
+      ['notes', 'reviewNotes'],
+      ['correlation_id', 'correlationId'],
+      ['operation_id', 'idempotencyKey'],
+      ['operation_id', 'requestHash'],
+      ['operation_id', 'request_hash'],
+      ['request_hash', 'requestHash']
+    ];
+
+    for (const [snake, camel] of duplicatePairs) {
+      if (
+        Object.prototype.hasOwnProperty.call(params, snake) &&
+        Object.prototype.hasOwnProperty.call(params, camel)
+      ) {
+        throw new ValidationError(
+          `Conflicting duplicate fields provided: both '${snake}' and '${camel}' are present.`,
+          [{ field: camel, issue: `duplicate field: specify only '${snake}'` }]
+        );
+      }
+    }
+
     const actor = params.actor;
     const planId = params.plan_id || params.planId;
     const action = params.action;
     const expectedVersion = params.expected_version !== undefined ? params.expected_version : params.expectedVersion;
-    const operationId = params.operation_id || params.operationId || null;
+    const rawOperationId = params.operation_id !== undefined
+      ? params.operation_id
+      : (params.operationId !== undefined
+        ? params.operationId
+        : (params.idempotencyKey !== undefined ? params.idempotencyKey : params.request_hash));
     const correlationId = params.correlation_id || params.correlationId || null;
     const rawNotes = params.review_notes !== undefined
       ? params.review_notes
       : (params.notes !== undefined ? params.notes : (params.comment !== undefined ? params.comment : undefined));
-    const requestHash = params.request_hash || params.requestHash || params.idempotencyKey || null;
 
     // 1. Validate Actor
     if (!actor || !actor.isAuthenticated || !actor.userId) {
@@ -351,25 +381,18 @@ class WorkflowService {
     }
     const parsedExpectedVersion = Number(expectedVersion);
 
-    // 6. Validate Operation ID (#52 ข้อ 9)
-    let finalOperationId = null;
-    let isCallerSuppliedOpId = false;
-
-    if (operationId !== null) {
-      if (typeof operationId !== 'string' || !UUID_REGEX.test(operationId)) {
-        throw new ValidationError('Invalid operation_id: must be a valid UUID string.', [
-          { field: 'operation_id', issue: 'must be a valid UUID string' }
-        ]);
-      }
-      finalOperationId = operationId;
-      isCallerSuppliedOpId = true;
-    } else if (requestHash !== null && UUID_REGEX.test(requestHash)) {
-      finalOperationId = requestHash;
-      isCallerSuppliedOpId = true;
-    } else {
-      finalOperationId = crypto.randomUUID();
-      isCallerSuppliedOpId = false;
+    // 6. Validate Operation ID (#52 ข้อ 9: Mandatory from client)
+    if (
+      rawOperationId === undefined ||
+      rawOperationId === null ||
+      typeof rawOperationId !== 'string' ||
+      !UUID_REGEX.test(rawOperationId)
+    ) {
+      throw new ValidationError('operation_id is required and must be a valid UUID string.', [
+        { field: 'operation_id', issue: 'operation_id is required and must be a valid UUID string' }
+      ]);
     }
+    const finalOperationId = rawOperationId;
 
     // 7. Validate Correlation ID
     let finalCorrelationId = null;
@@ -441,50 +464,16 @@ class WorkflowService {
 
       // 12. Idempotency Check (#52 ข้อ 9)
       // Executed strictly AFTER authorization to prevent cache leakage
-      if (isCallerSuppliedOpId) {
-        const existingOp = await this.repository.findOperationById(client, finalOperationId);
-        if (existingOp) {
-          const planMatches = existingOp.plan_id === planId;
-          const actorMatches = existingOp.actor_id === actor.userId;
-          const actionMatches =
-            existingOp.action === canonicalAction ||
-            existingOp.action === AUDIT_ACTIONS[canonicalAction];
-          const payloadMatches = existingOp.request_hash === payloadHash;
+      const existingOp = await this.repository.findOperationById(client, finalOperationId);
+      if (existingOp) {
+        const planMatches = existingOp.plan_id === planId;
+        const actorMatches = existingOp.actor_id === actor.userId;
+        const actionMatches =
+          existingOp.action === canonicalAction ||
+          existingOp.action === AUDIT_ACTIONS[canonicalAction];
+        const payloadMatches = existingOp.request_hash === payloadHash;
 
-          if (planMatches && actorMatches && actionMatches && payloadMatches) {
-            await client.query('ROLLBACK');
-            return Object.freeze({
-              idempotentReplay: true,
-              status: existingOp.response_status,
-              data: existingOp.response_payload,
-              plan: existingOp.response_payload,
-              operation: {
-                operation_id: existingOp.operation_id,
-                request_hash: existingOp.request_hash,
-                response_status: existingOp.response_status,
-                result_version: existingOp.result_version
-              }
-            });
-          }
-
-          throw new ConflictError(
-            'Idempotency key has already been used with different request parameters.',
-            'IDEMPOTENCY_KEY_REUSED'
-          );
-        }
-      } else if (requestHash) {
-        const hashToQuery = normalizeHash(requestHash);
-        const existingOp = await this.repository.findOperationByRequestHash(client, planId, hashToQuery);
-        if (existingOp) {
-          if (
-            existingOp.actor_id !== actor.userId ||
-            (existingOp.action !== canonicalAction && existingOp.action !== AUDIT_ACTIONS[canonicalAction])
-          ) {
-            throw new ConflictError(
-              'Idempotency key has already been used with different request parameters.',
-              'IDEMPOTENCY_KEY_REUSED'
-            );
-          }
+        if (planMatches && actorMatches && actionMatches && payloadMatches) {
           await client.query('ROLLBACK');
           return Object.freeze({
             idempotentReplay: true,
@@ -499,6 +488,11 @@ class WorkflowService {
             }
           });
         }
+
+        throw new ConflictError(
+          'Idempotency key has already been used with different request parameters.',
+          'IDEMPOTENCY_KEY_REUSED'
+        );
       }
 
       // 13. Check Optimistic Concurrency (#52 ข้อ 9)

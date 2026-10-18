@@ -9,14 +9,18 @@
  *    - Cycle, public company, and matching public position required for submit
  *    - Review notes optional for approve, mandatory for return_for_revision
  *    - Rejection of unknown fields with 400
+ *    - Rejection of conflicting duplicate aliases with 400
+ *    - Rejection of missing/invalid client operation_id with 400
  * 3. Centralized role, ownership, and scope authorization (#49, #62)
  * 4. Optimistic concurrency control and conflict responses (409)
  * 5. Idempotent retries via plan_operations (#52 ข้อ 9)
  *    - operation_id match with same payload -> cached response
  *    - operation_id match with different payload/action/actor -> 409 IDEMPOTENCY_KEY_REUSED
+ *    - unpermitted actor gets 403 BEFORE idempotency check
  *    - new operation_id with stale expected_version -> 409 STALE_RECORD_CONFLICT
  * 6. Single atomic database transactions and rollback safety
  * 7. Real PostgreSQL concurrency and row-lock serialization
+ * 8. Real PostgreSQL idempotent retry verification (no duplicate version or audit event)
  */
 
 const crypto = require('crypto');
@@ -49,12 +53,17 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
   const USER_STUDENT_A = '44444444-4444-4444-8444-444444444441';
   const USER_STUDENT_B = '44444444-4444-4444-8444-444444444442';
   const USER_STAFF_1 = '55555555-5555-4555-8555-555555555551';
+  const USER_STAFF_2 = '55555555-5555-4555-8555-555555555553';
   const USER_STAFF_OUT_SCOPE = '55555555-5555-4555-8555-555555555552';
   const USER_ADVISOR = '66666666-6666-4666-8666-666666666661';
   const USER_ADMIN = '77777777-7777-4777-8777-777777777771';
   const CYCLE_ID = '88888888-8888-4888-8888-888888888881';
   const COMPANY_ID = '99999999-9999-4999-8999-999999999991';
   const POSITION_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+  function makeOperationId() {
+    return crypto.randomUUID();
+  }
 
   function makeStudentContext(overrides = {}) {
     return Object.freeze({
@@ -270,7 +279,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       const result = await service.submitPlan({
         actor: student,
         plan_id: TEST_PLAN_ID,
-        expected_version: 1
+        expected_version: 1,
+        operation_id: makeOperationId()
       });
 
       expect(result.plan.status).toBe(PLAN_STATES.SUBMITTED);
@@ -301,7 +311,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       const result = await service.startReview({
         actor: staff,
         plan_id: TEST_PLAN_ID,
-        expected_version: 2
+        expected_version: 2,
+        operation_id: makeOperationId()
       });
 
       expect(result.plan.status).toBe(PLAN_STATES.UNDER_REVIEW);
@@ -325,6 +336,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         actor: staff,
         plan_id: TEST_PLAN_ID,
         expected_version: 3,
+        operation_id: makeOperationId(),
         review_notes: 'Please add more details regarding project responsibilities.'
       });
 
@@ -344,6 +356,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         actor: student,
         plan_id: TEST_PLAN_ID,
         expected_version: 4,
+        operation_id: makeOperationId(),
         review_notes: 'Updated project responsibilities.'
       });
 
@@ -366,6 +379,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         actor: staff,
         plan_id: TEST_PLAN_ID,
         expected_version: 5,
+        operation_id: makeOperationId(),
         review_notes: 'Approved without remarks.'
       });
 
@@ -385,7 +399,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       const resultNoNotes = await serviceNoNotes.approvePlan({
         actor: staff,
         plan_id: TEST_PLAN_ID,
-        expected_version: 5
+        expected_version: 5,
+        operation_id: makeOperationId()
       });
 
       expect(resultNoNotes.plan.status).toBe(PLAN_STATES.APPROVED);
@@ -410,6 +425,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           actor: student,
           plan_id: TEST_PLAN_ID,
           expected_version: 1,
+          operation_id: makeOperationId(),
           review_notes: 'Cancelling this plan.'
         });
 
@@ -430,6 +446,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           actor: student,
           plan_id: TEST_PLAN_ID,
           expected_version: 2,
+          operation_id: makeOperationId(),
           review_notes: 'Attempting to cancel under review plan'
         })
       ).rejects.toThrow(InvalidStateTransitionError);
@@ -464,6 +481,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
               plan_id: TEST_PLAN_ID,
               action: act,
               expected_version: 10,
+              operation_id: makeOperationId(),
               review_notes: 'Attempting invalid move'
             })
           ).rejects.toThrow(InvalidStateTransitionError);
@@ -498,6 +516,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
             plan_id: TEST_PLAN_ID,
             action,
             expected_version: 2,
+            operation_id: makeOperationId(),
             review_notes: 'illegal note'
           })
         ).rejects.toThrow(InvalidStateTransitionError);
@@ -510,6 +529,55 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
   });
 
   describe('2. Preconditions and Required Fields Enforcement (#52)', () => {
+    it('rejects mutation if operation_id is missing or not a valid UUID with 400 VALIDATION_ERROR (#52 ข้อ 9)', async () => {
+      const repo = createMockRepo();
+      const service = new WorkflowService({ repository: repo });
+      const student = makeStudentContext();
+
+      const invalidOperationIds = [undefined, null, '', 'not-a-uuid', 12345];
+
+      for (const opId of invalidOperationIds) {
+        let caughtErr = null;
+        try {
+          await service.submitPlan({
+            actor: student,
+            plan_id: TEST_PLAN_ID,
+            expected_version: 1,
+            operation_id: opId
+          });
+        } catch (err) {
+          caughtErr = err;
+        }
+
+        expect(caughtErr).toBeInstanceOf(ValidationError);
+        expect(caughtErr.statusCode).toBe(400);
+        expect(caughtErr.details.some((d) => d.field === 'operation_id')).toBe(true);
+      }
+    });
+
+    it('rejects conflicting duplicate fields (e.g. expected_version and expectedVersion) with 400 VALIDATION_ERROR (#52)', async () => {
+      const repo = createMockRepo();
+      const service = new WorkflowService({ repository: repo });
+      const student = makeStudentContext();
+
+      let caughtErr = null;
+      try {
+        await service.submitPlan({
+          actor: student,
+          plan_id: TEST_PLAN_ID,
+          expected_version: 1,
+          expectedVersion: 1, // Duplicate alias!
+          operation_id: makeOperationId()
+        });
+      } catch (err) {
+        caughtErr = err;
+      }
+
+      expect(caughtErr).toBeInstanceOf(ValidationError);
+      expect(caughtErr.statusCode).toBe(400);
+      expect(caughtErr.message).toContain('Conflicting duplicate fields');
+    });
+
     it('rejects submitPlan if cycle_id, company_id, or position_id is missing with 400 VALIDATION_ERROR', async () => {
       const missingFieldsCases = [
         { cycle_id: null, round_id: null },
@@ -526,7 +594,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           service.submitPlan({
             actor: student,
             plan_id: TEST_PLAN_ID,
-            expected_version: 1
+            expected_version: 1,
+            operation_id: makeOperationId()
           })
         ).rejects.toThrow(ValidationError);
 
@@ -549,7 +618,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         await service.submitPlan({
           actor: student,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         });
       } catch (err) {
         caughtErr = err;
@@ -575,7 +645,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         await service.submitPlan({
           actor: student,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         });
       } catch (err) {
         caughtErr = err;
@@ -602,7 +673,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         await service.submitPlan({
           actor: student,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         });
       } catch (err) {
         caughtErr = err;
@@ -627,6 +699,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
             actor: staff,
             plan_id: TEST_PLAN_ID,
             expected_version: 2,
+            operation_id: makeOperationId(),
             review_notes
           })
         ).rejects.toThrow(ValidationError);
@@ -646,6 +719,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           actor: staff,
           plan_id: TEST_PLAN_ID,
           expected_version: 2,
+          operation_id: makeOperationId(),
           review_notes: 'x'.repeat(2001)
         })
       ).rejects.toThrow(ValidationError);
@@ -663,6 +737,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           plan_id: TEST_PLAN_ID,
           action: ACTIONS.PLAN_SUBMIT,
           expected_version: 1,
+          operation_id: makeOperationId(),
           unexpected_extra_field: 'malicious_input'
         });
       } catch (err) {
@@ -697,7 +772,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
             actor: advisor,
             plan_id: TEST_PLAN_ID,
             action: act,
-            expected_version: 1
+            expected_version: 1,
+            operation_id: makeOperationId()
           });
         } catch (err) {
           caughtErr = err;
@@ -721,7 +797,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         await service.submitPlan({
           actor: admin,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         });
       } catch (err) {
         caughtErr = err;
@@ -742,7 +819,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         service.startReview({
           actor: student,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         })
       ).rejects.toThrow(ForbiddenError);
 
@@ -750,7 +828,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         service.approvePlan({
           actor: student,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         })
       ).rejects.toThrow(ForbiddenError);
     });
@@ -764,7 +843,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         service.submitPlan({
           actor: staff,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         })
       ).rejects.toThrow(ForbiddenError);
 
@@ -772,7 +852,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         service.cancelPlan({
           actor: staff,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         })
       ).rejects.toThrow(ForbiddenError);
     });
@@ -787,7 +868,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         await service.submitPlan({
           actor: studentA,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         });
       } catch (err) {
         caughtErr = err;
@@ -808,7 +890,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         await service.startReview({
           actor: staffOutOfScope,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         });
       } catch (err) {
         caughtErr = err;
@@ -829,7 +912,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         service.startReview({
           actor: staff,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         })
       ).rejects.toThrow(ForbiddenError);
 
@@ -844,7 +928,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         service.submitPlan({
           actor: null,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         })
       ).rejects.toThrow(UnauthorizedError);
     });
@@ -859,7 +944,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         await service.submitPlan({
           actor: disabledStudent,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         });
       } catch (err) {
         caughtErr = err;
@@ -881,7 +967,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         await service.submitPlan({
           actor: student,
           plan_id: TEST_PLAN_ID,
-          expected_version: 2 // Stale version! Current is 3
+          expected_version: 2, // Stale version! Current is 3
+          operation_id: makeOperationId()
         });
       } catch (err) {
         caughtErr = err;
@@ -913,7 +1000,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           service.submitPlan({
             actor: student,
             plan_id: TEST_PLAN_ID,
-            expected_version: ver
+            expected_version: ver,
+            operation_id: makeOperationId()
           })
         ).rejects.toThrow(ValidationError);
       }
@@ -928,7 +1016,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         service.submitPlan({
           actor: student,
           plan_id: OTHER_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         })
       ).rejects.toThrow(NotFoundError);
     });
@@ -939,7 +1028,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.DRAFT, version: 1 }));
       const service = new WorkflowService({ repository: repo });
       const student = makeStudentContext();
-      const testOperationId = crypto.randomUUID();
+      const testOperationId = makeOperationId();
 
       // 1. First execution
       const firstResult = await service.submitPlan({
@@ -977,7 +1066,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.DRAFT, version: 1 }));
       const service = new WorkflowService({ repository: repo });
       const student = makeStudentContext();
-      const testOperationId = crypto.randomUUID();
+      const testOperationId = makeOperationId();
 
       // 1. First call with payload A
       await service.submitPlan({
@@ -1008,32 +1097,84 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       expect(repo.auditLogs).toHaveLength(1); // Only initial audit log
     });
 
-    it('rejects with 409 IDEMPOTENCY_KEY_REUSED when same operation_id is reused with different action or actor (#52 ข้อ 9)', async () => {
+    it('operation_id เดิม payload เดิม แต่ คนละ actor: actor มีสิทธิ์ได้ 409 IDEMPOTENCY_KEY_REUSED, actor ไม่มีสิทธิ์ได้ 403 (#52 ข้อ 9)', async () => {
       const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.SUBMITTED, version: 2 }));
       const service = new WorkflowService({ repository: repo });
-      const staff = makeStaffContext();
-      const sharedOperationId = crypto.randomUUID();
+      const staff1 = makeStaffContext({ userId: USER_STAFF_1 });
+      const staff2 = makeStaffContext({ userId: USER_STAFF_2 }); // Another authorized staff
+      const studentB = makeStudentContext({ studentId: STUDENT_B_ID, userId: USER_STUDENT_B }); // Unauthorized
+      const sharedOpId = makeOperationId();
 
-      // Pre-seed an operation from student
+      // 1. Staff 1 executes startReview with sharedOpId
+      await service.startReview({
+        actor: staff1,
+        plan_id: TEST_PLAN_ID,
+        expected_version: 2,
+        operation_id: sharedOpId
+      });
+
+      // 2. Unauthorized actor (Student B) attempts to call with sharedOpId
+      // MUST get 403 FORBIDDEN and NOT get cached response or 409!
+      let unauthErr = null;
+      try {
+        await service.submitPlan({
+          actor: studentB,
+          plan_id: TEST_PLAN_ID,
+          expected_version: 2,
+          operation_id: sharedOpId
+        });
+      } catch (err) {
+        unauthErr = err;
+      }
+      expect(unauthErr).toBeInstanceOf(ForbiddenError);
+      expect(unauthErr.statusCode).toBe(403);
+      expect(unauthErr.message).toBe('Access denied.');
+
+      // 3. Another authorized actor (Staff 2 in scope) calls startReview with sharedOpId
+      // MUST get 409 IDEMPOTENCY_KEY_REUSED
+      let conflictErr = null;
+      try {
+        await service.startReview({
+          actor: staff2,
+          plan_id: TEST_PLAN_ID,
+          expected_version: 2,
+          operation_id: sharedOpId
+        });
+      } catch (err) {
+        conflictErr = err;
+      }
+      expect(conflictErr).toBeInstanceOf(ConflictError);
+      expect(conflictErr.statusCode).toBe(409);
+      expect(conflictErr.code).toBe('IDEMPOTENCY_KEY_REUSED');
+    });
+
+    it('rejects with 409 IDEMPOTENCY_KEY_REUSED when same operation_id is reused with different action (#52 ข้อ 9)', async () => {
+      const repo = createMockRepo(createMockPlanRow({ status: PLAN_STATES.UNDER_REVIEW, version: 3 }));
+      const service = new WorkflowService({ repository: repo });
+      const staff = makeStaffContext();
+      const sharedOperationId = makeOperationId();
+
+      // Pre-seed an operation for returnForRevision
       repo.operations.push({
         operation_id: sharedOperationId,
         plan_id: TEST_PLAN_ID,
-        actor_id: USER_STUDENT_A,
-        action: 'PLAN_SUBMITTED',
-        request_hash: crypto.createHash('sha256').update(JSON.stringify({ review_notes: null })).digest('hex'),
+        actor_id: USER_STAFF_1,
+        action: 'PLAN_RETURNED',
+        request_hash: crypto.createHash('sha256').update(JSON.stringify({ review_notes: 'Needs work' })).digest('hex'),
         response_status: 200,
-        response_payload: { status: 'SUBMITTED' },
-        result_version: 2
+        response_payload: { status: 'NEEDS_REVISION' },
+        result_version: 4
       });
 
-      // Staff attempts to reuse the same operation_id for start_review
+      // Staff attempts to reuse the same operation_id for approvePlan
       let caughtErr = null;
       try {
-        await service.startReview({
+        await service.approvePlan({
           actor: staff,
           plan_id: TEST_PLAN_ID,
-          expected_version: 2,
-          operation_id: sharedOperationId
+          expected_version: 3,
+          operation_id: sharedOperationId,
+          review_notes: 'Needs work'
         });
       } catch (err) {
         caughtErr = err;
@@ -1050,7 +1191,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       const student = makeStudentContext();
 
       // 1. Initial submit succeeds with op1, version becomes 2
-      const op1 = crypto.randomUUID();
+      const op1 = makeOperationId();
       await service.submitPlan({
         actor: student,
         plan_id: TEST_PLAN_ID,
@@ -1059,7 +1200,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       });
 
       // 2. Caller sends a new operation_id (op2), but with stale expected_version = 1
-      const op2 = crypto.randomUUID();
+      const op2 = makeOperationId();
       let caughtErr = null;
       try {
         await service.submitPlan({
@@ -1086,7 +1227,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       const service = new WorkflowService({ repository: repo });
       const studentA = makeStudentContext({ studentId: STUDENT_A_ID, userId: USER_STUDENT_A });
       const studentB = makeStudentContext({ studentId: STUDENT_B_ID, userId: USER_STUDENT_B });
-      const sharedOpId = crypto.randomUUID();
+      const sharedOpId = makeOperationId();
 
       // 1. Student A executes transition successfully
       await service.submitPlan({
@@ -1129,7 +1270,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         service.submitPlan({
           actor: student,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         })
       ).rejects.toThrow('Audit table constraint violation simulation');
 
@@ -1230,12 +1372,14 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         service.submitPlan({
           actor: student,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         }),
         service.submitPlan({
           actor: student,
           plan_id: TEST_PLAN_ID,
-          expected_version: 1
+          expected_version: 1,
+          operation_id: makeOperationId()
         })
       ]);
 
@@ -1274,7 +1418,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       }
     });
 
-    (canRunPg ? it : it.skip)('executes transition against real PostgreSQL with atomic update and immutable audit record', async () => {
+    (canRunPg ? it : it.skip)('executes transition against real PostgreSQL with atomic update and immutable audit record, and verifies retry does not duplicate version/audit', async () => {
       const repo = new WorkflowRepository({ pool });
       const service = new WorkflowService({ repository: repo });
 
@@ -1284,7 +1428,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       const testCompanyId = crypto.randomUUID();
       const testPositionId = crypto.randomUUID();
       const realPlanId = crypto.randomUUID();
-      const testOperationId = crypto.randomUUID();
+      const testOperationId = makeOperationId();
 
       try {
         await pool.query(`INSERT INTO users (id, role, account_status) VALUES ($1, 'STUDENT', 'ACTIVE')`, [testStudentUserId]);
@@ -1367,7 +1511,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         expect(opRes.rows[0].operation_id).toBe(testOperationId);
         expect(opRes.rows[0].result_version).toBe(2);
 
-        // 2. Retry with exact same operation_id returns cached result
+        // 2. Retry execution with exact same operation_id and payload
+        // Verification: in real PostgreSQL, retry must NOT increase version and must NOT create duplicate audit row
         const retryResult = await service.submitPlan({
           actor: studentActor,
           plan_id: realPlanId,
@@ -1375,15 +1520,29 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           operation_id: testOperationId,
           review_notes: 'Real integration submit'
         });
+
         expect(retryResult.idempotentReplay).toBe(true);
         expect(retryResult.plan.status).toBe('SUBMITTED');
+        expect(retryResult.plan.version).toBe(2);
+
+        // Real PostgreSQL verification: version is STILL 2 and audit events count is STILL exactly 1
+        const planAfterRetry = await pool.query('SELECT status, version FROM plans WHERE id = $1', [realPlanId]);
+        expect(planAfterRetry.rows[0].status).toBe('SUBMITTED');
+        expect(planAfterRetry.rows[0].version).toBe(2);
+
+        const auditAfterRetry = await pool.query('SELECT * FROM audit_events WHERE plan_id = $1', [realPlanId]);
+        expect(auditAfterRetry.rows).toHaveLength(1);
+
+        const opAfterRetry = await pool.query('SELECT * FROM plan_operations WHERE plan_id = $1', [realPlanId]);
+        expect(opAfterRetry.rows).toHaveLength(1);
 
         // 3. Stale update attempt -> 409
         await expect(
           service.submitPlan({
             actor: studentActor,
             plan_id: realPlanId,
-            expected_version: 1 // Stale!
+            expected_version: 1, // Stale! Current is 2
+            operation_id: makeOperationId()
           })
         ).rejects.toThrow(ConflictError);
       } finally {
@@ -1485,12 +1644,14 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           service.startReview({
             actor: staffActor,
             plan_id: realPlanId,
-            expected_version: 1
+            expected_version: 1,
+            operation_id: makeOperationId()
           }),
           service.startReview({
             actor: staffActor,
             plan_id: realPlanId,
-            expected_version: 1
+            expected_version: 1,
+            operation_id: makeOperationId()
           })
         ]);
 
@@ -1617,7 +1778,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           service.approvePlan({
             actor: staffActor,
             plan_id: realPlanId,
-            expected_version: 1
+            expected_version: 1,
+            operation_id: makeOperationId()
           })
         ).rejects.toThrow(InvalidStateTransitionError);
 
