@@ -375,127 +375,196 @@
       </div>
 
     <!-- เมื่อกดการ์ด จะเรียก openModal พร้อมส่ง ID บริษัท -->
-    <div class="directory-grid">
-      <!-- Card 1 -->
-      <div class="company-card" onclick="openModal(1)">
-        <div class="card-top">
-          <div class="company-logo company-logo-agoda"><img src="resources/images/agoda.jpg" alt="โลโก้ Agoda"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">Agoda</h4>
-        <p class="company-location">Agoda • กรุงเทพฯ</p>
-        <p class="company-desc">เปิดรับนักศึกษาร่วมพัฒนาประสบการณ์ด้านเทคโนโลยีการท่องเที่ยว...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-tech">Technology</span>
-          <span class="cat-badge cat-design">Design</span>
-        </div>
-      </div>
+      <!-- Bento Grid Showcase: 2 Featured Spotlight Tiles + 6 Minimalist Compact Tiles -->
+      <div class="bento-directory-grid">
+        <!-- Card 1: Agoda (Featured Spotlight Tile) -->
+        <article class="bento-card bento-card-featured" onclick="openModal(1)" tabindex="0" role="button" aria-label="ดูรายละเอียด Agoda">
+          <div class="bento-card-glow" aria-hidden="true"></div>
+          <div class="bento-top-row">
+            <div class="bento-logo-wrapper bento-logo-agoda">
+              <img src="resources/images/agoda.jpg" alt="โลโก้ Agoda" />
+            </div>
+            <div class="bento-badge-group">
+              <span class="bento-pill pill-featured"><i class="fa-solid fa-star"></i> Featured Partner</span>
+              <span class="bento-pill pill-quota">เปิดรับ 3 อัตรา</span>
+            </div>
+          </div>
+          <div class="bento-content">
+            <h3 class="bento-company-title">Agoda</h3>
+            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (เซ็นทรัลเวิลด์)</p>
+            <p class="bento-desc">เปิดรับนักศึกษาร่วมพัฒนาประสบการณ์ดิจิทัลระดับโลกสำหรับแพลตฟอร์มการท่องเที่ยว สัมผัส High-scale Distributed Systems</p>
+            <div class="bento-tags">
+              <span class="partner-tag tag-role-dev"><i class="fa-solid fa-code"></i> Software Engineer</span>
+              <span class="partner-tag tag-role-design"><i class="fa-solid fa-palette"></i> UX/UI Design</span>
+              <span class="partner-tag tag-benefit"><i class="fa-solid fa-wallet"></i> มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+          <div class="bento-footer">
+            <span class="bento-cta-text">ดูรายละเอียด & สัมภาษณ์</span>
+            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
+          </div>
+        </article>
 
-      <!-- Card 2 -->
-      <div class="company-card" onclick="openModal(2)">
-        <div class="card-top">
-          <div class="company-logo"><img src="resources/images/g-able.png" alt="โลโก้ G-Able"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">G-Able</h4>
-        <p class="company-location">G-Able • กรุงเทพฯ</p>
-        <p class="company-desc">เปิดโอกาสให้นักศึกษาเรียนรู้การพัฒนาซอฟต์แวร์ระดับองค์กร...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-software">Software</span>
-          <span class="cat-badge cat-tech">Technology</span>
-        </div>
-      </div>
+        <!-- Card 2: G-Able (Compact Tile) -->
+        <article class="bento-card bento-card-compact" onclick="openModal(2)" tabindex="0" role="button" aria-label="ดูรายละเอียด G-Able">
+          <div class="bento-top-row">
+            <div class="bento-logo-wrapper">
+              <img src="resources/images/g-able.png" alt="โลโก้ G-Able" />
+            </div>
+            <span class="bento-pill pill-neutral">Enterprise IT</span>
+          </div>
+          <div class="bento-content">
+            <h3 class="bento-company-title">G-Able</h3>
+            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ</p>
+            <div class="bento-tags">
+              <span class="partner-tag tag-role-dev">Software Dev</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+          <div class="bento-footer">
+            <span class="bento-cta-text">ดูรายละเอียด</span>
+            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
+          </div>
+        </article>
 
-      <!-- Card 3 -->
-      <div class="company-card" onclick="openModal(3)">
-        <div class="card-top">
-          <div class="company-logo"><img src="resources/images/gosoft.png" alt="โลโก้ Gosoft"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">Gosoft</h4>
-        <p class="company-location">Gosoft • กรุงเทพฯ</p>
-        <p class="company-desc">ร่วมพัฒนาระบบดิจิทัลและวิเคราะห์ข้อมูลสำหรับธุรกิจค้าปลีก...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-software">Software</span>
-          <span class="cat-badge cat-business">Business</span>
-        </div>
-      </div>
+        <!-- Card 3: Gosoft (Compact Tile) -->
+        <article class="bento-card bento-card-compact" onclick="openModal(3)" tabindex="0" role="button" aria-label="ดูรายละเอียด Gosoft">
+          <div class="bento-top-row">
+            <div class="bento-logo-wrapper">
+              <img src="resources/images/gosoft.png" alt="โลโก้ Gosoft" />
+            </div>
+            <span class="bento-pill pill-neutral">Retail Tech</span>
+          </div>
+          <div class="bento-content">
+            <h3 class="bento-company-title">Gosoft</h3>
+            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (แจ้งวัฒนะ)</p>
+            <div class="bento-tags">
+              <span class="partner-tag tag-role-data">Data Analyst</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+          <div class="bento-footer">
+            <span class="bento-cta-text">ดูรายละเอียด</span>
+            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
+          </div>
+        </article>
 
-      <!-- Card 4 -->
-      <div class="company-card" onclick="openModal(4)">
-        <div class="card-top">
-          <div class="company-logo"><img src="resources/images/huawei.jpg" alt="โลโก้ Huawei"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">Huawei</h4>
-        <p class="company-location">Huawei • กรุงเทพฯ</p>
-        <p class="company-desc">เรียนรู้เทคโนโลยีเครือข่าย คลาวด์ และโซลูชันดิจิทัลระดับสากล...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-tech">Technology</span>
-          <span class="cat-badge cat-software">Software</span>
-        </div>
-      </div>
+        <!-- Card 4: Huawei (Compact Tile) -->
+        <article class="bento-card bento-card-compact" onclick="openModal(4)" tabindex="0" role="button" aria-label="ดูรายละเอียด Huawei">
+          <div class="bento-top-row">
+            <div class="bento-logo-wrapper">
+              <img src="resources/images/huawei.jpg" alt="โลโก้ Huawei" />
+            </div>
+            <span class="bento-pill pill-neutral">Global Tech</span>
+          </div>
+          <div class="bento-content">
+            <h3 class="bento-company-title">Huawei</h3>
+            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (พระราม 9)</p>
+            <div class="bento-tags">
+              <span class="partner-tag tag-role-sec">Cloud & 5G</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+          <div class="bento-footer">
+            <span class="bento-cta-text">ดูรายละเอียด</span>
+            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
+          </div>
+        </article>
 
-      <!-- Card 5 -->
-      <div class="company-card" onclick="openModal(5)">
-        <div class="card-top">
-          <div class="company-logo"><img src="resources/images/KBTG.jpg" alt="โลโก้ KBTG"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">KBTG</h4>
-        <p class="company-location">KBTG • ปากเกร็ด</p>
-        <p class="company-desc">ร่วมสร้างนวัตกรรมทางการเงินและระบบคลาวด์กับทีมเทคโนโลยี...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-software">Software</span>
-          <span class="cat-badge cat-tech">Technology</span>
-        </div>
-      </div>
+        <!-- Card 5: KBTG (Featured Spotlight Tile) -->
+        <article class="bento-card bento-card-featured" onclick="openModal(5)" tabindex="0" role="button" aria-label="ดูรายละเอียด KBTG">
+          <div class="bento-card-glow" aria-hidden="true"></div>
+          <div class="bento-top-row">
+            <div class="bento-logo-wrapper">
+              <img src="resources/images/KBTG.jpg" alt="โลโก้ KBTG" />
+            </div>
+            <div class="bento-badge-group">
+              <span class="bento-pill pill-featured"><i class="fa-solid fa-coins"></i> FinTech Leader</span>
+              <span class="bento-pill pill-quota">เปิดรับ 6 อัตรา</span>
+            </div>
+          </div>
+          <div class="bento-content">
+            <h3 class="bento-company-title">KBTG</h3>
+            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> ปากเกร็ด (เมืองทองธานี)</p>
+            <p class="bento-desc">ร่วมสร้างนวัตกรรมทางการเงินและระบบคลาวด์กับทีมเทคโนโลยีของกสิกรไทย พัฒนาระบบที่มีเสถียรภาพระดับล้านธุรกรรม</p>
+            <div class="bento-tags">
+              <span class="partner-tag tag-role-dev"><i class="fa-solid fa-shield-halved"></i> Cloud Engineer</span>
+              <span class="partner-tag tag-role-data"><i class="fa-solid fa-brain"></i> Machine Learning</span>
+              <span class="partner-tag tag-benefit"><i class="fa-solid fa-wallet"></i> มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+          <div class="bento-footer">
+            <span class="bento-cta-text">ดูรายละเอียด & สัมภาษณ์</span>
+            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
+          </div>
+        </article>
 
-      <!-- Card 6 -->
-      <div class="company-card" onclick="openModal(6)">
-        <div class="card-top">
-          <div class="company-logo"><img src="resources/images/krungsri.jpg" alt="โลโก้ Krungsri"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">Krungsri</h4>
-        <p class="company-location">Krungsri • กรุงเทพฯ</p>
-        <p class="company-desc">พัฒนาประสบการณ์ดิจิทัลและผลิตภัณฑ์ทางการเงินสำหรับลูกค้า...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-design">Design</span>
-          <span class="cat-badge cat-business">Business</span>
-        </div>
-      </div>
+        <!-- Card 6: Krungsri (Compact Tile) -->
+        <article class="bento-card bento-card-compact" onclick="openModal(6)" tabindex="0" role="button" aria-label="ดูรายละเอียด Krungsri">
+          <div class="bento-top-row">
+            <div class="bento-logo-wrapper">
+              <img src="resources/images/krungsri.jpg" alt="โลโก้ Krungsri" />
+            </div>
+            <span class="bento-pill pill-neutral">Digital Banking</span>
+          </div>
+          <div class="bento-content">
+            <h3 class="bento-company-title">Krungsri</h3>
+            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (พระราม 3)</p>
+            <div class="bento-tags">
+              <span class="partner-tag tag-role-design">Mobile UX/UI</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+          <div class="bento-footer">
+            <span class="bento-cta-text">ดูรายละเอียด</span>
+            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
+          </div>
+        </article>
 
-      <!-- Card 7 -->
-      <div class="company-card" onclick="openModal(7)">
-        <div class="card-top">
-          <div class="company-logo"><img src="resources/images/nectec.png" alt="โลโก้ NECTEC"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">NECTEC</h4>
-        <p class="company-location">NECTEC • ปทุมธานี</p>
-        <p class="company-desc">ร่วมวิจัยและพัฒนาเทคโนโลยีดิจิทัล ความมั่นคงปลอดภัย และ AI...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-tech">Technology</span>
-          <span class="cat-badge cat-software">Research</span>
-        </div>
-      </div>
+        <!-- Card 7: NECTEC (Compact Tile) -->
+        <article class="bento-card bento-card-compact" onclick="openModal(7)" tabindex="0" role="button" aria-label="ดูรายละเอียด NECTEC">
+          <div class="bento-top-row">
+            <div class="bento-logo-wrapper">
+              <img src="resources/images/nectec.png" alt="โลโก้ NECTEC" />
+            </div>
+            <span class="bento-pill pill-neutral">National Research</span>
+          </div>
+          <div class="bento-content">
+            <h3 class="bento-company-title">NECTEC</h3>
+            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> ปทุมธานี (อุทยานวิทย์ฯ)</p>
+            <div class="bento-tags">
+              <span class="partner-tag tag-role-sec">Cyber Security</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+          <div class="bento-footer">
+            <span class="bento-cta-text">ดูรายละเอียด</span>
+            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
+          </div>
+        </article>
 
-      <!-- Card 8 -->
-      <div class="company-card" onclick="openModal(8)">
-        <div class="card-top">
-          <div class="company-logo"><img src="resources/images/PTT-Digital.png" alt="โลโก้ PTT Digital"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">PTT Digital</h4>
-        <p class="company-location">PTT Digital • กรุงเทพฯ</p>
-        <p class="company-desc">ร่วมวิเคราะห์ข้อมูลและพัฒนาโซลูชันสำหรับธุรกิจพลังงาน...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-business">Business</span>
-          <span class="cat-badge cat-tech">Technology</span>
-        </div>
+        <!-- Card 8: PTT Digital (Compact Tile) -->
+        <article class="bento-card bento-card-compact" onclick="openModal(8)" tabindex="0" role="button" aria-label="ดูรายละเอียด PTT Digital">
+          <div class="bento-top-row">
+            <div class="bento-logo-wrapper">
+              <img src="resources/images/PTT-Digital.png" alt="โลโก้ PTT Digital" />
+            </div>
+            <span class="bento-pill pill-neutral">Energy Tech</span>
+          </div>
+          <div class="bento-content">
+            <h3 class="bento-company-title">PTT Digital</h3>
+            <p class="bento-location"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (วิภาวดี)</p>
+            <div class="bento-tags">
+              <span class="partner-tag tag-role-biz">Business Analyst</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+          </div>
+          <div class="bento-footer">
+            <span class="bento-cta-text">ดูรายละเอียด</span>
+            <span class="bento-arrow-circle"><i class="fa-solid fa-arrow-right"></i></span>
+          </div>
+        </article>
       </div>
-    </div>
   </div>
 </section>
 

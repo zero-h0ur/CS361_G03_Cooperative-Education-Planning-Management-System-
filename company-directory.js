@@ -136,9 +136,31 @@ function createCompanyCardFromAPI(company) {
     tagsDiv.appendChild(createElement('span', 'partner-tag tag-metadata', `สถานะ: ${company.data_status}`));
   }
 
+  function getRoleTagClass(title) {
+    const t = String(title || '').toLowerCase();
+    if (t.includes('ซอฟต์แวร์') || t.includes('software') || t.includes('developer') || t.includes('frontend') || t.includes('backend') || t.includes('web') || t.includes('engineer') || t.includes('tester')) {
+      return 'tag-role-dev';
+    }
+    if (t.includes('ข้อมูล') || t.includes('data') || t.includes('ai') || t.includes('machine learning') || t.includes('nlp')) {
+      return 'tag-role-data';
+    }
+    if (t.includes('design') || t.includes('ux') || t.includes('ui') || t.includes('กราฟิก') || t.includes('creative') || t.includes('researcher')) {
+      return 'tag-role-design';
+    }
+    if (t.includes('security') || t.includes('cyber') || t.includes('cloud') || t.includes('network') || t.includes('ระบบคลาวด์')) {
+      return 'tag-role-sec';
+    }
+    if (t.includes('business') || t.includes('analyst') || t.includes('ธุรกิจ') || t.includes('marketing') || t.includes('การตลาด')) {
+      return 'tag-role-biz';
+    }
+    return '';
+  }
+
   if (Array.isArray(company.positions)) {
     company.positions.filter((position) => position && position.title).forEach((pos) => {
-      tagsDiv.appendChild(createElement('span', 'partner-tag tag-field', pos.title));
+      const roleClass = getRoleTagClass(pos.title);
+      const fullClass = roleClass ? `partner-tag tag-field ${roleClass}` : 'partner-tag tag-field';
+      tagsDiv.appendChild(createElement('span', fullClass, pos.title));
     });
   }
 

@@ -84,24 +84,37 @@
       <p id="searchResultStatus" class="directory-result-status" aria-live="polite"></p>
 
       <div class="directory-controls">
-        <label class="directory-search" for="companySearch">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m20 20-4.4-4.4m2.4-4.1a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"/>
-          </svg>
-          <input id="companySearch" type="search" placeholder="ค้นหาสถานที่ฝึกงาน, สาขาวิชา" autocomplete="off">
-        </label>
-        <label class="directory-location-filter" for="locationFilter">
-          <span>สถานที่</span>
-          <select id="locationFilter">
-            <option value="">ทุกสถานที่</option>
-            <option value="กรุงเทพฯ">กรุงเทพฯ</option>
-            <option value="ชลบุรี">ชลบุรี</option>
-            <option value="นนทบุรี">นนทบุรี</option>
-            <option value="ปทุมธานี">ปทุมธานี</option>
-            <option value="ระยอง">ระยอง</option>
-            <option value="เชียงใหม่">เชียงใหม่</option>
-          </select>
-        </label>
+        <div class="directory-search-row">
+          <label class="directory-search" for="companySearch">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m20 20-4.4-4.4m2.4-4.1a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <input id="companySearch" type="search" placeholder="ค้นหาตำแหน่งงาน เช่น Software Engineer, Data, UX/UI..." autocomplete="off">
+          </label>
+          <label class="directory-location-filter" for="locationFilter">
+            <i class="fa-solid fa-location-dot" style="color: var(--tu-red);"></i>
+            <span>สถานที่:</span>
+            <select id="locationFilter">
+              <option value="">ทุกสถานที่</option>
+              <option value="กรุงเทพฯ">กรุงเทพฯ</option>
+              <option value="ชลบุรี">ชลบุรี</option>
+              <option value="นนทบุรี">นนทบุรี</option>
+              <option value="ปทุมธานี">ปทุมธานี</option>
+              <option value="ระยอง">ระยอง</option>
+              <option value="เชียงใหม่">เชียงใหม่</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- Quick Category Filter Chips -->
+        <div class="directory-category-chips" id="directoryCategoryChips" role="group" aria-label="กรองตามหมวดหมู่สายงาน">
+          <button type="button" class="dir-chip-btn active" data-keyword=""><i class="fa-solid fa-layer-group"></i> ทั้งหมด</button>
+          <button type="button" class="dir-chip-btn" data-keyword="ซอฟต์แวร์"><i class="fa-solid fa-code"></i> Software & Tech</button>
+          <button type="button" class="dir-chip-btn" data-keyword="ข้อมูล"><i class="fa-solid fa-brain"></i> Data & AI</button>
+          <button type="button" class="dir-chip-btn" data-keyword="Designer"><i class="fa-solid fa-pen-nib"></i> UX/UI & Design</button>
+          <button type="button" class="dir-chip-btn" data-keyword="Security"><i class="fa-solid fa-shield-halved"></i> Security & Cloud</button>
+          <button type="button" class="dir-chip-btn" data-keyword="Analyst"><i class="fa-solid fa-chart-pie"></i> Business & Analyst</button>
+        </div>
       </div>
 
       <section id="companyList" class="partner-grid" aria-label="รายชื่อพันธมิตรสถานประกอบการ">
@@ -113,7 +126,7 @@
             <h2>Agoda</h2>
             <div class="partner-tags">
               <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">วิศวกรซอฟต์แวร์</span>
+              <span class="partner-tag tag-field tag-role-dev">วิศวกรซอฟต์แวร์</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
           </div>
@@ -127,7 +140,7 @@
             <h2>G-Able</h2>
             <div class="partner-tags">
               <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">วิศวกรซอฟต์แวร์</span>
+              <span class="partner-tag tag-field tag-role-dev">วิศวกรซอฟต์แวร์</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
           </div>
@@ -141,7 +154,7 @@
             <h2>Gosoft</h2>
             <div class="partner-tags">
               <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">นักวิเคราะห์ข้อมูล</span>
+              <span class="partner-tag tag-field tag-role-data">นักวิเคราะห์ข้อมูล</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
           </div>
@@ -155,7 +168,7 @@
             <h2>Huawei</h2>
             <div class="partner-tags">
               <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">วิศวกรซอฟต์แวร์</span>
+              <span class="partner-tag tag-field tag-role-sec">Cloud & 5G Network</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
           </div>
@@ -169,7 +182,7 @@
             <h2>KBTG</h2>
             <div class="partner-tags">
               <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">วิศวกรระบบคลาวด์</span>
+              <span class="partner-tag tag-field tag-role-sec">วิศวกรระบบคลาวด์</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
           </div>
@@ -183,7 +196,7 @@
             <h2>Krungsri</h2>
             <div class="partner-tags">
               <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">UX/UI Designer</span>
+              <span class="partner-tag tag-field tag-role-design">UX/UI Designer</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
           </div>
@@ -197,7 +210,7 @@
             <h2>NECTEC</h2>
             <div class="partner-tags">
               <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">Cyber Security</span>
+              <span class="partner-tag tag-field tag-role-sec">Cyber Security</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
           </div>
@@ -211,7 +224,7 @@
             <h2>PTT Digital</h2>
             <div class="partner-tags">
               <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">Business Analyst</span>
+              <span class="partner-tag tag-field tag-role-biz">Business Analyst</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
           </div>
@@ -225,7 +238,7 @@
             <h2>CP ALL</h2>
             <div class="partner-tags">
               <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">วิศวกรข้อมูล</span>
+              <span class="partner-tag tag-field tag-role-data">วิศวกรข้อมูล</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
           </div>
@@ -239,7 +252,7 @@
             <h2>SCB Tech X</h2>
             <div class="partner-tags">
               <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">Mobile Developer</span>
+              <span class="partner-tag tag-field tag-role-dev">Mobile Developer</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
           </div>
@@ -253,7 +266,7 @@
             <h2>SCG</h2>
             <div class="partner-tags">
               <span class="partner-tag tag-location">ปากเกร็ด</span>
-              <span class="partner-tag tag-field">Software Tester</span>
+              <span class="partner-tag tag-field tag-role-dev">Software Tester</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
           </div>
@@ -267,7 +280,7 @@
             <h2>Wongnai</h2>
             <div class="partner-tags">
               <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">UX Researcher</span>
+              <span class="partner-tag tag-field tag-role-design">UX Researcher</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
           </div>
@@ -355,6 +368,95 @@
     document.querySelectorAll('.fade-up-init').forEach(el => {
       scrollObserver.observe(el);
     });
+
+    // Typing placeholder animation for Company Directory Search
+    const dirSearchInput = document.getElementById('companySearch');
+    if (dirSearchInput) {
+      const phrases = [
+        "Software Engineer...",
+        "Data Analyst / AI...",
+        "UX/UI Designer...",
+        "Cloud & Cyber Security...",
+        "Agoda, KBTG, SCG...",
+        "ค้นหาตำแหน่งงาน หรือชื่อบริษัท..."
+      ];
+      let pIdx = 0;
+      let cIdx = 0;
+      let isDeleting = false;
+      let isPaused = false;
+      let timeoutId = null;
+
+      function typeDirSearch() {
+        if (isPaused) return;
+        const current = phrases[pIdx];
+        const cursor = "|";
+
+        if (isDeleting) {
+          cIdx--;
+          dirSearchInput.setAttribute('placeholder', current.substring(0, cIdx) + cursor);
+        } else {
+          cIdx++;
+          dirSearchInput.setAttribute('placeholder', current.substring(0, cIdx) + cursor);
+        }
+
+        let delay = isDeleting ? 35 : 75;
+        if (!isDeleting && cIdx === current.length) {
+          delay = 1800;
+          isDeleting = true;
+        } else if (isDeleting && cIdx === 0) {
+          isDeleting = false;
+          pIdx = (pIdx + 1) % phrases.length;
+          delay = 400;
+        }
+
+        timeoutId = setTimeout(typeDirSearch, delay);
+      }
+
+      timeoutId = setTimeout(typeDirSearch, 400);
+
+      dirSearchInput.addEventListener('focus', () => {
+        isPaused = true;
+        clearTimeout(timeoutId);
+        dirSearchInput.setAttribute('placeholder', 'ค้นหาตำแหน่งงาน หรือชื่อบริษัท...');
+      });
+
+      dirSearchInput.addEventListener('blur', () => {
+        if (dirSearchInput.value.trim() === '') {
+          isPaused = false;
+          isDeleting = false;
+          cIdx = 0;
+          timeoutId = setTimeout(typeDirSearch, 400);
+        }
+      });
+    }
+
+    // Quick Category Filter Chips interaction
+    const categoryChips = document.querySelectorAll('#directoryCategoryChips .dir-chip-btn');
+    if (categoryChips.length > 0 && dirSearchInput) {
+      categoryChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+          categoryChips.forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          const keyword = chip.getAttribute('data-keyword') || '';
+          dirSearchInput.value = keyword;
+          dirSearchInput.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+      });
+
+      dirSearchInput.addEventListener('input', () => {
+        const val = dirSearchInput.value.trim();
+        categoryChips.forEach(chip => {
+          const kw = chip.getAttribute('data-keyword') || '';
+          if (kw === '' && val === '') {
+            chip.classList.add('active');
+          } else if (kw !== '' && val.includes(kw)) {
+            chip.classList.add('active');
+          } else {
+            chip.classList.remove('active');
+          }
+        });
+      });
+    }
   </script>
 </body>
 </html>
