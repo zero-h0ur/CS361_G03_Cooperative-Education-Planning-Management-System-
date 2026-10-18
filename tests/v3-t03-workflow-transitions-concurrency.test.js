@@ -115,8 +115,8 @@ const ACTORS = Object.freeze({
 });
 
 /**
- * Creates an transactional in-memory workflow test harness with row-level lock serialization
- * (`SELECT ... FOR UPDATE`) and full transactional snapshot/rollback fidelity.
+ * In-memory harness for HTTP/state-policy tests. PostgreSQL transaction, locking,
+ * rollback and append-only guarantees are verified in v3-t03-postgres.test.js.
  */
 function createWorkflowTestHarness(initialPlans = []) {
   const plansById = new Map();
@@ -250,6 +250,13 @@ function createWorkflowTestHarness(initialPlans = []) {
       return {
         _holdUnlock(unlockFn) {
           heldRowUnlockFns.push(unlockFn);
+          // Take the rollback baseline after the row lock is acquired, so a
+          // losing retry cannot restore data from before the winner committed.
+          txSnapshot = {
+            plans: new Map(Array.from(plansById.entries()).map(([k, v]) => [k, { ...v }])),
+            operations: new Map(Array.from(operationsById.entries()).map(([k, v]) => [k, { ...v }])),
+            auditLength: auditEvents.length
+          };
         },
         async query(sql) {
           const upper = String(sql).trim().toUpperCase();
@@ -379,10 +386,10 @@ function createWorkflowTestHarness(initialPlans = []) {
               link_status: actor.linkStatus,
               active_link_count: 1,
               student_id: actor.studentId,
-              student_number: '6601000101',
+              student_number: 'TEST-WORKFLOW-001',
               full_name: 'นายสมชาย ใจดี',
               preferred_name: 'ชาย',
-              institutional_email: '6601000101@student.university.ac.th',
+              institutional_email: 'workflow-001@student.example.com',
               department: actor.department || 'CPE',
               program: actor.program || 'B.Eng.',
               major: 'Computer Engineering',
@@ -679,6 +686,8 @@ describe('Issue #80 [V3-T03]: Verify workflow transitions, audit and concurrent 
         PLAN_STATES.UNDER_REVIEW
       );
       expect(harness.plansById.get(underReviewPlanId).version).toBe(3);
+      expect(harness.operationsById.size).toBe(0);
+      expect(harness.auditEvents).toHaveLength(0);
     });
   });
 
@@ -815,6 +824,8 @@ describe('Issue #80 [V3-T03]: Verify workflow transitions, audit and concurrent 
         }
       );
       expect(foreignSubmitRes.status).toBe(403);
+      expect(harness.plansById.get(planId)).toMatchObject({ status: PLAN_STATES.DRAFT, version: 1 });
+      expect(harness.operationsById.size).toBe(0);
 
       // Out-of-scope Staff rejected on start-review
       harness.plansById.set(planId, {
@@ -837,6 +848,8 @@ describe('Issue #80 [V3-T03]: Verify workflow transitions, audit and concurrent 
         }
       );
       expect(outScopeRes.status).toBe(403);
+      expect(harness.plansById.get(planId)).toMatchObject({ status: PLAN_STATES.SUBMITTED, version: 2 });
+      expect(harness.operationsById.size).toBe(0);
       expect(harness.auditEvents).toHaveLength(0);
     });
   });

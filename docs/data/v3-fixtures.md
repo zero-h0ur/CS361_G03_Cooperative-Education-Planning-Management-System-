@@ -82,7 +82,7 @@
 * **Out-of-scope Testability Guarantee**: ระบบ Validator ตรวจสอบให้มั่นใจว่า Staff ทุกคนมี Student อย่างน้อย 1 คนที่อยู่นอก Scope ของตนเองเสมอ เพื่อรองรับการทดสอบเคสปฏิเสธสิทธิ์ (403)
 
 ### 3.7 ประวัติการทำงานและ Audit Log (`plan_operations` และ `audit_events`)
-* บันทึกประวัติครบทุก Action หลัก: `SUBMIT_PLAN`, `REVIEW_PLAN`, `APPROVE_PLAN`, `REQUEST_REVISION`, และ `ASSIGN_ADVISOR`
+* บันทึกประวัติครบทุก Action หลักด้วยชื่อเดียวกับที่ระบบเขียนจริง (#54, #63): `PLAN_CREATED`, `PLAN_SUBMITTED`, `PLAN_REVIEW_STARTED`, `PLAN_APPROVED`, `PLAN_RETURNED` และ `ADVISOR_ASSIGNED` (#53)
 * ข้อมูลเป็นแบบ Append-only ไม่ละเมิด Trigger ป้องกันการแก้ไขหรือลบ
 
 ### 3.8 การยืนยันความครบถ้วนของ Schema Columns ระหว่าง Migration 001 และ 002

@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { Pool } = require('pg');
 require('dotenv').config();
@@ -460,6 +461,54 @@ describe('Issue #56 forward-only V3 migration', () => {
       `DELETE FROM plans WHERE id = $1`,
       [IDS.v3Plan]
     )).rejects.toMatchObject({ code: '55000' });
+  });
+
+  test('rolls back PostgreSQL DDL, data, and migration history when a migration fails', async () => {
+    const isolated = await createIsolatedPool('rollback');
+    const migrationsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'coed-v3-rollback-'));
+
+    try {
+      fs.writeFileSync(
+        path.join(migrationsDir, '001_initial_schema.sql'),
+        `
+          CREATE TABLE rollback_probe (id INTEGER PRIMARY KEY);
+          INSERT INTO rollback_probe (id) VALUES (1);
+        `,
+        'utf8'
+      );
+      fs.writeFileSync(
+        path.join(migrationsDir, '002_intentional_failure.sql'),
+        `
+          CREATE TABLE rollback_partial (id INTEGER PRIMARY KEY);
+          INSERT INTO rollback_probe (id) VALUES (2);
+          SELECT * FROM table_that_must_not_exist;
+        `,
+        'utf8'
+      );
+
+      await expect(
+        migrate({
+          pool: isolated.pool,
+          logger: SILENT_LOGGER,
+          migrationsDir,
+        })
+      ).rejects.toThrow();
+
+      const result = await isolated.pool.query(`
+        SELECT
+          to_regclass(current_schema() || '.schema_migrations') AS migration_table,
+          to_regclass(current_schema() || '.rollback_probe') AS committed_table,
+          to_regclass(current_schema() || '.rollback_partial') AS partial_table
+      `);
+      expect(result.rows[0]).toEqual({
+        migration_table: null,
+        committed_table: null,
+        partial_table: null,
+      });
+    } finally {
+      fs.rmSync(migrationsDir, { recursive: true, force: true });
+      await dropIsolatedPool(isolated.schema, isolated.pool);
+    }
   });
 
   test('rejects checksum drift for an applied migration', async () => {
