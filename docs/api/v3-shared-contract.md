@@ -456,6 +456,26 @@ Request body:
 
 > หลัง Plan ถูก Submit ครั้งแรก (`NEEDS_REVISION`) `PATCH /api/v3/plans/:planId` จะล้าง `company_id` / `position_id` เป็น `null` ไม่ได้ (`400`) ตาม Constraint `chk_plans_submittable_fields`
 
+
+### 3.10 Student Plan History: `GET /api/v3/plans/:planId/history` (#76)
+
+ประวัติของ Plan ที่ได้จาก `audit_events` แบบ Append-only ใช้ได้เฉพาะ Student เจ้าของ Plan ผ่าน Action `audit:read_own_plan_history` (#49) Policy กลางตรวจ UUID (`400`), การมีอยู่ (`404`) และ Ownership (`403`) ส่วน Advisor / Staff ได้ `403` (ประวัติสำหรับ Role อื่นอยู่ใน #75 / #77)
+
+Response (`data`) เรียงตามเวลาเก่าไปใหม่:
+
+```json
+[
+  { "event_id": "<uuid>", "action": "PLAN_SUBMITTED", "from_state": "DRAFT", "to_state": "SUBMITTED", "actor_role": "STUDENT", "review_notes": null, "created_at": "2026-10-02T10:00:00.000Z" },
+  { "event_id": "<uuid>", "action": "PLAN_RETURNED", "from_state": "UNDER_REVIEW", "to_state": "NEEDS_REVISION", "actor_role": "STAFF", "review_notes": "กรุณาแนบหนังสือตอบรับ", "created_at": "2026-10-04T13:00:00.000Z" }
+]
+```
+
+- `action` ใช้ชื่อเดียวกับที่ระบบเขียน: `PLAN_CREATED`, `PLAN_DRAFT_UPDATED`, `PLAN_SUBMITTED`, `PLAN_REVIEW_STARTED`, `PLAN_RETURNED`, `PLAN_APPROVED`, `PLAN_CANCELLED`
+- `review_notes` มีค่าเฉพาะ `PLAN_RETURNED` / `PLAN_APPROVED` (#50: Owner อ่าน Review comment ได้) ส่วน Event อื่นเป็น `null` เสมอ
+- ไม่ส่ง `actor_id`, `operation_id`, `correlation_id` หรือ Resource id ออกมา
+- ไม่รับ Query parameter ใดๆ (`400`) และ Method อื่นนอกจาก `GET` ได้ `405`
+- ใช้ Index `idx_audit_events_plan_created`
+
 ---
 
 ## 4. Architectural Boundaries

@@ -8,6 +8,7 @@ import {
   isAllowlistedRoute
 } from './routes.js';
 import { renderStudentDashboardView } from './student/student-dashboard-view.js';
+import { renderStudentPlanView } from './student/student-plan-view.js';
 
 const RETURN_ROUTE_KEY = 'co-ed:return-route';
 const SENSITIVE_QUERY_PARAMS = Object.freeze([
@@ -271,6 +272,7 @@ export function createShellApp({
   storage,
   history = globalThis.history,
   studentProfileClient = null,
+  studentPlanClient = null,
   renderRouteContent
 }) {
   if (
@@ -452,6 +454,15 @@ export function createShellApp({
         onSessionExpired: handleSessionExpired,
         onAccessDenied: (message) => renderForbidden(message),
         onNavigate: navigateToAllowlistedRoute
+      });
+    }
+
+    if (role === 'STUDENT' && route.hash === '#/student/plan' && studentPlanClient) {
+      return renderStudentPlanView({
+        planClient: studentPlanClient,
+        signal,
+        onSessionExpired: handleSessionExpired,
+        onAccessDenied: (message) => renderForbidden(message)
       });
     }
 
