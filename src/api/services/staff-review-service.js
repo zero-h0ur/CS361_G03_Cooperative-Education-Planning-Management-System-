@@ -6,7 +6,7 @@
  * Conforms to Issue #50, #52, #53, #54, #55, and #67.
  */
 
-const { ValidationError } = require('../errors');
+const { ForbiddenError, ValidationError } = require('../errors');
 const {
   StaffReviewRepository,
   REVIEW_QUEUE_STATES,
@@ -216,6 +216,15 @@ function toStaffPlanSummary(row) {
   });
 }
 
+// Detail view (#77): the summary plus the Student's Plan notes, which scoped Staff may read (#50).
+// Review comments are served by the history route, never on the Plan itself.
+function toStaffPlanDetail(row) {
+  return Object.freeze({
+    ...toStaffPlanSummary(row),
+    notes: row.notes ?? null
+  });
+}
+
 function toPagination({ page, pageSize }, total) {
   return {
     page,
@@ -253,6 +262,15 @@ class StaffReviewService {
     const { rows, total } = await this.repository.searchPlans({ staffUserId, reviewQueue: true, ...filters });
     return { items: rows.map(toStaffPlanSummary), pagination: toPagination(filters, total) };
   }
+
+  async getPlanDetail(staffUserId, planId) {
+    const row = await this.repository.findScopedPlan({ staffUserId, planId });
+    // The policy already returned 403/404; a missing row here means scope changed in between
+    if (!row) {
+      throw new ForbiddenError('Access denied.', 'FORBIDDEN');
+    }
+    return toStaffPlanDetail(row);
+  }
 }
 
 module.exports = {
@@ -262,5 +280,6 @@ module.exports = {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
   toStaffStudentSummary,
-  toStaffPlanSummary
+  toStaffPlanSummary,
+  toStaffPlanDetail
 };

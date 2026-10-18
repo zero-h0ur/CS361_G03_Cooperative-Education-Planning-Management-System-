@@ -651,6 +651,8 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
     { method: 'GET', path: '/api/v3/staff/students' },
     { method: 'GET', path: '/api/v3/staff/plans' },
     { method: 'GET', path: '/api/v3/staff/review-queue' },
+    { method: 'GET', path: `/api/v3/staff/plans/${PLANS.planA_UnderReview.id}` },
+    { method: 'GET', path: `/api/v3/staff/plans/${PLANS.planA_UnderReview.id}/history` },
     {
       method: 'POST',
       path: `/api/v3/plans/${PLANS.planA_Submitted.id}/start-review`,

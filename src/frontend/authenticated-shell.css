@@ -769,6 +769,44 @@ a:focus-visible,
   font-size: 0.86rem;
 }
 
+/* Staff review workspace (#77) */
+.staff-queue-filter {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 14px;
+  margin: 20px 0;
+}
+
+.staff-review-confirm {
+  margin-top: 20px;
+  padding: 18px 20px;
+  border: 1px solid #c7d2fe;
+  border-left: 4px solid var(--shell-primary);
+  border-radius: 8px;
+  background: var(--shell-soft);
+}
+
+.staff-review-confirm__title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.staff-review-confirm__title:focus {
+  outline: none;
+}
+
+.staff-review-notes {
+  min-height: 110px;
+  resize: vertical;
+}
+
+@media (max-width: 760px) {
+  .staff-queue-filter {
+    grid-template-columns: 1fr;
+  }
+}
+
 @keyframes shell-pulse {
   50% {
     transform: translateY(-4px);
