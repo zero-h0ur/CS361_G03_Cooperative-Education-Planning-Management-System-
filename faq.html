@@ -3,48 +3,82 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FAQ - COOP-EDU</title>
+  <title>FAQ คำถามที่พบบ่อย - CO-ED TU สหกิจศึกษา มหาวิทยาลัยธรรมศาสตร์</title>
   
+  <link rel="icon" href="resources/images/logomini.png" type="image/png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body class="faq-page">
+
+  <!-- Ambient Blurs -->
+  <div class="blur-blob -top-24 -right-24" aria-hidden="true"></div>
+  <div class="blur-blob-gold top-[500px] -left-28" aria-hidden="true"></div>
 
   <!-- Navigation -->
-<header class="header">
-  <div class="container header-container">
-    <div class="header-main-group">
-      <a href="index.html" class="logo">
-        <img src="resources/images/logo.png" alt="logo" class="nav-logo">
-      </a>
-      <nav class="nav-links">
-        <a href="index.html">หน้าแรก</a>
-        <a href="requirements.html">ข้อกำหนดสหกิจและขั้นตอน</a>
-        <a href="company-directory.html">รายชื่อสถานประกอบการ</a>
-        <a href="faq.html" class="active">คำถามที่พบบ่อย</a>
-      </nav>
-    </div>
+  <header class="header">
+    <div class="container header-container">
+      <div class="header-main-group">
+        <a href="index.html" class="logo" aria-label="CO-ED หน้าแรก">
+          <div class="logo-tu-mark">
+            <img src="resources/images/logomini.png" alt="CO-ED Logo" class="logo-tu-img" />
+          </div>
+          <div class="logo-text-block">
+            <span class="logo-text-main">CO-ED TU</span>
+            <span class="logo-text-sub">ระบบข้อมูลสหกิจศึกษา</span>
+          </div>
+        </a>
+        <nav class="nav-links" aria-label="เมนูหลัก">
+          <a href="index.html">หน้าแรก</a>
+          <a href="requirements.html">ข้อกำหนดสหกิจและขั้นตอน</a>
+          <a href="company-directory.html">รายชื่อสถานประกอบการ</a>
+          <a href="faq.html" class="active" aria-current="page">คำถามที่พบบ่อย</a>
+        </nav>
+      </div>
 
-    <div class="auth-buttons">
-      <a href="app.html" class="btn-login">เข้าสู่ระบบ</a>
+      <div class="auth-buttons">
+        <a href="app.html" class="btn-login">เข้าสู่ระบบ</a>
+      </div>
     </div>
-  </div>
-  <nav class="mobile-nav-links" aria-label="เมนูหลักสำหรับหน้าจอขนาดเล็ก">
-    <a href="index.html">หน้าแรก</a>
-    <a href="requirements.html">ข้อกำหนดและขั้นตอน</a>
-    <a href="company-directory.html">สถานประกอบการ</a>
-    <a href="faq.html" class="active" aria-current="page">คำถามที่พบบ่อย</a>
-  </nav>
-</header>
+    <nav class="mobile-nav-links" aria-label="เมนูหลักสำหรับหน้าจอขนาดเล็ก">
+      <a href="index.html">หน้าแรก</a>
+      <a href="requirements.html">ข้อกำหนดและขั้นตอน</a>
+      <a href="company-directory.html">สถานประกอบการ</a>
+      <a href="faq.html" class="active" aria-current="page">คำถามที่พบบ่อย</a>
+    </nav>
+  </header>
 
   <!-- FAQ Header  -->
-  <section class="faq-hero">
-     <h2>คำถามที่พบบ่อย (FAQ)</h2>
-     <div class="faq-search-box" style="position: relative;">
-       <i class="fa-solid fa-magnifying-glass" style="color: #64748B; padding: 0 16px;"></i>
-       <input type="text" id="faq-search-input" placeholder="ค้นหาหัวข้อคำถามที่คุณต้องการ...">
-       <i class="fa-solid fa-xmark" id="faq-clear-search" style="display: none; cursor: pointer; color: #94A3B8; padding: 0 16px;"></i>
-     </div>
+  <section class="faq-hero dot-grid">
+    <div class="container" style="text-align: center;">
+      <div class="hero-badge fade-up-init" style="margin-bottom: 16px;">
+        <i class="fa-solid fa-circle-question"></i>
+        <span>HELP & FAQ CENTER</span>
+      </div>
+      <h2 class="fade-up-init" style="margin-bottom: 14px;">
+        คำถามที่พบบ่อย <span class="hero-highlight" style="font-family: var(--font-serif); font-style: italic; color: var(--tu-red);">
+          (FAQ)
+          <svg class="hero-underline-svg" viewBox="0 0 340 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path class="hero-underline-path" d="M4 18C75 6 245 4 336 17" stroke="url(#heroCoralGradFaq)" stroke-width="6" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="heroCoralGradFaq" x1="0" y1="0" x2="340" y2="0" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#C8102E" />
+                <stop offset="0.65" stop-color="#E51838" />
+                <stop offset="1" stop-color="#F1B521" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </span>
+      </h2>
+      <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 15px;" class="fade-up-init">
+        รวบรวมข้อสงสัยและคำแนะนำที่พบบ่อยเกี่ยวกับการเข้าร่วมโครงการสหกิจศึกษา
+      </p>
+      <div class="faq-search-box fade-up-init" style="position: relative;">
+        <i class="fa-solid fa-magnifying-glass" style="color: #64748B; padding: 0 16px;"></i>
+        <input type="text" id="faq-search-input" placeholder="ค้นหาหัวข้อคำถามที่คุณต้องการ...">
+        <i class="fa-solid fa-xmark" id="faq-clear-search" style="display: none; cursor: pointer; color: #94A3B8; padding: 0 16px;"></i>
+      </div>
+    </div>
   </section>
   
   <!-- FAQ Content Section  -->
@@ -145,9 +179,11 @@
   <footer class="footer">
     <div class="container footer-grid">
       <div>
-        <div class="footer-logo">
-          <i class="fa-solid fa-graduation-cap"></i>
-          <span>CO-ED</span>
+        <div class="footer-logo" style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+          <div class="logo-tu-mark" style="width: 36px; height: 36px; border-radius: 10px; background: #FFF;">
+            <img src="resources/images/logomini.png" alt="CO-ED Logo" style="width: 24px; height: 24px; object-fit: contain;" />
+          </div>
+          <span style="font-family: var(--font-serif); font-size: 22px; font-weight: 700; color: #fff;">CO-ED TU</span>
         </div>
         <p style="max-width: 280px; line-height: 1.6;">
           ระบบสารสนเทศเพื่อการจัดการข้อมูลสหกิจศึกษา ช่วยให้นักศึกษาเตรียมความพร้อมสู่การทำงานจริงได้อย่างมีประสิทธิภาพ
@@ -177,7 +213,7 @@
     </div>
 
     <div class="container footer-bottom">
-      <p>© 2024 CO-ED Cooperative Education. All rights reserved.</p>
+      <p>© 2026 CO-ED TU Cooperative Education. All rights reserved.</p>
       <div class="social-links">
         <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
         <a href="#"><i class="fa-brands fa-youtube"></i></a>
@@ -240,7 +276,7 @@
             <li style="margin-bottom: 12px;">มีความประพฤติเรียบร้อย ไม่เคยถูกลงโทษทางวินัยนักศึกษา</li>
             <li style="margin-bottom: 12px;">รับทราบเกณฑ์และลงนามยอมรับว่าจะปฏิบัติตามเงื่อนไขและกระบวนการสหกิจศึกษาอย่างครบถ้วน</li>
           </ol>
-          <div style="background-color: #F8FAFC; padding: 20px; border-left: 4px solid #4B48E5; border-radius: 4px;">
+          <div style="background-color: #F8FAFC; padding: 20px; border-left: 4px solid var(--tu-red); border-radius: 4px;">
             <p style="color: #334155; font-size: 0.95rem; margin-bottom: 12px; line-height: 1.6;">
               <strong>*** หมายเหตุสำคัญ:</strong> นักศึกษาที่ผ่านคุณสมบัติข้างต้นมีสิทธิในการสมัครเพื่อคัดเลือกเข้าแผนสหกิจฯ เท่านั้น และจะไม่พิจารณานักศึกษาที่ไม่สามารถตรวจสอบได้ว่ามีคุณสมบัติครบถ้วน การคัดเลือกนักศึกษาเข้าแผนสหกิจฯ จะทำโดยคณะกรรมการบริหารสหกิจฯ ของสาขาวิชาฯ จำนวนของนักศึกษาที่ได้รับการคัดเลือกขึ้นอยู่กับคุณสมบัติของนักศึกษา และภาระงานของอาจารย์ในสาขาวิชาฯ ผลการคัดเลือกจากคณะกรรมการบริหารสหกิจฯ ถือเป็นที่สิ้นสุด ***
             </p>
@@ -340,6 +376,29 @@
         });
         clearBtn.style.alignItems = 'center';
       }
+
+      window.addEventListener('scroll', () => {
+        const header = document.querySelector('.header');
+        if (header) {
+          if (window.scrollY > 30) {
+            header.classList.add('scrolled');
+          } else {
+            header.classList.remove('scrolled');
+          }
+        }
+      });
+
+      const scrollObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('fade-up-active');
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+      document.querySelectorAll('.fade-up-init').forEach(el => {
+        scrollObserver.observe(el);
+      });
     });
   </script>
 </body>

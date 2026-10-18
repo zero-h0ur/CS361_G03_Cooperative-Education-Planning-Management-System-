@@ -12,3 +12,9 @@
 node_modules/
 .env
 .env.*.local
+
+# Agents, Superdesign, and Skill configs
+.agents/
+.agents
+skills-lock.json
+.superdesign/

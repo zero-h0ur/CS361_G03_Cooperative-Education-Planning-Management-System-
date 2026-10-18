@@ -383,5 +383,20 @@ loadMoreButton.onclick = () => {
   }
 };
 
+// Read initial query parameters from URL if present
+if (typeof window !== 'undefined' && window.location && window.location.search) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialSearch = urlParams.get('search');
+  const initialLocation = urlParams.get('location');
+  if (initialSearch && companySearch) {
+    companySearch.value = initialSearch;
+    state.query = initialSearch.trim();
+  }
+  if (initialLocation && locationFilter) {
+    locationFilter.value = initialLocation;
+    state.location = initialLocation;
+  }
+}
+
 // Initial Load
 fetchCompanies(false);
