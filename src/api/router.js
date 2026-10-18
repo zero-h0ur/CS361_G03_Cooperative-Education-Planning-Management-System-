@@ -25,38 +25,45 @@ class Router {
   }
 
   /**
-   * Registers a route with method, pattern (RegExp or string), and handler.
+   * Registers a route with method, pattern (RegExp or string), optional
+   * route-scoped middlewares, and a final handler.
+   * Example: router.get('/api/v3/me', authenticate, handler)
    */
-  register(method, pattern, handler) {
+  register(method, pattern, ...handlers) {
+    const handler = handlers.pop();
     if (typeof handler !== 'function') {
       throw new TypeError('Route handler must be a function.');
+    }
+    if (handlers.some(middleware => typeof middleware !== 'function')) {
+      throw new TypeError('Middleware must be a function.');
     }
     this.routes.push({
       method: method.toUpperCase(),
       pattern,
+      middlewares: handlers,
       handler
     });
     return this;
   }
 
-  get(pattern, handler) {
-    return this.register('GET', pattern, handler);
+  get(pattern, ...handlers) {
+    return this.register('GET', pattern, ...handlers);
   }
 
-  post(pattern, handler) {
-    return this.register('POST', pattern, handler);
+  post(pattern, ...handlers) {
+    return this.register('POST', pattern, ...handlers);
   }
 
-  put(pattern, handler) {
-    return this.register('PUT', pattern, handler);
+  put(pattern, ...handlers) {
+    return this.register('PUT', pattern, ...handlers);
   }
 
-  patch(pattern, handler) {
-    return this.register('PATCH', pattern, handler);
+  patch(pattern, ...handlers) {
+    return this.register('PATCH', pattern, ...handlers);
   }
 
-  delete(pattern, handler) {
-    return this.register('DELETE', pattern, handler);
+  delete(pattern, ...handlers) {
+    return this.register('DELETE', pattern, ...handlers);
   }
 
   /**
@@ -116,9 +123,16 @@ class Router {
         throw new MethodNotAllowedError('Method not allowed.', allowedMethods, 'METHOD_NOT_ALLOWED');
       }
 
-      // 3. Execute middlewares
-      for (const middleware of this.middlewares) {
-        await middleware(request, response, { pathname, url, method, dal });
+      // 3. Execute global middlewares, then route-scoped middlewares (e.g. authentication)
+      const middlewares = [...this.middlewares, ...methodMatch.route.middlewares];
+      for (const middleware of middlewares) {
+        await middleware(request, response, {
+          pathname,
+          url,
+          method,
+          params: methodMatch.params,
+          dal
+        });
         // If middleware ended the response (e.g. auth failure), stop
         if (response.writableEnded) {
           return;

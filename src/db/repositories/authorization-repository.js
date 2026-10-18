@@ -6,6 +6,9 @@
  */
 
 const { getPool } = require('../connection');
+const { ServiceUnavailableError } = require('../../api/errors');
+
+const UNAVAILABLE_DB_ERROR_CODES = new Set(['ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', '42P01']);
 
 class AuthorizationRepository {
   /**
@@ -20,6 +23,18 @@ class AuthorizationRepository {
     return this.pool || getPool();
   }
 
+  async query(text, params) {
+    try {
+      return await this.getDbPool().query(text, params);
+    } catch (err) {
+      // Match DAL behavior: connection/schema failures are 503, anything else is a sanitized 500
+      if (UNAVAILABLE_DB_ERROR_CODES.has(err?.code)) {
+        throw new ServiceUnavailableError();
+      }
+      throw err;
+    }
+  }
+
   async findActiveAdvisorAssignment({
     advisorUserId,
     studentId,
@@ -27,7 +42,6 @@ class AuthorizationRepository {
     semester = null,
     timestampIso
   }) {
-    const pool = this.getDbPool();
     const query = `
       SELECT
         aa.id,
@@ -56,7 +70,7 @@ class AuthorizationRepository {
       LIMIT 1
     `;
 
-    const result = await pool.query(query, [
+    const result = await this.query(query, [
       advisorUserId,
       studentId,
       academicYear,
@@ -73,7 +87,6 @@ class AuthorizationRepository {
     planId = null,
     isReviewAction = false
   }) {
-    const pool = this.getDbPool();
     const query = `
       SELECT
         ss.id AS scope_id,
@@ -115,7 +128,7 @@ class AuthorizationRepository {
       LIMIT 1
     `;
 
-    const result = await pool.query(query, [
+    const result = await this.query(query, [
       staffUserId,
       studentId,
       planId,
@@ -126,7 +139,6 @@ class AuthorizationRepository {
   }
 
   async listActiveStaffScopes(staffUserId) {
-    const pool = this.getDbPool();
     const query = `
       SELECT
         ss.id,
@@ -142,12 +154,11 @@ class AuthorizationRepository {
       ORDER BY ss.department ASC, ss.program ASC NULLS FIRST, ss.academic_year ASC NULLS FIRST
     `;
 
-    const result = await pool.query(query, [staffUserId]);
+    const result = await this.query(query, [staffUserId]);
     return result?.rows || [];
   }
 
   async listActiveAdvisorAssignments(advisorUserId, timestampIso) {
-    const pool = this.getDbPool();
     const query = `
       SELECT
         aa.id,
@@ -168,12 +179,11 @@ class AuthorizationRepository {
       ORDER BY aa.academic_year DESC, aa.semester DESC, aa.student_id ASC
     `;
 
-    const result = await pool.query(query, [advisorUserId, timestampIso]);
+    const result = await this.query(query, [advisorUserId, timestampIso]);
     return result?.rows || [];
   }
 
   async findPlanById(planId) {
-    const pool = this.getDbPool();
     const query = `
       SELECT
         p.id AS plan_id,
@@ -190,7 +200,7 @@ class AuthorizationRepository {
       LIMIT 1
     `;
 
-    const result = await pool.query(query, [planId]);
+    const result = await this.query(query, [planId]);
     return result?.rows?.[0] || null;
   }
 }

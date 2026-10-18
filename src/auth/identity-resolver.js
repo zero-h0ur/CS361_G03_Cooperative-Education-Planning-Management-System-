@@ -4,10 +4,13 @@
  * Conforms to Issue #48, #49, #50, #51, #56, and #61.
  */
 
-const { ForbiddenError } = require('../api/errors');
+const { ForbiddenError, ServiceUnavailableError } = require('../api/errors');
 const { getPool } = require('../db/connection');
 
-const ALLOWED_ROLES = new Set(['STUDENT', 'ADVISOR', 'STAFF', 'ADMIN', 'SYSTEM']);
+// SYSTEM is a non-interactive actor (e.g. audit/seed) and must never authenticate via token (#49).
+const ALLOWED_ROLES = new Set(['STUDENT', 'ADVISOR', 'STAFF', 'ADMIN']);
+
+const UNAVAILABLE_DB_ERROR_CODES = new Set(['ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', '42P01']);
 
 function createForbidden(message, reason) {
   const err = new ForbiddenError(message, reason || 'FORBIDDEN');
@@ -113,7 +116,16 @@ class IdentityResolver {
         AND eil.external_subject = $2
     `;
 
-    const res = await pool.query(query, [issuer, subject]);
+    let res;
+    try {
+      res = await pool.query(query, [issuer, subject]);
+    } catch (err) {
+      // Match DAL behavior: connection/schema failures are 503, anything else is a sanitized 500
+      if (UNAVAILABLE_DB_ERROR_CODES.has(err?.code)) {
+        throw new ServiceUnavailableError();
+      }
+      throw err;
+    }
 
     // 1. Identity not linked
     if (!res?.rows || res.rows.length === 0) {
