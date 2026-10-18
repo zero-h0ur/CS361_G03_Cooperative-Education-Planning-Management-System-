@@ -63,33 +63,36 @@ describe('Data Access Layer', () => {
   describe('Seed Reset Safety', () => {
     it('rejects reset when ALLOW_DB_RESET is not true', async () => {
       const originalFlag = process.env.ALLOW_DB_RESET;
-      process.env.ALLOW_DB_RESET = 'false';
-
-      await expect(seed()).rejects.toThrow('Seed/Reset requires ALLOW_DB_RESET=true flag.');
-
-      process.env.ALLOW_DB_RESET = originalFlag;
+      try {
+        process.env.ALLOW_DB_RESET = 'false';
+        await expect(seed()).rejects.toThrow(/ALLOW_DB_RESET=true flag is required/);
+      } finally {
+        process.env.ALLOW_DB_RESET = originalFlag;
+      }
     });
 
     it('rejects test reset without TEST_DATABASE_URL', async () => {
       const originalTestUrl = process.env.TEST_DATABASE_URL;
-      delete process.env.TEST_DATABASE_URL;
-
-      await expect(seed()).rejects.toThrow(
-        'Test reset requires a TEST_DATABASE_URL that differs from DATABASE_URL.'
-      );
-
-      process.env.TEST_DATABASE_URL = originalTestUrl;
+      try {
+        delete process.env.TEST_DATABASE_URL;
+        await expect(seed()).rejects.toThrow(
+          'Test reset requires a TEST_DATABASE_URL that differs from DATABASE_URL.'
+        );
+      } finally {
+        process.env.TEST_DATABASE_URL = originalTestUrl;
+      }
     });
 
     it('rejects test reset when TEST_DATABASE_URL matches DATABASE_URL', async () => {
       const originalTestUrl = process.env.TEST_DATABASE_URL;
-      process.env.TEST_DATABASE_URL = process.env.DATABASE_URL;
-
-      await expect(seed()).rejects.toThrow(
-        'Test reset requires a TEST_DATABASE_URL that differs from DATABASE_URL.'
-      );
-
-      process.env.TEST_DATABASE_URL = originalTestUrl;
+      try {
+        process.env.TEST_DATABASE_URL = process.env.DATABASE_URL;
+        await expect(seed()).rejects.toThrow(
+          'Test reset requires a TEST_DATABASE_URL that differs from DATABASE_URL.'
+        );
+      } finally {
+        process.env.TEST_DATABASE_URL = originalTestUrl;
+      }
     });
   });
 
