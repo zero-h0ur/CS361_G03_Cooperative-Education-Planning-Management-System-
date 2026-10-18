@@ -110,13 +110,22 @@ function mapError(error, dal = {}) {
     };
   }
 
-  // 4. DAL Database errors -> 503 or 500
+  // 4. DAL Database errors -> 503, 409 (unique violation) or 500
   if (dal.DALError && error instanceof dal.DALError) {
     if (error.code === 'CONNECTION_ERROR' || error.code === 'SCHEMA_NOT_READY') {
       return {
         status: 503,
         code: error.code,
         message: 'Service temporarily unavailable.',
+        headers: {},
+        details: null
+      };
+    }
+    if (error.code === 'UNIQUE_VIOLATION') {
+      return {
+        status: 409,
+        code: 'CONFLICT',
+        message: 'Resource conflict or concurrent update.',
         headers: {},
         details: null
       };

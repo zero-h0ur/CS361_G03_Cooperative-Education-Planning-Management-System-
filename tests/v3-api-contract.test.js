@@ -204,6 +204,21 @@ describe('Issue #55 - V3 Modular API and Shared Response/Error Contract', () => 
         headers: {},
         details: null
       });
+
+      const duplicate = new mockDal.DALError('Unique constraint violation.', 'UNIQUE_VIOLATION');
+      expect(mapError(duplicate, mockDal)).toEqual({
+        status: 409,
+        code: 'CONFLICT',
+        message: 'Resource conflict or concurrent update.',
+        headers: {},
+        details: null
+      });
+
+      const otherConstraint = new mockDal.DALError('Check constraint violation.', 'CONSTRAINT_VIOLATION');
+      expect(mapError(otherConstraint, mockDal)).toMatchObject({
+        status: 500,
+        code: 'INTERNAL_ERROR'
+      });
     });
   });
 
@@ -269,6 +284,15 @@ describe('Issue #55 - V3 Modular API and Shared Response/Error Contract', () => 
       expect(res.body).toEqual({
         error: { code: 'ROUTE_NOT_FOUND', message: 'Route not found.' }
       });
+    });
+
+    it('returns 405 with Allow: GET for non-GET requests to unregistered routes (V2 compatibility)', async () => {
+      const router = new Router();
+      const res = createMockResponse();
+      await router.handle({ method: 'POST', url: '/api/unknown' }, res);
+      expect(res.statusCode).toBe(405);
+      expect(res.headers.Allow).toBe('GET');
+      expect(res.body.error.code).toBe('METHOD_NOT_ALLOWED');
     });
 
     it('executes middleware pipeline and respects early termination', async () => {
