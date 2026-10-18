@@ -307,7 +307,6 @@ describe('Issue #60 - Anonymized V3 Fixtures and Destructive-Seed Guards', () =>
 
         // Student 1
         const studentCtx = await resolver.resolveIdentity(issuer, 'mock-sub-student-001');
-        console.log(JSON.stringify(studentCtx, null, 2));
         expect(studentCtx.role).toBe('STUDENT');
         expect(studentCtx.userId).toBe('70000000-0000-4000-8000-000000000001');
         expect(studentCtx.studentId).toBe('40000000-0000-4000-8000-000000000101');
