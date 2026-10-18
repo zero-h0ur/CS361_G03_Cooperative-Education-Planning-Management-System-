@@ -12,6 +12,8 @@ await build({
   entryPoints: [
     resolve(workspace, 'src/frontend/auth/auth-errors.js'),
     resolve(workspace, 'src/frontend/auth/session-client.js'),
+    resolve(workspace, 'src/frontend/student/profile-client.js'),
+    resolve(workspace, 'src/frontend/student/student-dashboard-view.js'),
     resolve(workspace, 'src/frontend/shell-app.js')
   ],
   bundle: true,

@@ -384,6 +384,258 @@ a:focus-visible,
   overflow-wrap: anywhere;
 }
 
+.student-workspace {
+  display: grid;
+  gap: 24px;
+  margin-top: 38px;
+}
+
+.student-card {
+  padding: 28px 30px;
+  border: 1px solid var(--shell-line);
+  border-radius: 12px;
+  background: var(--shell-surface);
+  box-shadow: 0 18px 45px -35px rgba(23, 32, 51, 0.45);
+}
+
+.student-card__eyebrow {
+  margin: 0 0 8px;
+  color: var(--shell-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.student-card__title {
+  margin: 0;
+  font-size: 1.24rem;
+  line-height: 1.35;
+}
+
+.student-card__description {
+  margin: 10px 0 0;
+  color: var(--shell-muted);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.student-dashboard-summary {
+  display: grid;
+  gap: 20px;
+  border-color: #d7dcff;
+  background: linear-gradient(135deg, #ffffff 0%, #f6f8ff 100%);
+}
+
+.student-dashboard-summary__greeting {
+  margin: 8px 0 0;
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: var(--shell-ink);
+}
+
+.student-dashboard-summary__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.student-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.student-badge--status {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.student-badge--neutral {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.student-dashboard-summary__cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--shell-line);
+}
+
+.student-dashboard-summary__cta-copy {
+  margin: 0;
+  max-width: 34rem;
+  color: var(--shell-muted);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.student-dashboard-summary__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.student-profile-official__notice {
+  margin: 10px 0 20px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid var(--shell-line);
+  color: var(--shell-muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.student-profile-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px 22px;
+  margin: 0;
+}
+
+.student-profile-list__item {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fbfcfe;
+  border: 1px solid #edf1f7;
+}
+
+.student-profile-list__term {
+  color: var(--shell-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.student-profile-list__detail {
+  margin: 4px 0 0;
+  font-size: 0.96rem;
+  font-weight: 600;
+  color: var(--shell-ink);
+  overflow-wrap: anywhere;
+}
+
+.student-profile-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.student-profile-feedback__text {
+  margin: 0;
+  font-weight: 500;
+}
+
+.student-profile-feedback--status {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.student-profile-feedback--warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.student-profile-feedback--error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.student-profile-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.student-form__field {
+  display: grid;
+  gap: 8px;
+}
+
+.student-form__label {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--shell-ink);
+}
+
+.student-form__input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--shell-ink);
+  font: inherit;
+  font-size: 0.96rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.student-form__input:focus {
+  outline: none;
+  border-color: var(--shell-primary);
+  box-shadow: 0 0 0 3px rgba(75, 72, 229, 0.18);
+}
+
+.student-form__input[aria-invalid="true"] {
+  border-color: #dc2626;
+  background: #fffafa;
+}
+
+.student-form__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--shell-muted);
+  font-size: 0.8rem;
+}
+
+.student-form__hint {
+  margin: 0;
+}
+
+.student-form__counter {
+  font-family: 'Inter', sans-serif;
+  white-space: nowrap;
+}
+
+.student-form__error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.student-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.shell-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
 @keyframes shell-pulse {
   50% {
     transform: translateY(-4px);

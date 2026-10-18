@@ -7,6 +7,7 @@ import {
   getRoutesForRole,
   isAllowlistedRoute
 } from './routes.js';
+import { renderStudentDashboardView } from './student/student-dashboard-view.js';
 
 const RETURN_ROUTE_KEY = 'co-ed:return-route';
 const SENSITIVE_QUERY_PARAMS = Object.freeze([
@@ -276,6 +277,7 @@ export function createShellApp({
   eventTarget,
   storage,
   history = globalThis.history,
+  studentProfileClient = null,
   renderRouteContent
 }) {
   if (
@@ -423,6 +425,42 @@ export function createShellApp({
     renderExpired();
   }
 
+  function navigateToAllowlistedRoute(targetHash) {
+    if (!isAllowlistedRoute(targetHash)) {
+      return;
+    }
+    const changed = location.hash !== targetHash;
+    location.hash = targetHash;
+    if (changed) {
+      renderCurrentRoute();
+    }
+  }
+
+  function resolveRouteBody({ role, route, signal }) {
+    if (typeof renderRouteContent === 'function') {
+      return renderRouteContent({
+        role,
+        route,
+        signal,
+        onSessionExpired: handleSessionExpired,
+        onAccessDenied: (message) => renderForbidden(message),
+        onNavigate: navigateToAllowlistedRoute
+      });
+    }
+
+    if (role === 'STUDENT' && route.hash === '#/student/profile' && studentProfileClient) {
+      return renderStudentDashboardView({
+        profileClient: studentProfileClient,
+        signal,
+        onSessionExpired: handleSessionExpired,
+        onAccessDenied: (message) => renderForbidden(message),
+        onNavigate: navigateToAllowlistedRoute
+      });
+    }
+
+    return null;
+  }
+
   function renderCurrentRoute() {
     if (!currentRole) {
       return;
@@ -438,20 +476,11 @@ export function createShellApp({
     const controller = new AbortController();
     routeController = controller;
 
-    const customBody = typeof renderRouteContent === 'function'
-      ? renderRouteContent({
-        role: currentRole,
-        route,
-        signal: controller.signal,
-        onSessionExpired: handleSessionExpired,
-        onAccessDenied: (message) => renderForbidden(message),
-        onNavigate: (targetHash) => {
-          if (isAllowlistedRoute(targetHash)) {
-            location.hash = targetHash;
-          }
-        }
-      })
-      : null;
+    const customBody = resolveRouteBody({
+      role: currentRole,
+      route,
+      signal: controller.signal
+    });
 
     const { layout, main } = createProtectedLayout({
       role: currentRole,
