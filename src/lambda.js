@@ -11,8 +11,8 @@ function buildRequestUrl(event = {}) {
   return rawQueryString ? `${rawPath}?${rawQueryString}` : rawPath;
 }
 
-function createLambdaHandler({ dal } = {}) {
-  const requestHandler = createRequestHandler(dal);
+function createLambdaHandler({ dal, ...options } = {}) {
+  const requestHandler = createRequestHandler(dal, options);
 
   return async function lambdaHandler(event = {}) {
     const method = event.requestContext?.http?.method || event.httpMethod || 'GET';
