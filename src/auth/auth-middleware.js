@@ -31,11 +31,15 @@ function freezeAttachedContext(request) {
  * @param {TokenValidator} [options.tokenValidator]
  * @param {IdentityResolver} [options.identityResolver]
  * @param {boolean} [options.required=true]
+ * @param {boolean} [options.allowBearerFallback=false] Verify raw Bearer tokens in-process when
+ *   no API Gateway authorizer claims exist. Off by default: per #48, Lambda trusts identity only
+ *   from requestContext.authorizer.jwt.claims. Enable only for local development or tests.
  */
 function createAuthMiddleware(options = {}) {
   const tokenValidator = options.tokenValidator || new TokenValidator();
   const identityResolver = options.identityResolver || new IdentityResolver();
   const required = options.required ?? true;
+  const allowBearerFallback = options.allowBearerFallback ?? false;
 
   return async function authMiddleware(request, response, context = {}) {
     try {
@@ -49,8 +53,8 @@ function createAuthMiddleware(options = {}) {
         ? authorizerJwt.scopes
         : null;
 
-      // 2. Otherwise extract Bearer token from Authorization header
-      const rawToken = extractBearerToken(request);
+      // 2. Otherwise extract Bearer token from Authorization header (only when fallback is enabled)
+      const rawToken = allowBearerFallback ? extractBearerToken(request) : null;
       const hasAuthHeader = hasAuthorizationHeader(request);
 
       if (!authorizerClaims && !rawToken) {
