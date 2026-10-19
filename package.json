@@ -34,7 +34,7 @@
     "test:fixtures": "node --test tests/v3-dataset.test.mjs && jest --runInBand tests/v3-fixtures.test.js",
     "test:v3-t01": "node --test tests/v3-dataset.test.mjs && jest --runInBand tests/v3-fixtures.test.js tests/v3-t01-migrations-constraints-fixtures.test.js tests/v3-migration.test.js",
     "test:dal": "jest --runInBand tests/dal.test.js",
-    "test:frontend": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/company-directory.test.js tests/authenticated-session.test.js tests/authenticated-shell.test.js tests/login-logout-session-ux.test.js tests/student-dashboard-profile.test.js tests/student-plan-submission-ux.test.js tests/student-plan-editor.test.js tests/advisor-assigned-ui.test.js tests/staff-review-workspace-ui.test.js tests/staff-student-management.test.js",
+    "test:frontend": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/company-directory.test.js tests/authenticated-session.test.js tests/authenticated-shell.test.js tests/login-logout-session-ux.test.js tests/student-dashboard-profile.test.js tests/student-plan-submission-ux.test.js tests/student-plan-editor.test.js tests/advisor-assigned-ui.test.js tests/staff-review-workspace-ui.test.js tests/staff-student-management.test.js tests/navbar-auth.test.js",
     "test:staff-ui": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/staff-student-management.test.js",
     "test:migration": "jest --runInBand tests/v3-migration.test.js tests/v3-t01-migrations-constraints-fixtures.test.js",
     "test:deployment": "node --test tests/deployed-v2.test.mjs",

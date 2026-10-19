@@ -109,6 +109,21 @@ describe('authenticated V3 shell and route guards', () => {
     expect(context.root.textContent).toContain('ไม่พบ Route นี้ในรายการที่ระบบอนุญาต');
   });
 
+  it.each([
+    ['', '#/student/profile'],
+    ['#', '#/student/profile'],
+    ['#/', '#/student/profile']
+  ])('redirects root or empty hash %j directly to the default role route without denying access', async (hash, expectedHash) => {
+    const context = setup({ hash, session: { role: 'STUDENT' } });
+
+    await context.app.start();
+
+    expect(context.location.hash).toBe(expectedHash);
+    expect(context.root.textContent).not.toContain('ไม่มีสิทธิ์เข้าถึง');
+    expect(context.root.textContent).not.toContain('ไม่พบ Route นี้ในรายการที่ระบบอนุญาต');
+    expect(context.root.querySelector('h1').textContent).toBe('ข้อมูลนักศึกษา');
+  });
+
   it('updates the Student view only after an allowlisted hash change', async () => {
     const context = setup({ hash: '#/student/profile' });
     await context.app.start();
