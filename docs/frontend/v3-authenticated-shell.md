@@ -109,9 +109,11 @@ Access Token, Refresh Token หรือ Credential ใด ๆ ใน Environmen
 frontend artifact
 
 Strict build (`CO_ED_REQUIRE_AUTH_CONFIG=1`) ทำให้ Build ล้มเหลวเมื่อค่าที่จำเป็นไม่ครบ
-แทนการ Deploy หน้า Login ที่ตั้งค่าผิด **ตอนนี้ปิดไว้ชั่วคราวใน `amplify.yml`** จนกว่า
-รายการในหัวข้อ "สิ่งที่ต้องทำใน AWS Console" จะเสร็จ ระหว่างนี้ `app.html` แสดงสถานะ
-Configuration required แบบ Fail-closed ส่วนหน้า Public ยัง Deploy ได้ตามปกติ
+แทนการ Deploy หน้า Login ที่ตั้งค่าผิด เปิดใช้งานใน `amplify.yml` สำหรับการ Deploy
+หลัง rollout #82 โดย main และแต่ละ authenticated preview ต้องมี Public client
+configuration ของ Origin ตัวเองก่อน Build ห้ามใช้ Client secret หรือ Database
+credentials ใน Frontend environment การรัน Build เองโดยไม่เปิด Strict mode
+ยังแสดง Configuration required แบบ Fail-closed เมื่อค่า Login ไม่ครบ
 
 Cognito App Client ต้อง Allowlist URL ต่อไปนี้ให้ตรงกับ `CO_ED_APP_ORIGIN`:
 
@@ -174,31 +176,36 @@ role ถูก Bundle เข้า Production
 Keyboard navigation และหน้าจอ Mobile/Tablet/Desktop พร้อมยืนยันว่า Public Company
 Directory ยังเปิดแบบ Anonymous ได้
 
-## สิ่งที่ต้องทำใน AWS Console (ค้างอยู่หลัง Merge)
+## AWS configuration และผล main rollout (#82)
 
-PR นี้ Merge ก่อนที่รายการด้านล่างจะเสร็จ โดยปิด Strict build ไว้ชั่วคราว รายการนี้แก้ด้วยโค้ดใน
-Repository ไม่ได้ ต้องให้ผู้ดูแล AWS ทำให้เสร็จ ระหว่างนี้ Login บน Production ยังใช้งานไม่ได้
+PR #94 เคย Merge โดยปิด Strict build ใน `amplify.yml` ชั่วคราวเพื่อรอ AWS configuration
+ใน rollout #82 ผู้ดูแลตั้งค่า Cognito และ main environment แล้ว และ Main Job 51 ผ่านครบ
+BUILD/DEPLOY/VERIFY ผู้ดูแลยืนยัน Login/Logout ทั้ง Student และ Staff บน main แล้ว
+รายละเอียด source/hash, screenshots, DB verification และ rollback อยู่ใน
+[main rollout evidence](../operations/v3-main-rollout.md)
 
-สถานะ:
+สถานะหลักฐาน Job 51 (ไม่ใช่การรับรอง UI ที่เปลี่ยนภายหลังโดยอัตโนมัติ):
 
-- [ ] 1. อัปเดต Callback และ Sign-out URL ของ Cognito App Client
-- [ ] 2. ตั้ง Environment variables ใน Amplify Hosting
-- [ ] 3. เปิด Strict build กลับใน `amplify.yml`
-- [ ] 4. Smoke test หลัง Deploy
+- [x] 1. เพิ่ม exact main Callback และ Sign-out URL โดยรักษา URL เดิม/preview
+- [x] 2. ตั้ง public environment variables ของ main รวม `CO_ED_REQUIRE_AUTH_CONFIG=1`
+- [ ] 3. นำ Strict build guard ใน `amplify.yml` ของ branch #82 ผ่าน PR checks/review และ Merge
+- [x] 4. Job 51 + public/API/CORS smoke + main Student/Staff Login/Logout
+
+ขั้นตอนต่อไปนี้เก็บไว้เป็นแนวทางตรวจ configuration ไม่ใช่คำสั่งให้ deploy ซ้ำหรือแก้ค่า AWS
+ที่ผ่านแล้ว การเปลี่ยน UI หลัง Job 51 ต้องผูกผลตรวจเข้ากับ artifact ของการเปลี่ยนนั้นแยกกัน
 
 ### 1. อัปเดต Callback และ Sign-out URL ของ Cognito App Client
 
-ตอนนี้ Cognito App Client ที่ตั้งไว้ใน #58 Allowlist เฉพาะ
-`https://main.d1d9qrqnsi5nl6.amplifyapp.com/` ทั้ง Callback และ Sign-out แต่ Shell นี้
-Redirect ไปที่ `/app.html` และ `/index.html` เมื่อ URL ไม่ตรงแบบ Exact match ตาม #48
-Cognito จะตอบ `redirect_mismatch` ทำให้ Login บน Production ใช้งานไม่ได้
+ค่าเดิมใน #58 เคยใช้ main root `/` แต่ Shell Redirect ไป `/app.html` และ `/index.html`
+ใน rollout #82 เพิ่ม exact URLs ด้านล่างแล้ว พร้อมรักษา main root และ preview URLs เดิม
+หากตั้ง environment ใหม่ ให้ตรวจ URL ตาม #48 ไม่เช่นนั้น Cognito จะตอบ `redirect_mismatch`
 
-ให้แก้ใน Cognito > User pool > App client > Login pages ดังนี้:
+ค่าที่ต้องมีใน Cognito > User pool > App client > Login pages:
 
 - Allowed callback URLs: `https://main.d1d9qrqnsi5nl6.amplifyapp.com/app.html`
 - Allowed sign-out URLs: `https://main.d1d9qrqnsi5nl6.amplifyapp.com/index.html`
-- ยังคงเป็น Exact URL ห้ามใช้ Wildcard และห้ามเพิ่ม Origin อื่น
-- อัปเดตบันทึกค่า `AUTH_CALLBACK_URL` และ `AUTH_LOGOUT_URL` ใน #58 ให้ตรงกัน
+- ยังคงเป็น Exact URL ห้ามใช้ Wildcard และห้ามลบ preview/URL อื่นที่ได้รับอนุญาตเดิม
+- ค่า Callback/Logout ปัจจุบันถูกบันทึกใน main rollout evidence ที่ลิงก์ไว้ข้างต้น
 
 ### 2. ตั้ง Environment variables ใน Amplify Hosting
 
@@ -232,12 +239,16 @@ Cognito จะตอบ `redirect_mismatch` ทำให้ Login บน Product
         - NODE_ENV=production CO_ED_REQUIRE_AUTH_CONFIG=1 npm run build
 ```
 
-แล้วลบ Comment `TEMPORARY` ออก ตรวจว่า Build บน Amplify ผ่านด้วย Env จริงก่อนปิด Checklist นี้
+branch #82 เปลี่ยนบรรทัดนี้และลบ Comment `TEMPORARY` แล้ว แต่ยังต้องผ่าน PR checks/review
+และ Merge ก่อนถือว่า Guard ใน Source บน main เสร็จ ระดับ main environment ตั้ง
+`CO_ED_REQUIRE_AUTH_CONFIG=1` แล้วตั้งแต่ Job 51 ไม่ต้องเริ่ม manual deploy ซ้ำ
+เมื่อ Merge และ auto-build ให้ตรวจผลของ Job ใหม่โดยอ้างอิง source/artifact จริง
 
 ### 4. Smoke test หลัง Deploy
 
-หลังจากข้อ 1–3 เสร็จ และ Deploy แล้ว ให้ทดสอบตาม Smoke procedure ของ #58 โดยใช้บัญชีทดสอบ
-ที่ Link กับ Internal user ใน RDS แล้ว:
+Job 51 ผ่าน public/config smoke และผู้ดูแลยืนยัน Student/Staff Login/Logout แล้ว
+สำหรับ deployment ที่มีการเปลี่ยนแปลงภายหลัง ให้ทดสอบตาม procedure นี้ด้วยบัญชีทดสอบ
+ที่ Link กับ Internal user ใน RDS โดยไม่อ้างผล Job 51 แทน artifact ใหม่:
 
 1. เปิด `index.html` แล้วกด “เข้าสู่ระบบ” ต้องเห็นหน้า “กรุณาเข้าสู่ระบบ”
 2. กดเข้าสู่ระบบ ต้องไปที่ Cognito Managed Login และกลับมาที่ `/app.html` โดยไม่มี `redirect_mismatch`
