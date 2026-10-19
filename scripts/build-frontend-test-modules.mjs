@@ -16,6 +16,7 @@ await build({
     resolve(workspace, 'src/frontend/student/student-dashboard-view.js'),
     resolve(workspace, 'src/frontend/student/plan-submission-client.js'),
     resolve(workspace, 'src/frontend/student/student-plan-view.js'),
+    resolve(workspace, 'src/frontend/student/plan-editor-view.js'),
     resolve(workspace, 'src/frontend/advisor/advisor-client.js'),
     resolve(workspace, 'src/frontend/advisor/advisor-views.js'),
     resolve(workspace, 'src/frontend/staff/staff-review-client.js'),

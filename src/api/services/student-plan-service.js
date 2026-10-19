@@ -136,6 +136,22 @@ class StudentPlanService {
     if (!row) throw new ForbiddenError('Access denied.', 'FORBIDDEN');
   }
 
+  async listCycleOptions(actor) {
+    assertStudentActor(actor);
+    await this.assertActiveStudent(null, actor);
+    const rows = await this.repository.listCycleOptions({
+      userId: actor.userId,
+      studentId: actor.studentId
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      academic_year: row.academic_year,
+      semester: row.semester ?? null,
+      status: row.status
+    }));
+  }
+
   async assertReferences(client, { cycleId, companyId, positionId }) {
     if (!await this.repository.findCycle(client, cycleId)) {
       throw new ValidationError('Selected cycle does not exist.', [

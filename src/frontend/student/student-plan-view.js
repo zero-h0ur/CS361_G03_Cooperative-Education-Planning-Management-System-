@@ -4,6 +4,7 @@ import {
   evaluatePlanReadiness,
   findLatestReturnReason
 } from './plan-submission-client.js';
+import { renderPlanEditor } from './plan-editor-view.js';
 
 const STATUS_META = Object.freeze({
   [PLAN_STATUSES.DRAFT]: {
@@ -131,12 +132,84 @@ export function renderStudentPlanView({
   let currentPlan = null;
   let currentHistory = [];
   let isSubmitting = false;
+  let currentPlans = [];
+  let selectedPlanId = null;
+  let editorController = null;
+  let editorDirty = false;
+  let editorBusy = false;
+  let loadSequence = 0;
+  let submitNeedsRefresh = false;
   // One operation_id per submit click, reused only when retrying after a network
   // failure so the server deduplicates the request instead of submitting twice (#52 section 9)
   let pendingOperationId = null;
 
   function isAborted() {
     return Boolean(signal?.aborted);
+  }
+
+  signal?.addEventListener('abort', () => editorController?.abort(), { once: true });
+
+  function syncEditorControls() {
+    const locked = editorDirty || editorBusy || isSubmitting;
+    for (const control of container.querySelectorAll('[data-editor-lock]')) {
+      control.disabled = locked || control.dataset.unavailable === 'true';
+    }
+    const editorControls = container.querySelector('[data-role="plan-editor-controls"]');
+    if (editorControls) editorControls.disabled = isSubmitting || submitNeedsRefresh;
+  }
+
+  function renderPlanPicker() {
+    if (typeof planClient.saveDraft !== 'function' || currentPlans.length === 0) return null;
+    const picker = element('section', 'student-card plan-picker');
+    const label = element('label', 'student-form__label', 'เปิดแผนที่บันทึกไว้');
+    label.htmlFor = 'student-plan-picker';
+    const select = element('select', 'student-form__input');
+    select.id = label.htmlFor;
+    select.dataset.editorLock = 'true';
+    for (const plan of currentPlans) {
+      const created = new Date(plan.created_at);
+      const date = Number.isNaN(created.getTime()) ? '' : created.toLocaleDateString('th-TH');
+      const option = element('option', '', `${formatStatusLabel(plan.status)}${date ? ` — สร้าง ${date}` : ''}`);
+      option.value = plan.id;
+      select.append(option);
+    }
+    select.value = selectedPlanId || currentPlan?.id || currentPlans[0].id;
+    select.addEventListener('change', () => {
+      if (editorDirty || editorBusy || isSubmitting) return;
+      selectedPlanId = select.value;
+      loadPlanBundle();
+    });
+    const create = element('button', 'shell-button shell-button--secondary', 'สร้างแผนใหม่');
+    create.type = 'button';
+    create.dataset.editorLock = 'true';
+    create.addEventListener('click', () => {
+      if (editorDirty || editorBusy || isSubmitting) return;
+      editorController?.abort();
+      selectedPlanId = null;
+      pendingOperationId = null;
+      renderNoPlanState();
+    });
+    picker.append(label, select, create);
+    return picker;
+  }
+
+  function makeEditor(plan = null) {
+    if (typeof planClient.saveDraft !== 'function') return null;
+    editorController?.abort();
+    editorController = new AbortController();
+    editorDirty = false;
+    editorBusy = false;
+    return renderPlanEditor({
+      plan, planClient, signal: editorController.signal, createOperationId,
+      onSessionExpired, onAccessDenied,
+      onDirtyChange: (dirty) => { editorDirty = dirty; syncEditorControls(); },
+      onBusyChange: (busy) => { editorBusy = busy; syncEditorControls(); },
+      onReload: () => loadPlanBundle(),
+      onSaved: async (saved) => {
+        selectedPlanId = saved.id;
+        await loadPlanBundle({ tone: 'status', message: 'บันทึกแผนเรียบร้อยแล้ว กรุณาตรวจสอบข้อมูลก่อนส่งแผน' });
+      }
+    });
   }
 
   function renderLoadingState() {
@@ -173,18 +246,26 @@ export function renderStudentPlanView({
 
   function renderNoPlanState() {
     container.setAttribute('aria-busy', 'false');
+    container.dataset.planStatus = 'DRAFT';
+    container.dataset.planReadonly = 'false';
     const card = element('section', 'student-card');
     card.dataset.role = 'plan-empty';
     const refreshBtn = element('button', 'shell-button shell-button--secondary', 'รีเฟรชสถานะล่าสุด');
     refreshBtn.type = 'button';
-    refreshBtn.addEventListener('click', () => loadPlanBundle());
+    refreshBtn.dataset.editorLock = 'true';
+    refreshBtn.addEventListener('click', () => {
+      if (!editorDirty && !editorBusy) loadPlanBundle();
+    });
     card.append(
       element('p', 'student-card__eyebrow', 'NO PLAN YET'),
       element('h2', 'student-card__title', 'ยังไม่มีแผนสหกิจศึกษา'),
-      element('p', 'student-card__description', 'สร้างแผนและเลือกสถานประกอบการกับตำแหน่งงานก่อน จากนั้นกลับมาส่งแผนที่หน้านี้'),
+      element('p', 'student-card__description', 'เลือกรอบสมัครเพื่อเริ่มบันทึกฉบับร่าง คุณสามารถเลือกสถานประกอบการและตำแหน่งงานเพิ่มเติมได้ภายหลัง'),
       refreshBtn
     );
-    container.replaceChildren(card);
+    const picker = renderPlanPicker();
+    const editor = makeEditor();
+    container.replaceChildren(...[picker, card, editor].filter(Boolean));
+    syncEditorControls();
   }
 
   function renderPlanExperience(plan, statusHistory, initialFeedback = null) {
@@ -341,14 +422,17 @@ export function renderStudentPlanView({
     const submitButton = element('button', 'shell-button', 'ส่งแผนสหกิจศึกษา');
     submitButton.type = 'submit';
     submitButton.dataset.role = 'submit-plan-button';
+    submitButton.dataset.editorLock = 'true';
+    submitButton.dataset.unavailable = String(!readiness.canSubmit);
     // Submit enabled ONLY when plan/state is submittable and ready (#76 AC 1)
     submitButton.disabled = !readiness.canSubmit;
 
     const refreshButton = element('button', 'shell-button shell-button--secondary', 'รีเฟรชสถานะล่าสุด');
     refreshButton.type = 'button';
     refreshButton.dataset.role = 'refresh-plan-button';
+    refreshButton.dataset.editorLock = 'true';
     refreshButton.addEventListener('click', () => {
-      if (!isSubmitting) {
+      if (!isSubmitting && !editorDirty && !editorBusy) {
         loadPlanBundle();
       }
     });
@@ -358,7 +442,7 @@ export function renderStudentPlanView({
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      if (isSubmitting) {
+      if (isSubmitting || editorDirty || editorBusy) {
         return;
       }
 
@@ -378,6 +462,7 @@ export function renderStudentPlanView({
 
       // Prevent accidental duplicate submit while request is in flight (#76 Scope & AC)
       isSubmitting = true;
+      syncEditorControls();
       submitButton.disabled = true;
       submitButton.setAttribute('aria-busy', 'true');
       submitButton.textContent = 'กำลังส่งแผนสหกิจ...';
@@ -408,6 +493,12 @@ export function renderStudentPlanView({
         }
 
         isSubmitting = false;
+        // A submit attempt may have committed before a network failure. Require
+        // a server refresh before editing the same Plan again.
+        submitNeedsRefresh = [STUDENT_PLAN_ERROR_CODES.SERVICE_UNAVAILABLE,
+          STUDENT_PLAN_ERROR_CODES.STALE_RECORD_CONFLICT,
+          STUDENT_PLAN_ERROR_CODES.INVALID_STATE_TRANSITION].includes(error?.code);
+        syncEditorControls();
         submitButton.disabled = !evaluatePlanReadiness(currentPlan).canSubmit;
         submitButton.removeAttribute('aria-busy');
         submitButton.textContent = 'ส่งแผนสหกิจศึกษา';
@@ -512,24 +603,40 @@ export function renderStudentPlanView({
       historySection.append(historyTitle, historyList);
     }
 
-    container.replaceChildren(statusSection, readinessSection, submitSection, historySection);
+    const picker = renderPlanPicker();
+    const editor = makeEditor(plan);
+    container.replaceChildren(...[picker, statusSection, editor, readinessSection, submitSection, historySection].filter(Boolean));
+    syncEditorControls();
   }
 
   async function loadPlanBundle(postLoadFeedback = null) {
+    const sequence = ++loadSequence;
+    editorController?.abort();
+    editorDirty = false;
+    editorBusy = false;
+    submitNeedsRefresh = false;
+    pendingOperationId = null;
     renderLoadingState();
 
     try {
-      const bundle = await planClient.getOwnPlan({ signal });
-      if (isAborted()) {
+      const bundle = await planClient.getOwnPlan({ signal, ...(selectedPlanId ? { planId: selectedPlanId } : {}) });
+      if (isAborted() || sequence !== loadSequence) {
         return;
       }
+      currentPlans = bundle.plans || (bundle.plan ? [bundle.plan] : []);
+      selectedPlanId = bundle.plan?.id || null;
       if (!bundle.plan) {
         renderNoPlanState();
         return;
       }
       renderPlanExperience(bundle.plan, bundle.statusHistory, postLoadFeedback);
+      if (postLoadFeedback) {
+        const feedback = container.querySelector('[data-role="plan-submit-feedback"]');
+        feedback.tabIndex = -1;
+        feedback.focus();
+      }
     } catch (error) {
-      if (isAborted() || error?.name === 'AbortError') {
+      if (isAborted() || sequence !== loadSequence || error?.name === 'AbortError') {
         return;
       }
 

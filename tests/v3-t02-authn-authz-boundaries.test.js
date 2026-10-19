@@ -630,6 +630,7 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
     { method: 'GET', path: '/api/v3/students/me' },
     { method: 'PATCH', path: '/api/v3/students/me', body: { preferred_name: 'ชาย', version: 1 } },
     { method: 'PUT', path: '/api/v3/students/me', body: { preferred_name: 'ชาย', version: 1 } },
+    { method: 'GET', path: '/api/v3/plan-options/cycles' },
     {
       method: 'POST',
       path: '/api/v3/plans',
