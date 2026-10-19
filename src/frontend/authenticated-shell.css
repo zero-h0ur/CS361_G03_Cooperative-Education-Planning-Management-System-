@@ -753,6 +753,124 @@ a:focus-visible,
   line-height: 1.55;
 }
 
+/* Advisor read-only pages (#75) */
+.advisor-readonly-notice {
+  margin-bottom: 18px;
+  border-left: 4px solid #94a3b8;
+}
+
+.advisor-back-link {
+  justify-self: start;
+  color: var(--shell-primary);
+  font-weight: 600;
+}
+
+.advisor-back-link:hover,
+.advisor-link:hover {
+  text-decoration: underline;
+}
+
+.advisor-link {
+  color: var(--shell-primary);
+  font-weight: 600;
+}
+
+.advisor-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--shell-line);
+  border-radius: 8px;
+}
+
+.advisor-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.advisor-table__caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.advisor-table th,
+.advisor-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #edf1f7;
+  text-align: left;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+
+.advisor-table th {
+  background: #f8fafc;
+  color: var(--shell-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.advisor-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.advisor-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.advisor-pager__status {
+  margin: 0;
+  color: var(--shell-muted);
+  font-size: 0.86rem;
+}
+
+/* Staff review workspace (#77) */
+.staff-queue-filter {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 14px;
+  margin: 20px 0;
+}
+
+.staff-review-confirm {
+  margin-top: 20px;
+  padding: 18px 20px;
+  border: 1px solid #c7d2fe;
+  border-left: 4px solid var(--shell-primary);
+  border-radius: 8px;
+  background: var(--shell-soft);
+}
+
+.staff-review-confirm__title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.staff-review-confirm__title:focus {
+  outline: none;
+}
+
+.staff-review-notes {
+  min-height: 110px;
+  resize: vertical;
+}
+
+@media (max-width: 760px) {
+  .staff-queue-filter {
+    grid-template-columns: 1fr;
+  }
+}
+
 @keyframes shell-pulse {
   50% {
     transform: translateY(-4px);

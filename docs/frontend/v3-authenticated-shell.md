@@ -19,15 +19,40 @@ Accepted Decisions #48, #49 และ shared response/error contract จาก #
 
 ## Routes
 
-| Role | Route | สถานะใน Issue #57 |
+| Role | Route | สถานะปัจจุบัน |
 | --- | --- | --- |
-| `STUDENT` | `#/student/profile` | Shell/Placeholder สำหรับ #65 |
-| `STUDENT` | `#/student/plan` | Shell/Placeholder สำหรับ #66 |
-| `STAFF` | `#/staff/review` | Shell/Placeholder สำหรับ #67 |
-| `ADVISOR` | `#/advisor/students` | Shell/Placeholder สำหรับ #68 |
+| `STUDENT` | `#/student/profile` | Dashboard และข้อมูลของฉัน (#72) |
+| `STUDENT` | `#/student/plan` | สถานะและการส่งแผน (#76) |
+| `STAFF` | `#/staff/review` | คิวตรวจแผน (#77) |
+| `STAFF` | `#/staff/plans/:planId` | รายละเอียด ประวัติ และคำสั่งตรวจแผน (#77) ไม่อยู่ในเมนู |
+| `ADVISOR` | `#/advisor/students` | รายชื่อนักศึกษาที่ได้รับมอบหมาย (#75) |
+| `ADVISOR` | `#/advisor/students/:studentId` | ข้อมูลนักศึกษาและรายการแผน (#75) ไม่อยู่ในเมนู |
+| `ADVISOR` | `#/advisor/plans/:planId` | รายละเอียดแผนแบบอ่านอย่างเดียว (#75) ไม่อยู่ในเมนู |
 
-Role หรือ Route อื่นถูกปฏิเสธโดยค่าเริ่มต้น หน้าเหล่านี้ยังไม่เรียก Student,
-Plan, review หรือ assignment data จริง
+Role หรือ Route อื่นถูกปฏิเสธโดยค่าเริ่มต้น Route ที่มี `:studentId` / `:planId`
+ต้องเป็น UUID เท่านั้น ถ้ารูปแบบผิดจะถือว่าไม่อยู่ใน Allowlist และไม่เรียก API
+
+### Staff review workspace (#77)
+
+- คิวใช้ `GET /api/v3/staff/review-queue` (contract หัวข้อ 3.6) กรองด้วยสถานะและคำค้นได้ ส่วนหน้าแผนใช้ `GET /api/v3/staff/plans/:planId` และ `/history` (หัวข้อ 3.12)
+- ปุ่ม Start review / Approve / Return แสดงเมื่อเงื่อนไขครบทั้งสามข้อ: `capabilities.canReviewPlan` ของ Session, สถานะของแผน (`SUBMITTED` → Start review, `UNDER_REVIEW` → Approve / Return) และรอบเป็น `OPEN` ส่วน Backend ตรวจซ้ำทุกคำสั่ง (หัวข้อ 3.8)
+- ทุกคำสั่งต้องยืนยันใน Panel ก่อน Focus จะย้ายเข้า Panel และกลับมาที่ปุ่มเดิมเมื่อกดยกเลิกหรือ Escape การ Return บังคับให้ใส่เหตุผล (ไม่เกิน 2,000 ตัวอักษร) ส่วนความเห็นตอน Approve ไม่บังคับ
+- ไม่ทำ Optimistic update หลังสำเร็จจะโหลด State และ History ใหม่จาก Server ถ้าเจอ `409` / `422` / `403` จะแจ้งว่าคำสั่งยังไม่ถูกบันทึก และมีปุ่มโหลดข้อมูลล่าสุด
+- ถ้า Network ล้มเหลว Panel และความเห็นที่พิมพ์ไว้ยังอยู่ กดยืนยันอีกครั้งจะใช้ `operation_id` เดิม แต่ถ้าแก้ความเห็นจะใช้ `operation_id` ใหม่
+- Advisor view ไม่ Import Module นี้ และ Route ของ Staff ปฏิเสธ Role อื่นตั้งแต่ Shell
+
+### Advisor pages (#75)
+
+- ใช้เฉพาะ `GET /api/v3/advisor/*` (#68, contract หัวข้อ 3.11) Client ไม่มี Method
+  ที่ส่ง Mutation และ Backend ปฏิเสธ Mutation ของ Advisor อยู่แล้ว (`405` / `403`)
+- ไม่ Render Form, Input หรือปุ่ม Start review / Return / Approve / แก้ไข ทุกหน้ามี
+  Badge และข้อความแจ้งว่าเป็น Read-only
+- `403` และ `404` ของ Resource รายตัวแสดงข้อความเดียวกันว่า "ไม่พบหรือไม่อยู่ในขอบเขต"
+  เพื่อไม่เปิดเผยว่า Record มีอยู่จริงหรือไม่ ส่วน `403` ของรายการ (ไม่มี id) ส่งให้ Shell
+  แสดงหน้า Access denied
+- รองรับ Loading, No assignment, ไม่มีแผน, Session หมดอายุ และ Service unavailable
+  (มีปุ่มลองใหม่) ตารางอยู่ใน Region ที่ Focus ได้เพื่อเลื่อนด้วยคีย์บอร์ดบนจอเล็ก
+- ไม่แสดงประวัติ/Review comment ของแผน เพราะ Advisor read API (#68) ไม่เปิดข้อมูลนี้
 
 ## Public build configuration
 

@@ -7,6 +7,12 @@ import {
   getRoutesForRole,
   isAllowlistedRoute
 } from './routes.js';
+import {
+  renderAdvisorPlanView,
+  renderAdvisorStudentDetailView,
+  renderAdvisorStudentListView
+} from './advisor/advisor-views.js';
+import { renderStaffPlanReviewView, renderStaffReviewQueueView } from './staff/staff-review-views.js';
 import { renderStudentDashboardView } from './student/student-dashboard-view.js';
 import { renderStudentPlanView } from './student/student-plan-view.js';
 
@@ -172,16 +178,19 @@ function createBrand() {
   return brand;
 }
 
-function createNavigation(role, activeHash) {
+function createNavigation(role, activeRoute) {
   const navigation = element('nav', 'shell-nav');
   navigation.setAttribute('aria-label', 'เมนูพื้นที่ผู้ใช้งาน');
 
   for (const route of getRoutesForRole(role)) {
     const link = element('a', 'shell-nav__link', route.navLabel);
     link.href = route.hash;
-    if (route.hash === activeHash) {
+    if (route.hash === activeRoute.hash) {
       link.classList.add('shell-nav__link--active');
       link.setAttribute('aria-current', 'page');
+    } else if (route.hash === activeRoute.navHash) {
+      // Detail page: highlight its parent menu entry without claiming it is the current page
+      link.classList.add('shell-nav__link--active');
     }
     navigation.append(link);
   }
@@ -214,7 +223,7 @@ function createProtectedLayout({ role, route, onLogout, bodyNode }) {
   const publicLink = element('a', 'shell-sidebar__public-link', 'ดูรายชื่อสถานประกอบการ');
   publicLink.href = 'company-directory.html';
 
-  sidebar.append(createBrand(), identity, createNavigation(role, route.hash), publicLink);
+  sidebar.append(createBrand(), identity, createNavigation(role, route), publicLink);
 
   const mainColumn = element('div', 'shell-main-column');
   const topbar = element('header', 'shell-topbar');
@@ -273,6 +282,8 @@ export function createShellApp({
   history = globalThis.history,
   studentProfileClient = null,
   studentPlanClient = null,
+  advisorClient = null,
+  staffReviewClient = null,
   renderRouteContent
 }) {
   if (
@@ -291,6 +302,8 @@ export function createShellApp({
   // hashchange event that follows our own navigation, which would render the route twice.
   let renderedHash = null;
   let currentRole = null;
+  // UI-only review capability from /api/v3/me; the backend re-checks every command
+  let currentCanReviewPlan = false;
   let destroyed = false;
 
   function abortRouteWork() {
@@ -314,6 +327,7 @@ export function createShellApp({
   function renderSignIn() {
     abortRouteWork();
     currentRole = null;
+    currentCanReviewPlan = false;
     safelyRememberReturnRoute(storage, location.hash);
     const publicDirectory = element('a', 'shell-button shell-button--secondary', 'ดูรายชื่อสถานประกอบการ');
     publicDirectory.href = 'company-directory.html';
@@ -341,6 +355,7 @@ export function createShellApp({
   function renderExpired() {
     abortRouteWork();
     currentRole = null;
+    currentCanReviewPlan = false;
     safelyRememberReturnRoute(storage, location.hash);
     const publicDirectory = element('a', 'shell-button shell-button--secondary', 'ดูรายชื่อสถานประกอบการ');
     publicDirectory.href = 'company-directory.html';
@@ -407,6 +422,7 @@ export function createShellApp({
     activeController?.abort();
     abortRouteWork();
     currentRole = null;
+    currentCanReviewPlan = false;
     safelyClearReturnRoute(storage);
     renderLoading('กำลังออกจากระบบ');
     try {
@@ -464,6 +480,43 @@ export function createShellApp({
         onSessionExpired: handleSessionExpired,
         onAccessDenied: (message) => renderForbidden(message)
       });
+    }
+
+    if (role === 'STAFF' && staffReviewClient) {
+      const staffViewOptions = {
+        staffReviewClient,
+        signal,
+        onSessionExpired: handleSessionExpired,
+        onAccessDenied: (message) => renderForbidden(message)
+      };
+      if (route.hash === '#/staff/review') {
+        return renderStaffReviewQueueView(staffViewOptions);
+      }
+      if (route.params?.planId) {
+        return renderStaffPlanReviewView({
+          ...staffViewOptions,
+          planId: route.params.planId,
+          canReviewPlan: currentCanReviewPlan
+        });
+      }
+    }
+
+    if (role === 'ADVISOR' && advisorClient) {
+      const advisorViewOptions = {
+        advisorClient,
+        signal,
+        onSessionExpired: handleSessionExpired,
+        onAccessDenied: (message) => renderForbidden(message)
+      };
+      if (route.hash === '#/advisor/students') {
+        return renderAdvisorStudentListView(advisorViewOptions);
+      }
+      if (route.params?.studentId) {
+        return renderAdvisorStudentDetailView({ ...advisorViewOptions, studentId: route.params.studentId });
+      }
+      if (route.params?.planId) {
+        return renderAdvisorPlanView({ ...advisorViewOptions, planId: route.params.planId });
+      }
     }
 
     return null;
@@ -533,6 +586,7 @@ export function createShellApp({
     const controller = new AbortController();
     activeController = controller;
     currentRole = null;
+    currentCanReviewPlan = false;
     renderLoading();
 
     try {
@@ -542,6 +596,7 @@ export function createShellApp({
         return;
       }
       currentRole = session.role;
+      currentCanReviewPlan = session.role === 'STAFF' && session.canReviewPlan === true;
       selectInitialRoute();
     } catch (error) {
       scrubAuthCallbackUrl(location, history);
