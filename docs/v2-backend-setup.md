@@ -3,7 +3,7 @@
 เอกสารนี้อธิบายขั้นตอนการตั้งค่า Local PostgreSQL Database, การรัน Migrations และ Seed ข้อมูล รวมถึงการทดสอบ Data Access Layer ของ V2
 
 ## 1. สิ่งที่ต้องมีเบื้องต้น (Prerequisites)
-- [Node.js](https://nodejs.org/) เวอร์ชัน 18.14 ขึ้นไป
+- [Node.js](https://nodejs.org/) เวอร์ชัน 20 ขึ้นไป สำหรับ dependencies ปัจจุบัน (Lambda ใช้ 22.x)
 - [Docker](https://www.docker.com/) (สำหรับรัน Local PostgreSQL)
 
 ## 2. เริ่มต้น Local PostgreSQL Database
