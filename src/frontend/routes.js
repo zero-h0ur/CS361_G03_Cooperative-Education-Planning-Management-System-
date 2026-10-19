@@ -1,3 +1,5 @@
+import { parseStaffRouteState } from './staff/staff-route-state.js';
+
 const ROUTE_DEFINITIONS = Object.freeze([
   Object.freeze({
     hash: '#/student/profile',
@@ -16,6 +18,26 @@ const ROUTE_DEFINITIONS = Object.freeze([
     title: 'แผนสหกิจของฉัน',
     description: 'พื้นที่สำหรับสร้าง ตรวจสอบ และติดตามสถานะแผนสหกิจของคุณ',
     status: 'การจัดการ Plan จริงจะเชื่อมต่อใน Issue #66'
+  }),
+  Object.freeze({
+    hash: '#/staff/students',
+    staffMode: 'students',
+    role: 'STAFF',
+    navLabel: 'จัดการนักศึกษา',
+    eyebrow: 'STAFF WORKSPACE',
+    title: 'ค้นหานักศึกษา',
+    description: 'ค้นหาข้อมูลนักศึกษาภายในขอบเขตที่คุณมีสิทธิ์อ่าน',
+    status: 'Student search API (#67)'
+  }),
+  Object.freeze({
+    hash: '#/staff/plans',
+    staffMode: 'plans',
+    role: 'STAFF',
+    navLabel: 'ค้นหาแผนสหกิจ',
+    eyebrow: 'STAFF WORKSPACE',
+    title: 'ค้นหาแผนสหกิจ',
+    description: 'เลือกแผนภายในขอบเขตที่รับผิดชอบเพื่อเปิดพื้นที่ตรวจแผน',
+    status: 'Plan search API (#67)'
   }),
   Object.freeze({
     hash: '#/staff/review',
@@ -88,6 +110,15 @@ const ROLE_LABELS = Object.freeze({
 export function getRoute(hash) {
   if (typeof hash !== 'string') {
     return null;
+  }
+  const [pathname, query = '', ...extra] = hash.split('?');
+  const staffList = ROUTE_DEFINITIONS.find((candidate) => candidate.staffMode && candidate.hash === pathname);
+  if (staffList) {
+    if (extra.length) return null;
+    try {
+      return Object.freeze({ ...staffList, hash, navHash: staffList.hash,
+        filters: parseStaffRouteState(staffList.staffMode, query) });
+    } catch { return null; }
   }
   const route = ROUTE_DEFINITIONS.find((candidate) => candidate.hash === hash);
   if (route) {

@@ -79,7 +79,7 @@ describe('authenticated V3 shell and route guards', () => {
 
   it.each([
     ['STUDENT', '#/student/profile', ['ข้อมูลของฉัน', 'แผนสหกิจ'], 'ข้อมูลนักศึกษา'],
-    ['STAFF', '#/staff/review', ['คิวตรวจแผน'], 'คิวตรวจแผนสหกิจ'],
+    ['STAFF', '#/staff/review', ['จัดการนักศึกษา', 'ค้นหาแผนสหกิจ', 'คิวตรวจแผน'], 'คิวตรวจแผนสหกิจ'],
     ['ADVISOR', '#/advisor/students', ['นักศึกษาที่ดูแล'], 'นักศึกษาที่ได้รับมอบหมาย']
   ])('renders only %s navigation from the trusted session role', async (role, expectedHash, navLabels, title) => {
     const context = setup({ session: { role } });

@@ -22,6 +22,9 @@ await build({
     resolve(workspace, 'src/frontend/staff/staff-review-client.js'),
     resolve(workspace, 'src/frontend/staff/staff-review-views.js'),
     resolve(workspace, 'src/frontend/routes.js'),
+    resolve(workspace, 'src/frontend/staff/staff-client.js'),
+    resolve(workspace, 'src/frontend/staff/staff-route-state.js'),
+    resolve(workspace, 'src/frontend/staff/staff-student-management-view.js'),
     resolve(workspace, 'src/frontend/shell-app.js')
   ],
   bundle: true,

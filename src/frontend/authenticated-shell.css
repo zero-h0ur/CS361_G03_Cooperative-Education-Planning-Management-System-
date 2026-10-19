@@ -892,6 +892,39 @@ a:focus-visible,
   }
 }
 
+/* Staff search (#74): summaries stay readable without exposing detail payloads. */
+.staff-search-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.staff-search-form__actions { grid-column: 1 / -1; }
+.staff-search-form .student-form__field { min-width: 0; }
+.staff-management [hidden] { display: none; }
+.staff-results { min-width: 0; }
+.staff-result + .staff-result { border-top: 1px solid var(--shell-line); margin-top: 24px; padding-top: 24px; }
+.staff-result__title { margin: 0 0 8px; font-size: 1.08rem; overflow-wrap: anywhere; }
+.staff-result__number { margin: 0 0 16px; color: var(--shell-muted); }
+.staff-result__details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 14px 24px;
+  margin: 18px 0;
+}
+.staff-result__detail { min-width: 0; }
+.staff-result__detail dt { color: var(--shell-muted); font-size: 0.82rem; }
+.staff-result__detail dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.staff-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
+.staff-pagination__label { color: var(--shell-muted); }
+
+@media (max-width: 520px) {
+  .staff-search-form { grid-template-columns: minmax(0, 1fr); }
+  .staff-search-form__actions > * { flex: 1 1 100%; }
+  .staff-pagination { justify-content: center; }
+}
+
 @media (max-width: 760px) {
   .protected-shell {
     grid-template-columns: 1fr;
