@@ -16,6 +16,7 @@ import { renderStaffPlanReviewView, renderStaffReviewQueueView } from './staff/s
 import { renderStudentDashboardView } from './student/student-dashboard-view.js';
 import { renderStudentPlanView } from './student/student-plan-view.js';
 import { renderStaffStudentManagementView } from './staff/staff-student-management-view.js';
+import { createWorkspaceIcon } from './ui/workspace-presentation.js';
 
 const RETURN_ROUTE_KEY = 'co-ed:return-route';
 const SENSITIVE_QUERY_PARAMS = Object.freeze([
@@ -62,6 +63,18 @@ function createActionButton(label, onClick, secondary = false) {
   return button;
 }
 
+function createBrandMark(className) {
+  const mark = element('span', className);
+  mark.setAttribute('aria-hidden', 'true');
+  const logo = element('img', 'shell-brand__logo');
+  logo.src = 'resources/images/logomini.png';
+  logo.alt = '';
+  logo.width = 36;
+  logo.height = 36;
+  mark.append(logo);
+  return mark;
+}
+
 function renderState(root, {
   eyebrow,
   title,
@@ -79,8 +92,7 @@ function renderState(root, {
     main.setAttribute('role', 'status');
   }
 
-  const mark = element('div', 'shell-state__mark', 'CO');
-  mark.setAttribute('aria-hidden', 'true');
+  const mark = createBrandMark('shell-state__mark');
   const copy = element('div', 'shell-state__copy');
   copy.append(
     element('p', 'shell-state__eyebrow', eyebrow),
@@ -173,9 +185,13 @@ function createBrand() {
   brand.href = 'index.html';
   brand.setAttribute('aria-label', 'CO-ED หน้าแรก');
 
-  const mark = element('span', 'shell-brand__mark', 'CO');
-  mark.setAttribute('aria-hidden', 'true');
-  brand.append(mark, element('span', 'shell-brand__name', 'CO-ED'));
+  const mark = createBrandMark('shell-brand__mark');
+  const copy = element('span', 'shell-brand__copy');
+  copy.append(
+    element('span', 'shell-brand__name', 'CO-ED'),
+    element('span', 'shell-brand__subtitle', 'ระบบข้อมูลสหกิจศึกษา')
+  );
+  brand.append(mark, copy);
   return brand;
 }
 
@@ -186,6 +202,9 @@ function createNavigation(role, activeRoute) {
   for (const route of getRoutesForRole(role)) {
     const link = element('a', 'shell-nav__link', route.navLabel);
     link.href = route.hash;
+    if (role === 'STUDENT') {
+      link.prepend(createWorkspaceIcon(route.hash === '#/student/profile' ? 'user' : 'file'));
+    }
     if (route.hash === activeRoute.hash) {
       link.classList.add('shell-nav__link--active');
       link.setAttribute('aria-current', 'page');
@@ -214,15 +233,25 @@ function createDefaultPlaceholder(route) {
 
 function createProtectedLayout({ role, route, onLogout, bodyNode }) {
   const layout = element('div', 'protected-shell');
+  if (role === 'STUDENT') layout.classList.add('protected-shell--student');
+  const skipLink = element('a', 'shell-skip-link', 'ข้ามไปยังเนื้อหาหลัก');
+  skipLink.href = '#shell-main-content';
+  // Do not assign a fragment: this app uses the hash for guarded routes.
+  skipLink.addEventListener('click', (event) => {
+    event.preventDefault();
+    main.focus();
+  });
   const sidebar = element('aside', 'shell-sidebar');
   const identity = element('div', 'shell-role');
   identity.append(
     element('span', 'shell-role__label', 'พื้นที่ผู้ใช้งาน'),
     element('strong', 'shell-role__value', getRoleLabel(role))
   );
+  if (role === 'STUDENT') identity.prepend(createWorkspaceIcon('user'));
 
   const publicLink = element('a', 'shell-sidebar__public-link', 'ดูรายชื่อสถานประกอบการ');
   publicLink.href = 'company-directory.html';
+  if (role === 'STUDENT') publicLink.prepend(createWorkspaceIcon('building'));
 
   sidebar.append(createBrand(), identity, createNavigation(role, route), publicLink);
 
@@ -235,6 +264,7 @@ function createProtectedLayout({ role, route, onLogout, bodyNode }) {
   topbar.append(context, createActionButton('ออกจากระบบ', onLogout, true));
 
   const main = element('main', 'shell-content');
+  main.id = 'shell-main-content';
   main.tabIndex = -1;
   const headingGroup = element('div', 'shell-content__heading');
   headingGroup.append(
@@ -253,7 +283,7 @@ function createProtectedLayout({ role, route, onLogout, bodyNode }) {
 
   main.append(headingGroup, contentRegion, securityNote);
   mainColumn.append(topbar, main);
-  layout.append(sidebar, mainColumn);
+  layout.append(skipLink, sidebar, mainColumn);
   return { layout, main };
 }
 
