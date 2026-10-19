@@ -45,6 +45,7 @@ if (root) {
       startLogin: authClient.startLogin,
       restartLogin: authClient.restartLogin,
       logout: authClient.logout,
+      invalidateLocalSession: authClient.invalidateLocalSession,
       location: window.location,
       eventTarget: window,
       storage: window.sessionStorage,

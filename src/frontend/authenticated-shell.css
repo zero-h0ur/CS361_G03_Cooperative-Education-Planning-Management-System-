@@ -484,31 +484,39 @@ a:focus-visible,
   height: 22px;
 }
 
-/* Student workspace: reference-inspired cards without changing other role layouts. */
+/* Shared Student/Staff campus theme; Advisor layout stays unchanged. */
 .student-campus-backdrop {
   position: absolute;
   top: 60px;
   right: 0;
-  width: 100%;
-  height: 225px;
-  object-fit: cover;
+  width: min(100%, 1120px);
+  height: auto;
+  aspect-ratio: 3 / 1;
+  object-fit: contain;
   object-position: right top;
   pointer-events: none;
   user-select: none;
+  /* Fade the image boundary, not the data cards or readable foreground text. */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 24%, #000 92%, transparent),
+    linear-gradient(to bottom, transparent, #000 8%, #000 76%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 24%, #000 92%, transparent),
+    linear-gradient(to bottom, transparent, #000 8%, #000 76%, transparent);
+  mask-composite: intersect;
 }
 
-.protected-shell--student .shell-main-column {
+.protected-shell--campus .shell-main-column {
   position: relative;
   isolation: isolate;
   background: var(--shell-canvas);
 }
 
-.protected-shell--student .shell-topbar,
-.protected-shell--student .shell-content {
+.protected-shell--campus .shell-topbar,
+.protected-shell--campus .shell-content {
   position: relative;
 }
 
-.protected-shell--student .shell-topbar {
+.protected-shell--campus .shell-topbar {
   min-height: 60px;
   justify-content: flex-end;
   gap: 26px;
@@ -516,45 +524,59 @@ a:focus-visible,
   background: #fff;
 }
 
-.protected-shell--student .shell-context__dot {
+.protected-shell--campus .shell-context__dot {
   width: 12px;
   height: 12px;
   background: #078532;
   box-shadow: none;
 }
 
-.protected-shell--student .shell-content {
+.protected-shell--campus .shell-content {
   width: min(100%, 1280px);
   padding: 30px clamp(24px, 3.5vw, 54px) 56px;
 }
 
-.protected-shell--student .shell-content__title {
+.protected-shell--campus .shell-content__title {
   font-size: clamp(1.75rem, 2.5vw, 2.25rem);
   line-height: 1.35;
   letter-spacing: -0.035em;
 }
 
-.protected-shell--student .shell-content__description {
+.protected-shell--campus .shell-content__description {
   margin-top: 2px;
   font-size: 1.12rem;
 }
 
-.protected-shell--student .shell-brand__mark {
-  width: 44px;
-  height: 44px;
+.protected-shell--campus .shell-content__heading {
+  /* Keep the full campus focal point above cards; shrink naturally on mobile. */
+  min-height: clamp(150px, 27vw, 340px);
+  max-width: none;
 }
 
-.protected-shell--student .shell-brand__logo {
+.protected-shell--campus .shell-content__heading > * {
+  max-width: 38rem;
+}
+
+.protected-shell--campus .shell-brand__mark {
+  width: 44px;
+  height: 44px;
+  border: 1.5px solid var(--shell-accent-line);
+  box-shadow: 0 4px 14px -2px rgba(200, 16, 46, 0.12);
+}
+
+.protected-shell--campus .shell-brand { gap: 12px; }
+
+.protected-shell--campus .shell-brand__logo {
   width: 28px;
   height: 28px;
 }
 
-.protected-shell--student .shell-brand__name {
+.protected-shell--campus .shell-brand__name {
   font-size: 18px;
   line-height: 1.15;
 }
 
-.protected-shell--student .shell-brand__subtitle {
+.protected-shell--campus .shell-brand__subtitle {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -581,7 +603,7 @@ a:focus-visible,
   }
 }
 
-.protected-shell--student .shell-role {
+.protected-shell--campus .shell-role {
   grid-template-columns: 32px minmax(0, 1fr);
   column-gap: 16px;
   margin: 40px 0 30px;
@@ -590,16 +612,16 @@ a:focus-visible,
   background: #fcecef;
 }
 
-.protected-shell--student .shell-role__label {
+.protected-shell--campus .shell-role__label {
   font-size: 0.92rem;
 }
 
-.protected-shell--student .shell-role__value {
+.protected-shell--campus .shell-role__value {
   color: var(--shell-primary-dark);
   font-size: 1.15rem;
 }
 
-.protected-shell--student .shell-role > .workspace-icon {
+.protected-shell--campus .shell-role > .workspace-icon {
   grid-row: 1 / span 2;
   align-self: center;
   width: 30px;
@@ -607,29 +629,29 @@ a:focus-visible,
   color: var(--shell-primary);
 }
 
-.protected-shell--student .shell-role__label,
-.protected-shell--student .shell-role__value {
+.protected-shell--campus .shell-role__label,
+.protected-shell--campus .shell-role__value {
   grid-column: 2;
 }
 
-.protected-shell--student .shell-role::before {
+.protected-shell--campus .shell-role::before {
   display: none;
 }
 
-.protected-shell--student .shell-nav__link {
+.protected-shell--campus .shell-nav__link {
   gap: 24px;
   min-height: 64px;
   padding: 16px 20px;
   font-size: 1.08rem;
 }
 
-.protected-shell--student .shell-nav__link > .workspace-icon,
-.protected-shell--student .shell-sidebar__public-link > .workspace-icon {
+.protected-shell--campus .shell-nav__link > .workspace-icon,
+.protected-shell--campus .shell-sidebar__public-link > .workspace-icon {
   width: 28px;
   height: 28px;
 }
 
-.protected-shell--student .shell-sidebar__public-link {
+.protected-shell--campus .shell-sidebar__public-link {
   display: flex;
   align-items: center;
   gap: 24px;
@@ -639,7 +661,7 @@ a:focus-visible,
   font-size: 1rem;
 }
 
-.protected-shell--student .shell-topbar .shell-button--secondary {
+.protected-shell--campus .shell-topbar .shell-button--secondary {
   border-color: var(--shell-primary);
   color: var(--shell-primary-dark);
   min-width: 138px;
@@ -650,11 +672,11 @@ a:focus-visible,
 }
 
 @media (min-width: 761px) {
-  .protected-shell--student {
+  .protected-shell--campus {
     grid-template-columns: 296px minmax(0, 1fr);
   }
 
-  .protected-shell--student .shell-sidebar {
+  .protected-shell--campus .shell-sidebar {
     padding: 24px 14px 24px 30px;
     background: #fff;
   }
@@ -1544,23 +1566,23 @@ a:focus-visible,
     display: none;
   }
 
-  .protected-shell--student .shell-sidebar__public-link {
+  .protected-shell--campus .shell-sidebar__public-link {
     display: none;
   }
 
-  .protected-shell--student .shell-role {
+  .protected-shell--campus .shell-role {
     margin: 18px 0 12px;
   }
 
-  .protected-shell--student .shell-content {
+  .protected-shell--campus .shell-content {
     padding: 24px 20px 48px;
   }
 
-  .protected-shell--student .shell-content__description {
+  .protected-shell--campus .shell-content__description {
     font-size: 0.95rem;
   }
 
-  .protected-shell--student .shell-nav__link {
+  .protected-shell--campus .shell-nav__link {
     gap: 12px;
     padding: 12px;
     min-height: 48px;

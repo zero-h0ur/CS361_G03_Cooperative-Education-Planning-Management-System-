@@ -80,3 +80,27 @@ test('cross-tab invalidation ignores unrelated storage events and can unsubscrib
   window.dispatchEvent(new StorageEvent('storage', { key: AUTH_LOGOUT_EVENT_KEY, newValue: 'nonce' }));
   expect(handler).toHaveBeenCalledTimes(1); unsubscribe();
 });
+
+test('a restored page detects a missed logout without exposing identity in the nonce', () => {
+  const handler = jest.fn(); const unsubscribe = subscribeToLogout(handler);
+  localStorage.setItem(AUTH_LOGOUT_EVENT_KEY, 'new-identity-free-nonce');
+  window.dispatchEvent(new Event('pageshow'));
+  expect(handler).toHaveBeenCalledTimes(1);
+  window.dispatchEvent(new Event('pageshow'));
+  expect(handler).toHaveBeenCalledTimes(1); unsubscribe();
+});
+
+test('a token refresh finishing after logout cannot restore browser access', async () => {
+  let finish;
+  fetchAuthSession.mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+  const auth = client(); const token = auth.getAccessToken(); await auth.logout();
+  finish({ tokens: { accessToken: { toString: () => 'old-token' } } });
+  await expect(token).rejects.toMatchObject({ code: 'NOT_SIGNED_IN' });
+});
+
+test('redirect failure is visible and never restores removed credentials', async () => {
+  navigate.mockImplementation(() => { throw new Error('navigation blocked'); });
+  await expect(client().logout()).rejects.toThrow('navigation blocked');
+  expect(sessionStorage.getItem('CognitoIdentityServiceProvider.client-test.user.accessToken')).toBeNull();
+  expect(localStorage.getItem('theme')).toBe('dark');
+});

@@ -1,4 +1,5 @@
 import { AUTH_ERROR_CODES } from './auth/auth-errors.js';
+import { subscribeToLogout } from './auth/auth-storage.js';
 import {
   canRoleAccessRoute,
   getDefaultRoute,
@@ -202,8 +203,9 @@ function createNavigation(role, activeRoute) {
   for (const route of getRoutesForRole(role)) {
     const link = element('a', 'shell-nav__link', route.navLabel);
     link.href = route.hash;
-    if (role === 'STUDENT') {
-      link.prepend(createWorkspaceIcon(route.hash === '#/student/profile' ? 'user' : 'file'));
+    if (role === 'STUDENT' || role === 'STAFF') {
+      link.prepend(createWorkspaceIcon(route.hash.includes('students') || route.hash.endsWith('/profile')
+        ? 'user' : route.hash.includes('review') ? 'clipboard' : 'file'));
     }
     if (route.hash === activeRoute.hash) {
       link.classList.add('shell-nav__link--active');
@@ -234,6 +236,9 @@ function createDefaultPlaceholder(route) {
 function createProtectedLayout({ role, route, onLogout, bodyNode }) {
   const layout = element('div', 'protected-shell');
   if (role === 'STUDENT') layout.classList.add('protected-shell--student');
+  const campusTheme = role === 'STUDENT' || role === 'STAFF';
+  if (campusTheme) layout.classList.add('protected-shell--campus');
+  if (role === 'STAFF') layout.classList.add('protected-shell--staff');
   const skipLink = element('a', 'shell-skip-link', 'ข้ามไปยังเนื้อหาหลัก');
   skipLink.href = '#shell-main-content';
   // Do not assign a fragment: this app uses the hash for guarded routes.
@@ -247,21 +252,23 @@ function createProtectedLayout({ role, route, onLogout, bodyNode }) {
     element('span', 'shell-role__label', 'พื้นที่ผู้ใช้งาน'),
     element('strong', 'shell-role__value', getRoleLabel(role))
   );
-  if (role === 'STUDENT') identity.prepend(createWorkspaceIcon('user'));
+  if (campusTheme) identity.prepend(createWorkspaceIcon('user'));
 
   const publicLink = element('a', 'shell-sidebar__public-link', 'ดูรายชื่อสถานประกอบการ');
   publicLink.href = 'company-directory.html';
-  if (role === 'STUDENT') publicLink.prepend(createWorkspaceIcon('building'));
+  if (campusTheme) publicLink.prepend(createWorkspaceIcon('building'));
 
   sidebar.append(createBrand(), identity, createNavigation(role, route), publicLink);
 
   const mainColumn = element('div', 'shell-main-column');
-  if (role === 'STUDENT') {
+  if (campusTheme) {
     const backdrop = element('img', 'student-campus-backdrop');
     backdrop.src = 'resources/images/student-campus-banner.png';
     backdrop.alt = '';
     backdrop.setAttribute('aria-hidden', 'true');
     backdrop.decoding = 'async';
+    backdrop.width = 2172;
+    backdrop.height = 724;
     mainColumn.append(backdrop);
   }
   const topbar = element('header', 'shell-topbar');
@@ -315,6 +322,7 @@ export function createShellApp({
   startLogin,
   restartLogin,
   logout,
+  invalidateLocalSession = async () => {},
   location,
   eventTarget,
   storage,
@@ -345,6 +353,7 @@ export function createShellApp({
   // UI-only review capability from /api/v3/me; the backend re-checks every command
   let currentCanReviewPlan = false;
   let destroyed = false;
+  let unsubscribeLogout = null;
 
   function abortRouteWork() {
     routeController?.abort();
@@ -364,11 +373,11 @@ export function createShellApp({
 
   // First visit in this tab: ask the user to sign in explicitly. No automatic redirect,
   // so a failed or cancelled Cognito login cannot cause a redirect loop.
-  function renderSignIn() {
+  function renderSignIn({ rememberRoute = true } = {}) {
     abortRouteWork();
     currentRole = null;
     currentCanReviewPlan = false;
-    safelyRememberReturnRoute(storage, location.hash);
+    if (rememberRoute) safelyRememberReturnRoute(storage, location.hash);
     const publicDirectory = element('a', 'shell-button shell-button--secondary', 'ดูรายชื่อสถานประกอบการ');
     publicDirectory.href = 'company-directory.html';
 
@@ -396,6 +405,7 @@ export function createShellApp({
     abortRouteWork();
     currentRole = null;
     currentCanReviewPlan = false;
+    Promise.resolve(invalidateLocalSession()).catch(() => {});
     safelyRememberReturnRoute(storage, location.hash);
     const publicDirectory = element('a', 'shell-button shell-button--secondary', 'ดูรายชื่อสถานประกอบการ');
     publicDirectory.href = 'company-directory.html';
@@ -468,7 +478,12 @@ export function createShellApp({
     try {
       await logout();
     } catch {
-      renderUnavailable();
+      renderState(root, {
+        eyebrow: 'LOGOUT INCOMPLETE', title: 'ยังยืนยันการออกจาก Cognito ไม่สำเร็จ',
+        description: 'ข้อมูล Session ในหน้านี้ถูกปิดแล้ว กรุณาลองออกจากระบบอีกครั้งเพื่อปิด Session ที่ Cognito',
+        tone: 'error', alert: true,
+        actions: [createActionButton('ลองออกจากระบบอีกครั้ง', handleLogout)]
+      });
     }
   }
 
@@ -667,7 +682,7 @@ export function createShellApp({
     try {
       const session = await loadSession({ signal: controller.signal });
       scrubAuthCallbackUrl(location, history);
-      if (destroyed || activeController !== controller) {
+      if (destroyed || controller.signal.aborted || activeController !== controller) {
         return;
       }
       currentRole = session.role;
@@ -675,7 +690,7 @@ export function createShellApp({
       selectInitialRoute();
     } catch (error) {
       scrubAuthCallbackUrl(location, history);
-      if (destroyed || activeController !== controller || error?.name === 'AbortError') {
+      if (destroyed || controller.signal.aborted || activeController !== controller || error?.name === 'AbortError') {
         return;
       }
 
@@ -697,11 +712,25 @@ export function createShellApp({
     }
     renderCurrentRoute();
   };
+  const handleLogoutSignal = () => {
+    activeController?.abort();
+    safelyClearReturnRoute(storage);
+    renderSignIn({ rememberRoute: false });
+    Promise.resolve(invalidateLocalSession()).catch(() => {});
+  };
+  const handlePageHide = () => {
+    activeController?.abort(); abortRouteWork(); currentRole = null;
+    currentCanReviewPlan = false; renderLoading();
+  };
+  const handlePageShow = (event) => { if (event.persisted) bootstrap(); };
 
   return Object.freeze({
     start() {
       destroyed = false;
       eventTarget.addEventListener('hashchange', handleHashChange);
+      eventTarget.addEventListener('pagehide', handlePageHide);
+      eventTarget.addEventListener('pageshow', handlePageShow);
+      unsubscribeLogout = subscribeToLogout(handleLogoutSignal, eventTarget);
       return bootstrap();
     },
     expireSession() {
@@ -712,6 +741,9 @@ export function createShellApp({
       activeController?.abort();
       abortRouteWork();
       eventTarget.removeEventListener('hashchange', handleHashChange);
+      eventTarget.removeEventListener('pagehide', handlePageHide);
+      eventTarget.removeEventListener('pageshow', handlePageShow);
+      unsubscribeLogout?.();
     }
   });
 }
