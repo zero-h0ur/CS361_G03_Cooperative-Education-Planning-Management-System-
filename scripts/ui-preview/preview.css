@@ -1,0 +1,7 @@
+.preview-controls { position: relative; z-index: 10; display: flex; flex-wrap: wrap; align-items: center;
+  gap: 12px; padding: 12px 20px; background: #fff6d6; border-bottom: 2px solid #e0a619; color: #493509; font: 14px 'Prompt', sans-serif; }
+.preview-controls p { margin: 0; flex: 1 1 340px; }
+.preview-controls label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.preview-controls select, .preview-controls button { min-height: 44px; max-width: 100%; border: 1px solid #89743b;
+  border-radius: 8px; padding: 6px 10px; background: white; color: #493509; font: inherit; }
+.preview-controls :focus-visible { outline: 3px solid #c8102e; outline-offset: 2px; }

@@ -9,6 +9,8 @@
   "scripts": {
     "start": "node src/server.js",
     "build": "node scripts/build-frontend.mjs",
+    "dev:ui": "node scripts/dev-ui.mjs",
+    "test:ui-preview": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/ui-preview.test.js && node --test tests/ui-preview-server.test.mjs",
     "package:lambda": "node scripts/package-lambda.mjs",
     "migrate": "node src/db/migrate.js",
     "test": "npm run test:dataset && npm run test:fixtures && npm run test:api && npm run test:contract && npm run test:auth && npm run test:authz && npm run test:workflow && npm run test:session && npm run test:profile && npm run test:plan && npm run test:staff && npm run test:review && npm run test:staff-plan && npm run test:submit && npm run test:history && npm run test:advisor && npm run test:v3-t02 && npm run test:v3-t03 && npm run test:lambda && npm run test:runtime-grants && npm run test:frontend && npm run test:migration && npm run test:dal",
