@@ -4,6 +4,7 @@ import { cognitoUserPoolsTokenProvider } from 'aws-amplify/auth/cognito';
 import { sessionStorage as amplifySessionStorage } from 'aws-amplify/utils';
 
 import { AUTH_ERROR_CODES, AuthShellError } from './auth-errors.js';
+import { browserAuthStores, clearAuthenticationStorage, publishLogout } from './auth-storage.js';
 
 const REQUIRED_ACCESS_SCOPE = 'coed-api/access';
 let configuredSignature = null;
@@ -49,11 +50,15 @@ export function normalizeAuthConfig(config, currentOrigin) {
   if (!config || typeof config !== 'object' || Array.isArray(config)) {
     throw new AuthShellError(AUTH_ERROR_CODES.CONFIGURATION);
   }
+  const domain = requireNonEmptyString(config.domain);
+  if (!/^[a-z0-9.-]+$/i.test(domain) || domain.startsWith('.') || domain.endsWith('.')) {
+    throw new AuthShellError(AUTH_ERROR_CODES.CONFIGURATION);
+  }
 
   return Object.freeze({
     userPoolId: requireNonEmptyString(config.userPoolId),
     userPoolClientId: requireNonEmptyString(config.userPoolClientId),
-    domain: requireNonEmptyString(config.domain),
+    domain,
     redirectSignIn: requireSameOriginUrl(config.redirectSignIn, currentOrigin),
     redirectSignOut: requireSameOriginUrl(config.redirectSignOut, currentOrigin),
     scopes: Object.freeze(normalizeScopes(config.scopes))
@@ -94,13 +99,20 @@ export function configureAmplifyAuth(config, currentOrigin = window.location.ori
   return normalized;
 }
 
-export function createAmplifyAuthClient({ config, currentOrigin = window.location.origin } = {}) {
-  configureAmplifyAuth(config, currentOrigin);
+export function createAmplifyAuthClient({ config, currentOrigin = window.location.origin,
+  stores = browserAuthStores(), navigate = (url) => window.location.assign(url),
+  notifyLogout = publishLogout } = {}) {
+  const normalized = configureAmplifyAuth(config, currentOrigin);
+  let signedOut = false;
+  let logoutPromise = null;
+  const cleanup = () => clearAuthenticationStorage({ clientId: normalized.userPoolClientId, stores });
 
   return Object.freeze({
     async getAccessToken({ forceRefresh = false } = {}) {
       try {
+        if (signedOut) throw new AuthShellError(AUTH_ERROR_CODES.NOT_SIGNED_IN);
         const session = await fetchAuthSession({ forceRefresh });
+        if (signedOut) throw new AuthShellError(AUTH_ERROR_CODES.NOT_SIGNED_IN);
         const accessToken = session.tokens?.accessToken?.toString();
 
         // No stored tokens means the user has not signed in yet in this tab
@@ -120,21 +132,55 @@ export function createAmplifyAuthClient({ config, currentOrigin = window.locatio
     },
 
     async startLogin() {
-      await signInWithRedirect();
+      await signInWithRedirect({ options: { prompt: 'LOGIN' } });
     },
 
     async restartLogin() {
       await cognitoUserPoolsTokenProvider.tokenOrchestrator.clearTokens();
-      await signInWithRedirect();
+      cleanup();
+      await signInWithRedirect({ options: { prompt: 'LOGIN' } });
     },
 
-    async logout() {
-      try {
-        await cognitoUserPoolsTokenProvider.tokenOrchestrator.clearTokens();
-      } catch {
-        // Proceed with global sign-out even if local storage cleanup fails.
-      }
-      await signOut({ global: true });
+    async getDisplayIdentity() {
+      if (signedOut) return null;
+      const session = await fetchAuthSession();
+      if (signedOut) return null;
+      // Presentation only, never a role/permission source. Render with textContent.
+      const claims = session.tokens?.idToken?.payload || {};
+      const email = typeof claims.email === 'string' ? claims.email : '';
+      const name = [claims.name, claims.given_name, claims['cognito:username'], email.split('@')[0]]
+        .find((value) => typeof value === 'string' && value.trim()) || 'ผู้ใช้งาน';
+      return { name, email };
+    },
+
+    logout() {
+      if (logoutPromise) return logoutPromise;
+      signedOut = true;
+      logoutPromise = (async () => {
+        try {
+          // Do not erase tokens/OAuth metadata before the SDK uses them to sign out.
+          await signOut({ global: true });
+        } catch { /* Still clear local state and visit Hosted UI logout on failure. */ }
+        try {
+          await cognitoUserPoolsTokenProvider.tokenOrchestrator.clearTokens();
+        } finally {
+          const cleaned = cleanup();
+          notifyLogout();
+          // Explicitly close Hosted UI cookies even if old OAuth metadata was missing.
+          const logoutUrl = new URL(`https://${normalized.domain}/logout`);
+          logoutUrl.searchParams.set('client_id', normalized.userPoolClientId);
+          logoutUrl.searchParams.set('logout_uri', normalized.redirectSignOut);
+          navigate(logoutUrl.href);
+          if (!cleaned) throw new AuthShellError(AUTH_ERROR_CODES.SERVICE_UNAVAILABLE);
+        }
+      })().finally(() => { logoutPromise = null; });
+      return logoutPromise;
+    },
+
+    async invalidateLocalSession() {
+      signedOut = true;
+      try { await cognitoUserPoolsTokenProvider.tokenOrchestrator.clearTokens(); }
+      finally { cleanup(); }
     }
   });
 }

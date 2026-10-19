@@ -5155,6 +5155,15 @@ a {
   transform: translateY(-1px);
 }
 
+.user-nav-avatar-btn:focus-visible,
+.dropdown-item:focus-visible {
+  outline: 3px solid var(--tu-red);
+  outline-offset: 3px;
+}
+
+.user-nav-dropdown-menu[hidden] { display: none; }
+.navbar-auth-status { max-width: 22rem; font-size: 0.8rem; color: #64748b; }
+
 .user-avatar-circle {
   width: 36px;
   height: 36px;
@@ -5400,5 +5409,14 @@ a {
     right: -8px;
     min-width: 240px;
   }
+}
+
+/* Keep after the base dropdown rules so reduced-motion cannot be overridden. */
+@media (prefers-reduced-motion: reduce) {
+  .logo:hover .logo-tu-mark,
+  .user-nav-avatar-btn:hover,
+  .user-nav-dropdown-menu,
+  .user-nav-dropdown-wrapper.is-open .user-nav-dropdown-menu,
+  .dropdown-item:hover { transform: none; transition: none; }
 }
 

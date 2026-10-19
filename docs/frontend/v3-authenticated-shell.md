@@ -3,6 +3,9 @@
 เอกสารนี้อธิบายวิธี Build, ทดสอบ และ Deploy frontend shell ของ Issue #57 โดยอิง
 Accepted Decisions #48, #49 และ shared response/error contract จาก #55
 
+การแก้ Navbar Role, shared Student/Staff theme และ scoped Cognito logout ล่าสุด
+อธิบายใน [workspace-role-logout.md](workspace-role-logout.md) รวมขั้นตอนทดสอบจริงก่อน Merge
+
 ## Scope และ security boundary
 
 - หน้า Public เดิม (`index.html`, `requirements.html`, `company-directory.html`,

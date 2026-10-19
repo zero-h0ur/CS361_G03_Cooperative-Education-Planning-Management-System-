@@ -37,6 +37,62 @@ function setup({ hash = '', session = { role: 'STUDENT' }, error } = {}) {
 }
 
 describe('authenticated V3 shell and route guards', () => {
+  it.each(['STUDENT', 'STAFF'])('shares the faded campus theme and framed public logo for %s', async (role) => {
+    const context = setup({ session: { role } }); await context.app.start();
+    expect(context.root.querySelector('.protected-shell--campus')).not.toBeNull();
+    const backdrop = context.root.querySelector('.student-campus-backdrop');
+    expect(backdrop.getAttribute('width')).toBe('2172');
+    expect(backdrop.getAttribute('height')).toBe('724');
+    expect(backdrop.getAttribute('aria-hidden')).toBe('true');
+    const css = fs.readFileSync(path.resolve(__dirname, '..', 'src/frontend/authenticated-shell.css'), 'utf8');
+    expect(css).toMatch(/object-fit:\s*contain/);
+    expect(css).toMatch(/mask-composite:\s*intersect/);
+    const heading = css.match(/\.protected-shell--campus \.shell-content__heading \{([^}]+)\}/)[1];
+    expect(heading).toMatch(/min-height:\s*96px/);
+    expect(heading).not.toMatch(/(?:height|max-height):\s*(?:340px|clamp)/);
+    const artwork = css.match(/\.student-campus-backdrop \{([^}]+)\}/)[1];
+    expect(artwork).toMatch(/width:\s*min\(58%, 480px\)/);
+    expect(css).toMatch(/\.shell-brand:hover \.shell-brand__mark/);
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)/);
+    context.app.destroy();
+  });
+
+  it('keeps Advisor out of the Student/Staff visual redesign', async () => {
+    const context = setup({ session: { role: 'ADVISOR' } }); await context.app.start();
+    expect(context.root.querySelector('.protected-shell--campus')).toBeNull();
+    expect(context.root.querySelector('.student-campus-backdrop')).toBeNull(); context.app.destroy();
+  });
+
+  it('clears private DOM on pagehide and verifies session again after BFCache restoration', async () => {
+    const context = setup({ session: { role: 'STAFF' } }); await context.app.start();
+    context.eventTarget.dispatchEvent(new Event('pagehide'));
+    expect(context.root.querySelector('.protected-shell')).toBeNull();
+    context.loadSession.mockRejectedValue({ code: AUTH_ERROR_CODES.NOT_SIGNED_IN });
+    const show = new Event('pageshow'); Object.defineProperty(show, 'persisted', { value: true });
+    context.eventTarget.dispatchEvent(show); await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(context.root.textContent).toContain('กรุณาเข้าสู่ระบบ');
+    expect(context.loadSession).toHaveBeenCalledTimes(2); context.app.destroy();
+  });
+
+  it('cross-tab logout immediately removes Staff routes without redirecting or selecting a Student route', async () => {
+    const context = setup({ session: { role: 'STAFF' } }); await context.app.start();
+    context.eventTarget.dispatchEvent(new StorageEvent('storage', { key: 'co-ed:auth-logout', newValue: 'nonce' }));
+    expect(context.root.querySelector('.protected-shell')).toBeNull();
+    expect(context.root.textContent).toContain('กรุณาเข้าสู่ระบบ');
+    expect(context.root.querySelector('a[href*="student/profile"]')).toBeNull();
+    expect(context.startLogin).not.toHaveBeenCalled(); context.app.destroy();
+  });
+
+  it('does not resurrect a protected shell when an aborted Session request ignores cancellation', async () => {
+    const context = setup({ session: { role: 'STAFF' } });
+    let finish; context.loadSession.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    const pending = context.app.start();
+    context.eventTarget.dispatchEvent(new StorageEvent('storage', { key: 'co-ed:auth-logout', newValue: 'nonce' }));
+    finish({ role: 'STAFF' }); await pending;
+    expect(context.root.querySelector('.protected-shell')).toBeNull();
+    expect(context.root.textContent).toContain('กรุณาเข้าสู่ระบบ'); context.app.destroy();
+  });
+
   it('matches the public TU palette without importing its page-specific stylesheet', () => {
     const publicCss = fs.readFileSync(path.resolve(__dirname, '..', 'style.css'), 'utf8');
     const shellCss = fs.readFileSync(path.resolve(__dirname, '..', 'src/frontend/authenticated-shell.css'), 'utf8');

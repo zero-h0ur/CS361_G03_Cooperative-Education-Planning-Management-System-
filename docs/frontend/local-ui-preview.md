@@ -1,6 +1,6 @@
 # Local UI Preview (ไม่ใช้ AWS)
 
-ใช้ตรวจ UI ของ Student Profile และ My Plan โดยใช้ shell, components และ CSS จริง
+ใช้ตรวจ UI ของ Student Profile, My Plan และหน้ารายการ Staff โดยใช้ shell, components และ CSS จริง
 แต่ฉีด clients ที่ใช้ข้อมูลจำลองในหน่วยความจำจาก entry point แยกเท่านั้น
 ไม่ต้องมี Learner Lab, ฐานข้อมูล, Cognito configuration, token หรือ AWS credentials
 
@@ -13,8 +13,12 @@ npm.cmd run dev:ui
 
 - แผนสหกิจ: http://localhost:8081/app.html#/student/plan
 - ข้อมูลของฉัน: http://localhost:8081/app.html#/student/profile
+- Staff: http://localhost:8081/app.html?role=STAFF#/staff/students
 
 ใช้พอร์ต 8081 แยกจากเว็บจริงที่อาจเปิดอยู่บน 8080 ไม่ต้องรัน `npm run build`
+เลือกพื้นที่ Student/Staff จากแถบด้านบน Staff มีข้อมูลค้นหาแบบอ่านอย่างเดียวเท่านั้น
+ไม่มี Review command service หรือการจำลองสิทธิ์ Backend หน้า Detail/Review ที่ไม่ได้เตรียม Fixture
+จะแสดง Placeholder ไม่ใช่ผลการทดสอบการเชื่อมต่อจริง
 เลือกสถานการณ์จำลองจากแถบสีเหลืองด้านบน เปลี่ยน scenario/refresh จะรีเซ็ตข้อมูล
 กด Ctrl+C ใน Terminal เพื่อหยุด Server หลังแก้ source ให้หยุดและเปิดคำสั่งใหม่
 

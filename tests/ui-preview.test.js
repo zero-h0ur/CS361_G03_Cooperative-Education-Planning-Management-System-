@@ -64,6 +64,20 @@ test('uses the real decorative campus asset on both Student routes', async () =>
   expect(root.querySelector('.shell-brand__name').textContent).toBe('CO-ED');
 });
 
+test('Staff preview renders real read-only search with the same campus shell and no network', async () => {
+  const root = document.createElement('div'); document.body.append(root);
+  const clients = createPreviewClients({ role: 'STAFF', delayMs: 0 });
+  app = createShellApp({ ...clients, root, location: { pathname: '/app.html', search: '', hash: '#/staff/students' },
+    eventTarget: new EventTarget(), storage: null, startLogin: async () => {}, restartLogin: async () => {}, logout: async () => {} });
+  await app.start(); await flush();
+  expect(root.querySelector('.protected-shell--staff.protected-shell--campus')).not.toBeNull();
+  expect(root.querySelector('.student-campus-backdrop')).not.toBeNull();
+  expect(root.querySelector('.staff-management')).not.toBeNull();
+  expect(root.textContent).toContain('นักศึกษา ตัวอย่าง');
+  expect(root.querySelector('a[href="#/student/profile"]')).toBeNull();
+  expect(global.fetch).not.toHaveBeenCalled();
+});
+
 test.each(['submitted', 'review', 'approved', 'cancelled'])('%s renders real read-only UI', async (scenario) => {
   const { root } = await mount(scenario);
   expect(root.querySelector('.plan-editor')).toBeNull();

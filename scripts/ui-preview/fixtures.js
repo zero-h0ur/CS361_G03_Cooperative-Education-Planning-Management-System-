@@ -31,8 +31,9 @@ const stamp = '2026-10-20T03:00:00.000Z';
 const copy = (value) => JSON.parse(JSON.stringify(value));
 const failure = (code) => Object.assign(new Error('Local UI preview scenario'), { code });
 
-export function createPreviewClients({ scenario = 'draft', delayMs = 250 } = {}) {
+export function createPreviewClients({ scenario = 'draft', delayMs = 250, role = 'STUDENT' } = {}) {
   if (!Object.hasOwn(SCENARIOS, scenario)) throw new Error('Unknown preview scenario');
+  if (!['STUDENT', 'STAFF'].includes(role)) throw new Error('Unsupported preview role');
   const status = { revision: 'NEEDS_REVISION', submitted: 'SUBMITTED', review: 'UNDER_REVIEW',
     approved: 'APPROVED', cancelled: 'CANCELLED' }[scenario] || 'DRAFT';
   let profile = {
@@ -90,7 +91,12 @@ export function createPreviewClients({ scenario = 'draft', delayMs = 250 } = {})
 
   return {
     // Simulates a Student only in this separate entry point, not authentication.
-    loadSession: async () => ({ role: 'STUDENT' }),
+    loadSession: async () => ({ role, canReviewPlan: false }),
+    // Synthetic read-only list data, not a mock permission or review-command service.
+    staffClient: {
+      async searchStudents(options = {}) { return staffResults('students', options); },
+      async searchPlans(options = {}) { return staffResults('plans', options); }
+    },
     studentProfileClient: {
       async getOwnProfile(options) { await wait(options); return copy(profile); },
       async updateOwnProfile({ preferredName, version, signal }) {
@@ -146,4 +152,28 @@ export function createPreviewClients({ scenario = 'draft', delayMs = 250 } = {})
       }
     }
   };
+
+  async function staffResults(mode, options) {
+    await wait(options);
+    const student = Object.fromEntries(['id', 'student_number', 'full_name', 'preferred_name',
+      'department', 'program', 'major', 'academic_year', 'enrollment_status'].map((key) => [key, profile[key]]));
+    let rows = mode === 'students' ? [student] : plans.map((plan) => ({
+      id: plan.id, status: plan.status, student,
+      cycle: { id: plan.cycle_id, name: 'รอบที่ 1 ปีการศึกษา 2569 (จำลอง)', academic_year: 2569 },
+      company: plan.company_id ? { id: plan.company_id, name: plan.company_name } : null,
+      position: plan.position_id ? { id: plan.position_id, title: plan.position_title } : null,
+      created_at: plan.created_at, updated_at: plan.updated_at
+    }));
+    if (scenario === 'empty') rows = [];
+    const query = (options.q || '').toLowerCase();
+    rows = rows.filter((row) => {
+      const owner = row.student || row;
+      return (!query || `${owner.full_name} ${owner.preferred_name} ${owner.student_number}`.toLowerCase().includes(query)) &&
+        (!options.academic_year || String(options.academic_year) === String(owner.academic_year)) &&
+        (!options.status || options.status === row.status);
+    });
+    const total = rows.length, page = options.page || 1, pageSize = options.pageSize || 20;
+    return copy({ items: rows.slice((page - 1) * pageSize, page * pageSize),
+      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } });
+  }
 }
