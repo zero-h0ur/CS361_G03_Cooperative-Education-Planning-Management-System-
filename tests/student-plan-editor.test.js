@@ -1,4 +1,6 @@
 /** @jest-environment jsdom */
+const fs = require('node:fs');
+const path = require('node:path');
 const { renderPlanEditor, validatePlanDraft } = require('../tmp/frontend-test-modules/student/plan-editor-view.cjs');
 const { renderStudentPlanView } = require('../tmp/frontend-test-modules/student/student-plan-view.cjs');
 const { createStudentPlanClient } = require('../tmp/frontend-test-modules/student/plan-submission-client.cjs');
@@ -51,6 +53,32 @@ beforeEach(() => { document.body.replaceChildren(); });
 afterEach(() => { controllers.forEach((item) => item.abort()); controllers = []; });
 
 describe('Issue #73 Plan editor', () => {
+  test('constrains intrinsic select, card and field widths instead of clipping the editor', async () => {
+    const style = document.createElement('style');
+    style.textContent = fs.readFileSync(path.resolve(__dirname, '../src/frontend/authenticated-shell.css'), 'utf8')
+      .replace(/^@import[^\n]*\n/, '');
+    document.head.append(style);
+    try {
+      const { root } = await mount(basePlan);
+      const workspace = document.createElement('div');
+      workspace.className = 'student-workspace';
+      document.body.append(workspace);
+      workspace.append(root);
+      expect(getComputedStyle(workspace).gridTemplateColumns).toBe('minmax(0, 1fr)');
+      expect(getComputedStyle(root).minWidth).toBe('0');
+      for (const field of root.querySelectorAll('.student-form__field')) {
+        expect(getComputedStyle(field).minWidth).toBe('0');
+      }
+      for (const control of root.querySelectorAll('.student-form__input')) {
+        expect(getComputedStyle(control).minWidth).toBe('0');
+        expect(getComputedStyle(control).maxWidth).toBe('100%');
+      }
+      expect(getComputedStyle(root.querySelector('[data-role="save-plan-button"]')).maxWidth).toBe('100%');
+    } finally {
+      style.remove();
+    }
+  });
+
   test('creates an incomplete Draft with a real selected Cycle and normalized optional notes', async () => {
     const { root, planClient } = await mount();
     change(root, 'cycle_id', CYCLE);

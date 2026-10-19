@@ -386,11 +386,15 @@ a:focus-visible,
 
 .student-workspace {
   display: grid;
+  /* Native selects must not widen the implicit grid track on narrow screens. */
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 24px;
   margin-top: 38px;
 }
 
 .student-card {
+  min-width: 0;
   padding: 28px 30px;
   border: 1px solid var(--shell-line);
   border-radius: 12px;
@@ -497,7 +501,7 @@ a:focus-visible,
 
 .student-profile-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 16px 22px;
   margin: 0;
 }
@@ -566,6 +570,7 @@ a:focus-visible,
 
 .student-form__field {
   display: grid;
+  min-width: 0;
   gap: 8px;
 }
 
@@ -577,6 +582,8 @@ a:focus-visible,
 
 .student-form__input {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 44px;
   padding: 10px 14px;
   border: 1px solid #cbd5e1;
@@ -628,6 +635,12 @@ a:focus-visible,
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.student-workspace .shell-button {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 /* #73: use the authenticated workspace's existing type, spacing and palette. */
@@ -683,6 +696,7 @@ a:focus-visible,
   flex: 1 1 260px;
   width: auto;
   min-width: 0;
+  max-width: 100%;
 }
 
 .plan-editor [hidden], .plan-picker [hidden] {
