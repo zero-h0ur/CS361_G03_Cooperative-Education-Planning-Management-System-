@@ -218,12 +218,68 @@ describe('Issue #76: Student Plan submission client (contract)', () => {
 });
 
 describe('Issue #76: Student Plan submission UI', () => {
+  it('groups the real plan into four labelled, illustrated sections with a preliminary readiness notice', async () => {
+    const backend = createFakeBackend();
+    const { app, root } = await mountPlanPage(backend);
+    const cards = root.querySelectorAll('.student-plan-workspace .student-card--illustrated:not(.plan-editor)');
+    expect(cards).toHaveLength(4);
+    for (const card of cards) {
+      expect(card.querySelector('.student-card__icon svg').getAttribute('aria-hidden')).toBe('true');
+      expect(card.querySelector('.student-card__body h2').id).toBe(card.getAttribute('aria-labelledby'));
+    }
+    const notice = root.querySelector('[data-role="plan-submit-readiness"]');
+    expect(notice.classList.contains('student-plan-submit__readiness--ready')).toBe(true);
+    expect(notice.textContent).toContain('ข้อมูลเบื้องต้น');
+    expect(notice.textContent).toContain('ตรวจสอบรอบรับสมัครและข้อมูลอีกครั้ง');
+    expect(root.querySelector('[data-role="submit-plan-button"]').getAttribute('aria-describedby'))
+      .toBe(root.querySelector('[data-role="plan-submit-hint"]').id);
+    expect(submitCalls(backend)).toHaveLength(0);
+    expect(root.querySelector('.plan-editor.student-card--illustrated')).not.toBeNull();
+    app.destroy();
+  });
+
+  it.each(['SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'CANCELLED'])('does not imply a locked %s plan is ready to submit', async (status) => {
+    const backend = createFakeBackend({ plans: [planRow({ status })] });
+    const { app, root } = await mountPlanPage(backend);
+    const notice = root.querySelector('[data-role="plan-submit-readiness"]');
+    expect(notice.classList.contains('student-plan-submit__readiness--neutral')).toBe(true);
+    expect(notice.textContent).toContain('อ่านอย่างเดียว');
+    expect(notice.textContent).not.toContain('พร้อมส่งตรวจ');
+    expect(submitButton(root).disabled).toBe(true);
+    expect(submitCalls(backend)).toHaveLength(0);
+    app.destroy();
+  });
+
+  it('shows history timestamps in Thai while retaining machine-readable instants', async () => {
+    const { app, root } = await mountPlanPage(createFakeBackend());
+    const time = root.querySelector('.student-plan-history time');
+    expect(time.getAttribute('datetime')).toBe('2026-10-01T10:00:00.000Z');
+    expect(time.textContent).toContain('2569');
+    expect(time.textContent).toContain('17:00');
+    expect(time.textContent).not.toContain('T10:00:00');
+    app.destroy();
+  });
+
+  it('renders notes and return reasons as plain text inside the redesigned cards', async () => {
+    const payload = '<img src=x onerror=alert(1)>';
+    const { app, root } = await mountPlanPage(createFakeBackend({
+      plans: [planRow({ status: 'NEEDS_REVISION', notes: payload })],
+      history: [historyRow({ action: 'PLAN_RETURNED', review_notes: payload })]
+    }));
+    expect(root.querySelector('[data-plan-field="notes"]').textContent).toBe(payload);
+    expect(root.querySelector('[data-role="plan-return-reason"]').textContent).toContain(payload);
+    expect(root.querySelector('.student-plan-workspace img')).toBeNull();
+    app.destroy();
+  });
+
   it('disables submit and lists missing fields for an incomplete DRAFT', async () => {
     const backend = createFakeBackend({ plans: [planRow({ company_id: null, position_id: null })] });
     const { root } = await mountPlanPage(backend);
 
     expect(submitButton(root).disabled).toBe(true);
     expect(root.querySelector('[data-role="plan-missing-fields"]').textContent).toContain('สถานประกอบการ');
+    expect(root.querySelector('[data-role="plan-submit-readiness"]').classList
+      .contains('student-plan-submit__readiness--warning')).toBe(true);
   });
 
   it('submits once while in flight, then refreshes state and history from the server and locks the Plan', async () => {

@@ -37,6 +37,97 @@ function setup({ hash = '', session = { role: 'STUDENT' }, error } = {}) {
 }
 
 describe('authenticated V3 shell and route guards', () => {
+  it('matches the public TU palette without importing its page-specific stylesheet', () => {
+    const publicCss = fs.readFileSync(path.resolve(__dirname, '..', 'style.css'), 'utf8');
+    const shellCss = fs.readFileSync(path.resolve(__dirname, '..', 'src/frontend/authenticated-shell.css'), 'utf8');
+    const valueOf = (css, variable) => {
+      const match = css.match(new RegExp(`--${variable}:\\s*([^;]+);`));
+      expect(match).not.toBeNull();
+      return match[1].trim().toLowerCase();
+    };
+
+    for (const [shell, publicToken] of [
+      ['shell-primary', 'tu-red'], ['shell-primary-dark', 'tu-red-hover'],
+      ['shell-gold', 'tu-gold'], ['shell-canvas', 'bg-page'],
+      ['shell-line', 'border-color'], ['shell-ink', 'ink']
+    ]) {
+      expect(valueOf(shellCss, shell)).toBe(valueOf(publicCss, publicToken));
+    }
+    expect(shellCss).not.toMatch(/#(?:4b48e5|3834bf|3730a3|d9ddff|eef0ff|29266f)\b/i);
+    expect(shellCss).not.toMatch(/rgba\(\s*75\s*,\s*72\s*,\s*229\b/i);
+    const html = fs.readFileSync(path.resolve(__dirname, '..', 'app.html'), 'utf8');
+    const page = new DOMParser().parseFromString(html, 'text/html');
+    expect(page.querySelector('link[href="style.css"]')).toBeNull();
+    expect(page.querySelector('link[href="assets/authenticated-shell.css"]')).not.toBeNull();
+  });
+
+  it('keeps primary, secondary and focus colors readable against the TU surfaces', () => {
+    const css = fs.readFileSync(path.resolve(__dirname, '..', 'src/frontend/authenticated-shell.css'), 'utf8');
+    const color = (name) => css.match(new RegExp(`--shell-${name}:\\s*#([0-9a-f]{6});`, 'i'))[1];
+    const luminance = (hex) => {
+      const channels = hex.match(/../g).map((part) => parseInt(part, 16) / 255)
+        .map((part) => part <= 0.04045 ? part / 12.92 : ((part + 0.055) / 1.055) ** 2.4);
+      return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    };
+    const contrast = (a, b) => {
+      const values = [luminance(a), luminance(b)].sort((x, y) => y - x);
+      return (values[0] + 0.05) / (values[1] + 0.05);
+    };
+
+    for (const [foreground, background] of [
+      ['ink', 'canvas'], ['muted', 'canvas'], ['muted', 'subtle'],
+      ['primary-dark', 'soft'], ['surface', 'primary']
+    ]) {
+      expect(contrast(color(foreground), color(background))).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(contrast(color('focus'), color('surface'))).toBeGreaterThanOrEqual(3);
+  });
+
+  it.each(['STUDENT', 'STAFF', 'ADVISOR'])('uses the real TU brand for %s without adding unauthorized navigation', async (role) => {
+    const context = setup({ session: { role } });
+    await context.app.start();
+
+    const brand = context.root.querySelector('.shell-brand');
+    expect(brand.getAttribute('href')).toBe('index.html');
+    expect(brand.getAttribute('aria-label')).toBe('CO-ED หน้าแรก');
+    expect(brand.querySelector('.shell-brand__name').textContent).toBe('CO-ED');
+    expect(brand.querySelector('.shell-brand__subtitle').textContent).toBe('ระบบข้อมูลสหกิจศึกษา');
+    const logo = brand.querySelector('img');
+    expect(logo.getAttribute('src')).toBe('resources/images/logomini.png');
+    expect(logo.getAttribute('alt')).toBe('');
+    expect(fs.existsSync(path.resolve(__dirname, '..', logo.getAttribute('src')))).toBe(true);
+    expect(context.root.querySelector('.shell-role__value').textContent).not.toBe('ไม่ทราบบทบาท');
+    context.app.destroy();
+  });
+
+  it('moves skip-link focus to the main content without changing the guarded hash route', async () => {
+    const context = setup({ hash: '#/student/plan' });
+    await context.app.start();
+    const skipLink = context.root.querySelector('.shell-skip-link');
+    const main = context.root.querySelector('main');
+    const originalHash = context.location.hash;
+    skipLink.focus();
+    expect(document.activeElement).toBe(skipLink);
+    skipLink.click();
+
+    expect(document.activeElement).toBe(main);
+    expect(main.id).toBe('shell-main-content');
+    expect(context.location.hash).toBe(originalHash);
+    expect(context.root.querySelector('h1').textContent).toBe('แผนสหกิจของฉัน');
+    context.app.destroy();
+  });
+
+  it('shows the TU logo on configuration failures while preserving the public recovery link', () => {
+    const context = setup();
+    renderStartupFailure(context.root);
+
+    expect(context.root.querySelector('.shell-state__mark img').getAttribute('src')).toBe('resources/images/logomini.png');
+    expect(context.root.querySelector('[role="alert"]')).not.toBeNull();
+    expect(context.root.querySelector('a').getAttribute('href')).toBe('company-directory.html');
+    expect(context.startLogin).not.toHaveBeenCalled();
+    context.app.destroy();
+  });
+
   it.each([
     'index.html',
     'requirements.html',

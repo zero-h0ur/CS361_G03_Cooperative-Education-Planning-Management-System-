@@ -35,3 +35,9 @@ await build({
   outExtension: { '.js': '.cjs' },
   logLevel: 'silent'
 });
+
+await build({
+  entryPoints: [resolve(workspace, 'scripts/ui-preview/fixtures.js')],
+  bundle: true, platform: 'node', format: 'cjs', target: ['node18'],
+  outfile: resolve(outputDirectory, 'preview-fixtures.cjs'), logLevel: 'silent'
+});
