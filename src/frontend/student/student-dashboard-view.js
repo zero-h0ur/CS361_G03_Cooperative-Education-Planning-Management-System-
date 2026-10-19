@@ -3,6 +3,7 @@ import {
   STUDENT_PROFILE_ERROR_CODES,
   validatePreferredName
 } from './profile-client.js';
+import { createWorkspaceIcon, decorateStudentCard } from '../ui/workspace-presentation.js';
 
 const OFFICIAL_FIELD_DEFINITIONS = Object.freeze([
   { key: 'student_number', label: 'รหัสนักศึกษา' },
@@ -12,7 +13,7 @@ const OFFICIAL_FIELD_DEFINITIONS = Object.freeze([
   { key: 'program', label: 'หลักสูตร' },
   { key: 'major', label: 'สาขาวิชา' },
   { key: 'academic_year', label: 'ปีการศึกษา' },
-  { key: 'enrollment_status', label: 'สถานะภาพนักศึกษา' }
+  { key: 'enrollment_status', label: 'สถานภาพนักศึกษา' }
 ]);
 
 // enrollment_status values allowed by #51 and chk_students_enrollment_status
@@ -59,7 +60,7 @@ export function renderStudentDashboardView({
   onAccessDenied,
   onNavigate
 } = {}) {
-  const container = element('div', 'student-workspace');
+  const container = element('div', 'student-workspace student-profile-workspace');
 
   if (!profileClient || typeof profileClient.getOwnProfile !== 'function') {
     const fallback = element('section', 'shell-placeholder');
@@ -120,7 +121,7 @@ export function renderStudentDashboardView({
     summarySection.setAttribute('aria-labelledby', 'student-dashboard-summary-title');
 
     const summaryHeader = element('div', 'student-dashboard-summary__header');
-    const summaryTitle = element('h2', 'student-card__title', 'สรุปสถานะนักศึกษาและทางลัดสหกิจศึกษา');
+    const summaryTitle = element('h2', 'student-card__title', 'ข้อมูลนักศึกษาของคุณ');
     summaryTitle.id = 'student-dashboard-summary-title';
 
     const displayNameValue = element('p', 'student-dashboard-summary__greeting');
@@ -130,7 +131,7 @@ export function renderStudentDashboardView({
     const badgeRow = element('div', 'student-dashboard-summary__badges');
     const statusBadge = element(
       'span',
-      'student-badge student-badge--status',
+      `student-badge ${profile.enrollment_status === 'ACTIVE' ? 'student-badge--status' : 'student-badge--neutral'}`,
       formatOfficialValue('enrollment_status', profile.enrollment_status)
     );
     const yearBadge = element(
@@ -159,6 +160,7 @@ export function renderStudentDashboardView({
     const planLink = element('a', 'shell-button', 'เปิดแผนสหกิจของฉัน');
     planLink.href = '#/student/plan';
     planLink.dataset.role = 'go-to-student-plan';
+    planLink.prepend(createWorkspaceIcon('file'));
     planLink.addEventListener('click', (event) => {
       if (typeof onNavigate === 'function') {
         event.preventDefault();
@@ -168,6 +170,7 @@ export function renderStudentDashboardView({
 
     const directoryLink = element('a', 'shell-button shell-button--secondary', 'ดูรายชื่อสถานประกอบการ');
     directoryLink.href = 'company-directory.html';
+    directoryLink.prepend(createWorkspaceIcon('building'));
 
     planActions.append(planLink, directoryLink);
     planCtaBox.append(planCtaCopy, planActions);
@@ -206,7 +209,7 @@ export function renderStudentDashboardView({
     const editableSection = element('section', 'student-card student-profile-editable');
     editableSection.setAttribute('aria-labelledby', 'student-editable-profile-title');
 
-    const editableTitle = element('h2', 'student-card__title', 'ตั้งค่าชื่อที่ต้องการให้แสดง (แก้ไขได้เฉพาะนักศึกษา)');
+    const editableTitle = element('h2', 'student-card__title', 'ตั้งค่าชื่อที่ต้องการให้แสดง');
     editableTitle.id = 'student-editable-profile-title';
 
     const editableDescription = element(
@@ -426,7 +429,11 @@ export function renderStudentDashboardView({
     });
 
     editableSection.append(editableTitle, editableDescription, feedbackRegion, form);
-    container.replaceChildren(summarySection, officialSection, editableSection);
+    container.replaceChildren(
+      decorateStudentCard(summarySection, 'user'),
+      decorateStudentCard(officialSection, 'lock'),
+      decorateStudentCard(editableSection, 'edit')
+    );
   }
 
   async function loadProfile(postLoadFeedback = null) {

@@ -203,6 +203,22 @@ describe('Issue #72: Student Profile API client', () => {
 });
 
 describe('Issue #72: Student Dashboard and My Profile UI view', () => {
+  it('separates profile summary, official data and preferred-name settings with decorative card icons', async () => {
+    const context = setupStudentShell();
+    await context.app.start();
+    await flushPromises();
+    const cards = context.root.querySelectorAll('.student-profile-workspace .student-card--illustrated');
+    expect(cards).toHaveLength(3);
+    for (const card of cards) {
+      expect(card.querySelector('.student-card__icon svg').getAttribute('aria-hidden')).toBe('true');
+      expect(card.querySelector('.student-card__body h2').id).toBe(card.getAttribute('aria-labelledby'));
+    }
+    expect(context.root.querySelector('.student-profile-official input')).toBeNull();
+    expect(context.root.querySelector('.student-profile-editable input').name).toBe('preferred_name');
+    expect(context.studentProfileClient.updateOwnProfile).not.toHaveBeenCalled();
+    context.app.destroy();
+  });
+
   it('renders official student fields as read-only and exposes only preferred_name as an editable input', async () => {
     const context = setupStudentShell();
 
@@ -448,5 +464,8 @@ describe('Issue #72: Student Dashboard and My Profile UI view', () => {
     await flushPromises();
     expect(context.root.querySelector('[data-field="enrollment_status"]').textContent)
       .toContain('INACTIVE');
+    const badge = context.root.querySelector('.student-dashboard-summary__badges .student-badge');
+    expect(badge.classList.contains('student-badge--status')).toBe(false);
+    expect(badge.textContent).toContain('INACTIVE');
   });
 });
