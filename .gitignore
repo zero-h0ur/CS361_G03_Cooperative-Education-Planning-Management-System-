@@ -18,3 +18,7 @@ node_modules/
 .agents
 skills-lock.json
 .superdesign/
+# Private synthetic identity mapping produced in an operator terminal, never a fixture for Git.
+coed-advisor83-identity.json
+coed-db83-baseline.json
+__pycache__/
