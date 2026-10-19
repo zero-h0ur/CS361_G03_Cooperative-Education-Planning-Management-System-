@@ -55,29 +55,32 @@
 
   <main class="directory-main">
     <section class="hero-section">
-    <div class="container">
-      <div class="directory-heading-centered">
-        <div class="hero-badge fade-up-init" style="margin-bottom: 16px; display: inline-flex;">
-          <i class="fa-solid fa-building"></i>
-          <span>CO-ED PARTNERS DIRECTORY</span>
+      <div class="container">
+        <div class="directory-heading-centered">
+          <div class="hero-badge fade-up-init" style="margin-bottom: 16px; display: inline-flex;">
+            <i class="fa-solid fa-building"></i>
+            <span>CO-ED PARTNERS DIRECTORY</span>
+          </div>
+          <h1 class="fade-up-init">
+            รายชื่อ<span class="hero-highlight" style="font-family: var(--font-serif); font-style: italic; color: var(--tu-red);">สถานประกอบการ
+              <svg class="hero-underline-svg" viewBox="0 0 340 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path class="hero-underline-path" d="M4 18C75 6 245 4 336 17" stroke="url(#heroCoralGradDir)" stroke-width="6" stroke-linecap="round"/>
+                <defs>
+                  <linearGradient id="heroCoralGradDir" x1="0" y1="0" x2="340" y2="0" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#C8102E" />
+                    <stop offset="0.65" stop-color="#E51838" />
+                    <stop offset="1" stop-color="#F1B521" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </span>
+          </h1>
+          <p class="directory-intro fade-up-init">ค้นหาและสำรวจสถานประกอบการชั้นนำที่เปิดรับนักศึกษาสหกิจศึกษา มหาวิทยาลัยธรรมศาสตร์</p>
         </div>
-        <h1 class="fade-up-init">
-          รายชื่อ<span class="hero-highlight" style="font-family: var(--font-serif); font-style: italic; color: var(--tu-red);">สถานประกอบการ
-            <svg class="hero-underline-svg" viewBox="0 0 340 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path class="hero-underline-path" d="M4 18C75 6 245 4 336 17" stroke="url(#heroCoralGradDir)" stroke-width="6" stroke-linecap="round"/>
-              <defs>
-                <linearGradient id="heroCoralGradDir" x1="0" y1="0" x2="340" y2="0" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#C8102E" />
-                  <stop offset="0.65" stop-color="#E51838" />
-                  <stop offset="1" stop-color="#F1B521" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </span>
-        </h1>
-        <p class="directory-intro fade-up-init">ค้นหาและสำรวจสถานประกอบการชั้นนำที่เปิดรับนักศึกษาสหกิจศึกษา มหาวิทยาลัยธรรมศาสตร์</p>
       </div>
+    </section>
 
+    <div class="container" style="padding-top: 36px;">
       <p id="searchResultStatus" class="directory-result-status" aria-live="polite"></p>
 
       <div class="directory-controls">
@@ -502,7 +505,6 @@
         </button>
       </div>
     </div>
-    </section>
   </main>
   
 

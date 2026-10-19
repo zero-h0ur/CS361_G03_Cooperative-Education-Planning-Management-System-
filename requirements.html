@@ -212,7 +212,7 @@
             <span class="detail-number shiny-badge">01</span>
             <div>
               <p class="section-kicker">QUALIFICATIONS</p>
-              <h2 class="shiny-shimmer-text">เกณฑ์รับสมัครเข้าแผนสหกิจศึกษา</h2>
+              <h2 class="heading-stagger-fade">เกณฑ์รับสมัครเข้าแผนสหกิจศึกษา</h2>
             </div>
             <span class="academic-year-badge shiny-badge">ปีการศึกษา 2568</span>
           </div>
@@ -293,7 +293,7 @@
               </div>
               <div>
                 <h3>ผลการเรียนเฉลี่ยสะสม</h3>
-                <p>มีผลการเรียนเฉลี่ยสะสม (GPA) เมื่อสิ้นภาคการศึกษาสุดท้ายก่อนสมัครเข้าเป็นนักศึกษาสหกิจศึกษา <strong class="eligibility-highlight shiny-shimmer-text">ไม่ต่ำกว่า 2.75</strong></p>
+                <p>มีผลการเรียนเฉลี่ยสะสม (GPA) เมื่อสิ้นภาคการศึกษาสุดท้ายก่อนสมัครเข้าเป็นนักศึกษาสหกิจศึกษา <strong class="eligibility-highlight">ไม่ต่ำกว่า 2.75</strong></p>
               </div>
             </li>
 
@@ -333,7 +333,7 @@
             <span class="detail-number shiny-badge">02</span>
             <div>
               <p class="section-kicker">STEP-BY-STEP GUIDELINES</p>
-              <h2 class="shiny-shimmer-text">ภาพรวมขั้นตอนการเตรียมสหกิจศึกษา</h2>
+              <h2 class="heading-stagger-fade">ภาพรวมขั้นตอนการเตรียมสหกิจศึกษา</h2>
             </div>
           </div>
           <p class="detail-intro">ภาพรวมการเตรียมตัวตั้งแต่ตรวจสอบคุณสมบัติ เตรียมเอกสาร จนถึงติดตามประกาศและกำหนดการ</p>
@@ -352,7 +352,7 @@
             <span class="detail-number shiny-badge">03</span>
             <div>
               <p class="section-kicker">DOCUMENTS</p>
-              <h2 class="shiny-shimmer-text">หมวดเอกสารที่ต้องตรวจสอบ</h2>
+              <h2 class="heading-stagger-fade">หมวดเอกสารที่ต้องตรวจสอบ</h2>
             </div>
           </div>
           <p class="detail-intro">เตรียมเอกสารให้ครบถ้วนและตรวจสอบรูปแบบไฟล์ตามประกาศของแต่ละรอบ</p>
@@ -381,7 +381,7 @@
             <span class="detail-number shiny-badge">04</span>
             <div>
               <p class="section-kicker">PREPARATION TIPS</p>
-              <h2 class="shiny-shimmer-text">แนวทางเตรียมตัวเบื้องต้น</h2>
+              <h2 class="heading-stagger-fade">แนวทางเตรียมตัวเบื้องต้น</h2>
             </div>
           </div>
           <p class="detail-intro">คำแนะนำทั่วไปสำหรับช่วยให้นักศึกษาจัดลำดับการเตรียมตัว โดยต้องตรวจสอบข้อกำหนดเฉพาะจากประกาศทางการอีกครั้ง</p>
@@ -466,7 +466,36 @@
       });
     }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
-    document.querySelectorAll('.fade-up-init, .scroll-stagger-item').forEach(el => {
+    function initHeadingStagger() {
+      const headings = document.querySelectorAll('.heading-stagger-fade');
+      headings.forEach(heading => {
+        const rawText = heading.textContent.trim();
+        if (!rawText) return;
+
+        let segments = [];
+        if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+          const segmenter = new Intl.Segmenter('th', { granularity: 'word' });
+          segments = Array.from(segmenter.segment(rawText)).map(s => s.segment);
+        } else {
+          segments = rawText.split(/\s+/);
+        }
+
+        heading.innerHTML = '';
+        segments.forEach((seg, idx) => {
+          const span = document.createElement('span');
+          span.className = 'stagger-unit';
+          span.style.setProperty('--char-idx', idx);
+          span.textContent = seg;
+          heading.appendChild(span);
+        });
+
+        scrollObserver.observe(heading);
+      });
+    }
+
+    initHeadingStagger();
+
+    document.querySelectorAll('.fade-up-init, .scroll-stagger-item, .requirements-detail-card').forEach(el => {
       scrollObserver.observe(el);
     });
   </script>
