@@ -1,0 +1,1121 @@
+
+> co-ed-v2@1.0.0 test
+> npm run test:dataset && npm run test:fixtures && npm run test:api && npm run test:contract && npm run test:auth && npm run test:authz && npm run test:workflow && npm run test:session && npm run test:profile && npm run test:plan && npm run test:staff && npm run test:review && npm run test:staff-plan && npm run test:submit && npm run test:history && npm run test:advisor && npm run test:v3-t02 && npm run test:v3-t03 && npm run test:lambda && npm run test:runtime-grants && npm run test:frontend && npm run test:migration && npm run test:dal
+
+
+> co-ed-v2@1.0.0 test:dataset
+> node --test tests/v2-dataset.test.mjs
+
+TAP version 13
+# Subtest: canonical dataset passes validation
+ok 1 - canonical dataset passes validation
+  ---
+  duration_ms: 3.450333
+  ...
+# Subtest: canonical dataset is repeatable and has the declared record counts
+ok 2 - canonical dataset is repeatable and has the declared record counts
+  ---
+  duration_ms: 0.654583
+  ...
+# Subtest: all record IDs are deterministic UUID v4 values
+ok 3 - all record IDs are deterministic UUID v4 values
+  ---
+  duration_ms: 0.251833
+  ...
+# Subtest: duplicate IDs are rejected across entities
+ok 4 - duplicate IDs are rejected across entities
+  ---
+  duration_ms: 0.680833
+  ...
+# Subtest: malformed UUIDs are rejected
+ok 5 - malformed UUIDs are rejected
+  ---
+  duration_ms: 0.605917
+  ...
+# Subtest: academic_year strings are rejected
+ok 6 - academic_year strings are rejected
+  ---
+  duration_ms: 0.469416
+  ...
+# Subtest: a position must reference an existing company
+ok 7 - a position must reference an existing company
+  ---
+  duration_ms: 0.749667
+  ...
+# Subtest: a plan must reference an existing student
+ok 8 - a plan must reference an existing student
+  ---
+  duration_ms: 0.656667
+  ...
+# Subtest: a non-null plan round must reference an existing round
+ok 9 - a non-null plan round must reference an existing round
+  ---
+  duration_ms: 0.72375
+  ...
+# Subtest: a public position cannot expose a private company
+ok 10 - a public position cannot expose a private company
+  ---
+  duration_ms: 0.607833
+  ...
+# Subtest: student and plan records remain private mock data
+ok 11 - student and plan records remain private mock data
+  ---
+  duration_ms: 0.613667
+  ...
+# Subtest: personal fields and email-like values are rejected
+ok 12 - personal fields and email-like values are rejected
+  ---
+  duration_ms: 0.8085
+  ...
+# Subtest: deferred workflow fields are rejected from plans
+ok 13 - deferred workflow fields are rejected from plans
+  ---
+  duration_ms: 0.459458
+  ...
+# Subtest: entities deferred by Issue \#28 are rejected from the minimum model
+ok 14 - entities deferred by Issue \#28 are rejected from the minimum model
+  ---
+  duration_ms: 0.473333
+  ...
+# Subtest: the canonical dataset exercises pagination and optional round_id
+ok 15 - the canonical dataset exercises pagination and optional round_id
+  ---
+  duration_ms: 0.59375
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 63.131417
+
+> co-ed-v2@1.0.0 test:fixtures
+> node --test tests/v3-dataset.test.mjs && jest --runInBand tests/v3-fixtures.test.js
+
+TAP version 13
+# Subtest: canonical V3 fixtures pass full validation against V2 base dataset
+ok 1 - canonical V3 fixtures pass full validation against V2 base dataset
+  ---
+  duration_ms: 2.555667
+  ...
+# Subtest: canonical V3 fixtures have declared record counts and deterministic structure
+ok 2 - canonical V3 fixtures have declared record counts and deterministic structure
+  ---
+  duration_ms: 0.272209
+  ...
+# Subtest: all entity IDs in V3 fixtures are deterministic UUID v4 values
+ok 3 - all entity IDs in V3 fixtures are deterministic UUID v4 values
+  ---
+  duration_ms: 0.230375
+  ...
+# Subtest: all students strictly use RFC 2606 reserved domains (@student.example.com)
+ok 4 - all students strictly use RFC 2606 reserved domains (@student.example.com)
+  ---
+  duration_ms: 0.295958
+  ...
+# Subtest: students and staff_scopes strictly use standardized department codes ('CPE', 'EE') per Issue \#53
+ok 5 - students and staff_scopes strictly use standardized department codes ('CPE', 'EE') per Issue \#53
+  ---
+  duration_ms: 0.204667
+  ...
+# Subtest: all academic_year values use the unified Buddhist Era calendar (2569/2568)
+ok 6 - all academic_year values use the unified Buddhist Era calendar (2569/2568)
+  ---
+  duration_ms: 0.194375
+  ...
+# Subtest: V3 fixtures cover required roles: STUDENT, ADVISOR, STAFF, ADMIN
+ok 7 - V3 fixtures cover required roles: STUDENT, ADVISOR, STAFF, ADMIN
+  ---
+  duration_ms: 0.208208
+  ...
+# Subtest: V3 fixtures cover all core workflow states: DRAFT, SUBMITTED, UNDER_REVIEW, NEEDS_REVISION, APPROVED, CANCELLED
+ok 8 - V3 fixtures cover all core workflow states: DRAFT, SUBMITTED, UNDER_REVIEW, NEEDS_REVISION, APPROVED, CANCELLED
+  ---
+  duration_ms: 0.190375
+  ...
+# Subtest: V3 fixtures cover advisor assignment states: ACTIVE, REVOKED, EXPIRED
+ok 9 - V3 fixtures cover advisor assignment states: ACTIVE, REVOKED, EXPIRED
+  ---
+  duration_ms: 0.265958
+  ...
+# Subtest: V3 fixtures cover staff scopes with active and inactive statuses
+ok 10 - V3 fixtures cover staff scopes with active and inactive statuses
+  ---
+  duration_ms: 0.21875
+  ...
+# Subtest: rejects non-RFC2606 email domain in validator
+ok 11 - rejects non-RFC2606 email domain in validator
+  ---
+  duration_ms: 0.375791
+  ...
+# Subtest: rejects unstandardized department string in validator
+ok 12 - rejects unstandardized department string in validator
+  ---
+  duration_ms: 0.82175
+  ...
+# Subtest: rejects overlapping active advisor assignments for the same student
+ok 13 - rejects overlapping active advisor assignments for the same student
+  ---
+  duration_ms: 0.415708
+  ...
+# Subtest: fixtures provide both in-scope (200 OK) and out-of-year (403 Forbidden) staff test cases for OPEN round 2569
+ok 14 - fixtures provide both in-scope (200 OK) and out-of-year (403 Forbidden) staff test cases for OPEN round 2569
+  ---
+  duration_ms: 0.2575
+  ...
+# Subtest: every staff member has at least one student outside their scope to guarantee 403 test coverage
+ok 15 - every staff member has at least one student outside their scope to guarantee 403 test coverage
+  ---
+  duration_ms: 0.348959
+  ...
+# Subtest: validator flags error when a staff member has no out-of-scope students
+ok 16 - validator flags error when a staff member has no out-of-scope students
+  ---
+  duration_ms: 0.512333
+  ...
+# Subtest: all rounds define valid end_date timestamps for default assignment effective_to (\#53)
+ok 17 - all rounds define valid end_date timestamps for default assignment effective_to (\#53)
+  ---
+  duration_ms: 0.453167
+  ...
+# Subtest: all active plans have student.academic_year matching round.academic_year for consistent predicate evaluation
+ok 18 - all active plans have student.academic_year matching round.academic_year for consistent predicate evaluation
+  ---
+  duration_ms: 0.639125
+  ...
+# Subtest: validator rejects plans where student.academic_year diverges from round.academic_year
+ok 19 - validator rejects plans where student.academic_year diverges from round.academic_year
+  ---
+  duration_ms: 0.812583
+  ...
+# Subtest: validator rejects rounds without end_date
+ok 20 - validator rejects rounds without end_date
+  ---
+  duration_ms: 0.448417
+  ...
+# Subtest: V3 fixtures cover identity link states ACTIVE and REVOKED for the \#51 relink flow
+ok 21 - V3 fixtures cover identity link states ACTIVE and REVOKED for the \#51 relink flow
+  ---
+  duration_ms: 0.182209
+  ...
+# Subtest: currently-active fixtures do not expire with the wall clock
+ok 22 - currently-active fixtures do not expire with the wall clock
+  ---
+  duration_ms: 0.188083
+  ...
+# Subtest: student numbers use a clearly synthetic TEST prefix
+ok 23 - student numbers use a clearly synthetic TEST prefix
+  ---
+  duration_ms: 0.2285
+  ...
+# Subtest: validator rejects Common Era academic years now that the team uses Buddhist Era
+ok 24 - validator rejects Common Era academic years now that the team uses Buddhist Era
+  ---
+  duration_ms: 1.238167
+  ...
+1..24
+# tests 24
+# suites 0
+# pass 24
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 53.3085
+  console.log
+    Starting seed process (includeV3: true)...
+
+      at log (src/db/seed.js:89:11)
+
+  console.log
+    Running migrations...
+
+      at log (src/db/seed.js:92:11)
+
+  console.log
+    Applying migration: 001_initial_schema.sql
+
+      at log (src/db/migrate.js:162:14)
+
+  console.log
+    Applying migration: 002_v3_identity_student_plan_assignment_audit.sql
+
+      at log (src/db/migrate.js:162:14)
+
+  console.log
+    Migrations applied successfully.
+
+      at log (src/db/migrate.js:172:12)
+
+  console.log
+    Resetting tables...
+
+      at log (src/db/seed.js:111:13)
+
+  console.log
+    Loading V2 dataset...
+
+      at log (src/db/seed.js:126:13)
+
+  console.log
+    Seeding V2 companies...
+
+      at log (src/db/seed.js:130:13)
+
+  console.log
+    Seeding V2 positions...
+
+      at log (src/db/seed.js:139:13)
+
+  console.log
+    Seeding V2 rounds...
+
+      at log (src/db/seed.js:148:13)
+
+  console.log
+    Seeding V2 document_metadata...
+
+      at log (src/db/seed.js:160:13)
+
+  console.log
+    Seeding V2 students (legacy unlinked)...
+
+      at log (src/db/seed.js:169:13)
+
+  console.log
+    Seeding V2 plans (legacy compatibility)...
+
+      at log (src/db/seed.js:178:13)
+
+  console.log
+    Loading V3 fixtures...
+
+      at log (src/db/seed.js:205:15)
+
+  console.log
+    Seeding V3 users...
+
+      at log (src/db/seed.js:209:15)
+
+  console.log
+    Seeding V3 external identity links...
+
+      at log (src/db/seed.js:219:15)
+
+  console.log
+    Seeding V3 students (linked profiles)...
+
+      at log (src/db/seed.js:242:15)
+
+  console.log
+    Seeding V3 rounds (cycles)...
+
+      at log (src/db/seed.js:275:15)
+
+  console.log
+    Seeding V3 plans...
+
+      at log (src/db/seed.js:306:15)
+
+  console.log
+    Seeding V3 advisor assignments...
+
+      at log (src/db/seed.js:336:15)
+
+  console.log
+    Seeding V3 staff scopes...
+
+      at log (src/db/seed.js:365:15)
+
+  console.log
+    Seeding V3 plan operations...
+
+      at log (src/db/seed.js:386:15)
+
+  console.log
+    Seeding V3 audit events...
+
+      at log (src/db/seed.js:409:15)
+
+  console.log
+    V2+V3 seed process completed successfully. Added 53 V3 records.
+
+      at log (src/db/seed.js:450:15)
+
+  console.log
+    Starting seed process (includeV3: true)...
+
+      at log (src/db/seed.js:89:11)
+
+  console.log
+    Running migrations...
+
+      at log (src/db/seed.js:92:11)
+
+  console.log
+    Migrations applied successfully.
+
+      at log (src/db/migrate.js:172:12)
+
+  console.log
+    Resetting tables...
+
+      at log (src/db/seed.js:111:13)
+
+  console.log
+    Loading V2 dataset...
+
+      at log (src/db/seed.js:126:13)
+
+  console.log
+    Seeding V2 companies...
+
+      at log (src/db/seed.js:130:13)
+
+  console.log
+    Seeding V2 positions...
+
+      at log (src/db/seed.js:139:13)
+
+  console.log
+    Seeding V2 rounds...
+
+      at log (src/db/seed.js:148:13)
+
+  console.log
+    Seeding V2 document_metadata...
+
+      at log (src/db/seed.js:160:13)
+
+  console.log
+    Seeding V2 students (legacy unlinked)...
+
+      at log (src/db/seed.js:169:13)
+
+  console.log
+    Seeding V2 plans (legacy compatibility)...
+
+      at log (src/db/seed.js:178:13)
+
+  console.log
+    Loading V3 fixtures...
+
+      at log (src/db/seed.js:205:15)
+
+  console.log
+    Seeding V3 users...
+
+      at log (src/db/seed.js:209:15)
+
+  console.log
+    Seeding V3 external identity links...
+
+      at log (src/db/seed.js:219:15)
+
+  console.log
+    Seeding V3 students (linked profiles)...
+
+      at log (src/db/seed.js:242:15)
+
+  console.log
+    Seeding V3 rounds (cycles)...
+
+      at log (src/db/seed.js:275:15)
+
+  console.log
+    Seeding V3 plans...
+
+      at log (src/db/seed.js:306:15)
+
+  console.log
+    Seeding V3 advisor assignments...
+
+      at log (src/db/seed.js:336:15)
+
+  console.log
+    Seeding V3 staff scopes...
+
+      at log (src/db/seed.js:365:15)
+
+  console.log
+    Seeding V3 plan operations...
+
+      at log (src/db/seed.js:386:15)
+
+  console.log
+    Seeding V3 audit events...
+
+      at log (src/db/seed.js:409:15)
+
+  console.log
+    V2+V3 seed process completed successfully. Added 53 V3 records.
+
+      at log (src/db/seed.js:450:15)
+
+  console.log
+    Starting seed process (includeV3: true)...
+
+      at log (src/db/seed.js:89:11)
+
+  console.log
+    Running migrations...
+
+      at log (src/db/seed.js:92:11)
+
+  console.log
+    Migrations applied successfully.
+
+      at log (src/db/migrate.js:172:12)
+
+  console.log
+    Resetting tables...
+
+      at log (src/db/seed.js:111:13)
+
+  console.log
+    Loading V2 dataset...
+
+      at log (src/db/seed.js:126:13)
+
+  console.log
+    Seeding V2 companies...
+
+      at log (src/db/seed.js:130:13)
+
+  console.log
+    Seeding V2 positions...
+
+      at log (src/db/seed.js:139:13)
+
+  console.log
+    Seeding V2 rounds...
+
+      at log (src/db/seed.js:148:13)
+
+  console.log
+    Seeding V2 document_metadata...
+
+      at log (src/db/seed.js:160:13)
+
+  console.log
+    Seeding V2 students (legacy unlinked)...
+
+      at log (src/db/seed.js:169:13)
+
+  console.log
+    Seeding V2 plans (legacy compatibility)...
+
+      at log (src/db/seed.js:178:13)
+
+  console.log
+    Loading V3 fixtures...
+
+      at log (src/db/seed.js:205:15)
+
+  console.log
+    Seeding V3 users...
+
+      at log (src/db/seed.js:209:15)
+
+  console.log
+    Seeding V3 external identity links...
+
+      at log (src/db/seed.js:219:15)
+
+  console.log
+    Seeding V3 students (linked profiles)...
+
+      at log (src/db/seed.js:242:15)
+
+  console.log
+    Seeding V3 rounds (cycles)...
+
+      at log (src/db/seed.js:275:15)
+
+  console.log
+    Seeding V3 plans...
+
+      at log (src/db/seed.js:306:15)
+
+  console.log
+    Seeding V3 advisor assignments...
+
+      at log (src/db/seed.js:336:15)
+
+  console.log
+    Seeding V3 staff scopes...
+
+      at log (src/db/seed.js:365:15)
+
+  console.log
+    Seeding V3 plan operations...
+
+      at log (src/db/seed.js:386:15)
+
+  console.log
+    Seeding V3 audit events...
+
+      at log (src/db/seed.js:409:15)
+
+  console.log
+    V2+V3 seed process completed successfully. Added 53 V3 records.
+
+      at log (src/db/seed.js:450:15)
+
+  console.log
+    Starting seed process (includeV3: true)...
+
+      at log (src/db/seed.js:89:11)
+
+  console.log
+    Running migrations...
+
+      at log (src/db/seed.js:92:11)
+
+  console.log
+    Migrations applied successfully.
+
+      at log (src/db/migrate.js:172:12)
+
+  console.log
+    Resetting tables...
+
+      at log (src/db/seed.js:111:13)
+
+  console.log
+    Loading V2 dataset...
+
+      at log (src/db/seed.js:126:13)
+
+  console.log
+    Seeding V2 companies...
+
+      at log (src/db/seed.js:130:13)
+
+  console.log
+    Seeding V2 positions...
+
+      at log (src/db/seed.js:139:13)
+
+  console.log
+    Seeding V2 rounds...
+
+      at log (src/db/seed.js:148:13)
+
+  console.log
+    Seeding V2 document_metadata...
+
+      at log (src/db/seed.js:160:13)
+
+  console.log
+    Seeding V2 students (legacy unlinked)...
+
+      at log (src/db/seed.js:169:13)
+
+  console.log
+    Seeding V2 plans (legacy compatibility)...
+
+      at log (src/db/seed.js:178:13)
+
+  console.log
+    Loading V3 fixtures...
+
+      at log (src/db/seed.js:205:15)
+
+  console.log
+    Seeding V3 users...
+
+      at log (src/db/seed.js:209:15)
+
+  console.log
+    Seeding V3 external identity links...
+
+      at log (src/db/seed.js:219:15)
+
+  console.log
+    Seeding V3 students (linked profiles)...
+
+      at log (src/db/seed.js:242:15)
+
+  console.log
+    Seeding V3 rounds (cycles)...
+
+      at log (src/db/seed.js:275:15)
+
+  console.log
+    Seeding V3 plans...
+
+      at log (src/db/seed.js:306:15)
+
+  console.log
+    Seeding V3 advisor assignments...
+
+      at log (src/db/seed.js:336:15)
+
+  console.log
+    Seeding V3 staff scopes...
+
+      at log (src/db/seed.js:365:15)
+
+  console.log
+    Seeding V3 plan operations...
+
+      at log (src/db/seed.js:386:15)
+
+  console.log
+    Seeding V3 audit events...
+
+      at log (src/db/seed.js:409:15)
+
+  console.log
+    V2+V3 seed process completed successfully. Added 53 V3 records.
+
+      at log (src/db/seed.js:450:15)
+
+Test Suites: 1 passed, 1 total
+Tests:       22 passed, 22 total
+Snapshots:   0 total
+Time:        0.574 s, estimated 1 s
+Ran all test suites matching tests/v3-fixtures.test.js.
+
+> co-ed-v2@1.0.0 test:api
+> jest --runInBand tests/api.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       17 passed, 17 total
+Snapshots:   0 total
+Time:        0.162 s, estimated 1 s
+Ran all test suites matching tests/api.test.js.
+
+> co-ed-v2@1.0.0 test:contract
+> jest --runInBand tests/v3-api-contract.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       24 passed, 24 total
+Snapshots:   0 total
+Time:        0.137 s, estimated 1 s
+Ran all test suites matching tests/v3-api-contract.test.js.
+
+> co-ed-v2@1.0.0 test:auth
+> jest --runInBand tests/auth-context.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       31 passed, 31 total
+Snapshots:   0 total
+Time:        0.305 s, estimated 1 s
+Ran all test suites matching tests/auth-context.test.js.
+
+> co-ed-v2@1.0.0 test:authz
+> jest --runInBand tests/authorization.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       30 passed, 30 total
+Snapshots:   0 total
+Time:        0.147 s, estimated 1 s
+Ran all test suites matching tests/authorization.test.js.
+
+> co-ed-v2@1.0.0 test:workflow
+> jest --runInBand tests/workflow-service.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       43 passed, 43 total
+Snapshots:   0 total
+Time:        0.236 s, estimated 1 s
+Ran all test suites matching tests/workflow-service.test.js.
+
+> co-ed-v2@1.0.0 test:session
+> jest --runInBand tests/session-me.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       9 passed, 9 total
+Snapshots:   0 total
+Time:        0.194 s, estimated 1 s
+Ran all test suites matching tests/session-me.test.js.
+
+> co-ed-v2@1.0.0 test:profile
+> jest --runInBand tests/student-profile.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       26 passed, 26 total
+Snapshots:   0 total
+Time:        0.318 s, estimated 1 s
+Ran all test suites matching tests/student-profile.test.js.
+
+> co-ed-v2@1.0.0 test:plan
+> jest --runInBand tests/student-plan.test.js tests/plan-cycle-options.test.js
+
+
+Test Suites: 2 passed, 2 total
+Tests:       24 passed, 24 total
+Snapshots:   0 total
+Time:        0.183 s, estimated 1 s
+Ran all test suites matching tests/student-plan.test.js|tests/plan-cycle-options.test.js.
+
+> co-ed-v2@1.0.0 test:staff
+> jest --runInBand tests/staff-review-queue.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       33 passed, 33 total
+Snapshots:   0 total
+Time:        0.303 s, estimated 1 s
+Ran all test suites matching tests/staff-review-queue.test.js.
+
+> co-ed-v2@1.0.0 test:review
+> jest --runInBand tests/staff-review-commands.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       26 passed, 26 total
+Snapshots:   0 total
+Time:        0.292 s, estimated 1 s
+Ran all test suites matching tests/staff-review-commands.test.js.
+
+> co-ed-v2@1.0.0 test:staff-plan
+> jest --runInBand tests/staff-plan-detail.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       16 passed, 16 total
+Snapshots:   0 total
+Time:        0.252 s, estimated 1 s
+Ran all test suites matching tests/staff-plan-detail.test.js.
+
+> co-ed-v2@1.0.0 test:submit
+> jest --runInBand tests/plan-submission.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       21 passed, 21 total
+Snapshots:   0 total
+Time:        0.288 s, estimated 1 s
+Ran all test suites matching tests/plan-submission.test.js.
+
+> co-ed-v2@1.0.0 test:history
+> jest --runInBand tests/plan-history.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       9 passed, 9 total
+Snapshots:   0 total
+Time:        0.219 s, estimated 1 s
+Ran all test suites matching tests/plan-history.test.js.
+
+> co-ed-v2@1.0.0 test:advisor
+> jest --runInBand tests/advisor-read.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       18 passed, 18 total
+Snapshots:   0 total
+Time:        0.261 s, estimated 1 s
+Ran all test suites matching tests/advisor-read.test.js.
+
+> co-ed-v2@1.0.0 test:v3-t02
+> jest --runInBand tests/v3-t02-authn-authz-boundaries.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       58 passed, 58 total
+Snapshots:   0 total
+Time:        0.53 s, estimated 1 s
+Ran all test suites matching tests/v3-t02-authn-authz-boundaries.test.js.
+
+> co-ed-v2@1.0.0 test:v3-t03
+> jest --runInBand tests/v3-t03-workflow-transitions-concurrency.test.js tests/v3-t03-postgres.test.js
+
+
+Test Suites: 2 passed, 2 total
+Tests:       42 passed, 42 total
+Snapshots:   0 total
+Time:        1.451 s, estimated 2 s
+Ran all test suites matching tests/v3-t03-workflow-transitions-concurrency.test.js|tests/v3-t03-postgres.test.js.
+
+> co-ed-v2@1.0.0 test:lambda
+> jest --runInBand tests/lambda.test.js tests/rds-secret.test.js && node --test tests/package-lambda.test.mjs
+
+
+Test Suites: 2 passed, 2 total
+Tests:       37 passed, 37 total
+Snapshots:   0 total
+Time:        0.206 s, estimated 1 s
+Ran all test suites matching tests/lambda.test.js|tests/rds-secret.test.js.
+TAP version 13
+# Subtest: Lambda release is self-contained and preserves reviewed migrations without secrets
+ok 1 - Lambda release is self-contained and preserves reviewed migrations without secrets
+  ---
+  duration_ms: 294.534125
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 330.377792
+
+> co-ed-v2@1.0.0 test:runtime-grants
+> jest --runInBand tests/runtime-grants.test.js
+
+  console.log
+    Starting seed process (includeV3: true)...
+
+      at log (src/db/seed.js:89:11)
+
+  console.log
+    Running migrations...
+
+      at log (src/db/seed.js:92:11)
+
+  console.log
+    Migrations applied successfully.
+
+      at log (src/db/migrate.js:172:12)
+
+  console.log
+    Resetting tables...
+
+      at log (src/db/seed.js:111:13)
+
+  console.log
+    Loading V2 dataset...
+
+      at log (src/db/seed.js:126:13)
+
+  console.log
+    Seeding V2 companies...
+
+      at log (src/db/seed.js:130:13)
+
+  console.log
+    Seeding V2 positions...
+
+      at log (src/db/seed.js:139:13)
+
+  console.log
+    Seeding V2 rounds...
+
+      at log (src/db/seed.js:148:13)
+
+  console.log
+    Seeding V2 document_metadata...
+
+      at log (src/db/seed.js:160:13)
+
+  console.log
+    Seeding V2 students (legacy unlinked)...
+
+      at log (src/db/seed.js:169:13)
+
+  console.log
+    Seeding V2 plans (legacy compatibility)...
+
+      at log (src/db/seed.js:178:13)
+
+  console.log
+    Loading V3 fixtures...
+
+      at log (src/db/seed.js:205:15)
+
+  console.log
+    Seeding V3 users...
+
+      at log (src/db/seed.js:209:15)
+
+  console.log
+    Seeding V3 external identity links...
+
+      at log (src/db/seed.js:219:15)
+
+  console.log
+    Seeding V3 students (linked profiles)...
+
+      at log (src/db/seed.js:242:15)
+
+  console.log
+    Seeding V3 rounds (cycles)...
+
+      at log (src/db/seed.js:275:15)
+
+  console.log
+    Seeding V3 plans...
+
+      at log (src/db/seed.js:306:15)
+
+  console.log
+    Seeding V3 advisor assignments...
+
+      at log (src/db/seed.js:336:15)
+
+  console.log
+    Seeding V3 staff scopes...
+
+      at log (src/db/seed.js:365:15)
+
+  console.log
+    Seeding V3 plan operations...
+
+      at log (src/db/seed.js:386:15)
+
+  console.log
+    Seeding V3 audit events...
+
+      at log (src/db/seed.js:409:15)
+
+  console.log
+    V2+V3 seed process completed successfully. Added 53 V3 records.
+
+      at log (src/db/seed.js:450:15)
+
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        0.244 s, estimated 1 s
+Ran all test suites matching tests/runtime-grants.test.js.
+
+> co-ed-v2@1.0.0 test:frontend
+> node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/company-directory.test.js tests/authenticated-session.test.js tests/authenticated-shell.test.js tests/login-logout-session-ux.test.js tests/student-dashboard-profile.test.js tests/student-plan-submission-ux.test.js tests/student-plan-editor.test.js tests/advisor-assigned-ui.test.js tests/staff-review-workspace-ui.test.js tests/staff-student-management.test.js tests/navbar-auth.test.js
+
+
+Test Suites: 11 passed, 11 total
+Tests:       268 passed, 268 total
+Snapshots:   0 total
+Time:        3.037 s
+Ran all test suites matching tests/company-directory.test.js|tests/authenticated-session.test.js|tests/authenticated-shell.test.js|tests/login-logout-session-ux.test.js|tests/student-dashboard-profile.test.js|tests/student-plan-submission-ux.test.js|tests/student-plan-editor.test.js|tests/advisor-assigned-ui.test.js|tests/staff-review-workspace-ui.test.js|tests/staff-student-management.test.js|tests/navbar-auth.test.js.
+
+> co-ed-v2@1.0.0 test:migration
+> jest --runInBand tests/v3-migration.test.js tests/v3-t01-migrations-constraints-fixtures.test.js
+
+
+Test Suites: 2 passed, 2 total
+Tests:       30 passed, 30 total
+Snapshots:   0 total
+Time:        0.518 s, estimated 1 s
+Ran all test suites matching tests/v3-migration.test.js|tests/v3-t01-migrations-constraints-fixtures.test.js.
+
+> co-ed-v2@1.0.0 test:dal
+> jest --runInBand tests/dal.test.js
+
+  console.log
+    Starting seed process (includeV3: false)...
+
+      at log (src/db/seed.js:89:11)
+
+  console.log
+    Running migrations...
+
+      at log (src/db/seed.js:92:11)
+
+  console.log
+    Migrations applied successfully.
+
+      at log (src/db/migrate.js:172:12)
+
+  console.log
+    Resetting tables...
+
+      at log (src/db/seed.js:111:13)
+
+  console.log
+    Loading V2 dataset...
+
+      at log (src/db/seed.js:126:13)
+
+  console.log
+    Seeding V2 companies...
+
+      at log (src/db/seed.js:130:13)
+
+  console.log
+    Seeding V2 positions...
+
+      at log (src/db/seed.js:139:13)
+
+  console.log
+    Seeding V2 rounds...
+
+      at log (src/db/seed.js:148:13)
+
+  console.log
+    Seeding V2 document_metadata...
+
+      at log (src/db/seed.js:160:13)
+
+  console.log
+    Seeding V2 students (legacy unlinked)...
+
+      at log (src/db/seed.js:169:13)
+
+  console.log
+    Seeding V2 plans (legacy compatibility)...
+
+      at log (src/db/seed.js:178:13)
+
+  console.log
+    V2 seed process completed successfully. Total records: 53
+
+      at log (src/db/seed.js:448:15)
+
+  console.log
+    Starting seed process (includeV3: false)...
+
+      at log (src/db/seed.js:89:11)
+
+  console.log
+    Running migrations...
+
+      at log (src/db/seed.js:92:11)
+
+  console.log
+    Migrations applied successfully.
+
+      at log (src/db/migrate.js:172:12)
+
+  console.log
+    Resetting tables...
+
+      at log (src/db/seed.js:111:13)
+
+  console.log
+    Loading V2 dataset...
+
+      at log (src/db/seed.js:126:13)
+
+  console.log
+    Seeding V2 companies...
+
+      at log (src/db/seed.js:130:13)
+
+  console.log
+    Seeding V2 positions...
+
+      at log (src/db/seed.js:139:13)
+
+  console.log
+    Seeding V2 rounds...
+
+      at log (src/db/seed.js:148:13)
+
+  console.log
+    Seeding V2 document_metadata...
+
+      at log (src/db/seed.js:160:13)
+
+  console.log
+    Seeding V2 students (legacy unlinked)...
+
+      at log (src/db/seed.js:169:13)
+
+  console.log
+    Seeding V2 plans (legacy compatibility)...
+
+      at log (src/db/seed.js:178:13)
+
+  console.log
+    V2 seed process completed successfully. Total records: 53
+
+      at log (src/db/seed.js:448:15)
+
+Test Suites: 1 passed, 1 total
+Tests:       21 passed, 21 total
+Snapshots:   0 total
+Time:        0.285 s, estimated 1 s
+Ran all test suites matching tests/dal.test.js.

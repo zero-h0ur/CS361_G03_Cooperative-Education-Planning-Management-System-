@@ -39,6 +39,13 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
+      - name: Verify smoke operator safety without AWS access
+        shell: bash
+        env:
+          CO_ED_TEST_DOCKER_PROVISION: '1'
+        run: |
+          set -o pipefail
+          python3 -m unittest discover -s tests/operations -p 'test_*.py' 2>&1 | tee smoke-operator-verification.log
       - name: Run full regression including auth boundaries and PostgreSQL integration
         shell: bash
         run: |
@@ -49,6 +56,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: v3-verification-${{ github.run_id }}-${{ github.run_attempt }}
-          path: v3-verification.log
+          path: |
+            v3-verification.log
+            smoke-operator-verification.log
           if-no-files-found: warn
           retention-days: 14

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import test from 'node:test';
 
 const DEFAULT_API_BASE_URL = 'https://qtqlsb1aec.execute-api.us-east-1.amazonaws.com';
@@ -10,6 +11,13 @@ const frontendBaseUrl = normalizeBaseUrl(
   process.env.V2_FRONTEND_BASE_URL || DEFAULT_FRONTEND_BASE_URL
 );
 const frontendOrigin = new URL(frontendBaseUrl).origin;
+// V3 Amplify deploys dist/, including generated public Cognito configuration.
+// Comparing runtime-config.js to the intentionally unconfigured source stub would
+// reject a correct authenticated deployment. Build with the target public config
+// first; still require exact bytes for every public artifact under test.
+const expectedFrontendDirectory = process.env.V2_EXPECTED_FRONTEND_DIR
+  ? resolve(process.env.V2_EXPECTED_FRONTEND_DIR)
+  : new URL('../dist/', import.meta.url);
 const requestTimeoutMs = parsePositiveInteger(
   process.env.V2_REQUEST_TIMEOUT_MS || '15000',
   'V2_REQUEST_TIMEOUT_MS'
@@ -153,7 +161,11 @@ function assertSafeError(body, context) {
   );
   assert.equal(typeof body.error.code, 'string');
   assert.equal(typeof body.error.message, 'string');
-  assert.doesNotMatch(body.error.message, /(?:stack|postgres|database_url|password|secret|credential|token)/i);
+  assert.equal(
+    /(?:stack|postgres|database_url|password|secret|credential|token)/i.test(body.error.message),
+    false,
+    `${context}: error message contains an unsafe detail (value withheld).`
+  );
 }
 
 function normalizeText(value) {
@@ -354,15 +366,20 @@ test('Issue #36 deployed V2 verification', { timeout: 120000 }, async (t) => {
       'company-directory.js',
       'runtime-config.js'
     ]) {
-      const localText = await readFile(new URL(`../${file}`, import.meta.url), 'utf8');
+      const localText = await readFile(
+        expectedFrontendDirectory instanceof URL
+          ? new URL(file, expectedFrontendDirectory)
+          : resolve(expectedFrontendDirectory, file),
+        'utf8'
+      );
       const deployedResult = await request(`${frontendBaseUrl}/${file}`, {
         headers: { Accept: file.endsWith('.html') ? 'text/html' : 'text/javascript' }
       });
 
       assertStatus(deployedResult.response, 200, `deployed asset ${file}`);
       assert.equal(
-        normalizeText(deployedResult.text),
-        normalizeText(localText),
+        normalizeText(deployedResult.text) === normalizeText(localText),
+        true,
         `${file} deployed by Amplify does not match the tested repository file.`
       );
     }

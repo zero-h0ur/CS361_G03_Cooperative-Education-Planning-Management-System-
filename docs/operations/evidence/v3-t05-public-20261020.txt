@@ -1,0 +1,279 @@
+
+> co-ed-v2@1.0.0 test:deployed-security
+> node --test tests/deployed-v2.test.mjs tests/deployed-v3-anonymous.test.mjs
+
+TAP version 13
+# Subtest: Issue \#36 deployed V2 verification
+    # Subtest: V2-T01 health endpoint is safe and available
+    ok 1 - V2-T01 health endpoint is safe and available
+      ---
+      duration_ms: 874.275333
+      ...
+    # Subtest: V2-T02 lists public mock companies and position details
+    ok 2 - V2-T02 lists public mock companies and position details
+      ---
+      duration_ms: 2072.511625
+      ...
+    # Subtest: V2-T03 searches by company name and position title
+    ok 3 - V2-T03 searches by company name and position title
+      ---
+      duration_ms: 582.592375
+      ...
+    # Subtest: V2-T04 filters companies by an exact deployed location
+    ok 4 - V2-T04 filters companies by an exact deployed location
+      ---
+      duration_ms: 292.265458
+      ...
+    # Subtest: V2-T05 paginates without duplicating records
+    ok 5 - V2-T05 paginates without duplicating records
+      ---
+      duration_ms: 639.812334
+      ...
+    # Subtest: V2-T06 returns safe 400 responses for invalid input
+    ok 6 - V2-T06 returns safe 400 responses for invalid input
+      ---
+      duration_ms: 1116.401875
+      ...
+    # Subtest: V2-T02 empty query result stays a valid 200 response
+    ok 7 - V2-T02 empty query result stays a valid 200 response
+      ---
+      duration_ms: 455.013792
+      ...
+    # Subtest: V2-T09 does not expose Student, Plan, or private fields
+    ok 8 - V2-T09 does not expose Student, Plan, or private fields
+      ---
+      duration_ms: 573.923334
+      ...
+    # Subtest: deployed frontend points to the API and CORS is origin-specific
+    ok 9 - deployed frontend points to the API and CORS is origin-specific
+      ---
+      duration_ms: 623.3335
+      ...
+    # Subtest: deployed frontend assets match the tested repository files
+    ok 10 - deployed frontend assets match the tested repository files
+      ---
+      duration_ms: 73.192083
+      ...
+    1..10
+ok 1 - Issue \#36 deployed V2 verification
+  ---
+  duration_ms: 7308.103625
+  ...
+# Subtest: V3-T05 deployed anonymous/authentication boundary
+    # Subtest: anonymous GET /api/v3/me → 401
+    ok 1 - anonymous GET /api/v3/me → 401
+      ---
+      duration_ms: 1097.9515
+      ...
+    # Subtest: anonymous GET /api/v3/students/me → 401
+    ok 2 - anonymous GET /api/v3/students/me → 401
+      ---
+      duration_ms: 1038.193333
+      ...
+    # Subtest: anonymous GET /api/v3/plans → 401
+    ok 3 - anonymous GET /api/v3/plans → 401
+      ---
+      duration_ms: 265.343125
+      ...
+    # Subtest: anonymous GET /api/v3/plans/00000000-0000-4000-8000-000000000083 → 401
+    ok 4 - anonymous GET /api/v3/plans/00000000-0000-4000-8000-000000000083 → 401
+      ---
+      duration_ms: 263.233166
+      ...
+    # Subtest: anonymous GET /api/v3/plans/00000000-0000-4000-8000-000000000083/history → 401
+    ok 5 - anonymous GET /api/v3/plans/00000000-0000-4000-8000-000000000083/history → 401
+      ---
+      duration_ms: 260.0445
+      ...
+    # Subtest: anonymous GET /api/v3/plan-options/cycles → 401
+    ok 6 - anonymous GET /api/v3/plan-options/cycles → 401
+      ---
+      duration_ms: 264.4445
+      ...
+    # Subtest: anonymous GET /api/v3/staff/students → 401
+    ok 7 - anonymous GET /api/v3/staff/students → 401
+      ---
+      duration_ms: 263.648
+      ...
+    # Subtest: anonymous GET /api/v3/staff/plans → 401
+    ok 8 - anonymous GET /api/v3/staff/plans → 401
+      ---
+      duration_ms: 267.202625
+      ...
+    # Subtest: anonymous GET /api/v3/staff/review-queue → 401
+    ok 9 - anonymous GET /api/v3/staff/review-queue → 401
+      ---
+      duration_ms: 257.746375
+      ...
+    # Subtest: anonymous GET /api/v3/staff/plans/00000000-0000-4000-8000-000000000083 → 401
+    ok 10 - anonymous GET /api/v3/staff/plans/00000000-0000-4000-8000-000000000083 → 401
+      ---
+      duration_ms: 264.03025
+      ...
+    # Subtest: anonymous GET /api/v3/staff/plans/00000000-0000-4000-8000-000000000083/history → 401
+    ok 11 - anonymous GET /api/v3/staff/plans/00000000-0000-4000-8000-000000000083/history → 401
+      ---
+      duration_ms: 265.019792
+      ...
+    # Subtest: anonymous GET /api/v3/advisor/students → 401
+    ok 12 - anonymous GET /api/v3/advisor/students → 401
+      ---
+      duration_ms: 270.683542
+      ...
+    # Subtest: anonymous GET /api/v3/advisor/students/00000000-0000-4000-8000-000000000083 → 401
+    ok 13 - anonymous GET /api/v3/advisor/students/00000000-0000-4000-8000-000000000083 → 401
+      ---
+      duration_ms: 269.2345
+      ...
+    # Subtest: anonymous GET /api/v3/advisor/students/00000000-0000-4000-8000-000000000083/plans → 401
+    ok 14 - anonymous GET /api/v3/advisor/students/00000000-0000-4000-8000-000000000083/plans → 401
+      ---
+      duration_ms: 267.382333
+      ...
+    # Subtest: anonymous GET /api/v3/advisor/plans/00000000-0000-4000-8000-000000000083 → 401
+    ok 15 - anonymous GET /api/v3/advisor/plans/00000000-0000-4000-8000-000000000083 → 401
+      ---
+      duration_ms: 259.608875
+      ...
+    # Subtest: anonymous POST /api/v3/plans → 401 before JSON parsing
+    ok 16 - anonymous POST /api/v3/plans → 401 before JSON parsing
+      ---
+      duration_ms: 274.565208
+      ...
+    # Subtest: anonymous PATCH /api/v3/students/me → 401 before JSON parsing
+    ok 17 - anonymous PATCH /api/v3/students/me → 401 before JSON parsing
+      ---
+      duration_ms: 261.030958
+      ...
+    # Subtest: anonymous PUT /api/v3/students/me → 401 before JSON parsing
+    ok 18 - anonymous PUT /api/v3/students/me → 401 before JSON parsing
+      ---
+      duration_ms: 268.003041
+      ...
+    # Subtest: anonymous PATCH /api/v3/plans/00000000-0000-4000-8000-000000000083 → 401 before JSON parsing
+    ok 19 - anonymous PATCH /api/v3/plans/00000000-0000-4000-8000-000000000083 → 401 before JSON parsing
+      ---
+      duration_ms: 259.671291
+      ...
+    # Subtest: anonymous DELETE /api/v3/plans/00000000-0000-4000-8000-000000000083 → 401 before JSON parsing
+    ok 20 - anonymous DELETE /api/v3/plans/00000000-0000-4000-8000-000000000083 → 401 before JSON parsing
+      ---
+      duration_ms: 269.020458
+      ...
+    # Subtest: anonymous POST /api/v3/plans/00000000-0000-4000-8000-000000000083/submit → 401 before JSON parsing
+    ok 21 - anonymous POST /api/v3/plans/00000000-0000-4000-8000-000000000083/submit → 401 before JSON parsing
+      ---
+      duration_ms: 267.982375
+      ...
+    # Subtest: anonymous POST /api/v3/plans/00000000-0000-4000-8000-000000000083/start-review → 401 before JSON parsing
+    ok 22 - anonymous POST /api/v3/plans/00000000-0000-4000-8000-000000000083/start-review → 401 before JSON parsing
+      ---
+      duration_ms: 780.215542
+      ...
+    # Subtest: anonymous POST /api/v3/plans/00000000-0000-4000-8000-000000000083/return → 401 before JSON parsing
+    ok 23 - anonymous POST /api/v3/plans/00000000-0000-4000-8000-000000000083/return → 401 before JSON parsing
+      ---
+      duration_ms: 267.210041
+      ...
+    # Subtest: anonymous POST /api/v3/plans/00000000-0000-4000-8000-000000000083/approve → 401 before JSON parsing
+    ok 24 - anonymous POST /api/v3/plans/00000000-0000-4000-8000-000000000083/approve → 401 before JSON parsing
+      ---
+      duration_ms: 257.301917
+      ...
+    # Subtest: malformed Bearer on /api/v3/me → 401
+    ok 25 - malformed Bearer on /api/v3/me → 401
+      ---
+      duration_ms: 263.022333
+      ...
+    # Subtest: malformed Bearer on /api/v3/students/me → 401
+    ok 26 - malformed Bearer on /api/v3/students/me → 401
+      ---
+      duration_ms: 262.983583
+      ...
+    # Subtest: malformed Bearer on /api/v3/staff/plans → 401
+    ok 27 - malformed Bearer on /api/v3/staff/plans → 401
+      ---
+      duration_ms: 264.567375
+      ...
+    # Subtest: malformed Bearer on /api/v3/advisor/students → 401
+    ok 28 - malformed Bearer on /api/v3/advisor/students → 401
+      ---
+      duration_ms: 263.079417
+      ...
+    # Subtest: legacy public namespace /api/students does not expose private data
+    ok 29 - legacy public namespace /api/students does not expose private data
+      ---
+      duration_ms: 280.96125
+      ...
+    # Subtest: legacy public namespace /api/plans does not expose private data
+    ok 30 - legacy public namespace /api/plans does not expose private data
+      ---
+      duration_ms: 281.758542
+      ...
+    # Subtest: public directory POST /api/companies is unavailable
+    ok 31 - public directory POST /api/companies is unavailable
+      ---
+      duration_ms: 264.358584
+      ...
+    # Subtest: public directory PATCH /api/companies is unavailable
+    ok 32 - public directory PATCH /api/companies is unavailable
+      ---
+      duration_ms: 264.29975
+      ...
+    # Subtest: public directory PUT /api/companies is unavailable
+    ok 33 - public directory PUT /api/companies is unavailable
+      ---
+      duration_ms: 257.635708
+      ...
+    # Subtest: public directory DELETE /api/companies is unavailable
+    ok 34 - public directory DELETE /api/companies is unavailable
+      ---
+      duration_ms: 262.521542
+      ...
+    # Subtest: public directory POST /api/positions is unavailable
+    ok 35 - public directory POST /api/positions is unavailable
+      ---
+      duration_ms: 258.375416
+      ...
+    # Subtest: public directory PATCH /api/positions is unavailable
+    ok 36 - public directory PATCH /api/positions is unavailable
+      ---
+      duration_ms: 1187.494958
+      ...
+    # Subtest: public directory PUT /api/positions is unavailable
+    ok 37 - public directory PUT /api/positions is unavailable
+      ---
+      duration_ms: 257.863333
+      ...
+    # Subtest: public directory DELETE /api/positions is unavailable
+    ok 38 - public directory DELETE /api/positions is unavailable
+      ---
+      duration_ms: 290.997417
+      ...
+    # Subtest: main protected preflight allows only configured origin/headers and exposes no data
+    ok 39 - main protected preflight allows only configured origin/headers and exposes no data
+      ---
+      duration_ms: 263.60825
+      ...
+    # Subtest: unapproved browser origin is not granted CORS access
+    ok 40 - unapproved browser origin is not granted CORS access
+      ---
+      duration_ms: 1104.063666
+      ...
+    1..40
+ok 2 - V3-T05 deployed anonymous/authentication boundary
+  ---
+  duration_ms: 14526.750333
+  ...
+# Started 2026-10-19T19:43:44.288Z · API https://qtqlsb1aec.execute-api.us-east-1.amazonaws.com · frontend https://main.d1d9qrqnsi5nl6.amplifyapp.com
+# These probes do NOT establish live ownership, Staff scope, Advisor read-only, session expiry or CloudWatch log acceptance.
+# Finished 2026-10-19T19:43:58.814Z
+1..2
+# tests 52
+# suites 0
+# pass 52
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 14579.567333
