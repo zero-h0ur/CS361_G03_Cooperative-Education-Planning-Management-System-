@@ -12,7 +12,6 @@ const staticFiles = [
   'style.css',
   'company-directory.js',
   'company-directory-helpers.js',
-  'navbar-auth.js',
   'app.html'
 ];
 
@@ -110,4 +109,12 @@ await build({
   sourcemap: process.env.NODE_ENV !== 'production',
   legalComments: 'none',
   logLevel: 'info'
+});
+
+await build({
+  entryPoints: [resolve(workspace, 'navbar-auth.js')], bundle: true,
+  format: 'iife', platform: 'browser', target: ['es2020'],
+  outfile: resolve(outputDirectory, 'navbar-auth.js'),
+  minify: process.env.NODE_ENV === 'production',
+  legalComments: 'none', logLevel: 'info'
 });

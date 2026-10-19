@@ -12,6 +12,8 @@ await build({
   entryPoints: [
     resolve(workspace, 'src/frontend/auth/auth-errors.js'),
     resolve(workspace, 'src/frontend/auth/session-client.js'),
+    resolve(workspace, 'src/frontend/auth/auth-storage.js'),
+    resolve(workspace, 'src/frontend/public-navbar.js'),
     resolve(workspace, 'src/frontend/student/profile-client.js'),
     resolve(workspace, 'src/frontend/student/student-dashboard-view.js'),
     resolve(workspace, 'src/frontend/student/plan-submission-client.js'),
@@ -34,6 +36,13 @@ await build({
   outdir: outputDirectory,
   outExtension: { '.js': '.cjs' },
   logLevel: 'silent'
+});
+
+await build({
+  entryPoints: [resolve(workspace, 'src/frontend/auth/amplify-client.js')],
+  bundle: true, platform: 'node', format: 'cjs', target: ['node18'],
+  external: ['aws-amplify', 'aws-amplify/*'],
+  outfile: resolve(outputDirectory, 'auth/amplify-client.cjs'), logLevel: 'silent'
 });
 
 await build({
