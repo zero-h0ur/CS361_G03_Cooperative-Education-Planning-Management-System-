@@ -12,6 +12,7 @@ const staticFiles = [
   'style.css',
   'company-directory.js',
   'company-directory-helpers.js',
+  'navbar-auth.js',
   'app.html'
 ];
 

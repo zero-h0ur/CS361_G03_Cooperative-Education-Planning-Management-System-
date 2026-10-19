@@ -583,9 +583,23 @@ export function createShellApp({
     return null;
   }
 
+  function isRootOrEmptyHash(hash) {
+    if (!hash || typeof hash !== 'string') return true;
+    const trimmed = hash.trim();
+    return trimmed === '' || trimmed === '#' || trimmed === '#/';
+  }
+
   function renderCurrentRoute() {
     if (!currentRole) {
       return;
+    }
+
+    if (isRootOrEmptyHash(location.hash)) {
+      const defaultRoute = getDefaultRoute(currentRole);
+      if (defaultRoute && location.hash !== defaultRoute) {
+        location.hash = defaultRoute;
+        return;
+      }
     }
 
     abortRouteWork();
@@ -616,13 +630,13 @@ export function createShellApp({
   }
 
   function selectInitialRoute() {
-    if (location.hash && isAllowlistedRoute(location.hash)) {
-      safelyClearReturnRoute(storage);
-      renderCurrentRoute();
-      return;
-    }
-
-    if (location.hash && !isAllowlistedRoute(location.hash)) {
+    const rawHash = typeof location.hash === 'string' ? location.hash.trim() : '';
+    if (!isRootOrEmptyHash(rawHash)) {
+      if (isAllowlistedRoute(rawHash)) {
+        safelyClearReturnRoute(storage);
+        renderCurrentRoute();
+        return;
+      }
       renderCurrentRoute();
       return;
     }
