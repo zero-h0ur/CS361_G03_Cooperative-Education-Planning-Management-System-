@@ -164,13 +164,14 @@ export function createAmplifyAuthClient({ config, currentOrigin = window.locatio
         try {
           await cognitoUserPoolsTokenProvider.tokenOrchestrator.clearTokens();
         } finally {
-          cleanup();
+          const cleaned = cleanup();
           notifyLogout();
           // Explicitly close Hosted UI cookies even if old OAuth metadata was missing.
           const logoutUrl = new URL(`https://${normalized.domain}/logout`);
           logoutUrl.searchParams.set('client_id', normalized.userPoolClientId);
           logoutUrl.searchParams.set('logout_uri', normalized.redirectSignOut);
           navigate(logoutUrl.href);
+          if (!cleaned) throw new AuthShellError(AUTH_ERROR_CODES.SERVICE_UNAVAILABLE);
         }
       })().finally(() => { logoutPromise = null; });
       return logoutPromise;

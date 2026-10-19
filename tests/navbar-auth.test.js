@@ -95,3 +95,9 @@ test('all Public pages load runtime configuration before the bundled Navbar', ()
     expect(html.indexOf('src="runtime-config.js"')).toBeLessThan(html.indexOf('src="navbar-auth.js"'));
   }
 });
+
+test('public reduced-motion overrides follow the base dropdown styles', () => {
+  const css = fs.readFileSync(path.resolve(__dirname, '..', 'style.css'), 'utf8');
+  expect(css.lastIndexOf('@media (prefers-reduced-motion: reduce)'))
+    .toBeGreaterThan(css.lastIndexOf('.user-nav-dropdown-menu {'));
+});

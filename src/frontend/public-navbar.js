@@ -65,7 +65,8 @@ export function createPublicNavbar({ container, authClient, sessionClient, event
     wrapper.id = 'userNavDropdownWrapper';
     trigger = node('button', 'user-nav-avatar-btn'); trigger.id = 'userNavAvatarBtn'; trigger.type = 'button';
     trigger.setAttribute('aria-expanded', 'false'); trigger.setAttribute('aria-controls', 'userNavDropdownMenu');
-    trigger.setAttribute('aria-label', 'เมนูผู้ใช้งาน'); trigger.setAttribute('aria-haspopup', 'menu');
+    trigger.setAttribute('aria-label', `เมนูผู้ใช้งาน: ${name} (${config.label})`);
+    trigger.setAttribute('aria-haspopup', 'menu');
     const avatar = node('span', 'user-avatar-circle');
     avatar.append(node('span', 'user-avatar-initials', initial));
     const dot = node('span', 'user-status-indicator'); dot.setAttribute('aria-hidden', 'true'); avatar.append(dot);

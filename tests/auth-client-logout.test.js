@@ -73,6 +73,14 @@ test('one blocked storage does not prevent cleanup in the other', () => {
   expect(clearAuthenticationStorage({ clientId: 'client-test', stores: [blocked, sessionStorage] })).toBe(false);
   expect(sessionStorage.getItem('co-ed:session')).toBeNull(); expect(sessionStorage.getItem('theme')).toBe('dark');
 });
+
+test('failed scoped cleanup is reported after attempting provider logout, not silently claimed as success', async () => {
+  const blocked = { get length() { throw new Error('denied'); } };
+  const auth = createAmplifyAuthClient({ config, currentOrigin: 'http://localhost',
+    stores: [blocked, sessionStorage], navigate, notifyLogout: jest.fn() });
+  await expect(auth.logout()).rejects.toMatchObject({ code: 'SESSION_SERVICE_UNAVAILABLE' });
+  expect(navigate).toHaveBeenCalledTimes(1); expect(sessionStorage.getItem('co-ed:session')).toBeNull();
+});
 test('cross-tab invalidation ignores unrelated storage events and can unsubscribe', () => {
   const handler = jest.fn(); const unsubscribe = subscribeToLogout(handler);
   window.dispatchEvent(new StorageEvent('storage', { key: 'theme', newValue: 'dark' }));
