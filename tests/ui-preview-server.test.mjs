@@ -10,7 +10,7 @@ test('loopback preview serves only allowlisted UI assets and rejects API calls',
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const base = `http://127.0.0.1:${server.address().port}`;
   try {
-    for (const path of ['/', '/app.html?scenario=approved', '/preview.js', '/preview.css', '/resources/images/logomini.png']) {
+    for (const path of ['/', '/app.html?scenario=approved', '/preview.js', '/preview.css', '/resources/images/logomini.png', '/resources/images/student-campus-banner.png']) {
       const response = await fetch(base + path);
       assert.equal(response.status, 200, path);
       assert.match(response.headers.get('content-security-policy'), /connect-src 'none'/);

@@ -256,6 +256,14 @@ function createProtectedLayout({ role, route, onLogout, bodyNode }) {
   sidebar.append(createBrand(), identity, createNavigation(role, route), publicLink);
 
   const mainColumn = element('div', 'shell-main-column');
+  if (role === 'STUDENT') {
+    const backdrop = element('img', 'student-campus-backdrop');
+    backdrop.src = 'resources/images/student-campus-banner.png';
+    backdrop.alt = '';
+    backdrop.setAttribute('aria-hidden', 'true');
+    backdrop.decoding = 'async';
+    mainColumn.append(backdrop);
+  }
   const topbar = element('header', 'shell-topbar');
   const context = element('div', 'shell-context');
   const contextDot = element('span', 'shell-context__dot');

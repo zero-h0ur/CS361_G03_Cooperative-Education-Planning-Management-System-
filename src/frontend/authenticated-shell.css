@@ -485,27 +485,97 @@ a:focus-visible,
 }
 
 /* Student workspace: reference-inspired cards without changing other role layouts. */
+.student-campus-backdrop {
+  position: absolute;
+  top: 60px;
+  right: 0;
+  width: 100%;
+  height: 225px;
+  object-fit: cover;
+  object-position: right top;
+  pointer-events: none;
+  user-select: none;
+}
+
+.protected-shell--student .shell-main-column {
+  position: relative;
+  isolation: isolate;
+  background: var(--shell-canvas);
+}
+
+.protected-shell--student .shell-topbar,
+.protected-shell--student .shell-content {
+  position: relative;
+}
+
+.protected-shell--student .shell-topbar {
+  min-height: 60px;
+  justify-content: flex-end;
+  gap: 26px;
+  padding: 8px 24px;
+  background: #fff;
+}
+
+.protected-shell--student .shell-context__dot {
+  width: 12px;
+  height: 12px;
+  background: #078532;
+  box-shadow: none;
+}
+
+.protected-shell--student .shell-content {
+  width: min(100%, 1280px);
+  padding: 30px clamp(24px, 3.5vw, 54px) 56px;
+}
+
+.protected-shell--student .shell-content__title {
+  font-size: clamp(1.75rem, 2.5vw, 2.25rem);
+  line-height: 1.35;
+  letter-spacing: -0.035em;
+}
+
+.protected-shell--student .shell-content__description {
+  margin-top: 2px;
+  font-size: 1.12rem;
+}
+
 .protected-shell--student .shell-brand__mark {
-  width: 48px;
-  height: 48px;
+  width: 54px;
+  height: 64px;
   border: 0;
   background: transparent;
   box-shadow: none;
 }
 
 .protected-shell--student .shell-brand__logo {
-  width: 46px;
-  height: 40px;
+  width: 54px;
+  height: 54px;
 }
 
 .protected-shell--student .shell-brand__name {
-  font-size: 1.5rem;
+  font-size: 2rem;
+}
+
+.protected-shell--student .shell-brand__subtitle {
+  font-size: 0.95rem;
 }
 
 .protected-shell--student .shell-role {
   grid-template-columns: 32px minmax(0, 1fr);
-  column-gap: 12px;
-  padding: 16px;
+  column-gap: 16px;
+  margin: 40px 0 30px;
+  padding: 14px 24px;
+  border: 0;
+  background: #fcecef;
+}
+
+.protected-shell--student .shell-role__label {
+  font-size: 0.92rem;
+}
+
+.protected-shell--student .shell-role__value {
+  color: var(--shell-primary-dark);
+  font-size: 1.15rem;
 }
 
 .protected-shell--student .shell-role > .workspace-icon {
@@ -526,22 +596,47 @@ a:focus-visible,
 }
 
 .protected-shell--student .shell-nav__link {
-  gap: 12px;
-  min-height: 52px;
+  gap: 24px;
+  min-height: 64px;
+  padding: 16px 20px;
+  font-size: 1.08rem;
+}
+
+.protected-shell--student .shell-nav__link > .workspace-icon,
+.protected-shell--student .shell-sidebar__public-link > .workspace-icon {
+  width: 28px;
+  height: 28px;
 }
 
 .protected-shell--student .shell-sidebar__public-link {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 28px;
-  padding: 18px 10px;
-  font-size: 0.88rem;
+  gap: 24px;
+  margin-top: 20px;
+  padding: 16px 23px;
+  border-top: 0;
+  font-size: 1rem;
 }
 
 .protected-shell--student .shell-topbar .shell-button--secondary {
   border-color: var(--shell-primary);
   color: var(--shell-primary-dark);
+  min-width: 138px;
+  min-height: 40px;
+  padding: 7px 20px;
+  border-radius: 16px;
+  font-weight: 500;
+}
+
+@media (min-width: 761px) {
+  .protected-shell--student {
+    grid-template-columns: 296px minmax(0, 1fr);
+  }
+
+  .protected-shell--student .shell-sidebar {
+    padding: 24px 14px 24px 30px;
+    background: #fff;
+  }
 }
 
 .student-card {
@@ -555,25 +650,25 @@ a:focus-visible,
 
 .student-card--illustrated {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-columns: 62px minmax(0, 1fr);
   align-items: start;
-  gap: 20px;
-  padding: 28px;
+  gap: 30px;
+  padding: 20px 24px;
 }
 
 .student-card__icon {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
   background: #fcebee;
   color: var(--shell-primary-dark);
 }
 
 .student-card__icon .workspace-icon {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
 }
 
 .student-card__body {
@@ -582,6 +677,73 @@ a:focus-visible,
 
 .student-card__body > .student-card__title {
   line-height: 1.45;
+}
+
+.student-plan-status__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.student-plan-status__manage {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--shell-soft);
+  color: var(--shell-primary-dark);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.student-plan-status .student-dashboard-summary__badges {
+  margin-top: 8px;
+}
+
+.student-plan-status .student-badge {
+  padding: 6px 18px;
+  border-radius: 15px;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.student-plan-status .student-badge .workspace-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.student-plan-tools {
+  min-width: 0;
+  border: 1px solid var(--shell-line);
+  border-radius: 16px;
+  background: #fff;
+  scroll-margin-top: 24px;
+}
+
+.student-plan-tools__summary {
+  padding: 18px 24px;
+  border-radius: 16px;
+  color: var(--shell-primary-dark);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.student-plan-tools__summary:focus-visible {
+  outline: 3px solid var(--shell-focus);
+  outline-offset: 3px;
+}
+
+.student-plan-tools > .student-card {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--shell-line);
+  border-radius: 0 0 16px 16px;
+  box-shadow: none;
 }
 
 .student-profile-workspace .student-dashboard-summary {
@@ -671,10 +833,14 @@ a:focus-visible,
 }
 
 .student-plan-access-mode {
-  display: inline-block;
-  margin-top: 10px;
-  color: var(--shell-muted);
-  font-size: 0.8rem;
+  /* The status description already explains editability; retain this accessible label. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .student-badge--status {
@@ -1005,12 +1171,11 @@ a:focus-visible,
 
 .student-plan-readiness .student-profile-list__item {
   display: grid;
-  grid-template-columns: minmax(140px, 0.45fr) minmax(0, 1fr);
+  grid-template-columns: minmax(160px, 0.4fr) minmax(0, 1fr);
   align-items: baseline;
   gap: 12px;
-  padding: 12px 0;
+  padding: 3px 0;
   border: 0;
-  border-bottom: 1px solid var(--shell-line);
   border-radius: 0;
   background: transparent;
 }
@@ -1020,27 +1185,53 @@ a:focus-visible,
 }
 
 .student-plan-readiness .student-profile-list__term {
-  font-size: 0.9rem;
+  position: relative;
+  padding-right: 16px;
+  font-size: 1rem;
+}
+
+.student-plan-readiness .student-profile-list__term::after {
+  position: absolute;
+  right: 0;
+  content: ':';
 }
 
 .student-plan-readiness .student-profile-list__detail {
   margin: 0;
   font-weight: 500;
   white-space: pre-wrap;
+  font-size: 1rem;
+}
+
+.student-plan-readiness .student-profile-list {
+  margin-top: 10px;
+}
+
+.student-plan-readiness .student-profile-official__notice {
+  margin: 12px 0 0;
+  font-size: 0.78rem;
 }
 
 .student-plan-submit__readiness {
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  padding: 16px;
+  padding: 8px 16px;
   border: 1px solid var(--shell-line);
   border-radius: 12px;
 }
 
 .student-plan-submit__readiness > .workspace-icon {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  border-radius: 50%;
+}
+
+.student-plan-submit__readiness--ready > .workspace-icon {
+  background: #078532;
+  color: #fff;
+  align-self: center;
 }
 
 .student-plan-submit__readiness p {
@@ -1050,7 +1241,7 @@ a:focus-visible,
 }
 
 .student-plan-submit__readiness--ready {
-  border-color: #cdebd7;
+  border-color: transparent;
   background: #f0faf3;
   color: #166534;
 }
@@ -1068,6 +1259,18 @@ a:focus-visible,
 
 .student-plan-submit .student-form__actions > .shell-button {
   flex: 1 1 210px;
+  border-radius: 18px;
+  min-height: 50px;
+  font-size: 1rem;
+}
+
+.student-plan-submit .student-profile-form {
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.student-plan-submit .student-form__actions {
+  margin-top: 0;
 }
 
 .student-plan-submit .shell-button--secondary {
@@ -1112,6 +1315,29 @@ a:focus-visible,
 }
 
 /* Advisor read-only pages (#75) */
+@media (min-width: 521px) and (max-width: 1100px) {
+  .student-card--illustrated {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .student-card__icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .student-plan-readiness .student-profile-list__item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: 7px 0;
+  }
+
+  .student-plan-readiness .student-profile-list__term::after {
+    content: none;
+  }
+}
+
 .advisor-readonly-notice {
   margin-bottom: 18px;
   border-left: 4px solid #94a3b8;
@@ -1301,6 +1527,25 @@ a:focus-visible,
     display: none;
   }
 
+  .protected-shell--student .shell-role {
+    margin: 18px 0 12px;
+  }
+
+  .protected-shell--student .shell-content {
+    padding: 24px 20px 48px;
+  }
+
+  .protected-shell--student .shell-content__description {
+    font-size: 0.95rem;
+  }
+
+  .protected-shell--student .shell-nav__link {
+    gap: 12px;
+    padding: 12px;
+    min-height: 48px;
+    font-size: 0.95rem;
+  }
+
   .shell-topbar {
     min-height: 64px;
     padding: 10px 20px;
@@ -1389,6 +1634,19 @@ a:focus-visible,
   .student-plan-readiness .student-profile-list__item {
     grid-template-columns: minmax(0, 1fr);
     gap: 4px;
+  }
+
+  .student-plan-readiness .student-profile-list__term::after {
+    content: none;
+  }
+
+  .student-plan-status .student-badge {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+  }
+
+  .student-plan-status__manage {
+    font-size: 0.8rem;
   }
 
   .student-plan-history__header {

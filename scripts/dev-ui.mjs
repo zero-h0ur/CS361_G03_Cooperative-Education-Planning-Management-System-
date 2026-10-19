@@ -24,6 +24,9 @@ export async function createPreviewServer() {
   assets.set('/resources/images/logomini.png', {
     body: await readFile(resolve(workspace, 'resources/images/logomini.png')), type: 'image/png'
   });
+  assets.set('/resources/images/student-campus-banner.png', {
+    body: await readFile(resolve(workspace, 'resources/images/student-campus-banner.png')), type: 'image/png'
+  });
   const server = createServer((request, response) => {
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('X-Content-Type-Options', 'nosniff');
