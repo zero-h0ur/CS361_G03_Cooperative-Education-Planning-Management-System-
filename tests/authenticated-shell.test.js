@@ -47,7 +47,11 @@ describe('authenticated V3 shell and route guards', () => {
     const css = fs.readFileSync(path.resolve(__dirname, '..', 'src/frontend/authenticated-shell.css'), 'utf8');
     expect(css).toMatch(/object-fit:\s*contain/);
     expect(css).toMatch(/mask-composite:\s*intersect/);
-    expect(css).toMatch(/min-height:\s*clamp\(150px, 27vw, 340px\)/);
+    const heading = css.match(/\.protected-shell--campus \.shell-content__heading \{([^}]+)\}/)[1];
+    expect(heading).toMatch(/min-height:\s*96px/);
+    expect(heading).not.toMatch(/(?:height|max-height):\s*(?:340px|clamp)/);
+    const artwork = css.match(/\.student-campus-backdrop \{([^}]+)\}/)[1];
+    expect(artwork).toMatch(/width:\s*min\(58%, 480px\)/);
     expect(css).toMatch(/\.shell-brand:hover \.shell-brand__mark/);
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)/);
     context.app.destroy();

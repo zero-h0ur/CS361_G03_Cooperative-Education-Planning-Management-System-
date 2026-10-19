@@ -18,8 +18,9 @@ control to SDK sign-out, removing information needed by the SDK.
 - The logo uses the same 44px framed mark, 28px image, compact CO-ED wordmark and
   hover/focus rotation as the public header. Reduced motion disables the transform.
 - The existing campus image uses its natural aspect ratio, not a cropped cover.
-  Horizontal/vertical gradient masks fade the edges. Heading space is reserved so
-  the building focal point sits above opaque data cards rather than behind them.
+  Horizontal/vertical gradient masks fade the edges. Artwork is limited to 480px
+  at the right; the heading has a compact 96px minimum instead of a 340px hero gap.
+  Long headings/descriptions can grow naturally. Data cards remain opaque/readable.
 - `resources/images/logomini.png` and the existing generated campus asset are reused.
   No new architectural image, logo, external asset or image-generation step is added.
 
