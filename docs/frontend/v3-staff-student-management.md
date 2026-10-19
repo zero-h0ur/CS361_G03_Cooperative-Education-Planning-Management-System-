@@ -122,11 +122,62 @@ Browser harness ไม่ใช่ production auth entry point และไม�
 จึงไม่แทน live Staff login/active-scope smoke, การทดสอบอุปกรณ์จริง หรือ screen
 reader review ผล CI บน commit ที่ push แล้วต้องผ่านก่อน merge
 
-## Manual review ที่ยังต้องทำ
+## Live preview และ Staff smoke — 2026-10-19
+
+Source ที่ทดสอบคือ `333de0aadbab61e9d9c1c6b85e4f0f4b9f7f8b66` หลังรวม main
+และ [V3 verification run 23](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/actions/runs/39265812063)
+ผ่าน บัญชี Staff synthetic แยกจาก Student มี Active scope เฉพาะ
+`CPE / ISNE / 2569` โดยผล provisioning ตรวจพบ Student ที่ตรง Scope 1 คน
+ไม่มีการเปลี่ยน Role ของบัญชี Student เดิม
+
+Preview: `https://feature-74-staff-student-management.d1d9qrqnsi5nl6.amplifyapp.com`
+ใช้ Cognito และ API จริงชุดเดิม ไม่ deploy ทับ main และไม่เปลี่ยน Lambda/RDS
+เพื่อทดสอบ Frontend นี้ เพิ่มเฉพาะ Callback `/app.html`, Logout `/index.html`
+และ CORS exact origin ของ Preview โดยตรวจว่าค่า Cognito อื่นยังตรง Backup
+รายการ URL เปรียบเทียบแบบไม่ขึ้นกับลำดับ แต่ไม่ยอมรับรายการขาด/เกิน
+
+หลักฐาน Deployment และ Read-only checks:
+
+- Amplify Job 1: BUILD, DEPLOY และ VERIFY เป็น `SUCCEED` เมื่อ 21:37 น.
+  (Asia/Bangkok) Job metadata เคยแสดง Commit `HEAD` จึงไม่ใช้ค่านั้นยืนยัน SHA
+- ตรวจ `/app.html` และ `/runtime-config.js` ได้ HTTP 200 และ Public auth config
+  ตรง Pool/Client/API/Callback/Logout ที่กำหนดสำหรับ Preview
+- สร้าง Production bundle จาก Source ที่ทดสอบไว้โดยไม่เขียนทับไฟล์ แล้วเทียบ
+  Bytes ของ JS/CSS ที่ Preview: ตรงกันทั้งสองไฟล์ JS SHA-256 คือ
+  `890680a3efcd36ef3bc9a5374ab47e05c895212c3733de6e2503047092deaaea`
+- API preflight ของ Preview ได้ HTTP 204 พร้อม Allow-Origin ตรง Origin และ
+  Allow-Headers มี `authorization` ไม่มีการใช้ Wildcard origin
+
+ผู้ทดสอบส่งภาพจาก Browser หลัง Login Staff จริง ยืนยันเส้นทางต่อไปนี้:
+
+| เวลา (Asia/Bangkok) | ผลที่เห็นจากภาพ |
+| --- | --- |
+| 21:42 | Student search ด้วย `TESTPR730001` พบ 1 คน แสดง CPE/ISNE, ปี 2569 และข้อมูล Summary ตรง Fixture |
+| 21:43 | Plan search พบ 1 แผน DRAFT ของ Student คนเดิม แสดงรอบ AWS V3 Preview PR73, บริษัทและตำแหน่งงาน |
+| 21:44 | กดเปิดตรวจแผนแล้วเข้าหน้า Review workspace จริง แสดง DRAFT v6, บริษัท Example Tech Co., Software Engineer Intern และบันทึกที่ Student เคยบันทึกผ่าน Secret-mode API |
+| 21:46 | กรอกปี `2026` แล้วค้นหา แสดงข้อความกำหนดปี พ.ศ. 2500–2700 พร้อม Error style และ Focus ring ที่ช่องปี |
+| 21:47 | หลังสลับเป็น Student ตามขั้นตอนทดสอบ เปิด Staff URL โดยตรง แสดง Access denied โดยไม่แสดงรายชื่อหรือข้อมูล Staff |
+| 21:50 | คำค้น `NO-SUCH-74` กับปี `2569` แสดง Total 0 และ Empty state พร้อม Focus ring ที่ผลลัพธ์ ไม่แสดงการ์ด Student เดิม |
+
+คิวตรวจแผนไม่แสดง DRAFT เป็นพฤติกรรมที่คาดไว้ ไม่ใช่หลักฐานว่ารายการ Plan
+หายไป การเปิด Detail ครั้งนี้ยังไม่ได้ทดสอบ Review command หรือเปลี่ยนสถานะ
+ภาพ Access denied ยืนยัน Frontend route guard ในกรณีที่ผู้ทดสอบดำเนินการ
+ไม่ได้ยืนยัน Backend HTTP 403 หรือ Advisor live negative case โดยตัวมันเอง
+Advisor และ Backend negative cases มี Automated/synthetic coverage แยกจาก
+Live smoke ด้านบน ไม่ถือเป็นหลักฐานตรวจอุปกรณ์จริงหรือ Screen reader
+
+สรุป Live smoke รอบนี้: Staff login, scoped Student/Plan search, real Review
+detail handoff, invalid year, empty result และ Student direct-route denial ผ่าน
+ตามภาพผู้ทดสอบ ไม่ได้สั่ง Review mutation หรือเปลี่ยนข้อมูลแผนเพื่อรับงาน #74
+ส่วน Multi-role/API authorization และ UI/accessibility acceptance ที่กว้างกว่า
+ยังต้องติดตามแยกใน #81/#83 และไม่ใช้ผล Smoke นี้ปิด #82–#84 อัตโนมัติ
+
+## Manual review และรายการที่ยังต้องยืนยัน
 
 ตรวจ browser layout และ keyboard ด้วย synthetic harness แล้วตามหัวข้อด้านบน
-รายการ live Cognito/API และ Staff active scope ด้านล่างยังต้องยืนยันก่อน merge
-ไม่ถือว่าผ่านจาก Unit tests หรือ synthetic browser checks เพียงอย่างเดียว
+Live login/search/detail ผ่านเฉพาะเส้นทางที่มีหลักฐานในหัวข้อก่อนหน้า
+รายการด้านล่างเป็น Checklist เต็มสำหรับ Review; ข้อที่ยังไม่มีหลักฐาน Live
+ต้องระบุแยกจาก Automated/synthetic coverage ไม่ติ๊กว่าผ่านทั้งหมดจากภาพ Happy path
 
 ใช้ Cognito/API configuration ตาม [shell guide](v3-authenticated-shell.md)
 และบัญชี Staff ทดสอบที่มี Active scope:
