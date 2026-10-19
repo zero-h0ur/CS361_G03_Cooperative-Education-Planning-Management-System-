@@ -7,7 +7,7 @@ const ROUTE_DEFINITIONS = Object.freeze([
     navLabel: 'ข้อมูลของฉัน',
     eyebrow: 'STUDENT PROFILE',
     title: 'ข้อมูลนักศึกษา',
-    description: 'พื้นที่สำหรับตรวจสอบข้อมูลนักศึกษาที่เชื่อมกับบัญชีของคุณ',
+    description: 'ตรวจสอบข้อมูลนักศึกษาและตั้งค่าชื่อที่ต้องการให้แสดง',
     status: 'ส่วนอ่านและแก้ไขข้อมูลจริงจะเชื่อมต่อใน Issue #65'
   }),
   Object.freeze({
@@ -16,7 +16,7 @@ const ROUTE_DEFINITIONS = Object.freeze([
     navLabel: 'แผนสหกิจ',
     eyebrow: 'CO-OP PLAN',
     title: 'แผนสหกิจของฉัน',
-    description: 'พื้นที่สำหรับสร้าง ตรวจสอบ และติดตามสถานะแผนสหกิจของคุณ',
+    description: 'ตรวจสอบข้อมูลและสถานะแผนก่อนส่งให้เจ้าหน้าที่',
     status: 'การจัดการ Plan จริงจะเชื่อมต่อใน Issue #66'
   }),
   Object.freeze({

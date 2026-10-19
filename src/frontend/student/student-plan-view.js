@@ -5,11 +5,12 @@ import {
   findLatestReturnReason
 } from './plan-submission-client.js';
 import { renderPlanEditor } from './plan-editor-view.js';
+import { createWorkspaceIcon, decorateStudentCard } from '../ui/workspace-presentation.js';
 
 const STATUS_META = Object.freeze({
   [PLAN_STATUSES.DRAFT]: {
     label: 'ฉบับร่าง (DRAFT)',
-    badgeClass: 'student-badge--neutral',
+    badgeClass: 'student-badge--draft',
     description: 'แผนสหกิจยังเป็นฉบับร่าง ตรวจสอบความครบถ้วนของข้อมูลแล้วกดส่งแผนเพื่อให้เจ้าหน้าที่ตรวจสอบ'
   },
   [PLAN_STATUSES.SUBMITTED]: {
@@ -98,11 +99,16 @@ function formatTransitionAction(entry) {
   return `${entry.action_label}: ${fromLabel} → ${formatStatusLabel(entry.to_status)}`;
 }
 
+const historyDateFormatter = new Intl.DateTimeFormat('th-TH', {
+  dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok'
+});
+
 function formatTimestamp(isoString) {
   if (!isoString || typeof isoString !== 'string') {
     return 'ไม่ระบุเวลา';
   }
-  return isoString;
+  const date = new Date(isoString);
+  return Number.isNaN(date.getTime()) ? 'ไม่ระบุเวลา' : historyDateFormatter.format(date);
 }
 
 function defaultOperationId() {
@@ -199,7 +205,7 @@ export function renderStudentPlanView({
     editorController = new AbortController();
     editorDirty = false;
     editorBusy = false;
-    return renderPlanEditor({
+    const editor = renderPlanEditor({
       plan, planClient, signal: editorController.signal, createOperationId,
       onSessionExpired, onAccessDenied,
       onDirtyChange: (dirty) => { editorDirty = dirty; syncEditorControls(); },
@@ -210,6 +216,7 @@ export function renderStudentPlanView({
         await loadPlanBundle({ tone: 'status', message: 'บันทึกแผนเรียบร้อยแล้ว กรุณาตรวจสอบข้อมูลก่อนส่งแผน' });
       }
     });
+    return editor ? decorateStudentCard(editor, 'edit') : null;
   }
 
   function renderLoadingState() {
@@ -291,6 +298,7 @@ export function renderStudentPlanView({
 
     const statusBadgeRow = element('div', 'student-dashboard-summary__badges');
     const currentStatusBadge = element('span', `student-badge ${statusInfo.badgeClass}`, statusInfo.label);
+    if (plan.status === PLAN_STATUSES.DRAFT) currentStatusBadge.prepend(createWorkspaceIcon('edit'));
     currentStatusBadge.dataset.role = 'plan-current-status';
 
     const versionBadge = element('span', 'student-badge student-badge--neutral', `เวอร์ชันแผน v${plan.version}`);
@@ -298,15 +306,15 @@ export function renderStudentPlanView({
 
     const modeBadge = element(
       'span',
-      'student-badge student-badge--neutral',
+      'student-plan-access-mode',
       readiness.isReadOnly ? 'โหมดอ่านอย่างเดียว (Read-only)' : 'โหมดแก้ไขและเตรียมส่งแผน'
     );
     modeBadge.dataset.role = 'plan-access-mode';
 
-    statusBadgeRow.append(currentStatusBadge, versionBadge, modeBadge);
+    statusBadgeRow.append(currentStatusBadge, versionBadge);
 
     const statusDescription = element('p', 'student-card__description', statusInfo.description);
-    statusSection.append(statusTitle, statusBadgeRow, statusDescription);
+    statusSection.append(statusTitle, statusBadgeRow, statusDescription, modeBadge);
 
     const returnReason = plan.status === PLAN_STATUSES.NEEDS_REVISION
       ? findLatestReturnReason(currentHistory)
@@ -328,8 +336,8 @@ export function renderStudentPlanView({
       'h2',
       'student-card__title',
       readiness.isReadOnly
-        ? 'ข้อมูลแผนสหกิจศึกษา (ล็อกแบบอ่านอย่างเดียวหลังส่งแผน)'
-        : 'ตรวจสอบความพร้อมของข้อมูลแผนก่อนส่ง (Submission Readiness)'
+        ? 'ข้อมูลแผนสหกิจศึกษา (อ่านอย่างเดียว)'
+        : 'ตรวจสอบความพร้อมก่อนส่ง'
     );
     readinessTitle.id = 'student-plan-readiness-title';
 
@@ -337,10 +345,10 @@ export function renderStudentPlanView({
     readinessSummaryText.dataset.role = 'plan-readiness-summary';
     if (readiness.isReadOnly) {
       readinessSummaryText.textContent =
-        'แผนสหกิจอยู่ในสถานะที่ส่งแล้วหรือสิ้นสุดการแก้ไข ข้อมูลทั้งหมดจึงถูกล็อกเป็นแบบอ่านอย่างเดียวตามสัญญา API';
+        'สถานะปัจจุบันไม่อนุญาตให้แก้ไขหรือส่งแผนซ้ำ คุณยังตรวจสอบข้อมูลและประวัติได้';
     } else if (readiness.isComplete) {
       readinessSummaryText.textContent =
-        'ข้อมูลบังคับครบถ้วนทุกรายการ พร้อมส่งแผนสหกิจศึกษาให้เจ้าหน้าที่ตรวจสอบ';
+        'ระบุข้อมูลเบื้องต้นครบแล้ว ระบบจะตรวจว่ารอบเปิดรับและข้อมูลยังใช้ได้อีกครั้งเมื่อส่งแผน';
     } else {
       readinessSummaryText.textContent =
         `ข้อมูลยังไม่ครบถ้วนสำหรับส่งแผน (ขาดอีก ${readiness.missingFields.length} รายการ) กรุณากรอกข้อมูลให้ครบก่อนกดส่งแผน`;
@@ -373,7 +381,7 @@ export function renderStudentPlanView({
     const submitSection = element('section', 'student-card student-plan-submit');
     submitSection.setAttribute('aria-labelledby', 'student-plan-submit-title');
 
-    const submitTitle = element('h2', 'student-card__title', 'การส่งแผนสหกิจศึกษา (Submit Plan)');
+    const submitTitle = element('h2', 'student-card__title', 'การส่งแผนสหกิจศึกษา');
     submitTitle.id = 'student-plan-submit-title';
 
     const feedbackRegion = element('div', 'student-profile-feedback');
@@ -409,6 +417,20 @@ export function renderStudentPlanView({
     const form = element('form', 'student-profile-form');
     form.noValidate = true;
 
+    const readinessBanner = element('div', `student-plan-submit__readiness student-plan-submit__readiness--${
+      readiness.isReadOnly ? 'neutral' : readiness.canSubmit ? 'ready' : 'warning'}`);
+    readinessBanner.dataset.role = 'plan-submit-readiness';
+    readinessBanner.append(createWorkspaceIcon(readiness.isReadOnly ? 'lock' : readiness.canSubmit ? 'check' : 'warning'));
+    const readinessCopy = element('div');
+    readinessCopy.append(
+      element('strong', null, readiness.isReadOnly ? 'แผนอยู่ในโหมดอ่านอย่างเดียว'
+        : readiness.canSubmit ? 'ข้อมูลเบื้องต้นครบ พร้อมส่งตรวจ' : 'ยังมีข้อมูลที่ต้องระบุก่อนส่ง'),
+      element('p', null, readiness.isReadOnly ? 'ตรวจสอบรายละเอียดและติดตามประวัติด้านล่างได้'
+        : readiness.canSubmit ? 'ระบบจะตรวจสอบรอบรับสมัครและข้อมูลอีกครั้งเมื่อกดส่ง'
+          : 'ตรวจสอบรายการที่ขาดในส่วนข้อมูลแผนด้านบน')
+    );
+    readinessBanner.append(readinessCopy);
+
     const submitHint = element(
       'p',
       'student-form__hint',
@@ -424,6 +446,7 @@ export function renderStudentPlanView({
     submitButton.dataset.role = 'submit-plan-button';
     submitButton.dataset.editorLock = 'true';
     submitButton.dataset.unavailable = String(!readiness.canSubmit);
+    submitButton.setAttribute('aria-describedby', 'student-plan-submit-hint');
     // Submit enabled ONLY when plan/state is submittable and ready (#76 AC 1)
     submitButton.disabled = !readiness.canSubmit;
 
@@ -431,6 +454,7 @@ export function renderStudentPlanView({
     refreshButton.type = 'button';
     refreshButton.dataset.role = 'refresh-plan-button';
     refreshButton.dataset.editorLock = 'true';
+    refreshButton.prepend(createWorkspaceIcon('refresh'));
     refreshButton.addEventListener('click', () => {
       if (!isSubmitting && !editorDirty && !editorBusy) {
         loadPlanBundle();
@@ -438,7 +462,8 @@ export function renderStudentPlanView({
     });
 
     submitActions.append(submitButton, refreshButton);
-    form.append(submitHint, submitActions);
+    submitHint.id = 'student-plan-submit-hint';
+    form.append(readinessBanner, submitActions, submitHint);
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -560,7 +585,7 @@ export function renderStudentPlanView({
     const historySection = element('section', 'student-card student-plan-history');
     historySection.setAttribute('aria-labelledby', 'student-plan-history-title');
 
-    const historyTitle = element('h2', 'student-card__title', 'ประวัติการเปลี่ยนสถานะแผนสหกิจศึกษา (Status History)');
+    const historyTitle = element('h2', 'student-card__title', 'ประวัติการเปลี่ยนสถานะ');
     historyTitle.id = 'student-plan-history-title';
 
     if (currentHistory.length === 0) {
@@ -578,10 +603,9 @@ export function renderStudentPlanView({
       for (const entry of currentHistory) {
         const item = element('li', 'student-plan-history__item');
         const headerRow = element('div', 'student-plan-history__header');
-        headerRow.append(
-          element('strong', 'student-plan-history__transition', formatTransitionAction(entry)),
-          element('span', 'student-plan-history__time', formatTimestamp(entry.created_at))
-        );
+        const timestamp = element('time', 'student-plan-history__time', formatTimestamp(entry.created_at));
+        if (entry.created_at && !Number.isNaN(Date.parse(entry.created_at))) timestamp.dateTime = entry.created_at;
+        headerRow.append(element('strong', 'student-plan-history__transition', entry.action_label), timestamp);
 
         const actorLine = element(
           'p',
@@ -590,6 +614,10 @@ export function renderStudentPlanView({
         );
 
         item.append(headerRow, actorLine);
+
+        if (entry.to_status && entry.from_status !== entry.to_status) {
+          item.append(element('p', 'student-plan-history__states', formatTransitionAction(entry)));
+        }
 
         if (entry.reason) {
           item.append(
@@ -605,7 +633,14 @@ export function renderStudentPlanView({
 
     const picker = renderPlanPicker();
     const editor = makeEditor(plan);
-    container.replaceChildren(...[picker, statusSection, editor, readinessSection, submitSection, historySection].filter(Boolean));
+    container.replaceChildren(...[
+      picker,
+      decorateStudentCard(statusSection, 'file'),
+      editor,
+      decorateStudentCard(readinessSection, 'clipboard'),
+      decorateStudentCard(submitSection, 'send'),
+      decorateStudentCard(historySection, 'clock')
+    ].filter(Boolean));
     syncEditorControls();
   }
 
