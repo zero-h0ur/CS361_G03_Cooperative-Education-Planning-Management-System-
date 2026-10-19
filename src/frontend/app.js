@@ -5,6 +5,7 @@ import { createSessionClient } from './auth/session-client.js';
 import { createAdvisorClient } from './advisor/advisor-client.js';
 import { createStaffClient } from './staff/staff-client.js';
 import { createShellApp, renderStartupFailure } from './shell-app.js';
+import { createStaffReviewClient } from './staff/staff-review-client.js';
 import { createStudentPlanClient } from './student/plan-submission-client.js';
 import { createStudentProfileClient } from './student/profile-client.js';
 
@@ -34,6 +35,10 @@ if (root) {
       apiBaseUrl: config.apiBaseUrl,
       getAccessToken: authClient.getAccessToken
     });
+    const staffReviewClient = createStaffReviewClient({
+      apiBaseUrl: config.apiBaseUrl,
+      getAccessToken: authClient.getAccessToken
+    });
     const app = createShellApp({
       root,
       loadSession: sessionClient.loadSession,
@@ -46,7 +51,8 @@ if (root) {
       studentProfileClient,
       studentPlanClient,
       advisorClient,
-      staffClient
+      staffClient,
+      staffReviewClient
     });
 
     app.start();

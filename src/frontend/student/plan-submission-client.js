@@ -13,6 +13,7 @@ export const STUDENT_PLAN_ERROR_CODES = Object.freeze({
   ACCESS_DENIED: 'ACCESS_DENIED',
   NOT_FOUND: 'NOT_FOUND',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
+  PLAN_ALREADY_EXISTS_FOR_CYCLE: 'PLAN_ALREADY_EXISTS_FOR_CYCLE',
   STALE_RECORD_CONFLICT: 'STALE_RECORD_CONFLICT',
   INVALID_STATE_TRANSITION: 'INVALID_STATE_TRANSITION',
   INVALID_RESPONSE: 'INVALID_RESPONSE',
@@ -216,6 +217,10 @@ async function parsePlanErrorResponse(response) {
     case 404:
       return new StudentPlanError(STUDENT_PLAN_ERROR_CODES.NOT_FOUND);
     case 409:
+      if (errorCode === 'PLAN_ALREADY_EXISTS_FOR_CYCLE') {
+        return new StudentPlanError(STUDENT_PLAN_ERROR_CODES.PLAN_ALREADY_EXISTS_FOR_CYCLE,
+          'มีแผนในรอบนี้แล้ว กรุณาเปิดแผนเดิมหรือเลือกรอบอื่น', details);
+      }
       // STALE_RECORD_CONFLICT or IDEMPOTENCY_KEY_REUSED: either way the UI must reload
       return new StudentPlanError(
         STUDENT_PLAN_ERROR_CODES.STALE_RECORD_CONFLICT,
@@ -323,11 +328,54 @@ export function createStudentPlanClient({
   }
 
   return Object.freeze({
+    async listCycles({ signal } = {}) {
+      const payload = await requestJson(buildApiUrl(apiBaseUrl, currentOrigin, '/api/v3/plan-options/cycles'), { signal });
+      if (!Array.isArray(payload?.data) || payload.data.some((row) =>
+        !row || typeof row.id !== 'string' || typeof row.name !== 'string' || !['OPEN', 'CLOSED'].includes(row.status))) {
+        throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
+      }
+      return payload.data.map(({ id, name, academic_year, semester, status }) =>
+        Object.freeze({ id, name, academic_year, semester, status }));
+    },
+
+    async searchCompanies({ q = '', page = 1, signal } = {}) {
+      const query = new URLSearchParams({ q: q.trim(), page: String(page), pageSize: '10' });
+      const payload = await requestJson(buildApiUrl(apiBaseUrl, currentOrigin, '/api/companies', query.toString()), {
+        signal, authenticated: false
+      });
+      if (!Array.isArray(payload?.data) || payload.data.some((row) => !row || typeof row.id !== 'string' || typeof row.name !== 'string') ||
+          !Number.isInteger(payload?.pagination?.totalPages) || payload.pagination.totalPages < 0) {
+        throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
+      }
+      return { items: payload.data.map(({ id, name }) => ({ id, name })), pagination: payload.pagination };
+    },
+
+    async getCompanyPositions({ companyId, signal } = {}) {
+      const payload = await requestJson(buildApiUrl(apiBaseUrl, currentOrigin,
+        `/api/companies/${encodeURIComponent(companyId)}/positions`), { signal, authenticated: false });
+      if (!Array.isArray(payload?.data) || payload.data.some((row) =>
+        !row || typeof row.id !== 'string' || typeof row.title !== 'string' || row.company_id !== companyId)) {
+        throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
+      }
+      return payload.data.map(({ id, company_id, title }) => ({ id, company_id, title }));
+    },
+
+    async saveDraft({ planId = null, content, expectedVersion, operationId, signal } = {}) {
+      const body = { cycle_id: content.cycle_id, company_id: content.company_id,
+        position_id: content.position_id, notes: content.notes, operation_id: operationId };
+      if (planId) body.expected_version = expectedVersion;
+      const payload = await requestJson(buildApiUrl(apiBaseUrl, currentOrigin,
+        planId ? `/api/v3/plans/${encodeURIComponent(planId)}` : '/api/v3/plans'), {
+        method: planId ? 'PATCH' : 'POST', body, signal
+      });
+      return sanitizePlanRecord(payload?.data);
+    },
+
     /**
      * Loads the current own Plan and its history from the server.
      * Resolves { plan: null, statusHistory: [] } when the Student has no Plan yet.
      */
-    async getOwnPlan({ signal } = {}) {
+    async getOwnPlan({ signal, planId = null } = {}) {
       const list = await requestJson(
         buildApiUrl(apiBaseUrl, currentOrigin, '/api/v3/plans', '?pageSize=100'),
         { signal }
@@ -335,9 +383,30 @@ export function createStudentPlanClient({
       if (!Array.isArray(list?.data)) {
         throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
       }
-      const current = selectCurrentPlan(list.data);
+      const plans = [...list.data];
+      // Preserve access to older cycles even when the Student has over 100 Plans.
+      const totalPages = list.pagination?.totalPages ?? 1;
+      if (!Number.isSafeInteger(totalPages) || totalPages < 0) {
+        throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
+      }
+      for (let page = 2; page <= totalPages; page += 1) {
+        const next = await requestJson(buildApiUrl(apiBaseUrl, currentOrigin, '/api/v3/plans',
+          `?pageSize=100&page=${page}`), { signal });
+        if (!Array.isArray(next?.data)) throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
+        plans.push(...next.data);
+      }
+      let current = selectCurrentPlan(plans);
+      if (planId) {
+        current = plans.find((item) => item.id === planId);
+        if (!current) {
+          const detail = await requestJson(buildApiUrl(apiBaseUrl, currentOrigin,
+            `/api/v3/plans/${encodeURIComponent(planId)}`), { signal });
+          current = detail?.data;
+        }
+        if (!current) throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);
+      }
       if (!current) {
-        return Object.freeze({ plan: null, statusHistory: Object.freeze([]) });
+        return Object.freeze({ plan: null, plans: Object.freeze([]), statusHistory: Object.freeze([]) });
       }
 
       const [historyPayload, display] = await Promise.all([
@@ -350,6 +419,7 @@ export function createStudentPlanClient({
 
       return Object.freeze({
         plan: sanitizePlanRecord(current, display),
+        plans: Object.freeze(plans.map((row) => sanitizePlanRecord(row))),
         statusHistory: sanitizeStatusHistory(historyPayload?.data)
       });
     },

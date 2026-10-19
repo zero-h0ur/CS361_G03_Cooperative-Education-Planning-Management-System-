@@ -38,9 +38,11 @@ async function parseSuccessResponse(response) {
     throw new AuthShellError(AUTH_ERROR_CODES.INVALID_RESPONSE);
   }
 
-  // The shell deliberately retains only role. Identity/profile/scope fields belong
-  // to downstream features and must not become client-side authorization inputs.
-  return Object.freeze({ role });
+  // The shell retains only role and the review capability. canReviewPlan only decides
+  // whether review controls are rendered (#77); the backend re-checks every command.
+  // Identity/profile/scope fields belong to downstream features.
+  const canReviewPlan = role === 'STAFF' && payload?.data?.capabilities?.canReviewPlan === true;
+  return Object.freeze({ role, canReviewPlan });
 }
 
 function mapFailureStatus(status) {

@@ -42,6 +42,8 @@ async function executeQuery(text, params) {
     const res = await pool.query(text, params);
     return res;
   } catch (err) {
+    // Preserve this sanitized domain error for the shared 503 mapper.
+    if (err.code === 'DB_CREDENTIALS_UNAVAILABLE') throw err;
     if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
       throw new DALError("Database connection unavailable.", 'CONNECTION_ERROR');
     }

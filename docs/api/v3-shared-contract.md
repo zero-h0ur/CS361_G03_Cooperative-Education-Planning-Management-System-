@@ -357,6 +357,14 @@ Query ใช้ Index จาก Migration 002 ได้แก่ `idx_students_s
 | `GET` | `/api/v3/plans` | รายการ Plan ของตนเอง รวม `CANCELLED` (Query: `page`, `pageSize` ค่าเริ่มต้น 10 สูงสุด 100, `cycle_id`, `status`) | `200` + `pagination` |
 | `GET` | `/api/v3/plans/:planId` | รายละเอียด Plan ของตนเอง | `200` |
 | `PATCH` | `/api/v3/plans/:planId` | แก้ Content เฉพาะสถานะ `DRAFT` / `NEEDS_REVISION` (`update_draft`) | `200` |
+| `GET` | `/api/v3/plan-options/cycles` | ตัวเลือกรอบสมัครสำหรับ Student ที่ Active และเชื่อม Student record แล้ว (#73) | `200` |
+
+Cycle options (#73): ไม่รับ Query parameters และคืน `{ data: [{ id, name,
+academic_year, semester, status }] }` เฉพาะ `rounds.visibility = 'public'`.
+เรียง `academic_year DESC, semester DESC NULLS LAST, name ASC, id ASC`.
+รอบ `CLOSED` ใช้บันทึก Draft ได้ แต่ยังส่งแผนไม่ได้ตาม Workflow contract.
+ไม่สร้างหรือคัดลอก Cycle; `id` คือ Foreign Key `cycle_id` ของ Plan.
+Role อื่นหรือ Student ที่ไม่ Active/ไม่ linked ได้ `403`, ไม่มี Login ได้ `401`.
 
 Request body:
 
@@ -459,7 +467,7 @@ Request body:
 
 ### 3.10 Student Plan History: `GET /api/v3/plans/:planId/history` (#76)
 
-ประวัติของ Plan ที่ได้จาก `audit_events` แบบ Append-only ใช้ได้เฉพาะ Student เจ้าของ Plan ผ่าน Action `audit:read_own_plan_history` (#49) Policy กลางตรวจ UUID (`400`), การมีอยู่ (`404`) และ Ownership (`403`) ส่วน Advisor / Staff ได้ `403` (Advisor read API ใน #68 ไม่เปิดประวัติของแผน ส่วนของ Staff อยู่ใน #77)
+ประวัติของ Plan ที่ได้จาก `audit_events` แบบ Append-only ใช้ได้เฉพาะ Student เจ้าของ Plan ผ่าน Action `audit:read_own_plan_history` (#49) Policy กลางตรวจ UUID (`400`), การมีอยู่ (`404`) และ Ownership (`403`) ส่วน Advisor / Staff ได้ `403` (Advisor read API ใน #68 ไม่เปิดประวัติของแผน ส่วน Staff ใช้หัวข้อ 3.12)
 
 Response (`data`) เรียงตามเวลาเก่าไปใหม่:
 
@@ -501,6 +509,30 @@ Allowlist (`src/api/services/advisor-read-serializers.js`):
 | Student / Plan นอก Assignment หรือไม่มีอยู่จริง | `403 FORBIDDEN` แบบเดียวกัน (ไม่เปิดเผยว่ามี Record หรือไม่) |
 | UUID / Pagination / Filter ผิดรูปแบบ, Query นอก Allowlist | `400 VALIDATION_ERROR` |
 | Method อื่นนอกจาก `GET` | `405 METHOD_NOT_ALLOWED` |
+
+### 3.12 Staff Plan Detail และ History: `/api/v3/staff/plans/:planId` (#77)
+
+Read API สำหรับหน้าตรวจแผนของ Staff (#77) ใช้ได้เฉพาะ Role `STAFF` และ Plan ต้องอยู่ใน Visibility Scope (#53 ข้อ 3.2) ส่วนคำสั่งตรวจยังใช้หัวข้อ 3.8
+
+| Method | Path | Action (#49) | Response (`data`) |
+|---|---|---|---|
+| `GET` | `/api/v3/staff/plans/:planId` | `plan:list_read` | PlanSummary ของหัวข้อ 3.6 + `notes` |
+| `GET` | `/api/v3/staff/plans/:planId/history` | `audit:read_plan_history` | History ตาม Allowlist ของหัวข้อ 3.10 |
+
+- Role อื่นได้ `403` ก่อน Policy อ่าน Record ใดๆ เพราะสอง Action นี้เปิดให้ Advisor แบบ ASSIGNED ด้วย แต่ Path `/api/v3/staff/*` เป็นของ Staff เท่านั้น
+- `notes` คือบันทึกของ Student ใน Plan ซึ่ง Staff ใน Scope อ่านได้ตาม #50 รายการ Queue และ Search ของหัวข้อ 3.6 ยังไม่มีค่านี้
+- History ส่ง `review_notes` เฉพาะ `PLAN_RETURNED` / `PLAN_APPROVED` และไม่ส่ง `actor_id`, `operation_id`, `correlation_id`
+- อ่านได้ทุกสถานะและทุกรอบ (ไม่ต้องเป็น `OPEN`) ส่วนคำสั่งตรวจยังต้องเป็นรอบ `OPEN`
+- SQL ของ Detail ตรวจ Scope ซ้ำอีกชั้น ถ้า Scope เปลี่ยนระหว่างทางจะได้ `403`
+
+| กรณี | Response |
+|---|---|
+| `planId` ไม่ใช่ UUID, ส่ง Query parameter | `400 VALIDATION_ERROR` |
+| ไม่มี/ผิด/หมดอายุ token | `401 UNAUTHORIZED` |
+| ไม่ใช่ `STAFF`, ไม่มี Scope ที่ `ACTIVE` หรือ Plan นอก Scope | `403 FORBIDDEN` |
+| ไม่พบ Plan (Staff มี Scope ที่ `ACTIVE`) | `404 RECORD_NOT_FOUND` |
+| Method อื่นนอกจาก `GET` | `405 METHOD_NOT_ALLOWED` |
+| Database ไม่พร้อมใช้งาน | `503 SERVICE_UNAVAILABLE` |
 
 ---
 

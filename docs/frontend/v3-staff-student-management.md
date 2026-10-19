@@ -9,17 +9,17 @@
 | --- | --- |
 | `app.html#/staff/students` | ค้นหานักศึกษา |
 | `app.html#/staff/plans` | ค้นหาแผนทุกสถานะใน Scope |
-| `app.html#/staff/review/:planId` | ส่งต่อแผนที่เลือกให้ Review workspace ของ #77 |
-| `app.html#/staff/review` | Route คิวตรวจเดิม รอ #77 |
+| `app.html#/staff/plans/:planId` | ส่งต่อแผนที่เลือกให้ Review workspace ของ #77 ที่ merge แล้ว |
+| `app.html#/staff/review` | คิวตรวจแผนของ #77 |
 
 ทุก Route ตรวจ Session และ Role `STAFF` ก่อนแสดงข้อมูล ผู้ใช้ Student/Advisor
 ไม่เห็นเมนูและเข้า Route โดยตรงไม่ได้ Backend ยังคงตรวจ Role/Active scope
 ด้วยตัวเอง การซ่อนเมนูไม่ใช่ Authorization เพียงชั้นเดียว
 
-ตามข้อตกลงของ #74 หน้า `#/staff/review/:planId` ตรวจรูปแบบ UUID และแสดงว่า
-รอ #77 เท่านั้น ไม่มีการเรียก Detail API หรือแสดงปุ่ม Start review/Return/Approve
-ทีม #77 สามารถรับ `route.params.planId` ที่ Route นี้เพื่อเพิ่ม workspace ภายหลัง
-ต้องตรวจ Scope และอ่านข้อมูลจาก Backend อีกครั้งก่อนแสดง Detail/Action
+หลังรวม main ใช้ Route `#/staff/plans/:planId` ของ #77 ที่มีอยู่แล้ว ไม่แสดง
+Placeholder รอพัฒนา หน้ารายการยังทำเฉพาะ GET และไม่มีคำสั่งเปลี่ยนสถานะ
+เมื่อเปิด Review workspace จะอ่าน Detail/History ผ่าน Client ของ #77 อีกครั้ง
+Backend ตรวจ Scope ทุก Request และตรวจสิทธิ์/สถานะซ้ำก่อน Review command
 
 ## API และ controls
 
@@ -86,7 +86,7 @@ git diff --check
 `test:staff-ui` และชุด Frontend ใช้ Synthetic responses ไม่ต้องมี Docker,
 Cognito หรือ Login จริง ไม่มี Mock role ถูกเพิ่มใน Production entry point
 
-ผลวันที่ 2026-10-19:
+ผลต้นฉบับก่อนรวม main วันที่ 2026-10-19:
 
 - Staff UI/client/filter/role tests: 39 ผ่าน (รวมอยู่ใน Frontend)
 - Frontend regression: 169 ผ่าน
@@ -99,10 +99,34 @@ Cognito หรือ Login จริง ไม่มี Mock role ถูกเ�
 Test harness ของ #67 จะ Seed/reset ข้อมูล Synthetic ในฐานนั้น ขณะตรวจ #74
 ใช้ Container ชั่วคราว `coed-issue74-test` พอร์ต 55474 ไม่ใช่ฐานหลักหรือ Production
 
+## ตรวจซ้ำหลังรวม main สำหรับ PR #114
+
+รวม main `509951f` โดยรักษา My Plan editor, Staff review workspace และ Secrets
+Manager runtime ไว้ แก้ conflict ใน package scripts, app wiring, routes และ shell
+เพื่อให้ Staff search และ review clients ทำงานร่วมกัน ไม่มีการย้อนกลับ backend
+หรือ lockfile จาก main ใช้ canonical review route `#/staff/plans/:planId`
+แทน placeholder เดิม และเพิ่ม negative tests สำหรับ Student/Advisor ที่เปิด
+Staff detail route โดยตรง
+
+- Node.js 20.20.2 / npm 10.8.2, full regression: **827/827 ผ่าน**
+- Frontend regression: **247/247 ผ่าน** รวม Staff search **41 tests**
+- Frontend build ผ่าน; ฐานข้อมูลทดสอบแยก `coed_pr114_test_20261019` บน local
+  PostgreSQL เท่านั้น ไม่มีการ seed/reset RDS
+- Headless Chrome ใช้ production UI modules/CSS กับ isolated synthetic responses:
+  จอ 320/768/1440px ไม่มี horizontal overflow ทั้ง Student และ Plan list
+- Browser checks ผ่าน: Enter submit, focus ไป field เมื่อปีผิด, focus ไปผลลัพธ์,
+  keyword ไม่ออก URL, ลิงก์เปิด Review workspace จริง, ไม่มี mutation อัตโนมัติ
+- Student/Advisor เปิด Staff list โดยตรงถูกปฏิเสธก่อนเรียก Staff client
+
+Browser harness ไม่ใช่ production auth entry point และไม่ใช้ Cognito/token จริง
+จึงไม่แทน live Staff login/active-scope smoke, การทดสอบอุปกรณ์จริง หรือ screen
+reader review ผล CI บน commit ที่ push แล้วต้องผ่านก่อน merge
+
 ## Manual review ที่ยังต้องทำ
 
-Session นี้เครื่องมือไม่มี Browser ที่เชื่อมต่อ จึงยังไม่ได้ตรวจภาพจริงหรือ
-พฤติกรรม Keyboard บน Browser ไม่ถือว่ารายการต่อไปนี้ผ่านจาก Unit tests อย่างเดียว
+ตรวจ browser layout และ keyboard ด้วย synthetic harness แล้วตามหัวข้อด้านบน
+รายการ live Cognito/API และ Staff active scope ด้านล่างยังต้องยืนยันก่อน merge
+ไม่ถือว่าผ่านจาก Unit tests หรือ synthetic browser checks เพียงอย่างเดียว
 
 ใช้ Cognito/API configuration ตาม [shell guide](v3-authenticated-shell.md)
 และบัญชี Staff ทดสอบที่มี Active scope:
@@ -112,8 +136,9 @@ Session นี้เครื่องมือไม่มี Browser ที่
 2. ค้นหาชื่อ/รหัส กรองปี พ.ศ. เปลี่ยน Page size และเดินหน้าถัดไป/ก่อนหน้า
    ตรวจว่าเปลี่ยน Filter แล้วกลับหน้า 1 และ Total นับเฉพาะ Scope
 3. เปิด `/app.html#/staff/plans` ลองทุกสถานะและ Sort/Order เทียบกับ API
-4. กด “เปิดตรวจแผน” ตรวจ Route มี Plan UUID และแสดงข้อความรอ #77
-   ไม่ควรมีปุ่มเปลี่ยนสถานะ หรือเรียกคำสั่ง POST/PATCH/DELETE
+4. กด “เปิดตรวจแผน” ตรวจ Route `#/staff/plans/:planId` แสดง Review workspace
+   ของ #77 และเรียก GET Detail/History ใหม่ หน้ารายการและการเปิด Detail
+   ต้องไม่เรียกคำสั่ง POST/PATCH/DELETE เอง
 5. ใช้บัญชี Student/Advisor เปิด Staff URL โดยตรง ต้องถูกปฏิเสธ
 6. ลองปี ค.ศ., ผลลัพธ์ว่าง, Network error, 401 และ 403; ต้องไม่มีรายการเก่า
    ค้างให้เห็นหลังระบบปฏิเสธสิทธิ์

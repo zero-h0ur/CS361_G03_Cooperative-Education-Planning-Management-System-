@@ -386,11 +386,15 @@ a:focus-visible,
 
 .student-workspace {
   display: grid;
+  /* Native selects must not widen the implicit grid track on narrow screens. */
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 24px;
   margin-top: 38px;
 }
 
 .student-card {
+  min-width: 0;
   padding: 28px 30px;
   border: 1px solid var(--shell-line);
   border-radius: 12px;
@@ -497,7 +501,7 @@ a:focus-visible,
 
 .student-profile-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 16px 22px;
   margin: 0;
 }
@@ -566,6 +570,7 @@ a:focus-visible,
 
 .student-form__field {
   display: grid;
+  min-width: 0;
   gap: 8px;
 }
 
@@ -577,6 +582,8 @@ a:focus-visible,
 
 .student-form__input {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 44px;
   padding: 10px 14px;
   border: 1px solid #cbd5e1;
@@ -628,6 +635,77 @@ a:focus-visible,
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.student-workspace .shell-button {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* #73: use the authenticated workspace's existing type, spacing and palette. */
+.plan-editor__controls {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.plan-editor__directory {
+  min-width: 0;
+  margin: 0;
+  padding: 18px 0;
+  border: 0;
+  border-top: 1px solid var(--shell-line);
+  border-bottom: 1px solid var(--shell-line);
+  display: grid;
+  gap: 14px;
+}
+
+.plan-editor__directory legend {
+  padding: 0 10px 0 0;
+}
+
+.plan-editor__selections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.plan-editor textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.plan-editor .student-form__hint {
+  color: var(--shell-muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.plan-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.plan-picker select {
+  flex: 1 1 260px;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.plan-editor [hidden], .plan-picker [hidden] {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .plan-editor__selections { grid-template-columns: minmax(0, 1fr); }
+  .plan-editor .student-form__actions > *, .plan-picker > * { width: 100%; }
 }
 
 .shell-button:disabled {
@@ -769,6 +847,44 @@ a:focus-visible,
   font-size: 0.86rem;
 }
 
+/* Staff review workspace (#77) */
+.staff-queue-filter {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 14px;
+  margin: 20px 0;
+}
+
+.staff-review-confirm {
+  margin-top: 20px;
+  padding: 18px 20px;
+  border: 1px solid #c7d2fe;
+  border-left: 4px solid var(--shell-primary);
+  border-radius: 8px;
+  background: var(--shell-soft);
+}
+
+.staff-review-confirm__title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.staff-review-confirm__title:focus {
+  outline: none;
+}
+
+.staff-review-notes {
+  min-height: 110px;
+  resize: vertical;
+}
+
+@media (max-width: 760px) {
+  .staff-queue-filter {
+    grid-template-columns: 1fr;
+  }
+}
+
 @keyframes shell-pulse {
   50% {
     transform: translateY(-4px);
@@ -802,7 +918,6 @@ a:focus-visible,
 .staff-result__detail dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 .staff-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
 .staff-pagination__label { color: var(--shell-muted); }
-.staff-review-handoff .shell-button { margin: 18px 12px 0 0; }
 
 @media (max-width: 520px) {
   .staff-search-form { grid-template-columns: minmax(0, 1fr); }

@@ -198,7 +198,7 @@ describe('Issue #74 Staff list UI', () => {
   test('Plan summary links the guarded #77 handoff and never renders mutation controls or protected fields', async () => {
     const malicious = { ...plan, student: { ...student, full_name: '<img src=x onerror=alert(1)>' } };
     const { root } = await mount({ mode: 'plans', searchPlans: jest.fn(async () => page([malicious])) });
-    expect(root.querySelector(`a[href="#/staff/review/${PLAN_ID}"]`)).not.toBeNull();
+    expect(root.querySelector(`a[href="#/staff/plans/${PLAN_ID}"]`)).not.toBeNull();
     expect(root.querySelector('img')).toBeNull();
     expect(root.textContent).toContain('<img');
     expect(root.textContent).toContain('ไม่เปิดเผยชื่อสถานประกอบการ');
@@ -214,13 +214,13 @@ describe('Issue #74 Staff list UI', () => {
   });
 });
 
-async function shell({ role = 'STAFF', hash = '#/staff/students', loadSession, client = fakeClient() } = {}) {
+async function shell({ role = 'STAFF', hash = '#/staff/students', loadSession, client = fakeClient(), reviewClient = null } = {}) {
   document.body.innerHTML = '<div id="app"></div>';
   const root = document.getElementById('app');
   const history = { replaceState: jest.fn() };
   const app = createShellApp({ root, loadSession: loadSession || (async () => ({ role })), startLogin: jest.fn(), restartLogin: jest.fn(),
     logout: jest.fn(), location: { pathname: '/app.html', hash }, eventTarget: new EventTarget(), storage: window.sessionStorage,
-    history, staffClient: client });
+    history, staffClient: client, staffReviewClient: reviewClient });
   await app.start(); await flush();
   return { root, app, history, client };
 }
@@ -247,14 +247,23 @@ describe('Issue #74 protected route integration', () => {
     expect(JSON.stringify(history.replaceState.mock.calls)).not.toContain('PRIVATE');
     expect(root.querySelector('.shell-nav__link--active').getAttribute('href')).toBe('#/staff/plans'); app.destroy();
   });
-  test('validates review UUID, keeps handoff Staff-only and performs no detail/mutation request', async () => {
-    const { root, client, app } = await shell({ hash: `#/staff/review/${PLAN_ID}` });
-    expect(root.textContent).toContain('Issue #77');
-    expect(root.querySelector('[data-role="staff-review-handoff"]')).not.toBeNull();
+  test('opens the merged #77 review workspace through its canonical Staff-only route without mutating', async () => {
+    const reviewClient = { getPlanWithHistory: jest.fn(async () => ({ plan, history: [] })), runReviewCommand: jest.fn() };
+    const { root, client, app } = await shell({ hash: `#/staff/plans/${PLAN_ID}`, reviewClient });
+    expect(reviewClient.getPlanWithHistory).toHaveBeenCalledWith(PLAN_ID, expect.objectContaining({ signal: expect.anything() }));
+    expect(reviewClient.runReviewCommand).not.toHaveBeenCalled();
+    expect(root.textContent).toContain(student.full_name);
+    expect(root.querySelector('[data-role="staff-review-handoff"]')).toBeNull();
     expect(client.searchPlans).not.toHaveBeenCalled();
-    expect(root.querySelector('.staff-review-handoff button')).toBeNull();
-    expect(canRoleAccessRoute('ADVISOR', `#/staff/review/${PLAN_ID}`)).toBe(false);
-    expect(getRoute('#/staff/review/not-a-uuid')).toBeNull(); app.destroy();
+    expect(canRoleAccessRoute('ADVISOR', `#/staff/plans/${PLAN_ID}`)).toBe(false);
+    expect(getRoute('#/staff/plans/not-a-uuid')).toBeNull(); app.destroy();
+  });
+  test.each(['STUDENT', 'ADVISOR'])('denies %s before reading a Staff plan detail', async (role) => {
+    const reviewClient = { getPlanWithHistory: jest.fn(), runReviewCommand: jest.fn() };
+    const { root, app } = await shell({ role, hash: `#/staff/plans/${PLAN_ID}`, reviewClient });
+    expect(root.textContent).toContain('ไม่มีสิทธิ์เข้าถึง');
+    expect(reviewClient.getPlanWithHistory).not.toHaveBeenCalled();
+    expect(reviewClient.runReviewCommand).not.toHaveBeenCalled(); app.destroy();
   });
   test.each(['#/staff/students?q=PRIVATE', '#/staff/plans?status=UNKNOWN', '#/staff/students?page=1&page=2', '#/staff/plans?access_token=secret'])
     ('rejects unsupported route state: %s', (hash) => { expect(getRoute(hash)).toBeNull(); });

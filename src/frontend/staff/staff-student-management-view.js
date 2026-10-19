@@ -143,7 +143,7 @@ export function renderStaffStudentManagementView({ mode = 'students', initialFil
     detail(data, 'สถานประกอบการ', item.company ? item.company.name || 'ไม่เปิดเผยชื่อสถานประกอบการ' : 'ยังไม่เลือก');
     detail(data, 'ตำแหน่งงาน', item.position ? item.position.title || 'ไม่เปิดเผยชื่อตำแหน่งงาน' : 'ยังไม่เลือก');
     detail(data, 'อัปเดตล่าสุด', date(item.updated_at));
-    const review = link(`#/staff/review/${item.id}`, 'เปิดตรวจแผน');
+    const review = link(`#/staff/plans/${item.id}`, 'เปิดตรวจแผน');
     review.setAttribute('aria-label', `เปิดตรวจแผนของ ${display(item.student.full_name)}`);
     article.append(heading, badge, data, review);
     return article;
@@ -205,16 +205,4 @@ export function renderStaffStudentManagementView({ mode = 'students', initialFil
   fillFields();
   if (!signal?.aborted) load(applied);
   return root;
-}
-
-/** #77 owns the eventual detail/API/actions. This handoff performs no request. */
-export function renderStaffReviewHandoff({ planId } = {}) {
-  const section = node('section', 'student-card staff-review-handoff');
-  section.dataset.role = 'staff-review-handoff';
-  section.append(node('h2', 'student-card__title', 'หน้าเปิดตรวจแผนอยู่ระหว่างพัฒนา'),
-    node('p', 'student-card__description', 'เลือกแผนแล้ว ส่วนรายละเอียดและคำสั่งตรวจแผนจะพร้อมใช้งานเมื่อ Issue #77 เสร็จสมบูรณ์'));
-  // The UUID is passed via the guarded route only, never a private payload in storage.
-  if (planId) section.dataset.planId = planId;
-  section.append(link('#/staff/plans', 'กลับไปค้นหาแผน'), link('#/staff/students', 'ค้นหานักศึกษา'));
-  return section;
 }

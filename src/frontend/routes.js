@@ -45,8 +45,8 @@ const ROUTE_DEFINITIONS = Object.freeze([
     navLabel: 'คิวตรวจแผน',
     eyebrow: 'STAFF WORKSPACE',
     title: 'คิวตรวจแผนสหกิจ',
-    description: 'พื้นที่สำหรับค้นหาและตรวจแผนภายในขอบเขตที่ระบบมอบหมาย',
-    status: 'คิวตรวจและคำสั่งตรวจแผนจะเชื่อมต่อใน Issue #77'
+    description: 'แผนที่รอตรวจในรอบที่เปิดอยู่ ภายในขอบเขตที่คุณได้รับมอบหมาย เรียงจากรอนานที่สุด',
+    status: 'Review queue API (#67)'
   }),
   Object.freeze({
     hash: '#/advisor/students',
@@ -64,11 +64,14 @@ const ROUTE_DEFINITIONS = Object.freeze([
 const UUID_SEGMENT = '([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})';
 const DETAIL_ROUTE_DEFINITIONS = Object.freeze([
   Object.freeze({
-    pattern: new RegExp(`^#/staff/review/${UUID_SEGMENT}$`, 'i'),
-    param: 'planId', navHash: '#/staff/review', role: 'STAFF',
-    eyebrow: 'STAFF WORKSPACE', title: 'เปิดตรวจแผนสหกิจ',
-    description: 'เส้นทางส่งต่อแผนที่เลือกไปยัง Review workspace ของ Issue #77',
-    status: 'รอหน้า Review detail จาก Issue #77'
+    pattern: new RegExp(`^#/staff/plans/${UUID_SEGMENT}$`, 'i'),
+    param: 'planId',
+    navHash: '#/staff/review',
+    role: 'STAFF',
+    eyebrow: 'STAFF WORKSPACE',
+    title: 'ตรวจแผนสหกิจ',
+    description: 'รายละเอียด สถานะ และประวัติของแผน พร้อมคำสั่งตรวจที่สถานะปัจจุบันอนุญาต',
+    status: 'Review commands API (#70)'
   }),
   Object.freeze({
     pattern: new RegExp(`^#/advisor/students/${UUID_SEGMENT}$`, 'i'),

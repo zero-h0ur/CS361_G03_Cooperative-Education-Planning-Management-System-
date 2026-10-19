@@ -139,6 +139,12 @@ function mapError(error, dal = {}) {
     };
   }
 
+  // Credential retrieval is a backend dependency failure, not a user auth failure.
+  if (error?.code === 'DB_CREDENTIALS_UNAVAILABLE') {
+    return { status: 503, code: 'SERVICE_UNAVAILABLE',
+      message: 'Service temporarily unavailable.', headers: {}, details: null };
+  }
+
   // 5. Generic or unexpected errors -> 500 (sanitize internals)
   return {
     status: 500,

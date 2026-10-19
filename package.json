@@ -4,13 +4,14 @@
   "description": "CO-ED V2 Data Access Layer",
   "main": "index.js",
   "engines": {
-    "node": ">=18.14.0"
+    "node": ">=20.0.0"
   },
   "scripts": {
     "start": "node src/server.js",
     "build": "node scripts/build-frontend.mjs",
+    "package:lambda": "node scripts/package-lambda.mjs",
     "migrate": "node src/db/migrate.js",
-    "test": "npm run test:dataset && npm run test:fixtures && npm run test:api && npm run test:contract && npm run test:auth && npm run test:authz && npm run test:workflow && npm run test:session && npm run test:profile && npm run test:plan && npm run test:staff && npm run test:review && npm run test:submit && npm run test:history && npm run test:advisor && npm run test:v3-t02 && npm run test:v3-t03 && npm run test:lambda && npm run test:frontend && npm run test:migration && npm run test:dal",
+    "test": "npm run test:dataset && npm run test:fixtures && npm run test:api && npm run test:contract && npm run test:auth && npm run test:authz && npm run test:workflow && npm run test:session && npm run test:profile && npm run test:plan && npm run test:staff && npm run test:review && npm run test:staff-plan && npm run test:submit && npm run test:history && npm run test:advisor && npm run test:v3-t02 && npm run test:v3-t03 && npm run test:lambda && npm run test:runtime-grants && npm run test:frontend && npm run test:migration && npm run test:dal",
     "test:api": "jest --runInBand tests/api.test.js",
     "test:contract": "jest --runInBand tests/v3-api-contract.test.js",
     "test:auth": "jest --runInBand tests/auth-context.test.js",
@@ -19,19 +20,21 @@
     "test:session": "jest --runInBand tests/session-me.test.js",
     "test:profile": "jest --runInBand tests/student-profile.test.js",
     "test:advisor": "jest --runInBand tests/advisor-read.test.js",
-    "test:plan": "jest --runInBand tests/student-plan.test.js",
+    "test:plan": "jest --runInBand tests/student-plan.test.js tests/plan-cycle-options.test.js",
     "test:staff": "jest --runInBand tests/staff-review-queue.test.js",
+    "test:staff-plan": "jest --runInBand tests/staff-plan-detail.test.js",
     "test:review": "jest --runInBand tests/staff-review-commands.test.js",
     "test:v3-t03": "jest --runInBand tests/v3-t03-workflow-transitions-concurrency.test.js tests/v3-t03-postgres.test.js",
     "test:submit": "jest --runInBand tests/plan-submission.test.js",
     "test:history": "jest --runInBand tests/plan-history.test.js",
     "test:v3-t02": "jest --runInBand tests/v3-t02-authn-authz-boundaries.test.js",
-    "test:lambda": "jest --runInBand tests/lambda.test.js",
+    "test:lambda": "jest --runInBand tests/lambda.test.js tests/rds-secret.test.js && node --test tests/package-lambda.test.mjs",
+    "test:runtime-grants": "jest --runInBand tests/runtime-grants.test.js",
     "test:dataset": "node --test tests/v2-dataset.test.mjs",
     "test:fixtures": "node --test tests/v3-dataset.test.mjs && jest --runInBand tests/v3-fixtures.test.js",
     "test:v3-t01": "node --test tests/v3-dataset.test.mjs && jest --runInBand tests/v3-fixtures.test.js tests/v3-t01-migrations-constraints-fixtures.test.js tests/v3-migration.test.js",
     "test:dal": "jest --runInBand tests/dal.test.js",
-    "test:frontend": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/company-directory.test.js tests/authenticated-session.test.js tests/authenticated-shell.test.js tests/login-logout-session-ux.test.js tests/student-dashboard-profile.test.js tests/student-plan-submission-ux.test.js tests/advisor-assigned-ui.test.js tests/staff-student-management.test.js",
+    "test:frontend": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/company-directory.test.js tests/authenticated-session.test.js tests/authenticated-shell.test.js tests/login-logout-session-ux.test.js tests/student-dashboard-profile.test.js tests/student-plan-submission-ux.test.js tests/student-plan-editor.test.js tests/advisor-assigned-ui.test.js tests/staff-review-workspace-ui.test.js tests/staff-student-management.test.js",
     "test:staff-ui": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/staff-student-management.test.js",
     "test:migration": "jest --runInBand tests/v3-migration.test.js tests/v3-t01-migrations-constraints-fixtures.test.js",
     "test:deployment": "node --test tests/deployed-v2.test.mjs",
@@ -40,6 +43,7 @@
     "seed:v2": "node src/db/seed.js --v2-only"
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "3.1152.0",
     "dotenv": "^16.3.1",
     "pg": "^8.11.3"
   },

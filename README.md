@@ -227,7 +227,7 @@ API รองรับเฉพาะ `GET` หากใช้ Method อื่�
 
 ### Prerequisites
 
-- Node.js 18.14 ขึ้นไป
+- Node.js 20 ขึ้นไป (Lambda ใช้ Node.js 22.x; Secrets Manager SDK ต้องการ Node.js 20+)
 - npm
 - Docker สำหรับ Local PostgreSQL
 
