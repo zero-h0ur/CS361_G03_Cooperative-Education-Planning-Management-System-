@@ -374,6 +374,43 @@
         <a href="company-directory.html" class="see-all-link">ดูทั้งหมด <i class="fa-solid fa-arrow-right"></i></a>
       </div>
 
+      <!-- Dynamic Live Stats Showcase -->
+      <div class="partner-dynamic-stats-bar" id="partnerStatsBar">
+        <div class="stat-badge-pulse">
+          <span class="stat-pulse-dot"></span>
+          <span class="stat-badge-text">LIVE DIRECTORY</span>
+        </div>
+        <div class="stat-metric-group">
+          <div class="stat-metric-item">
+            <div class="stat-metric-val">
+              <span class="stat-number" data-target="12">0</span><span class="stat-suffix">+</span>
+            </div>
+            <span class="stat-label">องค์กรพันธมิตรชั้นนำ</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-metric-item">
+            <div class="stat-metric-val">
+              <span class="stat-number" data-target="48">0</span><span class="stat-suffix">+</span>
+            </div>
+            <span class="stat-label">ตำแหน่งเปิดรับสะสม</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-metric-item">
+            <div class="stat-metric-val">
+              <span class="stat-number" data-target="100">0</span><span class="stat-suffix">%</span>
+            </div>
+            <span class="stat-label">มีเบี้ยเลี้ยงทุกตำแหน่ง</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-metric-item">
+            <div class="stat-metric-val">
+              <span class="stat-number" data-target="100">0</span><span class="stat-suffix">%</span>
+            </div>
+            <span class="stat-label">สายตรง Computer Science</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Infinite Logo Marquee Showcase with Hover Popovers -->
       <div class="partner-marquee-section">
         <div class="partner-marquee-container" aria-label="สถานประกอบการพันธมิตร">
@@ -1001,6 +1038,44 @@
           typingTimeout = setTimeout(typeLoop, 400);
         }
       });
+    }
+
+    // Animated Counters for Partner Dynamic Stats
+    const statsBar = document.getElementById('partnerStatsBar');
+    if (statsBar) {
+      let animated = false;
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !animated) {
+            animated = true;
+            const statNumbers = statsBar.querySelectorAll('.stat-number');
+            statNumbers.forEach(stat => {
+              const target = parseInt(stat.getAttribute('data-target'), 10) || 0;
+              const duration = 1200; // ms
+              const startTime = performance.now();
+
+              function updateCount(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                // easeOutExpo
+                const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+                const currentVal = Math.floor(ease * target);
+                stat.textContent = currentVal;
+                if (progress < 1) {
+                  requestAnimationFrame(updateCount);
+                } else {
+                  stat.textContent = target;
+                }
+              }
+
+              requestAnimationFrame(updateCount);
+            });
+            observer.unobserve(statsBar);
+          }
+        });
+      }, { threshold: 0.15 });
+
+      observer.observe(statsBar);
     }
   </script>
 </body>

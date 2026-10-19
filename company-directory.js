@@ -204,7 +204,7 @@ function activateStaticFallback() {
   }
 
   const updateStaticVisibility = () => {
-    const query = companySearch.value.trim().toLocaleLowerCase('th');
+    const rawQuery = companySearch.value.trim().toLocaleLowerCase('th');
     const roleEl = document.getElementById('roleFilter');
     const roleVal = roleEl ? roleEl.value.trim().toLocaleLowerCase('th') : '';
     const modeEl = document.getElementById('workModeFilter');
@@ -215,21 +215,32 @@ function activateStaticFallback() {
     let visibleCount = 0;
     Array.from(companyList.children).forEach((card) => {
       const companyText = card.dataset.company ? card.dataset.company.toLocaleLowerCase('th') : '';
-      const matchesQuery = !query || companyText.includes(query);
+
+      let matchesQuery = true;
+      if (rawQuery) {
+        const subQueries = rawQuery.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+        if (subQueries.length > 1) {
+          matchesQuery = subQueries.some(sub => companyText.includes(sub));
+        } else {
+          const words = rawQuery.split(/\s+/).filter(Boolean);
+          matchesQuery = words.every(word => companyText.includes(word));
+        }
+      }
+
       const matchesRole = !roleVal || companyText.includes(roleVal);
       const matchesMode = !modeVal || companyText.includes(modeVal);
       const matchesLoc = !locVal || companyText.includes(locVal);
       const matchesRecruiting = !recruitingOnly || companyText.includes('เปิดรับ');
 
       const isExtraCard = card.classList.contains('partner-card-extra');
-      const hasAnyFilter = Boolean(query || roleVal || modeVal || locVal || recruitingOnly);
-      const canShowByGroup = !isExtraCard || hasExpandedDirectory || Boolean(query);
+      const hasAnyFilter = Boolean(rawQuery || roleVal || modeVal || locVal || recruitingOnly);
+      const canShowByGroup = !isExtraCard || hasExpandedDirectory || Boolean(rawQuery);
       const shouldShow = matchesQuery && matchesRole && matchesMode && matchesLoc && matchesRecruiting && canShowByGroup;
       card.hidden = !shouldShow;
       if (shouldShow) visibleCount += 1;
     });
-    loadMoreButton.hidden = Boolean(query) || hasExpandedDirectory;
-    if (query || roleVal || modeVal || locVal || recruitingOnly) {
+    loadMoreButton.hidden = Boolean(rawQuery) || hasExpandedDirectory;
+    if (rawQuery || roleVal || modeVal || locVal || recruitingOnly) {
       searchResultStatus.textContent = visibleCount > 0
         ? `พบสถานประกอบการ ${visibleCount} รายการ`
         : 'ไม่พบสถานประกอบการที่ตรงกับคำค้นหา';
