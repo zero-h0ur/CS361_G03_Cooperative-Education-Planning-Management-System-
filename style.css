@@ -123,13 +123,16 @@ a {
   position: sticky;
   top: 0;
   z-index: 100;
-  transition: all var(--transition-normal);
+  transition: background-color 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
 }
 
 .header.scrolled {
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.08);
-  padding: 2px 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 6px 24px -4px rgba(15, 23, 42, 0.08);
+  border-bottom-color: rgba(226, 232, 240, 0.85);
+  padding: 0;
 }
 
 .header-container {
@@ -137,6 +140,11 @@ a {
   justify-content: space-between;
   align-items: center;
   height: 76px;
+  transition: height 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.header.scrolled .header-container {
+  height: 60px;
 }
 
 .header-main-group {
@@ -151,6 +159,11 @@ a {
   align-items: center;
   gap: 12px;
   text-decoration: none;
+  transition: gap 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.header.scrolled .logo {
+  gap: 0;
 }
 
 .logo-tu-mark {
@@ -163,8 +176,14 @@ a {
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 14px -2px rgba(200, 16, 46, 0.12);
-  transition: transform 450ms var(--ease-custom), box-shadow 450ms var(--ease-custom), border-color 300ms ease;
+  transition: transform 450ms var(--ease-custom), box-shadow 450ms var(--ease-custom), border-color 300ms ease, width 0.35s cubic-bezier(0.16, 1, 0.3, 1), height 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.35s ease;
   flex-shrink: 0;
+}
+
+.header.scrolled .logo-tu-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
 }
 
 .logo:hover .logo-tu-mark {
@@ -178,11 +197,29 @@ a {
   height: 28px;
   object-fit: contain;
   display: block;
+  transition: width 0.35s ease, height 0.35s ease;
+}
+
+.header.scrolled .logo-tu-img {
+  width: 23px;
+  height: 23px;
 }
 
 .logo-text-block {
   display: flex;
   flex-direction: column;
+  transition: max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, transform 0.35s ease;
+  max-width: 220px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.header.scrolled .logo-text-block {
+  max-width: 0;
+  opacity: 0;
+  transform: translateX(-10px);
+  pointer-events: none;
+  margin: 0;
 }
 
 .logo-text-main {
@@ -3421,6 +3458,298 @@ a {
   color: var(--text-muted);
   font-size: 14px;
   text-align: right;
+}
+
+/* ================= STUDENT QUICK ACCESS - INTERACTIVE FLOWING STRIPS ================= */
+.flowing-menu-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.flowing-strip-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: 22px 28px;
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 18px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.03);
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 350ms ease,
+              background 350ms ease;
+}
+
+.flowing-strip-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(200, 16, 46, 0.045) 0%, rgba(217, 119, 6, 0.025) 45%, transparent 100%);
+  opacity: 0;
+  transition: opacity 350ms ease;
+  pointer-events: none;
+}
+
+.flowing-strip-item:hover,
+.flowing-strip-item:focus-visible {
+  transform: translateX(8px);
+  border-color: rgba(200, 16, 46, 0.4);
+  background: #FFFFFF;
+  box-shadow: 0 14px 36px -8px rgba(200, 16, 46, 0.14), 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.flowing-strip-item:focus-visible {
+  outline: 3px solid rgba(200, 16, 46, 0.3);
+  outline-offset: 3px;
+}
+
+.flowing-strip-item:hover::before {
+  opacity: 1;
+}
+
+/* Index & Icon Circle */
+.flowing-strip-index {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.strip-num {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 800;
+  color: #94A3B8;
+  letter-spacing: -0.02em;
+  transition: color 300ms ease, transform 300ms ease;
+  min-width: 32px;
+}
+
+.flowing-strip-item:hover .strip-num {
+  color: var(--tu-red);
+  transform: scale(1.08);
+}
+
+.strip-icon-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  transition: transform 400ms var(--ease-custom), box-shadow 400ms var(--ease-custom);
+}
+
+.flowing-strip-item:hover .strip-icon-circle {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.15);
+}
+
+.icon-circle-red {
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1.5px solid #FEE2E2;
+}
+
+.icon-circle-gold {
+  background: #FFFBEB;
+  color: #D97706;
+  border: 1.5px solid #FEF3C7;
+}
+
+.icon-circle-blue {
+  background: #EFF6FF;
+  color: #2563EB;
+  border: 1.5px solid #DBEAFE;
+}
+
+.icon-circle-emerald {
+  background: #ECFDF5;
+  color: #059669;
+  border: 1.5px solid #D1FAE5;
+}
+
+/* Content Area */
+.flowing-strip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.flowing-strip-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.flowing-strip-title {
+  font-size: 19px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  line-height: 1.25;
+  transition: color 250ms ease;
+}
+
+.flowing-strip-item:hover .flowing-strip-title {
+  color: var(--tu-red);
+}
+
+.flowing-strip-en {
+  font-size: 12px;
+  font-weight: 700;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.flowing-strip-pills {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: 6px;
+}
+
+.strip-pill {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3.5px 10px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pill-red {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.pill-gold {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.pill-blue {
+  background: #DBEAFE;
+  color: #1E40AF;
+}
+
+.pill-emerald {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.pill-neutral {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #E2E8F0;
+}
+
+.flowing-strip-desc {
+  font-size: 14px;
+  color: #64748B;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Action Area */
+.flowing-strip-action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.strip-action-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: #64748B;
+  transition: color 250ms ease;
+}
+
+.flowing-arrow-pill {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748B;
+  font-size: 14px;
+  transition: all 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.flowing-strip-item:hover .strip-action-text {
+  color: var(--tu-red);
+}
+
+.flowing-strip-item:hover .flowing-arrow-pill {
+  background: linear-gradient(135deg, #C8102E 0%, #9B0D23 100%);
+  color: #FFFFFF;
+  border-color: transparent;
+  transform: translateX(6px);
+  box-shadow: 0 6px 18px rgba(200, 16, 46, 0.35);
+}
+
+/* Responsive adjustments for Flowing Menu */
+@media (max-width: 860px) {
+  .flowing-strip-item {
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    padding: 20px;
+  }
+  .flowing-strip-action {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    padding-top: 14px;
+    border-top: 1px dashed #E2E8F0;
+  }
+}
+
+@media (max-width: 580px) {
+  .flowing-strip-item {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 16px 18px;
+  }
+  .flowing-strip-item:hover,
+  .flowing-strip-item:focus-visible {
+    transform: translateY(-3px);
+  }
+  .flowing-strip-index {
+    gap: 12px;
+  }
+  .strip-num {
+    font-size: 22px;
+  }
+  .strip-icon-circle {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  .flowing-strip-title {
+    font-size: 17px;
+  }
+  .flowing-strip-pills {
+    margin-left: 0;
+  }
+  .flowing-strip-action {
+    justify-content: space-between;
+    width: 100%;
+  }
 }
 
 /* ================= STUDENT QUICK ACCESS - MINI UI PREVIEW CARDS ================= */
