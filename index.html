@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CO-ED TU ระบบข้อมูลสหกิจศึกษา มหาวิทยาลัยธรรมศาสตร์</title>
+  <title>CO-ED ระบบข้อมูลสหกิจศึกษา มหาวิทยาลัยธรรมศาสตร์</title>
   
   <link rel="icon" href="resources/images/logomini.png" type="image/png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -24,7 +24,7 @@
             <img src="resources/images/logomini.png" alt="CO-ED Logo" class="logo-tu-img" />
           </div>
           <div class="logo-text-block">
-            <span class="logo-text-main">CO-ED TU</span>
+            <span class="logo-text-main">CO-ED</span>
             <span class="logo-text-sub">ระบบข้อมูลสหกิจศึกษา</span>
           </div>
         </a>
@@ -37,7 +37,7 @@
       </div>
 
       <div class="auth-buttons">
-        <a href="app.html" class="btn-login">เข้าสู่ระบบ</a>
+        <a href="app.html" class="btn-login"><i class="fa-solid fa-arrow-right-to-bracket"></i> <span>เข้าสู่ระบบ</span></a>
       </div>
     </div>
     <nav class="mobile-nav-links" aria-label="เมนูหลักสำหรับหน้าจอขนาดเล็ก">
@@ -363,6 +363,44 @@
     </div>
   </section>
 
+  <!-- Key Statistics & Impact Bento (Dynamic Data Showcase) -->
+  <section class="coop-dynamic-stats-section" id="coopStatsSection" aria-label="สถิติโครงการสหกิจศึกษา">
+    <div class="container">
+      <div class="bento-stats-grid">
+        <!-- Card 1: Partner Organizations -->
+        <div class="bento-stat-card">
+          <div class="bento-stat-val">
+            <span class="bento-stat-number" data-target="12">0</span><span class="bento-stat-suffix">+</span>
+          </div>
+          <div class="bento-stat-label">สถานประกอบการพันธมิตร</div>
+        </div>
+
+        <!-- Card 2: Open Positions -->
+        <div class="bento-stat-card">
+          <div class="bento-stat-val">
+            <span class="bento-stat-number" data-target="48">0</span><span class="bento-stat-suffix">+</span>
+          </div>
+          <div class="bento-stat-label">ตำแหน่งงานที่เปิดรับ</div>
+        </div>
+
+        <!-- Card 3: Rolodex 3D Flipping Roles -->
+        <div class="bento-stat-card bento-stat-card-rolodex">
+          <div class="bento-stat-val bento-rolodex-wrapper">
+            <div class="bento-rolodex-viewport" id="rolodexViewport">
+              <div class="rolodex-item active">Full-Stack Developer</div>
+              <div class="rolodex-item">Data Analyst &amp; AI</div>
+              <div class="rolodex-item">Cloud &amp; DevOps</div>
+              <div class="rolodex-item">Cyber Security</div>
+              <div class="rolodex-item">UX/UI Designer</div>
+              <div class="rolodex-item">Mobile Developer</div>
+            </div>
+          </div>
+          <div class="bento-stat-label">สายงานยอดนิยมที่เปิดรับ</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Company Directory -->
   <section id="company-directory-preview" class="company-directory-preview-section">
     <div class="container">
@@ -374,128 +412,285 @@
         <a href="company-directory.html" class="see-all-link">ดูทั้งหมด <i class="fa-solid fa-arrow-right"></i></a>
       </div>
 
-    <!-- เมื่อกดการ์ด จะเรียก openModal พร้อมส่ง ID บริษัท -->
-    <div class="directory-grid">
-      <!-- Card 1 -->
-      <div class="company-card" onclick="openModal(1)">
-        <div class="card-top">
-          <div class="company-logo company-logo-agoda"><img src="resources/images/agoda.jpg" alt="โลโก้ Agoda"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">Agoda</h4>
-        <p class="company-location">Agoda • กรุงเทพฯ</p>
-        <p class="company-desc">เปิดรับนักศึกษาร่วมพัฒนาประสบการณ์ด้านเทคโนโลยีการท่องเที่ยว...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-tech">Technology</span>
-          <span class="cat-badge cat-design">Design</span>
+      <!-- Infinite Logo Marquee Showcase with Hover Popovers -->
+      <div class="partner-marquee-section">
+        <div class="partner-marquee-container" aria-label="สถานประกอบการพันธมิตร">
+          <div class="marquee-track">
+            <!-- Set 1 -->
+            <div class="marquee-logo-card marquee-logo-agoda" onclick="openModal(1)" tabindex="0" role="button" aria-label="Agoda">
+              <img src="resources/images/agoda.jpg" alt="Agoda" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">Agoda</h4>
+                  <span class="popover-badge">Tier 1 Partner</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(2)" tabindex="0" role="button" aria-label="G-Able">
+              <img src="resources/images/g-able.png" alt="G-Able" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">G-Able</h4>
+                  <span class="popover-badge">Enterprise IT</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(3)" tabindex="0" role="button" aria-label="Gosoft">
+              <img src="resources/images/gosoft.png" alt="Gosoft" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">Gosoft</h4>
+                  <span class="popover-badge">Retail Tech</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • On-site</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(4)" tabindex="0" role="button" aria-label="Huawei">
+              <img src="resources/images/huawei.jpg" alt="Huawei" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">Huawei</h4>
+                  <span class="popover-badge">Global Tech</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • On-site</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(5)" tabindex="0" role="button" aria-label="KBTG">
+              <img src="resources/images/KBTG.jpg" alt="KBTG" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">KBTG</h4>
+                  <span class="popover-badge">FinTech Leader</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> นนทบุรี • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(6)" tabindex="0" role="button" aria-label="Krungsri">
+              <img src="resources/images/krungsri.jpg" alt="Krungsri" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">Krungsri</h4>
+                  <span class="popover-badge">Digital Banking</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(7)" tabindex="0" role="button" aria-label="NECTEC">
+              <img src="resources/images/nectec.png" alt="NECTEC" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">NECTEC</h4>
+                  <span class="popover-badge">Research</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> ปทุมธานี • On-site</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(8)" tabindex="0" role="button" aria-label="PTT Digital">
+              <img src="resources/images/PTT-Digital.png" alt="PTT Digital" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">PTT Digital</h4>
+                  <span class="popover-badge">Energy Tech</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(9)" tabindex="0" role="button" aria-label="CP ALL">
+              <img src="resources/images/CP-ALL.png" alt="CP ALL" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">CP ALL</h4>
+                  <span class="popover-badge">Supply Chain</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(10)" tabindex="0" role="button" aria-label="SCB Tech X">
+              <img src="resources/images/SCB-TechX.png" alt="SCB Tech X" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">SCB Tech X</h4>
+                  <span class="popover-badge">Next-gen Tech</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(11)" tabindex="0" role="button" aria-label="SCG">
+              <img src="resources/images/SCG.png" alt="SCG" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">SCG</h4>
+                  <span class="popover-badge">Industrial Tech</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • On-site</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <div class="marquee-logo-card" onclick="openModal(12)" tabindex="0" role="button" aria-label="Wongnai">
+              <img src="resources/images/wongnai.png" alt="Wongnai" />
+              <div class="marquee-popover">
+                <div class="popover-header">
+                  <h4 class="popover-title">Wongnai</h4>
+                  <span class="popover-badge">Lifestyle Unicorn</span>
+                </div>
+                <div class="popover-meta"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ • Hybrid</div>
+                <div class="popover-cta">คลิกเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right"></i></div>
+              </div>
+            </div>
+
+            <!-- Set 2 (Duplicate for seamless infinite scroll) -->
+            <div class="marquee-logo-card marquee-logo-agoda" onclick="openModal(1)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/agoda.jpg" alt="Agoda" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(2)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/g-able.png" alt="G-Able" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(3)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/gosoft.png" alt="Gosoft" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(4)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/huawei.jpg" alt="Huawei" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(5)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/KBTG.jpg" alt="KBTG" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(6)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/krungsri.jpg" alt="Krungsri" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(7)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/nectec.png" alt="NECTEC" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(8)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/PTT-Digital.png" alt="PTT Digital" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(9)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/CP-ALL.png" alt="CP ALL" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(10)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/SCB-TechX.png" alt="SCB Tech X" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(11)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/SCG.png" alt="SCG" />
+            </div>
+            <div class="marquee-logo-card" onclick="openModal(12)" tabindex="0" role="button" aria-hidden="true">
+              <img src="resources/images/wongnai.png" alt="Wongnai" />
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Card 2 -->
-      <div class="company-card" onclick="openModal(2)">
-        <div class="card-top">
-          <div class="company-logo"><img src="resources/images/g-able.png" alt="โลโก้ G-Able"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">G-Able</h4>
-        <p class="company-location">G-Able • กรุงเทพฯ</p>
-        <p class="company-desc">เปิดโอกาสให้นักศึกษาเรียนรู้การพัฒนาซอฟต์แวร์ระดับองค์กร...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-software">Software</span>
-          <span class="cat-badge cat-tech">Technology</span>
-        </div>
-      </div>
+      <!-- 3 Curated Spotlight Cards (Direct Access) -->
+      <div class="partner-grid" style="margin-top: 18px;">
+        <!-- Card 1: Agoda -->
+        <article class="partner-card" onclick="openModal(1)" tabindex="0" role="button" aria-label="ดูรายละเอียด Agoda">
+          <div class="pricing-card-top">
+            <div class="partner-logo partner-logo-agoda-image">
+              <img src="resources/images/agoda.jpg" alt="โลโก้ Agoda" />
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-crown"></i> Tier 1 Partner</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 3 อัตรา</span>
+            </div>
+          </div>
+          <div class="partner-info">
+            <h2>Agoda</h2>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (เซ็นทรัลเวิลด์)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-laptop-house"></i> Hybrid</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-dev">Software Engineer</span>
+              <span class="partner-tag tag-role-design">UX/UI Design</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+            <button type="button" class="pricing-cta-btn">
+              ดูรายละเอียด &amp; ยื่นสมัคร <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </article>
 
-      <!-- Card 3 -->
-      <div class="company-card" onclick="openModal(3)">
-        <div class="card-top">
-          <div class="company-logo"><img src="resources/images/gosoft.png" alt="โลโก้ Gosoft"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">Gosoft</h4>
-        <p class="company-location">Gosoft • กรุงเทพฯ</p>
-        <p class="company-desc">ร่วมพัฒนาระบบดิจิทัลและวิเคราะห์ข้อมูลสำหรับธุรกิจค้าปลีก...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-software">Software</span>
-          <span class="cat-badge cat-business">Business</span>
-        </div>
-      </div>
+        <!-- Card 2: KBTG -->
+        <article class="partner-card" onclick="openModal(5)" tabindex="0" role="button" aria-label="ดูรายละเอียด KBTG">
+          <div class="pricing-card-top">
+            <div class="partner-logo">
+              <img src="resources/images/KBTG.jpg" alt="โลโก้ KBTG" />
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-coins"></i> FinTech Leader</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 6 อัตรา</span>
+            </div>
+          </div>
+          <div class="partner-info">
+            <h2>KBTG</h2>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> นนทบุรี (เมืองทองธานี)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-laptop-house"></i> Hybrid</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-sec">Cloud Engineer</span>
+              <span class="partner-tag tag-role-dev">Mobile iOS/Android</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+            <button type="button" class="pricing-cta-btn">
+              ดูรายละเอียด &amp; ยื่นสมัคร <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </article>
 
-      <!-- Card 4 -->
-      <div class="company-card" onclick="openModal(4)">
-        <div class="card-top">
-          <div class="company-logo"><img src="resources/images/huawei.jpg" alt="โลโก้ Huawei"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">Huawei</h4>
-        <p class="company-location">Huawei • กรุงเทพฯ</p>
-        <p class="company-desc">เรียนรู้เทคโนโลยีเครือข่าย คลาวด์ และโซลูชันดิจิทัลระดับสากล...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-tech">Technology</span>
-          <span class="cat-badge cat-software">Software</span>
-        </div>
+        <!-- Card 3: Krungsri -->
+        <article class="partner-card" onclick="openModal(6)" tabindex="0" role="button" aria-label="ดูรายละเอียด Krungsri">
+          <div class="pricing-card-top">
+            <div class="partner-logo">
+              <img src="resources/images/krungsri.jpg" alt="โลโก้ Krungsri">
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-building-columns"></i> Digital Banking</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 3 อัตรา</span>
+            </div>
+          </div>
+          <div class="partner-info">
+            <h2>Krungsri</h2>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (พระราม 3)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-laptop-house"></i> Hybrid</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-design">UX/UI Designer</span>
+              <span class="partner-tag tag-role-dev">FinTech App</span>
+              <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
+            </div>
+            <button type="button" class="pricing-cta-btn">
+              ดูรายละเอียด &amp; ยื่นสมัคร <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </article>
       </div>
-
-      <!-- Card 5 -->
-      <div class="company-card" onclick="openModal(5)">
-        <div class="card-top">
-          <div class="company-logo"><img src="resources/images/KBTG.jpg" alt="โลโก้ KBTG"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">KBTG</h4>
-        <p class="company-location">KBTG • ปากเกร็ด</p>
-        <p class="company-desc">ร่วมสร้างนวัตกรรมทางการเงินและระบบคลาวด์กับทีมเทคโนโลยี...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-software">Software</span>
-          <span class="cat-badge cat-tech">Technology</span>
-        </div>
-      </div>
-
-      <!-- Card 6 -->
-      <div class="company-card" onclick="openModal(6)">
-        <div class="card-top">
-          <div class="company-logo"><img src="resources/images/krungsri.jpg" alt="โลโก้ Krungsri"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">Krungsri</h4>
-        <p class="company-location">Krungsri • กรุงเทพฯ</p>
-        <p class="company-desc">พัฒนาประสบการณ์ดิจิทัลและผลิตภัณฑ์ทางการเงินสำหรับลูกค้า...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-design">Design</span>
-          <span class="cat-badge cat-business">Business</span>
-        </div>
-      </div>
-
-      <!-- Card 7 -->
-      <div class="company-card" onclick="openModal(7)">
-        <div class="card-top">
-          <div class="company-logo"><img src="resources/images/nectec.png" alt="โลโก้ NECTEC"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">NECTEC</h4>
-        <p class="company-location">NECTEC • ปทุมธานี</p>
-        <p class="company-desc">ร่วมวิจัยและพัฒนาเทคโนโลยีดิจิทัล ความมั่นคงปลอดภัย และ AI...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-tech">Technology</span>
-          <span class="cat-badge cat-software">Research</span>
-        </div>
-      </div>
-
-      <!-- Card 8 -->
-      <div class="company-card" onclick="openModal(8)">
-        <div class="card-top">
-          <div class="company-logo"><img src="resources/images/PTT-Digital.png" alt="โลโก้ PTT Digital"></div>
-          <span class="badge-tag badge-blue">Full Time</span>
-        </div>
-        <h4 class="company-name">PTT Digital</h4>
-        <p class="company-location">PTT Digital • กรุงเทพฯ</p>
-        <p class="company-desc">ร่วมวิเคราะห์ข้อมูลและพัฒนาโซลูชันสำหรับธุรกิจพลังงาน...</p>
-        <div class="category-tags">
-          <span class="cat-badge cat-business">Business</span>
-          <span class="cat-badge cat-tech">Technology</span>
-        </div>
-      </div>
-    </div>
   </div>
 </section>
 
@@ -506,7 +701,7 @@
           <div class="logo-tu-mark" style="width: 36px; height: 36px; border-radius: 10px; background: #FFF;">
             <img src="resources/images/logomini.png" alt="CO-ED Logo" style="width: 24px; height: 24px; object-fit: contain;" />
           </div>
-          <span style="font-family: var(--font-serif); font-size: 22px; font-weight: 700; color: #fff;">CO-ED TU</span>
+          <span style="font-family: var(--font-serif); font-size: 22px; font-weight: 700; color: #fff;">CO-ED</span>
         </div>
         <p style="max-width: 280px; line-height: 1.6;">
           ระบบสารสนเทศเพื่อการจัดการข้อมูลสหกิจศึกษา ช่วยให้นักศึกษาเตรียมความพร้อมสู่การทำงานจริงได้อย่างมีประสิทธิภาพ
@@ -633,11 +828,39 @@
         desc: "ร่วมวิเคราะห์ตลาด สร้างภาพลักษณ์แบรนด์ และจัดกิจกรรมทางการตลาดเพื่อส่งเสริมผู้ประกอบการธุรกิจขนาดเล็ก"
       },
       8: {
-        name: " PTT Digital",
+        name: "PTT Digital",
         location: "กรุงเทพฯ",
         logoHtml: '<img src="resources/images/PTT-Digital.png" alt="โลโก้ PTT Digital">',
         logoBg: "#FFFFFF",
         desc: "วิเคราะห์ Insight และพฤติกรรมการใช้งานแพลตฟอร์ม โซเชียลมีเดีย พร้อมจัดทำ Dashboard นำเสนอต่อทีมผู้บริหาร"
+      },
+      9: {
+        name: "CP ALL",
+        location: "กรุงเทพฯ",
+        logoHtml: '<img src="resources/images/CP-ALL.png" alt="โลโก้ CP ALL">',
+        logoBg: "#FFFFFF",
+        desc: "ร่วมพัฒนาระบบข้อมูล คลาวด์ และวิเคราะห์ข้อมูลซัพพลายเชนค้าปลีกระดับประเทศกับทีมเทคโนโลยี"
+      },
+      10: {
+        name: "SCB Tech X",
+        location: "กรุงเทพฯ",
+        logoHtml: '<img src="resources/images/SCB-TechX.png" alt="โลโก้ SCB Tech X">',
+        logoBg: "#FFFFFF",
+        desc: "ร่วมพัฒนาแอปพลิเคชันมือถือ แพลตฟอร์มการเงินยุคใหม่ และเทคโนโลยีคลาวด์กับทีมวิศวกรรมชั้นนำ"
+      },
+      11: {
+        name: "SCG",
+        location: "กรุงเทพฯ",
+        logoHtml: '<img src="resources/images/SCG.png" alt="โลโก้ SCG">',
+        logoBg: "#FFFFFF",
+        desc: "เรียนรู้และปฏิบัติงานด้านการทดสอบซอฟต์แวร์ อุปกรณ์ Industrial IoT และนวัตกรรมดิจิทัลสำหรับอุตสาหกรรม"
+      },
+      12: {
+        name: "Wongnai",
+        location: "กรุงเทพฯ",
+        logoHtml: '<img src="resources/images/wongnai.png" alt="โลโก้ Wongnai">',
+        logoBg: "#FFFFFF",
+        desc: "ร่วมทีมวิจัยประสบการณ์ผู้ใช้ (UX Research) และพัฒนา Frontend แพลตฟอร์มบริการไลฟ์สไตล์และอีคอมเมิร์ซ"
       }
     };
 
@@ -649,7 +872,11 @@
       5: "ร่วมสร้างนวัตกรรมทางการเงิน ระบบคลาวด์ และผลิตภัณฑ์ดิจิทัลกับทีมเทคโนโลยี",
       6: "พัฒนาประสบการณ์ผู้ใช้และผลิตภัณฑ์ดิจิทัลสำหรับบริการทางการเงิน",
       7: "ร่วมวิจัยและพัฒนาเทคโนโลยีดิจิทัล ความมั่นคงปลอดภัย และปัญญาประดิษฐ์",
-      8: "ร่วมวิเคราะห์ข้อมูลและพัฒนาโซลูชันดิจิทัลสำหรับธุรกิจพลังงาน"
+      8: "ร่วมวิเคราะห์ข้อมูลและพัฒนาโซลูชันดิจิทัลสำหรับธุรกิจพลังงาน",
+      9: "ร่วมพัฒนาระบบข้อมูล คลาวด์ และวิเคราะห์ข้อมูลซัพพลายเชนค้าปลีกระดับประเทศกับทีมเทคโนโลยี",
+      10: "ร่วมพัฒนาแอปพลิเคชันมือถือ แพลตฟอร์มการเงินยุคใหม่ และเทคโนโลยีคลาวด์กับทีมวิศวกรรมชั้นนำ",
+      11: "เรียนรู้และปฏิบัติงานด้านการทดสอบซอฟต์แวร์ อุปกรณ์ Industrial IoT และนวัตกรรมดิจิทัลสำหรับอุตสาหกรรม",
+      12: "ร่วมทีมวิจัยประสบการณ์ผู้ใช้ (UX Research) และพัฒนา Frontend แพลตฟอร์มบริการไลฟ์สไตล์และอีคอมเมิร์ซ"
     };
 
     Object.entries(companyDescriptions).forEach(([id, description]) => {
@@ -812,6 +1039,68 @@
           typingTimeout = setTimeout(typeLoop, 400);
         }
       });
+    }
+
+    // Animated Counters for Key Statistics Bento
+    const statsSection = document.getElementById('coopStatsSection');
+    if (statsSection) {
+      let animated = false;
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !animated) {
+            animated = true;
+            const statNumbers = statsSection.querySelectorAll('.bento-stat-number');
+            statNumbers.forEach(stat => {
+              const target = parseInt(stat.getAttribute('data-target'), 10) || 0;
+              const duration = 1200; // ms
+              const startTime = performance.now();
+
+              function updateCount(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                // easeOutExpo
+                const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+                const currentVal = Math.floor(ease * target);
+                stat.textContent = currentVal;
+                if (progress < 1) {
+                  requestAnimationFrame(updateCount);
+                } else {
+                  stat.textContent = target;
+                }
+              }
+
+              requestAnimationFrame(updateCount);
+            });
+            observer.unobserve(statsSection);
+          }
+        });
+      }, { threshold: 0.15 });
+
+      observer.observe(statsSection);
+    }
+
+    // Rolodex 3D Flipping Animation for Job Roles (5-second intervals)
+    const rolodexViewport = document.getElementById('rolodexViewport');
+    if (rolodexViewport) {
+      const items = rolodexViewport.querySelectorAll('.rolodex-item');
+      if (items.length > 1) {
+        let currentIdx = 0;
+        setInterval(() => {
+          const prevItem = items[currentIdx];
+          currentIdx = (currentIdx + 1) % items.length;
+          const nextItem = items[currentIdx];
+
+          // Set classes for 3D flip transition
+          prevItem.classList.remove('active');
+          prevItem.classList.add('exit');
+
+          nextItem.classList.add('active');
+
+          setTimeout(() => {
+            prevItem.classList.remove('exit');
+          }, 700);
+        }, 5000);
+      }
     }
   </script>
 </body>

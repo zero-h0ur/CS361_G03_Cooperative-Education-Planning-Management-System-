@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>รายชื่อสถานประกอบการ - CO-ED TU สหกิจศึกษา มหาวิทยาลัยธรรมศาสตร์</title>
+  <title>รายชื่อสถานประกอบการ - CO-ED สหกิจศึกษา มหาวิทยาลัยธรรมศาสตร์</title>
 
   <link rel="icon" href="resources/images/logomini.png" type="image/png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -27,7 +27,7 @@
             <img src="resources/images/logomini.png" alt="CO-ED Logo" class="logo-tu-img" />
           </div>
           <div class="logo-text-block">
-            <span class="logo-text-main">CO-ED TU</span>
+            <span class="logo-text-main">CO-ED</span>
             <span class="logo-text-sub">ระบบข้อมูลสหกิจศึกษา</span>
           </div>
         </a>
@@ -40,7 +40,7 @@
       </div>
 
       <div class="auth-buttons">
-        <a href="app.html" class="btn-login">เข้าสู่ระบบ</a>
+        <a href="app.html" class="btn-login"><i class="fa-solid fa-arrow-right-to-bracket"></i> <span>เข้าสู่ระบบ</span></a>
       </div>
     </div>
     
@@ -55,10 +55,9 @@
 
   <main class="directory-main">
     <section class="hero-section">
-    <div class="container">
-      <div class="directory-heading-row">
-        <div>
-          <div class="hero-badge fade-up-init" style="margin-bottom: 12px; display: inline-flex;">
+      <div class="container">
+        <div class="directory-heading-centered">
+          <div class="hero-badge fade-up-init" style="margin-bottom: 16px; display: inline-flex;">
             <i class="fa-solid fa-building"></i>
             <span>CO-ED PARTNERS DIRECTORY</span>
           </div>
@@ -79,197 +78,422 @@
           <p class="directory-intro fade-up-init">ค้นหาและสำรวจสถานประกอบการชั้นนำที่เปิดรับนักศึกษาสหกิจศึกษา มหาวิทยาลัยธรรมศาสตร์</p>
         </div>
       </div>
-      
+    </section>
 
+    <div class="container" style="padding-top: 36px;">
       <p id="searchResultStatus" class="directory-result-status" aria-live="polite"></p>
 
       <div class="directory-controls">
-        <label class="directory-search" for="companySearch">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m20 20-4.4-4.4m2.4-4.1a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"/>
-          </svg>
-          <input id="companySearch" type="search" placeholder="ค้นหาสถานที่ฝึกงาน, สาขาวิชา" autocomplete="off">
-        </label>
-        <label class="directory-location-filter" for="locationFilter">
-          <span>สถานที่</span>
-          <select id="locationFilter">
-            <option value="">ทุกสถานที่</option>
-            <option value="กรุงเทพฯ">กรุงเทพฯ</option>
-            <option value="ชลบุรี">ชลบุรี</option>
-            <option value="นนทบุรี">นนทบุรี</option>
-            <option value="ปทุมธานี">ปทุมธานี</option>
-            <option value="ระยอง">ระยอง</option>
-            <option value="เชียงใหม่">เชียงใหม่</option>
-          </select>
-        </label>
+        <div class="directory-search-row">
+          <label class="directory-search directory-search-field" for="companySearch">
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px; min-width: 20px; min-height: 20px; max-width: 20px; max-height: 20px; flex-shrink: 0;">
+              <path d="m20 20-4.4-4.4m2.4-4.1a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <input id="companySearch" type="search" placeholder="ค้นหาตำแหน่งงาน เช่น Software Engineer, Data, UX/UI..." autocomplete="off">
+          </label>
+        </div>
+
+        <!-- Multi-Faceted Filter Row -->
+        <div class="directory-filter-row" id="directoryFilterRow">
+          <!-- Location select with directory-location-filter class -->
+          <label class="directory-location-filter directory-filter-select" for="locationFilter">
+            <i class="fa-solid fa-location-dot"></i>
+            <span>สถานที่:</span>
+            <select id="locationFilter">
+              <option value="">ทุกสถานที่</option>
+              <option value="กรุงเทพฯ">กรุงเทพฯ</option>
+              <option value="ชลบุรี">ชลบุรี</option>
+              <option value="นนทบุรี">นนทบุรี</option>
+              <option value="ปทุมธานี">ปทุมธานี</option>
+              <option value="ระยอง">ระยอง</option>
+              <option value="เชียงใหม่">เชียงใหม่</option>
+            </select>
+          </label>
+
+          <!-- Work Mode select -->
+          <label class="directory-filter-select" for="workModeFilter">
+            <i class="fa-solid fa-laptop-house"></i>
+            <span>รูปแบบงาน:</span>
+            <select id="workModeFilter">
+              <option value="">ทุกรูปแบบ</option>
+              <option value="On-site">On-site</option>
+              <option value="Hybrid">Hybrid</option>
+              <option value="Online">Online / WFH</option>
+            </select>
+          </label>
+
+          <!-- Role select -->
+          <label class="directory-filter-select" for="roleFilter">
+            <i class="fa-solid fa-briefcase"></i>
+            <span>สายงาน:</span>
+            <select id="roleFilter">
+              <option value="">ทุกสายงาน</option>
+              <option value="ซอฟต์แวร์">Software & Tech</option>
+              <option value="ข้อมูล">Data & AI</option>
+              <option value="Designer">UX/UI & Design</option>
+              <option value="Security">Cloud & Cyber Security</option>
+              <option value="Analyst">Business & Analyst</option>
+            </select>
+          </label>
+
+          <!-- Actively Recruiting Toggle -->
+          <button type="button" class="filter-toggle-chip" id="recruitingToggle" aria-pressed="false">
+            <i class="fa-solid fa-user-check"></i> เปิดรับสมัครอยู่
+          </button>
+
+          <!-- Reset Filter button -->
+          <button type="button" class="filter-reset-btn" id="filterResetBtn">
+            <i class="fa-solid fa-arrow-rotate-left"></i> ล้างตัวกรอง
+          </button>
+        </div>
       </div>
 
       <section id="companyList" class="partner-grid" aria-label="รายชื่อพันธมิตรสถานประกอบการ">
-        <article class="partner-card" data-company="Agoda กรุงเทพ UX Researcher">
-          <div class="partner-logo partner-logo-agoda-image">
-            <img src="resources/images/agoda.jpg" alt="โลโก้ Agoda">
+        <!-- 1. Agoda -->
+        <article class="partner-card" onclick="openModal(1)" tabindex="0" role="button" aria-label="ดูรายละเอียด Agoda" data-company="Agoda กรุงเทพฯ Hybrid Software Engineer วิศวกรซอฟต์แวร์ DevOps Cloud UX Researcher Designer มีเบี้ยเลี้ยง เปิดรับ">
+          <div class="pricing-card-top">
+            <div class="partner-logo partner-logo-agoda-image">
+              <img src="resources/images/agoda.jpg" alt="โลโก้ Agoda">
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-crown"></i> Tier 1 Partner</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 3 อัตรา</span>
+            </div>
           </div>
           <div class="partner-info">
             <h2>Agoda</h2>
-            <div class="partner-tags">
-              <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">วิศวกรซอฟต์แวร์</span>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (เซ็นทรัลเวิลด์)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-laptop-house"></i> Hybrid</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-dev">Software Engineer</span>
+              <span class="partner-tag tag-role-design">UX/UI Design</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
+            <button type="button" class="pricing-cta-btn" onclick="openModal(1); event.stopPropagation();">
+              ดูรายละเอียดตำแหน่งงาน <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
 
-        <article class="partner-card" data-company="G-Able กรุงเทพ วิศวกรซอฟต์แวร์">
-          <div class="partner-logo">
-            <img src="resources/images/g-able.png" alt="โลโก้ G-Able">
+        <!-- 2. G-Able -->
+        <article class="partner-card" onclick="openModal(2)" tabindex="0" role="button" aria-label="ดูรายละเอียด G-Able" data-company="G-Able กรุงเทพฯ Hybrid วิศวกรซอฟต์แวร์ Software Engineer DevOps Cloud มีเบี้ยเลี้ยง เปิดรับ">
+          <div class="pricing-card-top">
+            <div class="partner-logo">
+              <img src="resources/images/g-able.png" alt="โลโก้ G-Able">
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-shield-halved"></i> Enterprise IT</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 4 อัตรา</span>
+            </div>
           </div>
           <div class="partner-info">
             <h2>G-Able</h2>
-            <div class="partner-tags">
-              <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">วิศวกรซอฟต์แวร์</span>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (สามย่าน)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-laptop-house"></i> Hybrid</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-dev">Software Dev</span>
+              <span class="partner-tag tag-role-sec">DevOps & Cloud</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
+            <button type="button" class="pricing-cta-btn" onclick="openModal(2); event.stopPropagation();">
+              ดูรายละเอียดตำแหน่งงาน <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
 
-        <article class="partner-card" data-company="Gosoft กรุงเทพ นักวิเคราะห์ข้อมูล">
-          <div class="partner-logo">
-            <img src="resources/images/gosoft.png" alt="โลโก้ Gosoft">
+        <!-- 3. Gosoft -->
+        <article class="partner-card" onclick="openModal(3)" tabindex="0" role="button" aria-label="ดูรายละเอียด Gosoft" data-company="Gosoft กรุงเทพฯ On-site นักวิเคราะห์ข้อมูล Data Analyst AI Retail Tech มีเบี้ยเลี้ยง เปิดรับ">
+          <div class="pricing-card-top">
+            <div class="partner-logo">
+              <img src="resources/images/gosoft.png" alt="โลโก้ Gosoft">
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-cart-shopping"></i> Retail Tech</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 5 อัตรา</span>
+            </div>
           </div>
           <div class="partner-info">
             <h2>Gosoft</h2>
-            <div class="partner-tags">
-              <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">นักวิเคราะห์ข้อมูล</span>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (แจ้งวัฒนะ)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-building"></i> On-site</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-data">Data Analyst</span>
+              <span class="partner-tag tag-role-dev">Retail Platform</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
+            <button type="button" class="pricing-cta-btn" onclick="openModal(3); event.stopPropagation();">
+              ดูรายละเอียดตำแหน่งงาน <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
 
-        <article class="partner-card" data-company="Huawei กรุงเทพ วิศวกรซอฟต์แวร์">
-          <div class="partner-logo">
-            <img src="resources/images/huawei.jpg" alt="โลโก้ Huawei">
+        <!-- 4. Huawei -->
+        <article class="partner-card" onclick="openModal(4)" tabindex="0" role="button" aria-label="ดูรายละเอียด Huawei" data-company="Huawei กรุงเทพฯ On-site วิศวกรซอฟต์แวร์ Cloud & 5G Network AI Systems มีเบี้ยเลี้ยง เปิดรับ">
+          <div class="pricing-card-top">
+            <div class="partner-logo">
+              <img src="resources/images/huawei.jpg" alt="โลโก้ Huawei">
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-globe"></i> Global Tech</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 4 อัตรา</span>
+            </div>
           </div>
           <div class="partner-info">
             <h2>Huawei</h2>
-            <div class="partner-tags">
-              <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">วิศวกรซอฟต์แวร์</span>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (พระราม 9)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-building"></i> On-site</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-sec">Cloud & 5G</span>
+              <span class="partner-tag tag-role-data">AI Systems</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
+            <button type="button" class="pricing-cta-btn" onclick="openModal(4); event.stopPropagation();">
+              ดูรายละเอียดตำแหน่งงาน <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
 
-        <article class="partner-card" data-company="KBTG ปากเกร็ด วิศวกรระบบคลาวด์">
-          <div class="partner-logo">
-            <img src="resources/images/KBTG.jpg" alt="โลโก้ KBTG">
+        <!-- 5. KBTG -->
+        <article class="partner-card" onclick="openModal(5)" tabindex="0" role="button" aria-label="ดูรายละเอียด KBTG" data-company="KBTG นนทบุรี ปากเกร็ด Hybrid Cloud Engineer Mobile Developer FinTech FinTech Leader มีเบี้ยเลี้ยง เปิดรับ">
+          <div class="pricing-card-top">
+            <div class="partner-logo">
+              <img src="resources/images/KBTG.jpg" alt="โลโก้ KBTG">
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-coins"></i> FinTech Leader</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 6 อัตรา</span>
+            </div>
           </div>
           <div class="partner-info">
             <h2>KBTG</h2>
-            <div class="partner-tags">
-              <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">วิศวกรระบบคลาวด์</span>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> นนทบุรี (เมืองทองธานี)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-laptop-house"></i> Hybrid</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-sec">Cloud Engineer</span>
+              <span class="partner-tag tag-role-dev">Mobile iOS/Android</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
+            <button type="button" class="pricing-cta-btn" onclick="openModal(5); event.stopPropagation();">
+              ดูรายละเอียดตำแหน่งงาน <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
 
-        <article class="partner-card" data-company="Krungsri กรุงเทพ UX UI Designer">
-          <div class="partner-logo">
-            <img src="resources/images/krungsri.jpg" alt="โลโก้ Krungsri">
+        <!-- 6. Krungsri -->
+        <article class="partner-card" onclick="openModal(6)" tabindex="0" role="button" aria-label="ดูรายละเอียด Krungsri" data-company="Krungsri กรุงเทพฯ Hybrid UX UI Designer UX/UI Design FinTech App Digital Banking มีเบี้ยเลี้ยง เปิดรับ">
+          <div class="pricing-card-top">
+            <div class="partner-logo">
+              <img src="resources/images/krungsri.jpg" alt="โลโก้ Krungsri">
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-building-columns"></i> Digital Banking</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 3 อัตรา</span>
+            </div>
           </div>
           <div class="partner-info">
             <h2>Krungsri</h2>
-            <div class="partner-tags">
-              <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">UX/UI Designer</span>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (พระราม 3)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-laptop-house"></i> Hybrid</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-design">UX/UI Designer</span>
+              <span class="partner-tag tag-role-dev">FinTech App</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
+            <button type="button" class="pricing-cta-btn" onclick="openModal(6); event.stopPropagation();">
+              ดูรายละเอียดตำแหน่งงาน <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
 
-        <article class="partner-card" data-company="NECTEC ปทุมธานี Cyber Security">
-          <div class="partner-logo">
-            <img src="resources/images/nectec.png" alt="โลโก้ NECTEC">
+        <!-- 7. NECTEC -->
+        <article class="partner-card" onclick="openModal(7)" tabindex="0" role="button" aria-label="ดูรายละเอียด NECTEC" data-company="NECTEC ปทุมธานี On-site Cyber Security Cloud AI IoT Research National Research มีเบี้ยเลี้ยง เปิดรับ">
+          <div class="pricing-card-top">
+            <div class="partner-logo">
+              <img src="resources/images/nectec.png" alt="โลโก้ NECTEC">
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-flask"></i> National Research</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 3 อัตรา</span>
+            </div>
           </div>
           <div class="partner-info">
             <h2>NECTEC</h2>
-            <div class="partner-tags">
-              <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">Cyber Security</span>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> ปทุมธานี (อุทยานวิทย์ฯ)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-building"></i> On-site</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-sec">Cyber Security</span>
+              <span class="partner-tag tag-role-data">AI & IoT Research</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
+            <button type="button" class="pricing-cta-btn" onclick="openModal(7); event.stopPropagation();">
+              ดูรายละเอียดตำแหน่งงาน <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
 
-        <article class="partner-card" data-company="PTT Group กรุงเทพ Business Analyst">
-          <div class="partner-logo">
-            <img src="resources/images/PTT-Digital.png" alt="โลโก้ PTT Digital">
+        <!-- 8. PTT Digital -->
+        <article class="partner-card" onclick="openModal(8)" tabindex="0" role="button" aria-label="ดูรายละเอียด PTT Digital" data-company="PTT Group PTT Digital กรุงเทพฯ Hybrid Business Analyst Enterprise Solutions ERP Cloud มีเบี้ยเลี้ยง เปิดรับ">
+          <div class="pricing-card-top">
+            <div class="partner-logo">
+              <img src="resources/images/PTT-Digital.png" alt="โลโก้ PTT Digital">
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-bolt"></i> Energy Tech</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 4 อัตรา</span>
+            </div>
           </div>
           <div class="partner-info">
             <h2>PTT Digital</h2>
-            <div class="partner-tags">
-              <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">Business Analyst</span>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (วิภาวดี)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-laptop-house"></i> Hybrid</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-biz">Business Analyst</span>
+              <span class="partner-tag tag-role-sec">ERP & Cloud</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
+            <button type="button" class="pricing-cta-btn" onclick="openModal(8); event.stopPropagation();">
+              ดูรายละเอียดตำแหน่งงาน <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
 
-        <article class="partner-card partner-card-extra" data-company="SCB กรุงเทพ วิศวกรข้อมูล" hidden>
-          <div class="partner-logo">
-            <img src="resources/images/CP-ALL.png" alt="โลโก้ CP ALL" loading="lazy">
+        <!-- 9. CP ALL (Extra) -->
+        <article class="partner-card partner-card-extra" onclick="openModal(9)" tabindex="0" role="button" aria-label="ดูรายละเอียด CP ALL" data-company="CP ALL SCB กรุงเทพฯ Hybrid วิศวกรข้อมูล Data Engineer AI Cloud Retail Supply Chain มีเบี้ยเลี้ยง เปิดรับ" hidden>
+          <div class="pricing-card-top">
+            <div class="partner-logo">
+              <img src="resources/images/CP-ALL.png" alt="โลโก้ CP ALL" loading="lazy">
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-truck-fast"></i> Supply Chain</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 5 อัตรา</span>
+            </div>
           </div>
           <div class="partner-info">
             <h2>CP ALL</h2>
-            <div class="partner-tags">
-              <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">วิศวกรข้อมูล</span>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (สีลม)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-laptop-house"></i> Hybrid</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-data">Data Engineer</span>
+              <span class="partner-tag tag-role-dev">Logistics Platform</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
+            <button type="button" class="pricing-cta-btn" onclick="openModal(9); event.stopPropagation();">
+              ดูรายละเอียดตำแหน่งงาน <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
 
-        <article class="partner-card partner-card-extra" data-company="SCBX กรุงเทพ Mobile Developer" hidden>
-          <div class="partner-logo">
-            <img src="resources/images/SCB-TechX.png" alt="โลโก้ SCB Tech X" loading="lazy">
+        <!-- 10. SCB Tech X (Extra) -->
+        <article class="partner-card partner-card-extra" onclick="openModal(10)" tabindex="0" role="button" aria-label="ดูรายละเอียด SCB Tech X" data-company="SCB Tech X SCBX กรุงเทพฯ Hybrid Mobile Developer Cloud Next-gen Tech มีเบี้ยเลี้ยง เปิดรับ" hidden>
+          <div class="pricing-card-top">
+            <div class="partner-logo">
+              <img src="resources/images/SCB-TechX.png" alt="โลโก้ SCB Tech X" loading="lazy">
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-rocket"></i> Next-gen Tech</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 4 อัตรา</span>
+            </div>
           </div>
           <div class="partner-info">
             <h2>SCB Tech X</h2>
-            <div class="partner-tags">
-              <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">Mobile Developer</span>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (รัชโยธิน)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-laptop-house"></i> Hybrid</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-dev">Mobile Developer</span>
+              <span class="partner-tag tag-role-sec">Golang & SRE</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
+            <button type="button" class="pricing-cta-btn" onclick="openModal(10); event.stopPropagation();">
+              ดูรายละเอียดตำแหน่งงาน <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
 
-        <article class="partner-card partner-card-extra" data-company="SCG กรุงเทพ Software Tester" hidden>
-          <div class="partner-logo">
-            <img src="resources/images/SCG.png" alt="โลโก้ SCG" loading="lazy">
+        <!-- 11. SCG (Extra) -->
+        <article class="partner-card partner-card-extra" onclick="openModal(11)" tabindex="0" role="button" aria-label="ดูรายละเอียด SCG" data-company="SCG กรุงเทพฯ On-site ปากเกร็ด Software Tester Industrial IoT Cloud มีเบี้ยเลี้ยง เปิดรับ" hidden>
+          <div class="pricing-card-top">
+            <div class="partner-logo">
+              <img src="resources/images/SCG.png" alt="โลโก้ SCG" loading="lazy">
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-industry"></i> Industrial Tech</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 3 อัตรา</span>
+            </div>
           </div>
           <div class="partner-info">
             <h2>SCG</h2>
-            <div class="partner-tags">
-              <span class="partner-tag tag-location">ปากเกร็ด</span>
-              <span class="partner-tag tag-field">Software Tester</span>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (บางซื่อ)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-building"></i> On-site</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-dev">Software Tester</span>
+              <span class="partner-tag tag-role-biz">IoT & Agility</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
+            <button type="button" class="pricing-cta-btn" onclick="openModal(11); event.stopPropagation();">
+              ดูรายละเอียดตำแหน่งงาน <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
 
-        <article class="partner-card partner-card-extra" data-company="Wongnai กรุงเทพ UX Researcher" hidden>
-          <div class="partner-logo">
-            <img src="resources/images/wongnai.png" alt="โลโก้ Wongnai" loading="lazy">
+        <!-- 12. Wongnai (Extra) -->
+        <article class="partner-card partner-card-extra" onclick="openModal(12)" tabindex="0" role="button" aria-label="ดูรายละเอียด Wongnai" data-company="Wongnai LINE MAN Wongnai กรุงเทพฯ Hybrid UX Researcher Frontend Dev Online มีเบี้ยเลี้ยง เปิดรับ" hidden>
+          <div class="pricing-card-top">
+            <div class="partner-logo">
+              <img src="resources/images/wongnai.png" alt="โลโก้ Wongnai" loading="lazy">
+            </div>
+            <div class="pricing-card-badges">
+              <span class="pricing-tier-pill"><i class="fa-solid fa-utensils"></i> Lifestyle Unicorn</span>
+              <span class="pricing-quota-pill"><i class="fa-solid fa-circle-check"></i> เปิดรับ 4 อัตรา</span>
+            </div>
           </div>
           <div class="partner-info">
             <h2>Wongnai</h2>
-            <div class="partner-tags">
-              <span class="partner-tag tag-location">กรุงเทพฯ</span>
-              <span class="partner-tag tag-field">UX Researcher</span>
+            <div class="card-subline">
+              <span class="card-subline-item"><i class="fa-solid fa-location-dot"></i> กรุงเทพฯ (สาทร)</span>
+              <span class="subline-dot">•</span>
+              <span class="card-subline-item mode-item"><i class="fa-solid fa-laptop-house"></i> Hybrid</span>
+            </div>
+            <div class="card-roles-row">
+              <span class="partner-tag tag-role-design">UX Researcher</span>
+              <span class="partner-tag tag-role-dev">Frontend React</span>
               <span class="partner-tag tag-benefit">มีเบี้ยเลี้ยง</span>
             </div>
+            <button type="button" class="pricing-cta-btn" onclick="openModal(12); event.stopPropagation();">
+              ดูรายละเอียดตำแหน่งงาน <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </article>
       </section>
@@ -281,7 +505,6 @@
         </button>
       </div>
     </div>
-    </section>
   </main>
   
 
@@ -292,7 +515,7 @@
           <div class="logo-tu-mark" style="width: 36px; height: 36px; border-radius: 10px; background: #FFF;">
             <img src="resources/images/logomini.png" alt="CO-ED Logo" style="width: 24px; height: 24px; object-fit: contain;" />
           </div>
-          <span style="font-family: var(--font-serif); font-size: 22px; font-weight: 700; color: #fff;">CO-ED TU</span>
+          <span style="font-family: var(--font-serif); font-size: 22px; font-weight: 700; color: #fff;">CO-ED</span>
         </div>
         <p style="max-width: 280px; line-height: 1.6;">
           ระบบสารสนเทศเพื่อการจัดการข้อมูลสหกิจศึกษา ช่วยให้นักศึกษาเตรียมความพร้อมสู่การทำงานจริงได้อย่างมีประสิทธิภาพ
@@ -322,7 +545,7 @@
     </div>
 
     <div class="container footer-bottom">
-      <p>© 2026 CO-ED TU Cooperative Education. All rights reserved.</p>
+      <p>© 2026 CO-ED Cooperative Education. All rights reserved.</p>
       <div class="social-links">
         <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
         <a href="#"><i class="fa-brands fa-youtube"></i></a>
@@ -332,7 +555,161 @@
     </div>
   </footer>
 
+  <!-- ================= POPUP MODAL ================= -->
+  <div id="companyModal" class="modal-overlay" onclick="handleBackdropClick(event)">
+    <div class="modal-container">
+      <button class="modal-close-btn" onclick="closeModal()" aria-label="ปิดหน้าต่าง">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="modal-header">
+        <div id="modalLogo" class="modal-logo"></div>
+        <div class="modal-title-area">
+          <h3 id="modalName">ชื่อสถานประกอบการ</h3>
+          <p id="modalLocation">สถานที่ตั้ง</p>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <h4>ลักษณะงาน / รายละเอียดโครงการ</h4>
+        <p id="modalDescription">รายละเอียดของงาน...</p>
+        
+        <h4 style="margin-top: 16px;">คุณสมบัติเบื้องต้น</h4>
+        <p id="modalReq">• เป็นนักศึกษาชั้นปีที่ 3-4 สาขาที่เกี่ยวข้อง<br>• มีความกระตือรือร้นและพร้อมเรียนรู้สิ่งใหม่</p>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeModal()">ปิดหน้าต่าง</button>
+        <button class="btn-signup">ยื่นสมัครสหกิจ</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // Modal Companies Data
+    const companiesData = {
+      1: {
+        name: "Agoda",
+        location: "กรุงเทพฯ (เซ็นทรัลเวิลด์)",
+        logoHtml: '<img class="agoda-logo-img" src="resources/images/agoda.jpg" alt="โลโก้ Agoda">',
+        logoBg: "#FFFFFF",
+        desc: "ร่วมพัฒนาผลิตภัณฑ์และประสบการณ์ดิจิทัลสำหรับแพลตฟอร์มการท่องเที่ยวระดับโลก พร้อมทีมวิศวกรและที่ปรึกษาแบบตัวต่อตัว"
+      },
+      2: {
+        name: "G-Able",
+        location: "กรุงเทพฯ (สามย่าน)",
+        logoHtml: '<img src="resources/images/g-able.png" alt="โลโก้ G-Able">',
+        logoBg: "#FFFFFF",
+        logoColor: "#0F172A",
+        desc: "เรียนรู้การพัฒนาซอฟต์แวร์ โครงสร้างพื้นฐาน Cloud และโซลูชันดิจิทัลระดับองค์กรขนาดใหญ่"
+      },
+      3: {
+        name: "Gosoft",
+        location: "กรุงเทพฯ (แจ้งวัฒนะ)",
+        logoHtml: '<img src="resources/images/gosoft.png" alt="โลโก้ Gosoft">',
+        logoBg: "#FFFFFF",
+        logoColor: "#FACC15",
+        desc: "ร่วมพัฒนาระบบดิจิทัล วิเคราะห์ข้อมูลขนาดใหญ่ และระบบค้าปลีกอัตโนมัติเพื่อสนับสนุนธุรกิจค้าปลีกชั้นนำ"
+      },
+      4: {
+        name: "Huawei",
+        location: "กรุงเทพฯ (พระราม 9)",
+        logoHtml: '<img src="resources/images/huawei.jpg" alt="โลโก้ Huawei">',
+        logoBg: "#FFFFFF",
+        desc: "เรียนรู้เทคโนโลยีเครือข่าย 5G คลาวด์ และโซลูชันโครงสร้างพื้นฐานดิจิทัลร่วมกับทีมวิศวกรระดับโลก"
+      },
+      5: {
+        name: "KBTG",
+        location: "นนทบุรี (เมืองทองธานี)",
+        logoHtml: '<img src="resources/images/KBTG.jpg" alt="โลโก้ KBTG">',
+        logoBg: "#FFFFFF",
+        desc: "ร่วมสร้างนวัตกรรมทางการเงิน (FinTech) ระบบคลาวด์ และผลิตภัณฑ์ดิจิทัลที่มีผู้ใช้งานกว่า 20 ล้านคน"
+      },
+      6: {
+        name: "Krungsri",
+        location: "กรุงเทพฯ (พระราม 3)",
+        logoHtml: '<img src="resources/images/krungsri.jpg" alt="โลโก้ Krungsri">',
+        logoBg: "#FFFFFF",
+        desc: "พัฒนาประสบการณ์ผู้ใช้ (UX/UI) และผลิตภัณฑ์ดิจิทัลสำหรับบริการทางการเงินยุคใหม่"
+      },
+      7: {
+        name: "NECTEC",
+        location: "ปทุมธานี (อุทยานวิทย์ฯ)",
+        logoHtml: '<img src="resources/images/nectec.png" alt="โลโก้ NECTEC">',
+        logoBg: "#FFFFFF",
+        logoColor: "#0F172A",
+        desc: "ร่วมวิจัยและพัฒนานวัตกรรมดิจิทัลแห่งชาติ ความมั่นคงปลอดภัยไซเบอร์ ปัญญาประดิษฐ์ (AI) และ IoT"
+      },
+      8: {
+        name: "PTT Digital",
+        location: "กรุงเทพฯ (วิภาวดี)",
+        logoHtml: '<img src="resources/images/PTT-Digital.png" alt="โลโก้ PTT Digital">',
+        logoBg: "#FFFFFF",
+        desc: "ร่วมวิเคราะห์ข้อมูลธุรกิจ (Business Analyst) และพัฒนาโซลูชันดิจิทัลระดับองค์กรสำหรับกลุ่มธุรกิจพลังงาน"
+      },
+      9: {
+        name: "CP ALL",
+        location: "กรุงเทพฯ (สีลม)",
+        logoHtml: '<img src="resources/images/CP-ALL.png" alt="โลโก้ CP ALL">',
+        logoBg: "#FFFFFF",
+        desc: "ร่วมพัฒนาระบบข้อมูล คลาวด์ และวิเคราะห์ข้อมูลซัพพลายเชนค้าปลีกระดับประเทศกับทีมเทคโนโลยี"
+      },
+      10: {
+        name: "SCB Tech X",
+        location: "กรุงเทพฯ (รัชโยธิน)",
+        logoHtml: '<img src="resources/images/SCB-TechX.png" alt="โลโก้ SCB Tech X">',
+        logoBg: "#FFFFFF",
+        desc: "ร่วมพัฒนาแอปพลิเคชันมือถือ แพลตฟอร์มการเงินยุคใหม่ และเทคโนโลยีคลาวด์กับทีมวิศวกรรมชั้นนำ"
+      },
+      11: {
+        name: "SCG",
+        location: "กรุงเทพฯ (บางซื่อ / ปากเกร็ด)",
+        logoHtml: '<img src="resources/images/SCG.png" alt="โลโก้ SCG">',
+        logoBg: "#FFFFFF",
+        desc: "เรียนรู้และปฏิบัติงานด้านการทดสอบซอฟต์แวร์ อุปกรณ์ Industrial IoT และนวัตกรรมดิจิทัลสำหรับอุตสาหกรรม"
+      },
+      12: {
+        name: "Wongnai",
+        location: "กรุงเทพฯ (สาทร)",
+        logoHtml: '<img src="resources/images/wongnai.png" alt="โลโก้ Wongnai">',
+        logoBg: "#FFFFFF",
+        desc: "ร่วมทีมวิจัยประสบการณ์ผู้ใช้ (UX Research) และพัฒนา Frontend แพลตฟอร์มบริการไลฟ์สไตล์และอีคอมเมิร์ซ"
+      }
+    };
+
+    function openModal(id) {
+      const data = companiesData[id];
+      if (!data) return;
+
+      document.getElementById('modalName').innerText = data.name;
+      document.getElementById('modalLocation').innerText = `สถานที่ตั้ง • ${data.location}`;
+      document.getElementById('modalDescription').innerText = data.desc;
+
+      const logoEl = document.getElementById('modalLogo');
+      logoEl.innerHTML = data.logoHtml;
+      logoEl.style.backgroundColor = data.logoBg || '#FFFFFF';
+      logoEl.style.color = data.logoColor || '#0F172A';
+
+      document.getElementById('companyModal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('companyModal');
+      if (modal) modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    function handleBackdropClick(event) {
+      if (event.target.id === 'companyModal') {
+        closeModal();
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+
     window.addEventListener('scroll', () => {
       const header = document.querySelector('.header');
       if (header) {
@@ -355,6 +732,139 @@
     document.querySelectorAll('.fade-up-init').forEach(el => {
       scrollObserver.observe(el);
     });
+
+    // Auto Infinite Scroll Observer for Load More
+    const loadMoreBtn = document.getElementById('loadMoreCompanies');
+    if (loadMoreBtn && typeof IntersectionObserver !== 'undefined') {
+      let isAutoLoading = false;
+      const loadMoreObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !isAutoLoading && !loadMoreBtn.hidden && loadMoreBtn.style.display !== 'none' && !loadMoreBtn.disabled) {
+            isAutoLoading = true;
+            loadMoreBtn.classList.add('is-loading');
+            loadMoreBtn.innerHTML = '<span class="loading-spinner"></span> กำลังโหลดสถานประกอบการ...';
+            setTimeout(() => {
+              loadMoreBtn.click();
+              loadMoreBtn.classList.remove('is-loading');
+              isAutoLoading = false;
+            }, 380);
+          }
+        });
+      }, { threshold: 0.15, rootMargin: '0px 0px 80px 0px' });
+
+      loadMoreObserver.observe(loadMoreBtn);
+    }
+
+    // Typing placeholder animation for Company Directory Search
+    const dirSearchInput = document.getElementById('companySearch');
+    if (dirSearchInput) {
+      const phrases = [
+        "Software Engineer, DevOps...",
+        "Data, AI...",
+        "UX/UI Designer...",
+        "Cloud, Cyber Security...",
+        "Agoda, KBTG, SCG...",
+        "ค้นหาตำแหน่งงาน หรือชื่อบริษัท..."
+      ];
+      let pIdx = 0;
+      let cIdx = 0;
+      let isDeleting = false;
+      let isPaused = false;
+      let timeoutId = null;
+
+      function typeDirSearch() {
+        if (isPaused) return;
+        const current = phrases[pIdx];
+        const cursor = "|";
+
+        if (isDeleting) {
+          cIdx--;
+          dirSearchInput.setAttribute('placeholder', current.substring(0, cIdx) + cursor);
+        } else {
+          cIdx++;
+          dirSearchInput.setAttribute('placeholder', current.substring(0, cIdx) + cursor);
+        }
+
+        let delay = isDeleting ? 35 : 75;
+        if (!isDeleting && cIdx === current.length) {
+          delay = 1800;
+          isDeleting = true;
+        } else if (isDeleting && cIdx === 0) {
+          isDeleting = false;
+          pIdx = (pIdx + 1) % phrases.length;
+          delay = 400;
+        }
+
+        timeoutId = setTimeout(typeDirSearch, delay);
+      }
+
+      timeoutId = setTimeout(typeDirSearch, 400);
+
+      dirSearchInput.addEventListener('focus', () => {
+        isPaused = true;
+        clearTimeout(timeoutId);
+        dirSearchInput.setAttribute('placeholder', 'ค้นหาตำแหน่งงาน หรือชื่อบริษัท...');
+      });
+
+      dirSearchInput.addEventListener('blur', () => {
+        if (dirSearchInput.value.trim() === '') {
+          isPaused = false;
+          isDeleting = false;
+          cIdx = 0;
+          timeoutId = setTimeout(typeDirSearch, 400);
+        }
+      });
+    }
+
+    // Multi-Faceted Filter Controls Interaction
+    const roleFilter = document.getElementById('roleFilter');
+    const workModeFilter = document.getElementById('workModeFilter');
+    const recruitingToggle = document.getElementById('recruitingToggle');
+    const filterResetBtn = document.getElementById('filterResetBtn');
+    const locationSelect = document.getElementById('locationFilter');
+
+    if (locationSelect && dirSearchInput) {
+      locationSelect.addEventListener('change', () => {
+        dirSearchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    }
+
+    if (workModeFilter && dirSearchInput) {
+      workModeFilter.addEventListener('change', () => {
+        dirSearchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    }
+
+    if (roleFilter && dirSearchInput) {
+      roleFilter.addEventListener('change', () => {
+        dirSearchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    }
+
+    if (recruitingToggle && dirSearchInput) {
+      recruitingToggle.addEventListener('click', () => {
+        const isActive = recruitingToggle.classList.toggle('active');
+        recruitingToggle.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        dirSearchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    }
+
+    if (filterResetBtn && dirSearchInput) {
+      filterResetBtn.addEventListener('click', () => {
+        dirSearchInput.value = '';
+        if (roleFilter) roleFilter.value = '';
+        if (workModeFilter) workModeFilter.value = '';
+        if (recruitingToggle) {
+          recruitingToggle.classList.remove('active');
+          recruitingToggle.setAttribute('aria-pressed', 'false');
+        }
+        if (locationSelect && !locationSelect.disabled) {
+          locationSelect.value = '';
+          locationSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        dirSearchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    }
   </script>
 </body>
 </html>
