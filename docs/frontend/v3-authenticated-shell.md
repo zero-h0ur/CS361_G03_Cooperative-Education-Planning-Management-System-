@@ -19,6 +19,39 @@ Accepted Decisions #48, #49 และ shared response/error contract จาก #
 
 ## Routes
 
+### Shared TU theme
+
+พื้นที่หลัง Login ใช้ Theme แดง TU/ทอง พื้นครีม และโลโก้เดียวกับหน้า Public
+ผ่าน `src/frontend/authenticated-shell.css` โดยไม่โหลด `style.css` ทั้งก้อนเพื่อหลีกเลี่ยง
+Global selector conflicts กับ Form/Table/Nav ของ Protected workspace
+Sidebar และการตรวจ Role/Route คงเดิม หัวข้อและระยะห่างกระชับขึ้นเพื่อเข้าถึงเนื้อหาเร็วขึ้น
+มี Skip link ที่ย้าย Focus ไป Main โดยไม่เปลี่ยน Hash route และปรับกริดฟอร์มให้รองรับจอเล็ก
+
+Protected brand ใช้ชื่อ **CO-ED** และไฟล์ `resources/images/logomini.png` ตามคำขอล่าสุด
+หน้า ข้อมูลของฉัน และ แผนสหกิจ ใช้ไอคอน SVG แบบ Code-native ที่ซ่อนจาก Screen reader
+พร้อม Section headings/Labels จริง หน้า Profile แยก Official read-only fields กับ Preferred name
+หน้า Plan แยก Status, Readiness, Submit และ History ที่แสดงเวลาภาษาไทยใน Asia/Bangkok
+Banner สีเขียวหมายถึงข้อมูลเบื้องต้นครบเท่านั้น Server ยังตรวจ Cycle/References เมื่อ Submit
+State ที่ล็อกยังปิด Submit และไม่แสดงว่าพร้อมส่ง ไม่เพิ่ม API, Mock data หรือ Role bypass ในงาน Theme
+
+เมื่อตรวจ Visual review ให้ครอบคลุม Student/Staff/Advisor และหน้า Login, Loading,
+Expired, Forbidden, Configuration error ที่ขนาด 320px, 768px และ Desktop
+ตรวจ Focus/Keyboard, ข้อความและปุ่มยาว, Semantic status colors และ Disabled states
+Automated tests ตรวจ Palette parity, Brand และ Skip-link routing แต่ไม่ทดแทน Browser review
+
+การปรับ Theme ถูกนำมารวมกับ `main` ล่าสุดก่อนสร้าง Branch
+`feature/student-profile-plan-ui` (Base `8805f1d`) โดยรักษา Plan editor (#73),
+การล็อก Submit/Picker ขณะมี Unsaved changes และ Staff review workspace (#77)
+Plan editor ใช้ Card/ไอคอนรูปแบบเดียวกับ Student workspace แต่ Payload, Version,
+Idempotency และ Read-only rules ไม่เปลี่ยน
+
+ผลตรวจวันที่ 2026-10-20:
+
+- `npm ci` ติดตั้งตาม Lockfile ของ `main` โดยไม่แก้ Dependency versions
+- `npm run test:frontend`: 10 suites / 262 tests ผ่าน รวม Editor และ Staff review regression
+- `npm run build` และ `git diff --check` ผ่าน
+- ยังรอ Browser visual/keyboard review ที่ 320px, 768px และ Desktop; ไม่มี Browser ที่เชื่อมต่อใน Session ที่ปรับโค้ด จึงไม่ถือว่า Automated tests แทนการตรวจนี้แล้ว
+
 Issue #74 เพิ่มเมนู Staff ที่ `#/staff/students` และ `#/staff/plans` โดยใช้
 Scoped read API ของ #67 แล้ว และส่งต่อผ่าน `#/staff/plans/:planId` ไปยัง
 Review workspace ของ #77 ที่ merge แล้ว ดู Contract, URL-state privacy และวิธีทดสอบใน
@@ -27,7 +60,7 @@ Review workspace ของ #77 ที่ merge แล้ว ดู Contract, URL
 | Role | Route | สถานะปัจจุบัน |
 | --- | --- | --- |
 | `STUDENT` | `#/student/profile` | Dashboard และข้อมูลของฉัน (#72) |
-| `STUDENT` | `#/student/plan` | สถานะและการส่งแผน (#76) |
+| `STUDENT` | `#/student/plan` | Editor (#73), สถานะ/ส่งแผน/ประวัติ (#76) |
 | `STAFF` | `#/staff/review` | คิวตรวจแผน (#77) |
 | `STAFF` | `#/staff/plans/:planId` | รายละเอียด ประวัติ และคำสั่งตรวจแผน (#77) ไม่อยู่ในเมนู |
 | `ADVISOR` | `#/advisor/students` | รายชื่อนักศึกษาที่ได้รับมอบหมาย (#75) |
