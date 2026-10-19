@@ -540,24 +540,45 @@ a:focus-visible,
 }
 
 .protected-shell--student .shell-brand__mark {
-  width: 54px;
-  height: 64px;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
+  width: 44px;
+  height: 44px;
 }
 
 .protected-shell--student .shell-brand__logo {
-  width: 54px;
-  height: 54px;
+  width: 28px;
+  height: 28px;
 }
 
 .protected-shell--student .shell-brand__name {
-  font-size: 2rem;
+  font-size: 18px;
+  line-height: 1.15;
 }
 
 .protected-shell--student .shell-brand__subtitle {
-  font-size: 0.95rem;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* Same framed logo and interaction as the public index header. */
+.shell-brand__mark {
+  transition: transform 450ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 450ms cubic-bezier(0.16, 1, 0.3, 1), border-color 300ms ease;
+}
+
+.shell-brand:hover .shell-brand__mark,
+.shell-brand:focus-visible .shell-brand__mark {
+  transform: rotate(8deg) scale(1.06);
+  box-shadow: 0 8px 22px -2px rgba(200, 16, 46, 0.25);
+  border-color: var(--shell-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-brand:hover .shell-brand__mark,
+  .shell-brand:focus-visible .shell-brand__mark {
+    transform: none;
+    transition: none;
+  }
 }
 
 .protected-shell--student .shell-role {
