@@ -207,6 +207,22 @@ The branch push alone does not trigger this repository's V3 workflow: it runs on
 pull requests, main pushes or manual dispatch. Open the follow-up PR and verify CI
 on its exact head before merging; local tests are not a substitute for that run.
 
+## PR #117 clean-install correction
+
+The first V3 verification run, `39262186208`, on head `54514df` failed at `npm ci`
+before running tests. npm 10.8.2 reported missing optional peer dependency lock
+entries for `@emnapi/core@1.11.3` and `@emnapi/runtime@1.11.3`. Their original
+versions, integrity hashes and metadata from the approved main lockfile were
+restored; no dependency version was upgraded and no test gate was disabled.
+
+The corrected lockfile passed a real clean install in a new temporary directory
+using the CI versions Node.js 20.20.2 and npm 10.8.2. The source snapshot plus the
+lockfile correction then passed all 786 tests and frontend build with those same
+versions against a new isolated local PostgreSQL database
+`coed_ci117_test_20261019`; it did not contact or reset RDS. The deployed runtime
+code is unchanged by this development-only lockfile correction. The corrected PR
+must still pass its own GitHub workflow on the newly pushed head before merge.
+
 ## References
 
 - [node-postgres dynamic passwords](https://node-postgres.com/features/connecting)
