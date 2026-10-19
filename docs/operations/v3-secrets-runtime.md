@@ -1,4 +1,4 @@
-# V3 Secrets Manager runtime follow-up (#58 → #82)
+# V3 Secrets Manager runtime follow-up (#116; #58 → #82)
 
 ## Status
 
@@ -8,9 +8,10 @@ the AWS secret-mode cutover on 2026-10-19: public database-backed API 200, healt
 After cutover, the owner confirmed both authenticated Student profile and draft
 edits persist after refresh. The Secrets Manager runtime smoke is successful;
 broader multi-role security and release acceptance checks remain separate.
-The follow-up issue could not be created by the connector (HTTP 403); create a
-tracking issue before opening the PR. Do not close #82/#83/#84 from this partial
-deployment evidence; their remaining acceptance/security checks still apply.
+The owner created tracking issue #116 after connector issue creation was denied
+(HTTP 403). PR CI and review on the final head are still required before merging
+and closing #116. Do not close #82/#83/#84 from this partial deployment evidence;
+their remaining acceptance/security checks still apply.
 
 Dependency audit on 2026-10-19 reports 19 moderate findings in the Jest development
 toolchain (including js-yaml/argparse/sprintf-js), no high/critical findings. These
