@@ -48,7 +48,10 @@ function change(root, name, value, event = 'change') {
   input.dispatchEvent(new Event(event, { bubbles: true }));
   return input;
 }
-function save(root) { root.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }
+function save(root) {
+  const form = root.querySelector('.plan-editor form') || root.querySelector('form');
+  form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+}
 beforeEach(() => { document.body.replaceChildren(); });
 afterEach(() => { controllers.forEach((item) => item.abort()); controllers = []; });
 

@@ -41,6 +41,29 @@ test('mounts real Plan editor, saves then submits and refreshes simulated histor
   expect(global.fetch).not.toHaveBeenCalled();
 });
 
+test('matches the reference overview order and opens the complete editor explicitly', async () => {
+  const { root } = await mount('draft');
+  const workspace = root.querySelector('.student-plan-workspace');
+  expect([...workspace.children].filter((node) => node.matches('.student-card')).map((node) =>
+    [...node.classList].find((name) => ['student-plan-status', 'student-plan-readiness', 'student-plan-submit', 'student-plan-history'].includes(name))
+  )).toEqual(['student-plan-status', 'student-plan-readiness', 'student-plan-submit', 'student-plan-history']);
+  const tools = workspace.querySelector('.student-plan-tools');
+  expect(tools.open).toBe(false);
+  workspace.querySelector('.student-plan-status__manage').click();
+  expect(tools.open).toBe(true);
+  expect(document.activeElement).toBe(tools.querySelector('summary'));
+  expect(root.querySelector('[data-plan-field="cycle_id"]').textContent).toContain('รอบที่ 1');
+});
+
+test('uses the real decorative campus asset on both Student routes', async () => {
+  const { root } = await mount('draft', '#/student/profile');
+  const backdrop = root.querySelector('.student-campus-backdrop');
+  expect(backdrop.getAttribute('src')).toBe('resources/images/student-campus-banner.png');
+  expect(backdrop.alt).toBe('');
+  expect(backdrop.getAttribute('aria-hidden')).toBe('true');
+  expect(root.querySelector('.shell-brand__name').textContent).toBe('CO-ED');
+});
+
 test.each(['submitted', 'review', 'approved', 'cancelled'])('%s renders real read-only UI', async (scenario) => {
   const { root } = await mount(scenario);
   expect(root.querySelector('.plan-editor')).toBeNull();

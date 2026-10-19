@@ -314,7 +314,9 @@ export function renderStudentPlanView({
     statusBadgeRow.append(currentStatusBadge, versionBadge);
 
     const statusDescription = element('p', 'student-card__description', statusInfo.description);
-    statusSection.append(statusTitle, statusBadgeRow, statusDescription, modeBadge);
+    const statusHeading = element('div', 'student-plan-status__heading');
+    statusHeading.append(statusTitle);
+    statusSection.append(statusHeading, statusBadgeRow, statusDescription, modeBadge);
 
     const returnReason = plan.status === PLAN_STATUSES.NEEDS_REVISION
       ? findLatestReturnReason(currentHistory)
@@ -365,7 +367,22 @@ export function renderStudentPlanView({
       detailList.append(wrapper);
     }
 
-    readinessSection.append(readinessTitle, readinessSummaryText, detailList);
+    readinessSection.append(readinessTitle, detailList, readinessSummaryText);
+    // Resolve the human-readable Cycle label using the existing Student options API.
+    // Never derive a name from an ID or change the submitted reference.
+    if (plan.cycle_id && typeof planClient.listCycles === 'function') {
+      Promise.resolve().then(() => planClient.listCycles({ signal })).then((cycles) => {
+        if (signal?.aborted || currentPlan?.id !== plan.id) return;
+        const cycle = cycles.find((item) => item.id === plan.cycle_id);
+        const value = detailList.querySelector('[data-plan-field="cycle_id"]');
+        if (cycle && value) value.textContent = cycle.name;
+      }).catch((error) => {
+        if (signal?.aborted) return;
+        if (error?.code === STUDENT_PLAN_ERROR_CODES.SESSION_EXPIRED) onSessionExpired?.();
+        else if (error?.code === STUDENT_PLAN_ERROR_CODES.ACCESS_DENIED) onAccessDenied?.('บัญชีนี้ไม่มีสิทธิ์เข้าถึงรอบสมัคร');
+        // For transient failures keep the original reference visible.
+      });
+    }
 
     if (!readiness.isComplete && readiness.isSubmittableStatus) {
       const missingBox = element('div', 'student-profile-feedback student-profile-feedback--warning');
@@ -633,13 +650,29 @@ export function renderStudentPlanView({
 
     const picker = renderPlanPicker();
     const editor = makeEditor(plan);
+    const tools = picker || editor ? element('details', 'student-plan-tools') : null;
+    if (tools) {
+      const summary = element('summary', 'student-plan-tools__summary', editor
+        ? 'จัดการและแก้ไขแผนสหกิจ' : 'เลือกแผนหรือสร้างแผนใหม่');
+      tools.append(summary, ...[picker, editor].filter(Boolean));
+      // Keep the reference's four-card overview while retaining the complete editor.
+      const manage = element('button', 'student-plan-status__manage', editor ? 'แก้ไขแผน' : 'เลือกแผน');
+      manage.type = 'button';
+      manage.prepend(createWorkspaceIcon(editor ? 'edit' : 'file'));
+      manage.addEventListener('click', () => {
+        tools.open = true;
+        summary.focus();
+        tools.scrollIntoView?.({ block: 'start', behavior: 'auto' });
+      });
+      statusHeading.append(manage);
+      if (plan.status === PLAN_STATUSES.NEEDS_REVISION) tools.open = true;
+    }
     container.replaceChildren(...[
-      picker,
       decorateStudentCard(statusSection, 'file'),
-      editor,
       decorateStudentCard(readinessSection, 'clipboard'),
       decorateStudentCard(submitSection, 'send'),
-      decorateStudentCard(historySection, 'clock')
+      decorateStudentCard(historySection, 'clock'),
+      tools
     ].filter(Boolean));
     syncEditorControls();
   }
