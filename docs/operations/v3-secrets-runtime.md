@@ -2,10 +2,15 @@
 
 ## Status
 
-Implementation and automated tests are prepared locally. AWS secret-mode cutover,
-runtime IAM/endpoint checks and authenticated smoke evidence remain pending.
+Implementation is pushed at `ca71916`. Owner-provided CloudShell results confirm
+the AWS secret-mode cutover on 2026-10-19: public database-backed API 200, health
+200, unauthenticated V3 401, and DATABASE_URL absent from the current configuration.
+After cutover, the owner confirmed both authenticated Student profile and draft
+edits persist after refresh. The Secrets Manager runtime smoke is successful;
+broader multi-role security and release acceptance checks remain separate.
 The follow-up issue could not be created by the connector (HTTP 403); create a
-tracking issue before opening the PR. Do not close #82/#83/#84 based on local tests.
+tracking issue before opening the PR. Do not close #82/#83/#84 from this partial
+deployment evidence; their remaining acceptance/security checks still apply.
 
 Dependency audit on 2026-10-19 reports 19 moderate findings in the Jest development
 toolchain (including js-yaml/argparse/sprintf-js), no high/critical findings. These
@@ -110,6 +115,11 @@ connect as `coed_app` without exposing its value, and check effective privileges
 6. If cutover fails, preserve sanitized evidence and restore the previous reviewed
    V3 configuration/code from the rollback version. Do not grant broad IAM rights,
    disable TLS, return to master DB credentials as a permanent fix or undo schema.
+7. Immutable rollback versions retain their historical credential-containing
+   configuration. Restrict access and plan their retirement after acceptance;
+   absence of DATABASE_URL in the current configuration is not a claim that all
+   historical versions/backups are credential-free. Do not delete checkpoints
+   before the owner approves their retirement.
 
 ## Existing AWS preview evidence (2026-10-19)
 
@@ -124,7 +134,7 @@ connect as `coed_app` without exposing its value, and check effective privileges
   exact CORS origin/method/header values. Original public GET route preserved.
 - Student login, profile, create/edit draft, persistence, dependent selectors,
   two-tab conflict/reload and responsive correction were reviewed for PR #112.
-- Current limitation before this cutover: Lambda still uses a plaintext
+- Previous limitation before this cutover: Lambda used a plaintext
   DATABASE_URL with master `postgres` credentials. The existing application secret
   has the expected PostgreSQL fields and username `coed_app`. After the owner
   explicitly authorized credential repair, the DB account password was aligned
@@ -134,11 +144,67 @@ connect as `coed_app` without exposing its value, and check effective privileges
   applied successfully. Effective checks returned read-identity=true,
   insert-and-update-plan=true, append-audit=true, delete-audit=false,
   change-role=false. No table data or secret version was changed by that ACL step.
-  Lambda-side retrieval/cutover still needs verification.
+  This credential repair did not change the existing secret version.
+- Pre-cutover owner-provided AWS checks: IAM simulation for LabRole permits
+  `secretsmanager:GetSecretValue` on the exact application secret. DescribeSecret
+  returned no custom KmsKeyId. Interface endpoint `vpce-09a6326385357ca65` is
+  available with private DNS enabled; its policy permits GetSecretValue and
+  DescribeSecret only for the application secret ARN. Its security group is
+  `sg-0ae66580f58e02866`. Owner-provided SG results confirm inbound TCP 443 from
+  Lambda SG `sg-0da316295f533eeef`; Lambda outbound traffic is permitted. IAM
+  simulation does not prove least-privilege of the entire shared LabRole.
+- Prepared artifact from pushed commit `ca7191652ca964c6f7959699fdec21e13c1151b2`:
+  SHA256 `8f0e8aa2eb66a5ade4bdf61422be67406d1b4d0c376e97e421a94207cfbf38a2`,
+  636575 bytes, including the root RDS CA. Package inspection, 38 focused tests
+  and frontend build passed.
+- Stage 1 owner-provided output: published healthy V3 rollback version **2**,
+  deployed the new code with unchanged URL-mode settings, verified AWS code hash
+  `jw6Koutmpa3kvfYUIr5nQG0bTQw3bpfkIalCB8+/OKI=`, and received health/public/
+  unauthenticated protected responses 200/200/401.
+- Stage 2 owner-provided output: configuration update completed; exact expected
+  environment and code hash checks passed. DB user is `coed_app`, secret ARN is
+  configured, TLS uses the packaged CA, DB connect timeout is 8000 ms and Lambda
+  timeout is 15 s. DATABASE_URL and accidental Key/Value entries were removed from
+  the current environment. The first post-update database-backed request returned
+  200, providing live retrieval/login evidence; health and unauthenticated V3 were
+  200/401. No automatic rollback was needed. The script did not rotate credentials
+  or change database data.
+- Post-cutover authenticated browser smoke: owner confirmed both requested checks
+  passed using the synthetic PR73 Student. Preferred Name save/refresh and existing
+  DRAFT note edit/save/refresh both persisted. This exercises the restricted
+  students/users-trigger row-lock privileges and plan/audit write path under
+  `coed_app`. No Plan submission was requested or inferred from these checks.
 - Local verification after adding the ACL integration regression: full `npm test`
   passed 786 tests; frontend build and `git diff --check` passed. The ACL integration
   also verifies that profile edits still work with the users row-lock trigger,
   and that audit deletion, role changes and official-profile writes are denied.
+
+## Independent post-cutover HTTP checks
+
+Executed against `https://qtqlsb1aec.execute-api.us-east-1.amazonaws.com` on
+2026-10-19, approximately 20:35 Asia/Bangkok, with the `ca71916` artifact above.
+These nine checks passed without credentials or database mutations:
+
+| Check | Result |
+| --- | --- |
+| GET /api/health | 200 |
+| GET /api/companies?pageSize=1 | 200 |
+| GET /api/companies?page=0 | 400 |
+| Anonymous GET /api/v3/me | 401 |
+| Anonymous GET /api/v3/students/me | 401 |
+| Anonymous GET /api/v3/plans | 401 |
+| Preview-origin PATCH preflight | 204; exact allowed origin; PATCH, authorization and content-type permitted |
+| Untrusted-origin PATCH preflight | 204; no Access-Control-Allow-Origin |
+| Untrusted-origin public companies request | 200; no Access-Control-Allow-Origin |
+
+A 204 without Access-Control-Allow-Origin rejects browser cross-origin access;
+it is not an authentication failure. Public directory HTTP 200 remains intended.
+These checks do not substitute for deployed Staff/Advisor/ownership smoke, sampled
+log review, main-frontend configuration, or final acceptance under #82–#84.
+GitHub still lists #74 and #81 open; #82's documented dependency gate remains.
+The branch push alone does not trigger this repository's V3 workflow: it runs on
+pull requests, main pushes or manual dispatch. Open the follow-up PR and verify CI
+on its exact head before merging; local tests are not a substitute for that run.
 
 ## References
 
