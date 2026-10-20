@@ -810,21 +810,57 @@ a:focus-visible,
   --profile-feedback-duration: 180ms;
   --profile-secondary-ink: #334155;
 }
-.student-profile-workspace > .student-card--illustrated {
-  transition: transform var(--profile-feedback-duration) ease-out,
-    box-shadow var(--profile-feedback-duration) ease-out,
-    border-color var(--profile-feedback-duration) ease-out;
+:is(.student-profile-workspace, .student-plan-workspace) {
+  /* Student-only contrast and motion: do not change Advisor/Staff cards. */
+  --shell-muted: #475569;
+  --shell-line: #d4c8c3;
+  --shell-shadow: 0 6px 22px rgba(15, 23, 42, 0.09);
+  --student-motion-fast: 180ms;
+  --student-motion-ease: cubic-bezier(0.2, 0.75, 0.25, 1);
 }
-.student-profile-workspace > .student-card--illustrated:focus-within {
+:is(.student-profile-workspace, .student-plan-workspace).student-workspace--ready {
+  animation: student-workspace-enter 420ms var(--student-motion-ease);
+}
+:is(.student-profile-workspace, .student-plan-workspace) .student-card {
+  transition: transform 240ms var(--student-motion-ease),
+    box-shadow 240ms ease-out, border-color var(--student-motion-fast) ease-out;
+}
+:is(.student-profile-workspace, .student-plan-workspace) .student-card__title {
+  color: var(--shell-ink);
+  font-weight: 700;
+}
+:is(.student-profile-workspace, .student-plan-workspace) .student-card__icon {
+  background: #fde2e8;
+  transition: transform 240ms var(--student-motion-ease), background var(--student-motion-fast) ease-out;
+}
+:is(.student-profile-workspace, .student-plan-workspace) .shell-button > .workspace-icon {
+  transition: transform var(--student-motion-fast) var(--student-motion-ease);
+}
+:is(.student-profile-workspace, .student-plan-workspace) .student-card:focus-within {
   border-color: var(--shell-primary);
-  box-shadow: 0 8px 24px rgba(200, 16, 46, 0.1);
+  box-shadow: 0 8px 24px rgba(200, 16, 46, 0.14);
 }
 @media (hover: hover) and (pointer: fine) {
-  .student-profile-workspace > .student-card--illustrated:hover {
-    transform: translateY(-3px);
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card:not(.student-card--loading):not(.student-card--error):hover {
+    transform: translateY(-6px);
     border-color: var(--shell-primary);
-    box-shadow: 0 12px 28px rgba(200, 16, 46, 0.12);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12), 0 3px 10px rgba(200, 16, 46, 0.08);
   }
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card--illustrated:hover > .student-card__icon {
+    transform: translateY(-2px) rotate(-6deg) scale(1.08);
+    background: #fbd2dc;
+  }
+  :is(.student-profile-workspace, .student-plan-workspace) .shell-button:not(:disabled):not([aria-disabled="true"]):hover > .workspace-icon {
+    transform: translateX(3px) rotate(-5deg);
+  }
+}
+.student-plan-workspace .student-plan-tools[open] > .plan-editor > .student-card__body {
+  animation: student-profile-disclose 220ms var(--student-motion-ease);
+}
+.student-plan-workspace .student-plan-submit__readiness--ready { border-color: #b7dfc4; }
+@keyframes student-workspace-enter {
+  from { opacity: 0.65; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .student-profile-toolbar {
   display: flex;
@@ -904,8 +940,14 @@ a:focus-visible,
   to { opacity: 1; transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .student-profile-workspace > .student-card--illustrated { transition: none; }
-  .student-profile-workspace > .student-card--illustrated:hover { transform: none; }
+  :is(.student-profile-workspace, .student-plan-workspace).student-workspace--ready { animation: none; }
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card,
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card__icon,
+  :is(.student-profile-workspace, .student-plan-workspace) .shell-button > .workspace-icon { transition: none; }
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card:not(.student-card--loading):not(.student-card--error):hover,
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card--illustrated:hover > .student-card__icon,
+  :is(.student-profile-workspace, .student-plan-workspace) .shell-button:not(:disabled):not([aria-disabled="true"]):hover > .workspace-icon { transform: none; }
+  .student-plan-workspace .student-plan-tools[open] > .plan-editor > .student-card__body { animation: none; }
   .student-profile-workspace .student-profile-refresh > .workspace-icon,
   .student-profile-workspace .student-profile-guide__step[open] > .student-profile-guide__content { animation: none; }
   .student-profile-guide__summary { transition: none; }

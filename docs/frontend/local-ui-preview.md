@@ -53,7 +53,11 @@ Loading scenario ค้างไว้ให้ตรวจหน้ารอโ
 - การสมัครบริษัท การส่งเอกสาร และการยืนยันบริษัทเป็นคำแนะนำให้ดำเนินการผ่านช่องทางที่ Staff กำหนด ไม่ใช่ฟีเจอร์ใหม่ในหน้านี้
 - ที่อยู่/เบอร์โทรยังไม่มี API รองรับ จึงไม่มีฟอร์มที่บันทึกจริงไม่ได้
 - ข้อมูล `preferred_name` เดิมในฐานข้อมูลและ API เดิมไม่ได้ถูกลบหรือเปลี่ยน
-- Motion ใช้กับไอคอนขณะรีเฟรชและการเปิดรายละเอียด และปิดเมื่อเปิด Reduced motion
+- Profile และ My Plan ใช้ขอบ/เงาการ์ดและข้อความรองที่เข้มขึ้น โดยไม่เปลี่ยนธีม Staff/Advisor
+- ทั้งสองหน้ามีจังหวะเปิดหน้าเมื่อข้อมูลพร้อมครั้งเดียว ไม่เล่นซ้ำเมื่อ Save/Refresh
+  การ์ดยกขึ้น 6px และไอคอนตอบสนองเมื่อ hover ด้วยเมาส์ ปุ่มที่ Disabled ไม่มี icon-hover effect
+  ส่วน Keyboard ใช้ขอบ/เงาเน้นการ์ดที่กำลังใช้งาน โดยไม่ทำให้ทั้งการ์ดคลิกได้
+- Motion ของหน้า การ์ด ไอคอน ปุ่ม และการเปิดรายละเอียดปิดเมื่อใช้ Reduced motion
 
 ตรวจหน้า Profile ด้วย `?scenario=loading`, `error`, `expired` และ `forbidden`
 ส่วน `conflict` ใช้ทดสอบการบันทึก/ส่งแผน ไม่ใช่การแก้ Profile อีกต่อไป
@@ -85,7 +89,7 @@ Browser visual review ต้องเปิดหน้าเว็บจริ�
 
 ### ผลตรวจ Student Profile refresh (2026-10-21)
 
-- Frontend: 13 suites / 320 tests ผ่าน รวม read-only, GET-only จากหน้า Profile,
+- Frontend: 13 suites / 321 tests ผ่าน รวม read-only, GET-only จากหน้า Profile,
   refresh/retry, focus, abort, cross-role denial และ reduced-motion CSS override
 - Preview: 39 component tests และ 2 server/production-isolation tests ผ่าน
 - Production build และ `git diff --check` ผ่าน

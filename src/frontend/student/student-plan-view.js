@@ -272,6 +272,7 @@ export function renderStudentPlanView({
     const picker = renderPlanPicker();
     const editor = makeEditor();
     container.replaceChildren(...[picker, card, editor].filter(Boolean));
+    container.classList.add('student-workspace--ready');
     syncEditorControls();
   }
 
@@ -674,6 +675,8 @@ export function renderStudentPlanView({
       decorateStudentCard(historySection, 'clock'),
       tools
     ].filter(Boolean));
+    // Content is now readable; keep this class through saves and refreshes.
+    container.classList.add('student-workspace--ready');
     syncEditorControls();
   }
 

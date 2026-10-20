@@ -198,6 +198,8 @@ export function renderStudentDashboardView({
       'ชื่อ-นามสกุล รหัสนักศึกษา และข้อมูลจากมหาวิทยาลัยไม่สามารถแก้ไขในหน้านี้ได้ หากข้อมูลไม่ถูกต้อง กรุณาติดต่อเจ้าหน้าที่สหกิจศึกษา'),
     feedback, list, metadata);
     container.replaceChildren(decorateStudentCard(summarySection, 'user'), decorateStudentCard(official, 'lock'), createGuide());
+    // Added once per mounted page; refreshes must not replay the entry motion.
+    container.classList.add('student-workspace--ready');
   }
 
   async function loadProfile({ refreshButton = null, restoreFocus = false } = {}) {
