@@ -22,6 +22,9 @@ describe('Company Directory - Real Dataset & Auth Lock State', () => {
           <option value="">ทุกสถานที่</option>
         </select>
       </label>
+      <select id="durationFilter">
+        <option value="">ทุกช่วงเวลา</option>
+      </select>
       <select id="roleFilter">
         <option value="">ทุกสายงาน</option>
       </select>
@@ -125,6 +128,36 @@ describe('Company Directory - Real Dataset & Auth Lock State', () => {
     cards.forEach(card => {
       expect(card.textContent).toContain('นนทบุรี');
     });
+  });
+
+  test('populates duration filter options and filters companies by selected internship duration', () => {
+    loadDirectoryScript();
+
+    const durationFilter = document.getElementById('durationFilter');
+    expect(durationFilter.options.length).toBeGreaterThan(1);
+
+    // Verify expected options are present
+    const optionsText = Array.from(durationFilter.options).map(o => o.value);
+    expect(optionsText).toContain('เปิดรับตลอดทั้งปี');
+    expect(optionsText).toContain('2 มิ.ย. 69 - 1 ธ.ค. 69');
+    expect(optionsText).toContain('มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)');
+
+    // Filter by specific duration
+    durationFilter.value = '2 มิ.ย. 69 - 1 ธ.ค. 69';
+    durationFilter.dispatchEvent(new Event('change', { bubbles: true }));
+
+    const status = document.getElementById('searchResultStatus');
+    expect(status.textContent).toContain('พบสถานประกอบการ');
+    const cards = document.querySelectorAll('#companyList .partner-card');
+    expect(cards.length).toBe(11); // Exactly 11 companies have this duration
+    cards.forEach(card => {
+      expect(card.querySelector('.tag-duration').textContent).toContain('2 มิ.ย. 69 - 1 ธ.ค. 69');
+    });
+
+    // Reset filters
+    document.getElementById('filterResetBtn').click();
+    expect(durationFilter.value).toBe('');
+    expect(status.textContent).toBe('');
   });
 
   test('displays normalized duration tag on recruiting cards and standard tag on non-recruiting', () => {

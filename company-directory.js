@@ -328,6 +328,8 @@ function activateStaticFallback() {
     const modeEl = document.getElementById('workModeFilter');
     const modeVal = modeEl ? modeEl.value.trim().toLocaleLowerCase('th') : '';
     const locVal = locationFilter && !locationFilter.disabled ? locationFilter.value.trim().toLocaleLowerCase('th') : '';
+    const durEl = document.getElementById('durationFilter');
+    const durVal = durEl ? durEl.value.trim().toLocaleLowerCase('th') : '';
     const recEl = document.getElementById('recruitingToggle');
     const recruitingOnly = recEl ? recEl.classList.contains('active') : false;
     let visibleCount = 0;
@@ -349,12 +351,13 @@ function activateStaticFallback() {
         const matchesRole = !roleVal || companyText.includes(roleVal);
         const matchesMode = !modeVal || companyText.includes(modeVal);
         const matchesLoc = !locVal || companyText.includes(locVal);
+        const matchesDuration = !durVal || companyText.includes(durVal);
         const matchesRecruiting = !recruitingOnly || companyText.includes('เปิดรับ');
 
         const isExtraCard = card.classList.contains('partner-card-extra');
-        const hasAnyFilter = Boolean(rawQuery || roleVal || modeVal || locVal || recruitingOnly);
+        const hasAnyFilter = Boolean(rawQuery || roleVal || modeVal || locVal || durVal || recruitingOnly);
         const canShowByGroup = !isExtraCard || hasExpandedDirectory || Boolean(rawQuery);
-        const shouldShow = matchesQuery && matchesRole && matchesMode && matchesLoc && matchesRecruiting && canShowByGroup;
+        const shouldShow = matchesQuery && matchesRole && matchesMode && matchesLoc && matchesDuration && matchesRecruiting && canShowByGroup;
         card.hidden = !shouldShow;
         if (shouldShow) visibleCount += 1;
       });
@@ -363,7 +366,7 @@ function activateStaticFallback() {
       loadMoreButton.hidden = Boolean(rawQuery) || hasExpandedDirectory;
     }
     if (searchResultStatus) {
-      if (rawQuery || roleVal || modeVal || locVal || recruitingOnly) {
+      if (rawQuery || roleVal || modeVal || locVal || durVal || recruitingOnly) {
         searchResultStatus.textContent = visibleCount > 0
           ? `พบสถานประกอบการ ${visibleCount} รายการ`
           : 'ไม่พบสถานประกอบการที่ตรงกับคำค้นหา';
@@ -396,6 +399,11 @@ function activateStaticFallback() {
       }
       locationFilter.addEventListener('change', updateStaticVisibility);
     }
+  }
+
+  const durationFilterEl = document.getElementById('durationFilter');
+  if (durationFilterEl) {
+    durationFilterEl.addEventListener('change', updateStaticVisibility);
   }
 
   if (loadMoreButton) {
@@ -592,6 +600,28 @@ function initRealDatasetMode(companies) {
     });
   }
 
+  // Populate duration filter dropdown dynamically with actual durations
+  const durationFilter = document.getElementById('durationFilter');
+  if (durationFilter) {
+    durationFilter.innerHTML = '<option value="">ทุกช่วงเวลา</option>';
+    const rawDurations = [...new Set(companies.map(c => c.duration || c.recruiting_period).filter(Boolean))];
+    rawDurations.sort((a, b) => {
+      if (a.includes('ตลอดทั้งปี')) return -1;
+      if (b.includes('ตลอดทั้งปี')) return 1;
+      return a.localeCompare(b, 'th');
+    });
+    rawDurations.forEach(dur => {
+      const opt = document.createElement('option');
+      opt.value = dur;
+      opt.textContent = dur;
+      durationFilter.appendChild(opt);
+    });
+
+    durationFilter.addEventListener('change', () => {
+      renderDatasetCards(true);
+    });
+  }
+
   // Populate role filter dropdown dynamically with actual job roles
   const roleFilter = document.getElementById('roleFilter');
   if (roleFilter) {
@@ -633,6 +663,7 @@ function initRealDatasetMode(companies) {
     resetBtn.addEventListener('click', () => {
       if (companySearch) companySearch.value = '';
       if (locationFilter) locationFilter.value = '';
+      if (durationFilter) durationFilter.value = '';
       if (roleFilter) roleFilter.value = '';
       if (recToggle) {
         recToggle.classList.remove('active');
@@ -682,6 +713,8 @@ function renderDatasetCards(resetPage = false) {
 
   const rawQuery = (companySearch?.value || state.query || '').trim().toLowerCase();
   const locVal = locationFilter?.value || state.location || '';
+  const durEl = document.getElementById('durationFilter');
+  const durVal = durEl ? durEl.value.trim() : '';
   const roleEl = document.getElementById('roleFilter');
   const roleVal = roleEl ? roleEl.value.trim().toLowerCase() : '';
   const recEl = document.getElementById('recruitingToggle');
@@ -696,6 +729,14 @@ function renderDatasetCards(resetPage = false) {
     // Location filter
     if (locVal && comp.location !== locVal) {
       return false;
+    }
+
+    // Duration filter
+    if (durVal) {
+      const compDur = comp.duration || comp.recruiting_period || '';
+      if (compDur !== durVal) {
+        return false;
+      }
     }
 
     // Role filter
@@ -731,7 +772,7 @@ function renderDatasetCards(resetPage = false) {
   });
 
   const totalFiltered = datasetFilteredCompanies.length;
-  const hasFilter = Boolean(rawQuery || locVal || roleVal || recruitingOnly);
+  const hasFilter = Boolean(rawQuery || locVal || durVal || roleVal || recruitingOnly);
 
   if (searchResultStatus) {
     searchResultStatus.removeAttribute('aria-busy');
