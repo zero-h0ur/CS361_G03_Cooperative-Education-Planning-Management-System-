@@ -37,7 +37,7 @@ function setup({ hash = '', session = { role: 'STUDENT' }, error } = {}) {
 }
 
 describe('authenticated V3 shell and route guards', () => {
-  it.each(['STUDENT', 'STAFF'])('shares the faded campus theme and framed public logo for %s', async (role) => {
+  it.each(['STUDENT', 'STAFF', 'ADVISOR'])('shares the faded campus theme and framed public logo for %s', async (role) => {
     const context = setup({ session: { role } }); await context.app.start();
     expect(context.root.querySelector('.protected-shell--campus')).not.toBeNull();
     const backdrop = context.root.querySelector('.student-campus-backdrop');
@@ -57,10 +57,15 @@ describe('authenticated V3 shell and route guards', () => {
     context.app.destroy();
   });
 
-  it('keeps Advisor out of the Student/Staff visual redesign', async () => {
+  it('gives Advisor the campus presentation without Student/Staff routes or identity', async () => {
     const context = setup({ session: { role: 'ADVISOR' } }); await context.app.start();
-    expect(context.root.querySelector('.protected-shell--campus')).toBeNull();
-    expect(context.root.querySelector('.student-campus-backdrop')).toBeNull(); context.app.destroy();
+    expect(context.root.querySelector('.protected-shell--advisor.protected-shell--campus')).not.toBeNull();
+    expect(context.root.querySelector('.protected-shell--student, .protected-shell--staff')).toBeNull();
+    expect(context.root.querySelector('.shell-role__value').textContent).toBe('อาจารย์ที่ปรึกษา');
+    expect(context.root.querySelector('.shell-nav__link .workspace-icon')).not.toBeNull();
+    expect([...context.root.querySelectorAll('.shell-nav__link')].map((link) => link.getAttribute('href')))
+      .toEqual(['#/advisor/students']);
+    context.app.destroy();
   });
 
   it('clears private DOM on pagehide and verifies session again after BFCache restoration', async () => {

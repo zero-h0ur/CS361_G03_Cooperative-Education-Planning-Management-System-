@@ -484,7 +484,7 @@ a:focus-visible,
   height: 22px;
 }
 
-/* Shared Student/Staff campus theme; Advisor layout stays unchanged. */
+/* Shared campus theme for Student, Staff and read-only Advisor workspaces. */
 .student-campus-backdrop {
   position: absolute;
   top: 60px;
