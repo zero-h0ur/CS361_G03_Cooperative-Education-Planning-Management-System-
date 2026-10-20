@@ -1,8 +1,4 @@
-import {
-  MAX_PREFERRED_NAME_LENGTH,
-  STUDENT_PROFILE_ERROR_CODES,
-  validatePreferredName
-} from './profile-client.js';
+import { STUDENT_PROFILE_ERROR_CODES } from './profile-client.js';
 import { createWorkspaceIcon, decorateStudentCard } from '../ui/workspace-presentation.js';
 
 const OFFICIAL_FIELD_DEFINITIONS = Object.freeze([
@@ -16,456 +12,224 @@ const OFFICIAL_FIELD_DEFINITIONS = Object.freeze([
   { key: 'enrollment_status', label: 'สถานภาพนักศึกษา' }
 ]);
 
-// enrollment_status values allowed by #51 and chk_students_enrollment_status
 const ENROLLMENT_STATUS_LABELS = Object.freeze({
   ACTIVE: 'กำลังศึกษา (ACTIVE)',
   INACTIVE: 'ไม่ได้อยู่ระหว่างการศึกษา (INACTIVE)'
 });
 
+// Informational guidance, not a progress tracker or additional workflow states.
+const WORKFLOW_GUIDE = Object.freeze([
+  {
+    title: 'เตรียมแผนสหกิจของคุณ',
+    text: 'เปิดหน้าแผนสหกิจเพื่อเตรียมฉบับร่างและตรวจสอบข้อมูลก่อนส่ง ชื่อ-นามสกุล รหัสนักศึกษา และข้อมูลทางการจากมหาวิทยาลัยเป็นข้อมูลอ่านอย่างเดียว'
+  },
+  {
+    title: 'ส่งแผนให้เจ้าหน้าที่ตรวจสอบ',
+    text: 'เมื่อส่งแผนแล้ว ให้รอเจ้าหน้าที่ตรวจสอบ ระหว่างรอตรวจจะไม่สามารถแก้ไข ลบ หรือส่งแผนเดิมซ้ำได้ ตรวจสอบสถานะจริงได้ที่หน้าแผนสหกิจ'
+  },
+  {
+    title: 'ตรวจผลพิจารณาและแก้ไขเมื่อได้รับแจ้ง',
+    text: 'เจ้าหน้าที่ตรวจคุณสมบัติตามเกณฑ์ของสาขา การไม่อนุมัติเพราะคุณสมบัติไม่ผ่านต่างจากการส่งกลับให้แก้ไข หากได้รับแจ้งให้แก้ไข ให้ทำตามข้อเสนอแนะก่อนส่งอีกครั้ง การแก้ไขไม่ได้หมายถึงได้รับอนุมัติโดยอัตโนมัติ'
+  },
+  {
+    title: 'รอเจ้าหน้าที่มอบหมายอาจารย์ที่ปรึกษา',
+    text: 'หลังได้รับอนุมัติ เจ้าหน้าที่เป็นผู้มอบหมายอาจารย์ที่ปรึกษาโดยพิจารณาบริษัท ตำแหน่ง และหัวข้อโครงการที่เหมาะสม อาจารย์จะอ่านข้อมูลของคุณได้เมื่อได้รับมอบหมายแล้ว'
+  }
+]);
+
 function element(tagName, className, text) {
   const node = document.createElement(tagName);
-  if (className) {
-    node.className = className;
-  }
-  if (typeof text === 'string') {
-    node.textContent = text;
-  }
+  if (className) node.className = className;
+  if (typeof text === 'string') node.textContent = text;
   return node;
 }
 
-function formatOfficialValue(key, rawValue) {
-  if (rawValue === null || rawValue === undefined || String(rawValue).trim() === '') {
-    return 'ไม่ระบุ';
-  }
-
-  const text = String(rawValue).trim();
-  if (key === 'enrollment_status' && ENROLLMENT_STATUS_LABELS[text]) {
-    return ENROLLMENT_STATUS_LABELS[text];
-  }
-
-  return text;
+function formatOfficialValue(key, value) {
+  if (value === null || value === undefined || String(value).trim() === '') return 'ไม่ระบุ';
+  const text = String(value).trim();
+  return key === 'enrollment_status' ? ENROLLMENT_STATUS_LABELS[text] || text : text;
 }
 
-function formatDisplayName(profile) {
-  if (typeof profile.preferred_name === 'string' && profile.preferred_name.trim() !== '') {
-    return `${profile.preferred_name.trim()} (${profile.full_name})`;
-  }
-  return profile.full_name;
+function updatedLabel(value) {
+  if (!value) return 'ไม่ระบุวันที่อัปเดต';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'ไม่ระบุวันที่อัปเดต';
+  return `อัปเดตข้อมูลล่าสุด ${new Intl.DateTimeFormat('th-TH', {
+    dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok'
+  }).format(date)}`;
 }
 
 export function renderStudentDashboardView({
-  profileClient,
-  signal,
-  onSessionExpired,
-  onAccessDenied,
-  onNavigate
+  profileClient, signal, onSessionExpired, onAccessDenied, onNavigate
 } = {}) {
   const container = element('div', 'student-workspace student-profile-workspace');
-
   if (!profileClient || typeof profileClient.getOwnProfile !== 'function') {
     const fallback = element('section', 'shell-placeholder');
-    fallback.append(
-      element('span', 'shell-placeholder__index', 'V3'),
-      element('h2', 'shell-placeholder__title', 'พื้นที่นี้พร้อมสำหรับการเชื่อมต่อขั้นถัดไป'),
-      element('p', 'shell-placeholder__description', 'ยังไม่ได้กำหนด Student Profile Client')
-    );
+    fallback.append(element('h2', 'shell-placeholder__title', 'ยังไม่พร้อมโหลดข้อมูลนักศึกษา'),
+      element('p', 'shell-placeholder__description', 'ยังไม่ได้กำหนด Student Profile Client'));
     container.append(fallback);
     return container;
   }
 
-  let currentProfile = null;
-  let isSaving = false;
-
-  function isAborted() {
-    return Boolean(signal?.aborted);
-  }
+  let isLoading = false;
+  let requestVersion = 0;
+  const expandedSteps = new Set();
 
   function renderLoadingState() {
     container.setAttribute('aria-busy', 'true');
-    const loadingCard = element('section', 'student-card student-card--loading');
-    loadingCard.setAttribute('role', 'status');
-    loadingCard.append(
-      element('p', 'student-card__eyebrow', 'LOADING PROFILE'),
-      element('h2', 'student-card__title', 'กำลังโหลดข้อมูลนักศึกษา...'),
-      element('p', 'student-card__description', 'ระบบกำลังดึงข้อมูลทางการและข้อมูลโปรไฟล์ของคุณจากฐานข้อมูล')
-    );
-    container.replaceChildren(loadingCard);
+    const card = element('section', 'student-card student-card--loading');
+    card.setAttribute('role', 'status');
+    card.append(element('h2', 'student-card__title', 'กำลังโหลดข้อมูลนักศึกษา...'),
+      element('p', 'student-card__description', 'กำลังเรียกข้อมูลของคุณ กรุณารอสักครู่'));
+    container.replaceChildren(card);
   }
 
   function renderLoadErrorState(message = 'ไม่สามารถโหลดข้อมูลนักศึกษาได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง') {
     container.setAttribute('aria-busy', 'false');
-    const errorCard = element('section', 'student-card student-card--error');
-    errorCard.setAttribute('role', 'alert');
-
-    const retryButton = element('button', 'shell-button', 'ลองโหลดข้อมูลอีกครั้ง');
-    retryButton.type = 'button';
-    retryButton.addEventListener('click', () => {
-      loadProfile();
-    });
-
-    errorCard.append(
-      element('p', 'student-card__eyebrow', 'PROFILE UNAVAILABLE'),
-      element('h2', 'student-card__title', 'โหลดข้อมูลนักศึกษาไม่สำเร็จ'),
-      element('p', 'student-card__description', message),
-      retryButton
-    );
-    container.replaceChildren(errorCard);
+    const card = element('section', 'student-card student-card--error');
+    card.setAttribute('role', 'alert');
+    const retry = element('button', 'shell-button', 'ลองโหลดข้อมูลอีกครั้ง');
+    retry.type = 'button';
+    retry.addEventListener('click', () => loadProfile({ restoreFocus: true }));
+    card.append(element('h2', 'student-card__title', 'โหลดข้อมูลนักศึกษาไม่สำเร็จ'),
+      element('p', 'student-card__description', message), retry);
+    container.replaceChildren(card);
   }
 
-  function renderDashboardAndProfile(profile, initialFeedback = null) {
-    currentProfile = profile;
-    container.setAttribute('aria-busy', 'false');
+  function createGuide() {
+    const section = element('section', 'student-card student-profile-guide');
+    section.setAttribute('aria-labelledby', 'student-profile-guide-title');
+    const title = element('h2', 'student-card__title', 'วางแผนขั้นตอนถัดไป');
+    title.id = 'student-profile-guide-title';
+    section.append(title, element('p', 'student-card__description',
+      'คู่มือขั้นตอนทั่วไป ไม่ใช่สถานะปัจจุบันของคุณ กดแต่ละหัวข้อเพื่ออ่านรายละเอียด'));
+    const list = element('ol', 'student-profile-guide__steps');
+    WORKFLOW_GUIDE.forEach((step, index) => {
+      const item = element('li');
+      const details = element('details', 'student-profile-guide__step');
+      details.open = expandedSteps.has(index);
+      const summary = element('summary', 'student-profile-guide__summary', step.title);
+      const body = element('p', 'student-profile-guide__content', step.text);
+      details.addEventListener('toggle', () => {
+        if (details.open) expandedSteps.add(index);
+        else expandedSteps.delete(index);
+      });
+      details.append(summary, body);
+      item.append(details);
+      list.append(item);
+    });
+    const external = element('aside', 'student-profile-guide__external');
+    external.append(element('h3', '', 'การสมัครบริษัทเป็นขั้นตอนแยกจากการอนุมัติแผน'),
+      element('p', '', 'ส่ง CV / Resume และสมัครกับบริษัทด้วยตนเอง เมื่อบริษัทรับและคุณตอบตกลง ให้ส่งชื่อบริษัท ตำแหน่ง และหัวข้อโครงการผ่านแบบฟอร์มหรือช่องทางที่เจ้าหน้าที่กำหนด เจ้าหน้าที่จะประสานให้บริษัทยืนยันข้อมูลให้ตรงกัน หน้าโปรไฟล์นี้ไม่ได้รับเอกสารหรือยืนยันบริษัท'));
+    section.append(list, external);
+    return decorateStudentCard(section, 'clipboard');
+  }
 
-    // 1. Dashboard Summary Card
+  function renderDashboardAndProfile(profile, refreshed) {
+    container.setAttribute('aria-busy', 'false');
     const summarySection = element('section', 'student-card student-dashboard-summary');
     summarySection.setAttribute('aria-labelledby', 'student-dashboard-summary-title');
+    const header = element('div', 'student-dashboard-summary__header');
+    const title = element('h2', 'student-card__title', 'ข้อมูลนักศึกษาของคุณ');
+    title.id = 'student-dashboard-summary-title';
+    const greeting = element('p', 'student-dashboard-summary__greeting', `สวัสดี ${formatOfficialValue('full_name', profile.full_name)}`);
+    greeting.dataset.role = 'display-greeting';
+    const badges = element('div', 'student-dashboard-summary__badges');
+    badges.append(element('span', `student-badge ${profile.enrollment_status === 'ACTIVE' ? 'student-badge--status' : 'student-badge--neutral'}`,
+      formatOfficialValue('enrollment_status', profile.enrollment_status)),
+    element('span', 'student-badge student-badge--neutral', `ปีการศึกษา ${formatOfficialValue('academic_year', profile.academic_year)}`));
+    header.append(title, greeting, badges);
 
-    const summaryHeader = element('div', 'student-dashboard-summary__header');
-    const summaryTitle = element('h2', 'student-card__title', 'ข้อมูลนักศึกษาของคุณ');
-    summaryTitle.id = 'student-dashboard-summary-title';
-
-    const displayNameValue = element('p', 'student-dashboard-summary__greeting');
-    displayNameValue.dataset.role = 'display-greeting';
-    displayNameValue.textContent = `สวัสดี ${formatDisplayName(profile)}`;
-
-    const badgeRow = element('div', 'student-dashboard-summary__badges');
-    const statusBadge = element(
-      'span',
-      `student-badge ${profile.enrollment_status === 'ACTIVE' ? 'student-badge--status' : 'student-badge--neutral'}`,
-      formatOfficialValue('enrollment_status', profile.enrollment_status)
-    );
-    const yearBadge = element(
-      'span',
-      'student-badge student-badge--neutral',
-      `ปีการศึกษา ${formatOfficialValue('academic_year', profile.academic_year)}`
-    );
-    const versionBadge = element(
-      'span',
-      'student-badge student-badge--neutral',
-      `ข้อมูลเวอร์ชัน v${profile.version}`
-    );
-    versionBadge.dataset.role = 'profile-version';
-    badgeRow.append(statusBadge, yearBadge, versionBadge);
-
-    summaryHeader.append(summaryTitle, displayNameValue, badgeRow);
-
-    const planCtaBox = element('div', 'student-dashboard-summary__cta');
-    const planCtaCopy = element(
-      'p',
-      'student-dashboard-summary__cta-copy',
-      'ตรวจสอบสถานะการวางแผน เลือกสถานประกอบการ และส่งแผนสหกิจศึกษาเพื่อให้เจ้าหน้าที่ตรวจสอบ'
-    );
-    const planActions = element('div', 'student-dashboard-summary__actions');
-
-    const planLink = element('a', 'shell-button', 'เปิดแผนสหกิจของฉัน');
-    planLink.href = '#/student/plan';
-    planLink.dataset.role = 'go-to-student-plan';
-    planLink.prepend(createWorkspaceIcon('file'));
-    planLink.addEventListener('click', (event) => {
-      if (typeof onNavigate === 'function') {
-        event.preventDefault();
-        onNavigate('#/student/plan');
+    const cta = element('div', 'student-dashboard-summary__cta');
+    const actions = element('div', 'student-dashboard-summary__actions');
+    const plan = element('a', 'shell-button', 'เปิดแผนสหกิจของฉัน');
+    plan.href = '#/student/plan';
+    plan.dataset.role = 'go-to-student-plan';
+    plan.prepend(createWorkspaceIcon('file'));
+    plan.addEventListener('click', (event) => {
+      if (typeof onNavigate === 'function' && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0) {
+        event.preventDefault(); onNavigate('#/student/plan');
       }
     });
+    const directory = element('a', 'shell-button shell-button--secondary', 'ดูรายชื่อสถานประกอบการ');
+    directory.href = 'company-directory.html';
+    directory.prepend(createWorkspaceIcon('building'));
+    actions.append(plan, directory);
+    cta.append(element('p', 'student-dashboard-summary__cta-copy',
+      'ตรวจข้อมูลทางการให้ถูกต้อง แล้วเปิดแผนสหกิจเพื่อเตรียมฉบับร่าง ส่งให้เจ้าหน้าที่ตรวจ และติดตามผลพิจารณา'), actions);
+    summarySection.append(header, cta);
 
-    const directoryLink = element('a', 'shell-button shell-button--secondary', 'ดูรายชื่อสถานประกอบการ');
-    directoryLink.href = 'company-directory.html';
-    directoryLink.prepend(createWorkspaceIcon('building'));
-
-    planActions.append(planLink, directoryLink);
-    planCtaBox.append(planCtaCopy, planActions);
-    summarySection.append(summaryHeader, planCtaBox);
-
-    // 2. Official Read-Only Profile Card
-    const officialSection = element('section', 'student-card student-profile-official');
-    officialSection.setAttribute('aria-labelledby', 'student-official-profile-title');
-
-    const officialTitle = element('h2', 'student-card__title', 'ข้อมูลทางการจากทะเบียนนักศึกษา (อ่านอย่างเดียว)');
+    const official = element('section', 'student-card student-profile-official');
+    official.setAttribute('aria-labelledby', 'student-official-profile-title');
+    const officialTitle = element('h2', 'student-card__title', 'ข้อมูลทางการจากทะเบียนนักศึกษา');
     officialTitle.id = 'student-official-profile-title';
-
-    const officialNotice = element(
-      'p',
-      'student-profile-official__notice',
-      'ข้อมูลทางการเชื่อมโยงจากระบบทะเบียนของมหาวิทยาลัย นักศึกษาไม่สามารถแก้ไขได้ หากพบข้อมูลไม่ถูกต้องกรุณาติดต่อเจ้าหน้าที่สหกิจศึกษา'
-    );
-
-    const officialList = element('dl', 'student-profile-list');
-    for (const fieldDef of OFFICIAL_FIELD_DEFINITIONS) {
+    const toolbar = element('div', 'student-profile-toolbar');
+    const lock = element('span', 'student-badge student-badge--neutral', 'อ่านอย่างเดียว');
+    lock.prepend(createWorkspaceIcon('lock'));
+    const refresh = element('button', 'shell-button shell-button--secondary student-profile-refresh', 'รีเฟรชข้อมูล');
+    refresh.type = 'button';
+    refresh.dataset.role = 'profile-refresh';
+    refresh.prepend(createWorkspaceIcon('refresh'));
+    refresh.addEventListener('click', () => loadProfile({ refreshButton: refresh, restoreFocus: true }));
+    toolbar.append(lock, refresh);
+    const feedback = element('p', 'student-profile-refresh-status');
+    feedback.dataset.role = 'profile-refresh-status';
+    feedback.setAttribute('role', 'status');
+    feedback.setAttribute('aria-atomic', 'true');
+    feedback.textContent = refreshed ? 'โหลดข้อมูลล่าสุดเรียบร้อยแล้ว' : 'ข้อมูลนี้ใช้ตรวจสอบตัวตนและข้อมูลการศึกษาของคุณ';
+    const list = element('dl', 'student-profile-list');
+    for (const field of OFFICIAL_FIELD_DEFINITIONS) {
       const item = element('div', 'student-profile-list__item');
-      const dt = element('dt', 'student-profile-list__term', fieldDef.label);
-      const dd = element(
-        'dd',
-        'student-profile-list__detail',
-        formatOfficialValue(fieldDef.key, profile[fieldDef.key])
-      );
-      dd.dataset.field = fieldDef.key;
-      item.append(dt, dd);
-      officialList.append(item);
+      const detail = element('dd', 'student-profile-list__detail', formatOfficialValue(field.key, profile[field.key]));
+      detail.dataset.field = field.key;
+      item.append(element('dt', 'student-profile-list__term', field.label), detail);
+      list.append(item);
     }
-
-    officialSection.append(officialTitle, officialNotice, officialList);
-
-    // 3. Editable Preferred Name Section
-    const editableSection = element('section', 'student-card student-profile-editable');
-    editableSection.setAttribute('aria-labelledby', 'student-editable-profile-title');
-
-    const editableTitle = element('h2', 'student-card__title', 'ตั้งค่าชื่อที่ต้องการให้แสดง');
-    editableTitle.id = 'student-editable-profile-title';
-
-    const editableDescription = element(
-      'p',
-      'student-card__description',
-      'คุณสามารถระบุชื่อเล่นหรือชื่อที่ต้องการให้แสดงควบคู่กับชื่อทางการในหน้าพื้นที่ผู้ใช้งาน'
-    );
-
-    const feedbackRegion = element('div', 'student-profile-feedback');
-    feedbackRegion.dataset.role = 'profile-feedback';
-    feedbackRegion.hidden = true;
-
-    const form = element('form', 'student-profile-form');
-    form.noValidate = true;
-
-    const fieldGroup = element('div', 'student-form__field');
-    const label = element('label', 'student-form__label', 'ชื่อที่ต้องการให้แสดง (Preferred Name)');
-    label.htmlFor = 'student-preferred-name';
-
-    const input = element('input', 'student-form__input');
-    input.id = 'student-preferred-name';
-    input.name = 'preferred_name';
-    input.type = 'text';
-    input.autocomplete = 'nickname';
-    input.value = typeof profile.preferred_name === 'string' ? profile.preferred_name : '';
-    input.setAttribute('aria-describedby', 'student-preferred-name-hint student-preferred-name-error');
-    input.setAttribute('aria-invalid', 'false');
-
-    const metaRow = element('div', 'student-form__meta');
-    const hint = element(
-      'p',
-      'student-form__hint',
-      `ความยาวไม่เกิน ${MAX_PREFERRED_NAME_LENGTH} ตัวอักษร และห้ามมีอักขระควบคุม (เว้นว่างได้หากต้องการแสดงเฉพาะชื่อทางการ)`
-    );
-    hint.id = 'student-preferred-name-hint';
-
-    const counter = element('span', 'student-form__counter');
-    counter.dataset.role = 'char-counter';
-
-    function updateCounter() {
-      const length = input.value.trim().length;
-      counter.textContent = `${length} / ${MAX_PREFERRED_NAME_LENGTH} ตัวอักษร`;
-    }
-    updateCounter();
-
-    metaRow.append(hint, counter);
-
-    const errorText = element('p', 'student-form__error');
-    errorText.id = 'student-preferred-name-error';
-    errorText.setAttribute('role', 'alert');
-    errorText.setAttribute('aria-live', 'polite');
-    errorText.hidden = true;
-
-    function setFieldError(message) {
-      if (message) {
-        input.setAttribute('aria-invalid', 'true');
-        errorText.textContent = message;
-        errorText.hidden = false;
-      } else {
-        input.setAttribute('aria-invalid', 'false');
-        errorText.textContent = '';
-        errorText.hidden = true;
-      }
-    }
-
-    function showFeedback(options = null) {
-      const { tone = 'status', message, actionLabel, onAction } = options || {};
-      feedbackRegion.replaceChildren();
-      if (!message) {
-        feedbackRegion.hidden = true;
-        feedbackRegion.removeAttribute('role');
-        return;
-      }
-
-      feedbackRegion.hidden = false;
-      feedbackRegion.className = `student-profile-feedback student-profile-feedback--${tone}`;
-      feedbackRegion.setAttribute('role', tone === 'status' ? 'status' : 'alert');
-
-      const textNode = element('p', 'student-profile-feedback__text', message);
-      feedbackRegion.append(textNode);
-
-      if (actionLabel && typeof onAction === 'function') {
-        const actionBtn = element('button', 'shell-button shell-button--secondary', actionLabel);
-        actionBtn.type = 'button';
-        actionBtn.addEventListener('click', onAction);
-        feedbackRegion.append(actionBtn);
-      }
-    }
-
-    if (initialFeedback) {
-      showFeedback(initialFeedback);
-    }
-
-    // Validate on blur to avoid premature warnings while typing,
-    // and reset error states on input as soon as the user attempts a correction.
-    input.addEventListener('blur', () => {
-      const validation = validatePreferredName(input.value);
-      if (!validation.valid) {
-        setFieldError(validation.error);
-      }
-    });
-
-    input.addEventListener('input', () => {
-      updateCounter();
-      if (input.getAttribute('aria-invalid') === 'true') {
-        setFieldError(null);
-      }
-    });
-
-    const actionsRow = element('div', 'student-form__actions');
-    const submitButton = element('button', 'shell-button', 'บันทึกชื่อที่แสดง');
-    submitButton.type = 'submit';
-
-    const resetButton = element('button', 'shell-button shell-button--secondary', 'คืนค่าเดิม');
-    resetButton.type = 'button';
-    resetButton.addEventListener('click', () => {
-      if (isSaving) {
-        return;
-      }
-      input.value = typeof currentProfile.preferred_name === 'string' ? currentProfile.preferred_name : '';
-      updateCounter();
-      setFieldError(null);
-      showFeedback(null);
-    });
-
-    actionsRow.append(submitButton, resetButton);
-    fieldGroup.append(label, input, metaRow, errorText);
-    form.append(fieldGroup, actionsRow);
-
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      if (isSaving) {
-        return;
-      }
-
-      const validation = validatePreferredName(input.value);
-      if (!validation.valid) {
-        setFieldError(validation.error);
-        showFeedback(null);
-        input.focus();
-        return;
-      }
-
-      setFieldError(null);
-      showFeedback(null);
-
-      // Disable the submit button after a valid submission is clicked to prevent double-posts.
-      isSaving = true;
-      submitButton.disabled = true;
-      submitButton.setAttribute('aria-busy', 'true');
-      submitButton.textContent = 'กำลังบันทึก...';
-      resetButton.disabled = true;
-
-      try {
-        const updatedProfile = await profileClient.updateOwnProfile({
-          preferredName: validation.value,
-          version: currentProfile.version,
-          signal
-        });
-
-        if (isAborted()) {
-          return;
-        }
-
-        isSaving = false;
-        renderDashboardAndProfile(updatedProfile, {
-          tone: 'status',
-          message: 'บันทึกชื่อที่ต้องการให้แสดงเรียบร้อยแล้ว'
-        });
-      } catch (error) {
-        if (isAborted() || error?.name === 'AbortError') {
-          return;
-        }
-
-        isSaving = false;
-        submitButton.disabled = false;
-        submitButton.removeAttribute('aria-busy');
-        submitButton.textContent = 'บันทึกชื่อที่แสดง';
-        resetButton.disabled = false;
-
-        if (error?.code === STUDENT_PROFILE_ERROR_CODES.SESSION_EXPIRED) {
-          onSessionExpired?.();
-          return;
-        }
-
-        if (error?.code === STUDENT_PROFILE_ERROR_CODES.ACCESS_DENIED) {
-          onAccessDenied?.('บัญชีนี้ไม่มีสิทธิ์แก้ไขข้อมูลนักศึกษา');
-          return;
-        }
-
-        if (error?.code === STUDENT_PROFILE_ERROR_CODES.VALIDATION_ERROR) {
-          setFieldError(error.message || 'ข้อมูลที่กรอกไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
-          input.focus();
-          return;
-        }
-
-        if (error?.code === STUDENT_PROFILE_ERROR_CODES.STALE_RECORD_CONFLICT) {
-          showFeedback({
-            tone: 'warning',
-            message: 'ข้อมูลถูกอัปเดตจากหน้าต่างหรืออุปกรณ์อื่น กรุณาโหลดข้อมูลล่าสุดก่อนบันทึกใหม่',
-            actionLabel: 'โหลดข้อมูลล่าสุด',
-            onAction: () => {
-              loadProfile({
-                tone: 'status',
-                message: 'ซิงก์ข้อมูลล่าสุดจากระบบเรียบร้อยแล้ว'
-              });
-            }
-          });
-          return;
-        }
-
-        showFeedback({
-          tone: 'error',
-          message: 'บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
-        });
-      }
-    });
-
-    editableSection.append(editableTitle, editableDescription, feedbackRegion, form);
-    container.replaceChildren(
-      decorateStudentCard(summarySection, 'user'),
-      decorateStudentCard(officialSection, 'lock'),
-      decorateStudentCard(editableSection, 'edit')
-    );
+    const metadata = element('p', 'student-profile-metadata', updatedLabel(profile.updated_at));
+    const version = element('span', '', `ข้อมูลเวอร์ชัน v${profile.version}`);
+    version.dataset.role = 'profile-version';
+    metadata.append(version);
+    official.append(officialTitle, toolbar, element('p', 'student-profile-official__notice',
+      'ชื่อ-นามสกุล รหัสนักศึกษา และข้อมูลจากมหาวิทยาลัยไม่สามารถแก้ไขในหน้านี้ได้ หากข้อมูลไม่ถูกต้อง กรุณาติดต่อเจ้าหน้าที่สหกิจศึกษา'),
+    feedback, list, metadata);
+    container.replaceChildren(decorateStudentCard(summarySection, 'user'), decorateStudentCard(official, 'lock'), createGuide());
   }
 
-  async function loadProfile(postLoadFeedback = null) {
-    renderLoadingState();
+  async function loadProfile({ refreshButton = null, restoreFocus = false } = {}) {
+    if (isLoading || signal?.aborted) return;
+    isLoading = true;
+    const version = ++requestVersion;
+    const hadFocus = restoreFocus && container.contains(document.activeElement);
+    if (refreshButton) {
+      container.setAttribute('aria-busy', 'true');
+      refreshButton.disabled = true;
+      refreshButton.setAttribute('aria-busy', 'true');
+      refreshButton.replaceChildren(createWorkspaceIcon('refresh'), document.createTextNode('กำลังรีเฟรช...'));
+      container.querySelector('[data-role="profile-refresh-status"]').textContent = 'กำลังโหลดข้อมูลนักศึกษาล่าสุด';
+    } else renderLoadingState();
 
     try {
       const profile = await profileClient.getOwnProfile({ signal });
-      if (isAborted()) {
-        return;
-      }
-      renderDashboardAndProfile(profile, postLoadFeedback);
+      if (signal?.aborted || version !== requestVersion) return;
+      renderDashboardAndProfile(profile, Boolean(refreshButton));
     } catch (error) {
-      if (isAborted() || error?.name === 'AbortError') {
-        return;
-      }
-
+      if (signal?.aborted || error?.name === 'AbortError' || version !== requestVersion) return;
+      // Never leave private profile content behind on an authorization failure.
       if (error?.code === STUDENT_PROFILE_ERROR_CODES.SESSION_EXPIRED) {
-        onSessionExpired?.();
-        return;
+        container.replaceChildren(); onSessionExpired?.(); return;
       }
-
       if (error?.code === STUDENT_PROFILE_ERROR_CODES.ACCESS_DENIED) {
-        onAccessDenied?.('บัญชีนี้ไม่มีสิทธิ์เข้าถึงข้อมูลนักศึกษา');
-        return;
+        container.replaceChildren(); onAccessDenied?.('บัญชีนี้ไม่มีสิทธิ์เข้าถึงข้อมูลนักศึกษา'); return;
       }
-
-      if (error?.code === STUDENT_PROFILE_ERROR_CODES.NOT_FOUND) {
-        renderLoadErrorState('ไม่พบระเบียนข้อมูลนักศึกษาที่เชื่อมโยงกับบัญชีนี้ กรุณาติดต่อเจ้าหน้าที่สหกิจศึกษา');
-        return;
+      renderLoadErrorState(error?.code === STUDENT_PROFILE_ERROR_CODES.NOT_FOUND
+        ? 'ไม่พบระเบียนข้อมูลนักศึกษาที่เชื่อมโยงกับบัญชีนี้ กรุณาติดต่อเจ้าหน้าที่สหกิจศึกษา' : undefined);
+    } finally {
+      isLoading = false;
+      // Restore only when rerender removed the focused control, not if the user moved elsewhere.
+      if (!signal?.aborted && container.isConnected && hadFocus && document.activeElement === document.body) {
+        const target = container.querySelector('[data-role="profile-refresh"]') || container.querySelector('button');
+        target?.focus();
       }
-
-      renderLoadErrorState();
     }
   }
 

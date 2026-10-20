@@ -7,8 +7,8 @@ const ROUTE_DEFINITIONS = Object.freeze([
     navLabel: 'ข้อมูลของฉัน',
     eyebrow: 'STUDENT PROFILE',
     title: 'ข้อมูลนักศึกษา',
-    description: 'ตรวจสอบข้อมูลนักศึกษาและตั้งค่าชื่อที่ต้องการให้แสดง',
-    status: 'ส่วนอ่านและแก้ไขข้อมูลจริงจะเชื่อมต่อใน Issue #65'
+    description: 'ตรวจสอบข้อมูลทางการและเตรียมพร้อมสำหรับแผนสหกิจของคุณ',
+    status: 'ข้อมูลทางการอ่านอย่างเดียว ผ่าน Student self-profile API'
   }),
   Object.freeze({
     hash: '#/student/plan',
