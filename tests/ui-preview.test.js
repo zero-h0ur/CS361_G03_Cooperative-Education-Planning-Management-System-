@@ -15,14 +15,19 @@ async function mount(scenario, hash = '#/student/plan', role = 'STUDENT') {
   return { root, clients };
 }
 
-test('mounts real profile UI and saves only in memory without any fetch', async () => {
+test('mounts the real read-only profile with realistic fictional data and no fetch or writes', async () => {
   const { root, clients } = await mount('draft', '#/student/profile');
-  expect(root.textContent).toContain('นักศึกษา ตัวอย่าง');
+  expect(root.textContent).toContain('ณัฐวดี ศิริกุล');
   expect(root.querySelector('.student-profile-workspace')).not.toBeNull();
   const profile = await clients.studentProfileClient.getOwnProfile();
-  await clients.studentProfileClient.updateOwnProfile({ preferredName: 'ทดลอง', version: profile.version });
-  expect((await clients.studentProfileClient.getOwnProfile()).preferred_name).toBe('ทดลอง');
-  expect((await createPreviewClients({ delayMs: 0 }).studentProfileClient.getOwnProfile()).preferred_name).toBe('นักศึกษาทดลอง');
+  expect(profile.student_number).toMatch(/^\d{10}$/);
+  expect(profile.institutional_email).toBe('nattawadee.s@example.invalid');
+  expect(profile.preferred_name).toBeNull();
+  expect(Object.keys(clients.studentProfileClient)).toEqual(['getOwnProfile']);
+  expect(root.querySelector('.student-profile-workspace form, #student-preferred-name')).toBeNull();
+  expect(root.querySelector('.student-profile-guide').textContent).toContain('ไม่ใช่สถานะปัจจุบันของคุณ');
+  root.querySelector('[data-role="profile-refresh"]').click(); await flush();
+  expect(root.querySelector('[data-role="profile-refresh-status"]').textContent).toContain('เรียบร้อย');
   expect(global.fetch).not.toHaveBeenCalled();
 });
 
@@ -73,7 +78,7 @@ test('Staff preview renders real read-only search with the same campus shell and
   expect(root.querySelector('.protected-shell--staff.protected-shell--campus')).not.toBeNull();
   expect(root.querySelector('.student-campus-backdrop')).not.toBeNull();
   expect(root.querySelector('.staff-management')).not.toBeNull();
-  expect(root.textContent).toContain('นักศึกษา ตัวอย่าง');
+  expect(root.textContent).toContain('ณัฐวดี ศิริกุล');
   expect(root.querySelector('a[href="#/student/profile"]')).toBeNull();
   expect(global.fetch).not.toHaveBeenCalled();
 });

@@ -112,12 +112,14 @@ export function createPreviewClients({ role = 'STUDENT', scenario = role === 'AD
   if (!Object.hasOwn(SCENARIOS, scenario)) throw new Error('Unknown preview scenario');
   const status = { revision: 'NEEDS_REVISION', submitted: 'SUBMITTED', review: 'UNDER_REVIEW',
     approved: 'APPROVED', cancelled: 'CANCELLED' }[scenario] || 'DRAFT';
-  let profile = {
-    id: '20000000-0000-4000-8000-000000000101', student_number: 'DEMO000001',
-    full_name: 'นักศึกษา ตัวอย่าง', preferred_name: 'นักศึกษาทดลอง',
-    institutional_email: 'student@example.invalid', department: 'ภาควิชาวิทยาการคอมพิวเตอร์',
+  // Invented identity with a realistic display format, not a TU record. The reserved
+  // .invalid domain is deliberate: never use a real student's contact details.
+  const profile = {
+    id: '20000000-0000-4000-8000-000000000101', student_number: '6609612345',
+    full_name: 'ณัฐวดี ศิริกุล', preferred_name: null,
+    institutional_email: 'nattawadee.s@example.invalid', department: 'ภาควิชาวิทยาการคอมพิวเตอร์',
     program: 'วิทยาศาสตรบัณฑิต', major: 'วิทยาการคอมพิวเตอร์', academic_year: 2569,
-    enrollment_status: 'ACTIVE', version: 1, created_at: stamp, updated_at: stamp
+    enrollment_status: 'ACTIVE', version: 1, created_at: '2023-08-01T02:00:00.000Z', updated_at: stamp
   };
   let plans = scenario === 'empty' ? [] : [{
     id: ids.plan, cycle_id: ids.cycle,
@@ -125,7 +127,7 @@ export function createPreviewClients({ role = 'STUDENT', scenario = role === 'AD
     position_id: scenario === 'incomplete' ? null : ids.position,
     company_name: scenario === 'incomplete' ? null : 'บริษัทตัวอย่างเพื่อทดสอบ จำกัด',
     position_title: scenario === 'incomplete' ? null : 'Software Developer',
-    notes: 'ข้อมูลจำลองสำหรับตรวจหน้าจอเท่านั้น ไม่มีการบันทึกลงระบบจริง',
+    notes: 'สนใจพัฒนาเว็บแอปพลิเคชันด้วย JavaScript และออกแบบ REST API ร่วมกับทีมพัฒนา (ข้อมูลสมมติสำหรับ Preview เท่านั้น)',
     status, version: 2, created_at: stamp, updated_at: stamp
   }];
   let history = [event('PLAN_CREATED', null, 'DRAFT')];
@@ -174,13 +176,7 @@ export function createPreviewClients({ role = 'STUDENT', scenario = role === 'AD
       async searchPlans(options = {}) { return staffResults('plans', options); }
     },
     studentProfileClient: {
-      async getOwnProfile(options) { await wait(options); return copy(profile); },
-      async updateOwnProfile({ preferredName, version, signal }) {
-        await wait({ signal }, true);
-        if (version !== profile.version) throw failure('STALE_RECORD_CONFLICT');
-        profile = { ...profile, preferred_name: preferredName, version: profile.version + 1 };
-        return copy(profile);
-      }
+      async getOwnProfile(options) { await wait(options); return copy(profile); }
     },
     studentPlanClient: {
       async getOwnPlan({ planId, signal } = {}) {
