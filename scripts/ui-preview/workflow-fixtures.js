@@ -6,6 +6,7 @@ export function enhanceWorkflowPreview(clients,{role,scenario}={}) {
   const policy={id:ids.policy,cycle_id:ids.cycle,department:'ภาควิชาวิทยาการคอมพิวเตอร์',program:'',version:1,requirements:[requirement]};
   let policies=[policy], assignments=[],contact={contact_address:'99 ถนนตัวอย่าง ตำบลคลองหนึ่ง อำเภอคลองหลวง จังหวัดปทุมธานี 12120 (ข้อมูลสมมติ)',contact_phone:'0800000000',version:1};
   const original=clients.studentPlanClient?.getOwnPlan.bind(clients.studentPlanClient);
+  const originalSave=clients.studentPlanClient?.saveDraft?.bind(clients.studentPlanClient);
   async function base(id){
     if(original){const bundle=await original({planId:id});return bundle.plan;}
     const plan=await clients.advisorClient.getPlan(id);return {...plan,company_name:plan.company?.name,position_title:plan.position?.title};
@@ -14,7 +15,7 @@ export function enhanceWorkflowPreview(clients,{role,scenario}={}) {
     if(records.has(id))return records.get(id);
     const source=await base(id);if(!source)throw new Error('ยังไม่มีแผนจำลอง');
     const status=scenario==='rejected'?'REJECTED':['company-confirmed','company-pending','capacity-full'].includes(scenario)?'APPROVED':source.status;
-    const value={...source,status,plan_id:id,student_number:'6609612345',student_id:'20000000-0000-4000-8000-000000000101',
+    const value={...source,status,cycle_status:'OPEN',plan_id:id,student_number:'6609612345',student_id:'20000000-0000-4000-8000-000000000101',
       project_title:'ระบบติดตามงานสหกิจศึกษา (ข้อมูลสมมติ)',policy:scenario==='missing-policy'?null:policy,
       references:[{requirement_id:'eligibility',filename:'6609612345_eligibility.pdf',format:'pdf',reference:'DEMO-2569-001',url:null}],
       submissions:[],placement:null,advisor:null,legacy_submission:scenario==='legacy'};
@@ -35,7 +36,7 @@ export function enhanceWorkflowPreview(clients,{role,scenario}={}) {
       return bundle;
     };
     clients.studentPlanClient.saveDraft=async({planId,expectedVersion,content})=>{
-      if(!planId) return Promise.reject(new Error('Preview นี้ใช้แผนตัวอย่างที่มีอยู่ก่อน'));
+      if(!planId) {const saved=await originalSave({planId,expectedVersion,content});await record(saved.id);return copy(saved);}
       const data=await record(planId);check(data.version,{expected_version:expectedVersion});
       Object.assign(data,content,{version:data.version+1});return copy(data);
     };
@@ -46,6 +47,7 @@ export function enhanceWorkflowPreview(clients,{role,scenario}={}) {
     };
   }
   clients.workflowClient={async request(path,{method='GET',body,signal}={}){
+    const parsed=new URL(path,'https://preview.invalid');path=parsed.pathname;
     if(signal?.aborted)throw new DOMException('Aborted','AbortError');
     if(['expired','forbidden','error'].includes(scenario))throw Object.assign(new Error('สถานการณ์จำลอง: อ่านข้อมูลไม่ได้'),{status:scenario==='expired'?401:scenario==='forbidden'?403:503});
     if(role==='ADVISOR' && scenario==='revoked')throw Object.assign(new Error('ยกเลิก Assignment แล้ว (จำลอง)'),{status:403});
@@ -56,6 +58,11 @@ export function enhanceWorkflowPreview(clients,{role,scenario}={}) {
     if(path==='/api/v3/staff/workflow')return copy({scopes:[{department:policy.department,program:null,academic_year:2569}],
       cycles:[{id:ids.cycle,name:'รอบที่ 1 ปีการศึกษา 2569 (สมมติ)',status:'OPEN'}],policies,
       advisors:[{id:ids.advisor,name:'อาจารย์สมมติ กิตติ ตัวอย่าง',active_count:scenario==='capacity-full'?5:assignments.length}],assignments});
+    if(path==='/api/v3/staff/assignments' && method==='GET'){
+      const page=Number(parsed.searchParams.get('page')||1),pageSize=Number(parsed.searchParams.get('pageSize')||20),advisor=parsed.searchParams.get('advisor_id');
+      const items=assignments.filter(a=>a.status==='ACTIVE'&&(!advisor||a.advisor_id===advisor));
+      return copy({items:items.slice((page-1)*pageSize,page*pageSize),pagination:{page,pageSize,total:items.length,totalPages:Math.ceil(items.length/pageSize)}});
+    }
     if(path==='/api/v3/staff/document-policies'){
       const saved={...body,id:crypto.randomUUID(),version:body.expected_version+1};policies.unshift(saved);return copy(saved);
     }

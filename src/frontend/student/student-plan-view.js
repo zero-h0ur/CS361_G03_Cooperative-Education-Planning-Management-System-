@@ -33,7 +33,7 @@ const STATUS_META = Object.freeze({
   [PLAN_STATUSES.APPROVED]: {
     label: 'อนุมัติแล้ว (APPROVED)',
     badgeClass: 'student-badge--status',
-    description: 'แผนสหกิจศึกษาได้รับการอนุมัติเรียบร้อยแล้ว ข้อมูลทั้งหมดถูกล็อกเป็นแบบอ่านอย่างเดียว'
+    description: 'ผ่านเกณฑ์สหกิจแล้ว ข้อมูลที่ส่งตรวจเป็นแบบอ่านอย่างเดียว คุณสามารถแจ้งผลตอบรับบริษัทในส่วนด้านล่างได้'
   },
   [PLAN_STATUSES.CANCELLED]: {
     label: 'ยกเลิกแผน (CANCELLED)',
@@ -146,6 +146,8 @@ export function renderStudentPlanView({
   let editorController = null;
   let editorDirty = false;
   let workflowDirty = false;
+  let workflowReady = !workflowClient;
+  let workflowController = null;
   let editorBusy = false;
   let loadSequence = 0;
   let submitNeedsRefresh = false;
@@ -158,11 +160,12 @@ export function renderStudentPlanView({
   }
 
   signal?.addEventListener('abort', () => editorController?.abort(), { once: true });
+  signal?.addEventListener('abort', () => workflowController?.abort(), { once: true });
 
   function syncEditorControls() {
     const locked = editorDirty || workflowDirty || editorBusy || isSubmitting;
     for (const control of container.querySelectorAll('[data-editor-lock]')) {
-      control.disabled = locked || control.dataset.unavailable === 'true';
+      control.disabled = locked || control.dataset.unavailable === 'true' || (control.dataset.role==='submit-plan-button' && !workflowReady);
     }
     const editorControls = container.querySelector('[data-role="plan-editor-controls"]');
     if (editorControls) editorControls.disabled = isSubmitting || submitNeedsRefresh || workflowDirty;
@@ -256,6 +259,7 @@ export function renderStudentPlanView({
   }
 
   function renderNoPlanState() {
+    workflowController?.abort();
     container.setAttribute('aria-busy', 'false');
     container.dataset.planStatus = 'DRAFT';
     container.dataset.planReadonly = 'false';
@@ -281,6 +285,7 @@ export function renderStudentPlanView({
   }
 
   function renderPlanExperience(plan, statusHistory, initialFeedback = null) {
+    workflowController?.abort();workflowController=new AbortController();
     currentPlan = plan;
     currentHistory = Array.isArray(statusHistory) ? statusHistory : [];
     const readiness = evaluatePlanReadiness(plan);
@@ -489,7 +494,7 @@ export function renderStudentPlanView({
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      if (isSubmitting || editorDirty || workflowDirty || editorBusy) {
+      if (isSubmitting || editorDirty || workflowDirty || editorBusy || !workflowReady) {
         return;
       }
 
@@ -676,8 +681,17 @@ export function renderStudentPlanView({
     container.replaceChildren(...[
       decorateStudentCard(statusSection, 'file'),
       decorateStudentCard(readinessSection, 'clipboard'),
-      workflowClient ? renderPlanWorkflow({client:workflowClient,planId:plan.id,role:'STUDENT',signal,
-        onSessionExpired,onAccessDenied,onChanged:()=>loadPlanBundle(),
+      workflowClient ? renderPlanWorkflow({client:workflowClient,planId:plan.id,role:'STUDENT',signal:workflowController.signal,
+        onSessionExpired,onAccessDenied,onChanged:feedback=>loadPlanBundle(feedback),
+        onReady:data=>{
+          workflowReady=Boolean(data.policy && data.project_title && data.version===currentPlan.version &&
+            data.policy.requirements.every(rule=>!rule.required || data.references.some(ref=>ref.requirement_id===rule.id)));
+          syncEditorControls();
+          if(!workflowReady && !readiness.isReadOnly){
+            const heading=container.querySelector('[data-role="plan-submit-readiness"] strong');
+            if(heading)heading.textContent='ตรวจ Project และเอกสารอ้างอิงให้ครบ แล้วบันทึกก่อนส่งแผน';
+          }
+        },
         onDirtyChange:dirty=>{workflowDirty=dirty;syncEditorControls();}}) : null,
       decorateStudentCard(submitSection, 'send'),
       decorateStudentCard(historySection, 'clock'),
@@ -689,10 +703,12 @@ export function renderStudentPlanView({
   }
 
   async function loadPlanBundle(postLoadFeedback = null) {
+    workflowController?.abort();
     const sequence = ++loadSequence;
     editorController?.abort();
     editorDirty = false;
     workflowDirty = false;
+    workflowReady = !workflowClient;
     editorBusy = false;
     submitNeedsRefresh = false;
     pendingOperationId = null;

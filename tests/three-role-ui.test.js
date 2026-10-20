@@ -1,6 +1,8 @@
 /** @jest-environment jsdom */
 const {renderPlanWorkflow,renderContactPanel,renderStaffWorkflow}=require('../tmp/frontend-test-modules/workflow/workflow-views.cjs');
 const {createWorkflowClient}=require('../tmp/frontend-test-modules/workflow/workflow-client.cjs');
+const {enhanceWorkflowPreview}=require('../tmp/frontend-test-modules/workflow-preview-fixtures.cjs');
+const {createPreviewClients}=require('../tmp/frontend-test-modules/preview-fixtures.cjs');
 const flush=()=>new Promise(resolve=>setTimeout(resolve,20));
 const planId='50000000-0000-4000-8000-000000000101';
 const state=(status='DRAFT')=>({plan_id:planId,status,version:2,project_title:'Synthetic portal',student_number:'6609612345',references:[],submissions:[],advisor:null,placement:null,policy:{id:'30000000-0000-4000-8000-000000000101',version:1,requirements:[]}});
@@ -11,6 +13,8 @@ test('integration client uses bearer auth, no-store and no role/body authenticat
   await client.request(`/api/v3/plans/${planId}/workflow`);
   expect(fetchImpl.mock.calls[0][1]).toMatchObject({cache:'no-store',headers:{Authorization:'Bearer synthetic-token'}});
   expect(fetchImpl.mock.calls[0][0]).not.toContain('role=');
+  await client.request('/api/v3/staff/assignments?page=2&pageSize=20');
+  expect(fetchImpl.mock.calls[1][0]).toBe('https://api.example.invalid/api/v3/staff/assignments?page=2&pageSize=20');
 });
 test('Advisor integration is read-only and external executable links are not rendered',async()=>{
   const data={...state('APPROVED'),references:[{filename:'Evidence.pdf',reference:'EXT-01',url:'javascript:alert(1)'}]};
@@ -50,4 +54,19 @@ test('Staff requirements and Advisor occupancy share a scoped hub with explicit 
   const root=renderStaffWorkflow({client:{request:async()=>data}});document.body.append(root);await flush();
   expect(root.textContent).toContain('5 / 5 คน');expect(root.textContent).toContain('ข้อกำหนดเอกสารรายรอบ');
   expect(root.querySelector('form')).not.toBeNull();expect(root.textContent).toContain('เพิ่มรายการเอกสาร');
+});
+test.each(['draft','revision','submitted','review','approved','rejected','company-confirmed','company-pending','missing-policy','legacy'])('enhanced Preview renders Student workflow scenario %s without network',async scenario=>{
+  const clients=enhanceWorkflowPreview(createPreviewClients({scenario,role:'STUDENT',delayMs:0}),{scenario,role:'STUDENT'});
+  const root=renderPlanWorkflow({client:clients.workflowClient,planId,role:'STUDENT'});document.body.append(root);await flush();await flush();
+  expect(root.querySelector('.workflow-card')).not.toBeNull();
+  if(['submitted','review','rejected'].includes(scenario))expect(root.querySelector('form')).toBeNull();
+  if(scenario==='missing-policy')expect(root.textContent).toContain('ยังไม่ได้ตั้งข้อกำหนด');
+  if(scenario==='company-confirmed')expect(root.textContent).toContain('บริษัทยืนยันแล้ว');
+});
+test('enhanced Staff Preview exposes requirements/roster and simulated review, never AWS',async()=>{
+  const clients=enhanceWorkflowPreview(createPreviewClients({scenario:'capacity-full',role:'STAFF',delayMs:0}),{scenario:'capacity-full',role:'STAFF'});
+  expect((await clients.loadSession()).canReviewPlan).toBe(true);
+  const root=renderStaffWorkflow({client:clients.workflowClient});document.body.append(root);await flush();
+  expect(root.textContent).toContain('5 / 5 คน');
+  expect((await clients.staffReviewClient.getPlanWithHistory(planId)).plan.status).toBe('APPROVED');
 });

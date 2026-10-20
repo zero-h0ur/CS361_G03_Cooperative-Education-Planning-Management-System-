@@ -461,6 +461,8 @@ export function renderAdvisorStudentDetailView({ advisorClient, studentId, signa
 }
 
 export function renderAdvisorPlanView({ advisorClient, workflowClient, planId, signal, onSessionExpired, onAccessDenied } = {}) {
+  let workflowController=null;
+  signal?.addEventListener('abort',()=>workflowController?.abort(),{once:true});
   const container = createWorkspace();
   if (!isUsableClient(advisorClient, ['getPlan'])) {
     return renderFallback(container);
@@ -519,7 +521,10 @@ export function renderAdvisorPlanView({ advisorClient, workflowClient, planId, s
     const navigation = element('div', 'advisor-toolbar');
     navigation.append(back, createRefresh(load));
     container.replaceChildren(navigation, card);
-    if (workflowClient) container.append(renderPlanWorkflow({client:workflowClient,planId,role:'ADVISOR',signal,onSessionExpired,onAccessDenied}));
+    if (workflowClient) {
+      workflowController?.abort();workflowController=new AbortController();
+      container.append(renderPlanWorkflow({client:workflowClient,planId,role:'ADVISOR',signal:workflowController.signal,onSessionExpired,onAccessDenied}));
+    }
   }
 
   load();

@@ -17,6 +17,7 @@ function field(form,label,value='',{type='text',required=true,maxLength=300}={})
 }
 function select(form,label,options,value) {
   const wrapper=el('label','workflow-field'), input=el('select','student-form__input');
+  input.required=true;
   wrapper.append(el('span','student-form__label',label));
   for(const [id,text] of options) { const option=el('option',null,text); option.value=id; input.append(option); }
   if(value!=null) input.value=value; wrapper.append(input); form.append(wrapper); return input;
@@ -50,7 +51,7 @@ function controls(form,label,action,{danger=false,onDirtyChange}={}) {
     const getOperation=body=>{const next=JSON.stringify(body); if(signature!==next){pending=globalThis.crypto.randomUUID();signature=next;} return {...body,operation_id:pending};};
     disabled.forEach(([node])=>{node.disabled=true;});
     try { await action(getOperation); onDirtyChange?.(false); feedback.textContent='บันทึกเรียบร้อยแล้ว'; }
-    catch(error) { if(error.name!=='AbortError') {feedback.setAttribute('role','alert');feedback.textContent=error.message || 'ทำรายการไม่สำเร็จ';} }
+    catch(error) { if(error.name!=='AbortError') {feedback.setAttribute('role','alert');feedback.textContent=error.message || 'ทำรายการไม่สำเร็จ';feedback.tabIndex=-1;feedback.focus();} }
     finally {busy=false;form.setAttribute('aria-busy','false');disabled.forEach(([node,was])=>{node.disabled=was;});}
   });
   return button;
@@ -58,9 +59,11 @@ function controls(form,label,action,{danger=false,onDirtyChange}={}) {
 function errorHandler(root,options) {
   return error=>{
     if(error.name==='AbortError' || options.signal?.aborted) return;
-    if(error.status===401 || error.status===403) {
-      root.replaceChildren(el('p','workflow-feedback',error.status===401?'Session หมดอายุ กรุณาเข้าสู่ระบบใหม่':'ไม่มีสิทธิ์อ่านข้อมูลนี้แล้ว'));
-      if(error.status===401) options.onSessionExpired?.(); else options.onAccessDenied?.('ไม่มีสิทธิ์เข้าถึงข้อมูลนี้');
+    const expired=error.status===401||error.code==='SESSION_EXPIRED';
+    const denied=error.status===403||['ACCESS_DENIED','NOT_IN_SCOPE'].includes(error.code);
+    if(expired || denied) {
+      root.replaceChildren(el('p','workflow-feedback',expired?'Session หมดอายุ กรุณาเข้าสู่ระบบใหม่':'ไม่มีสิทธิ์อ่านข้อมูลนี้แล้ว'));
+      if(expired) options.onSessionExpired?.(); else options.onAccessDenied?.('ไม่มีสิทธิ์เข้าถึงข้อมูลนี้');
     }
     throw error;
   };
@@ -68,6 +71,7 @@ function errorHandler(root,options) {
 
 export function renderContactPanel(options) {
   const {client,signal}=options, root=card('ข้อมูลติดต่อที่คุณแก้ไขได้','user');
+  const outcome=el('p','workflow-feedback');outcome.setAttribute('role','status');root.append(outcome);
   const error=errorHandler(root,options);
   async function load(){
     try {
@@ -76,36 +80,40 @@ export function renderContactPanel(options) {
       note(form,'แก้ไขเฉพาะที่อยู่และเบอร์โทร ชื่อ-นามสกุล รหัสนักศึกษา และข้อมูล TU ยังคงอ่านอย่างเดียว');
       const address=field(form,'ที่อยู่ติดต่อ',data.contact_address,{type:'textarea',required:false,maxLength:1000});
       const phone=field(form,'เบอร์โทรศัพท์',data.contact_phone,{type:'tel',required:false,maxLength:40});
+      address.autocomplete='street-address';phone.autocomplete='tel';
       controls(form,'บันทึกข้อมูลติดต่อ',async op=>{
         await client.request('/api/v3/students/me',{method:'PATCH',signal,body:op({contact_address:address.value,contact_phone:phone.value,version:data.version})}).catch(error);
         await load();
+        outcome.textContent='บันทึกข้อมูลติดต่อเรียบร้อยแล้ว';
       });
       root.querySelector('form')?.remove();root.append(form);
-    } catch(e){if(e.name!=='AbortError' && !signal?.aborted){note(root,e.message);}}
+    } catch(e){if(e.name!=='AbortError' && !signal?.aborted){note(root,e.message);try{error(e);}catch{/* Session/permission callbacks clear stale content. */}}}
   }
   load(); return root;
 }
 
 export function renderPlanWorkflow(options) {
-  const {client,planId,role,signal,onChanged,onDirtyChange}=options;
+  const {client,planId,role,signal,onChanged,onDirtyChange,onReady}=options;
   const root=el('div','workflow-stack'); let sequence=0;
   const error=errorHandler(root,options), path=`/api/v3/plans/${encodeURIComponent(planId)}`;
-  async function refresh(){
+  async function refresh(message=''){
     const request=++sequence; root.setAttribute('aria-busy','true');
     try {
       const data=await client.request(`${path}/workflow`,{signal});
       if(signal?.aborted || request!==sequence) return;
-      render(data); root.setAttribute('aria-busy','false');
+      render(data); onReady?.(data); root.setAttribute('aria-busy','false');
+      if(message){const feedback=el('p','workflow-feedback',message);feedback.setAttribute('role','status');root.prepend(feedback);}
     } catch(e) {
       if(signal?.aborted || request!==sequence || e.name==='AbortError') return;
       root.replaceChildren(el('p','workflow-feedback',e.message)); root.setAttribute('aria-busy','false');
+      const retry=el('button','shell-button shell-button--secondary','ลองโหลด Workflow อีกครั้ง');retry.type='button';retry.addEventListener('click',()=>refresh());root.append(retry);
       try{error(e);}catch{/* Feedback stays visible; no stale data remains. */}
     }
   }
   async function send(suffix,method,body){
     await client.request(`${path}${suffix}`,{method,body,signal}).catch(error);
     onDirtyChange?.(false);
-    if(onChanged) await onChanged(); else await refresh();
+    if(onChanged) await onChanged({tone:'status',message:'บันทึกข้อมูล Workflow เรียบร้อยแล้ว'}); else await refresh('บันทึกเรียบร้อยแล้ว');
   }
   function render(data){
     const documents=card('Project และเอกสารอ้างอิง');badge(documents,data.status);
@@ -152,7 +160,7 @@ export function renderPlanWorkflow(options) {
       const reason=data.advisor?field(form,'เหตุผลเปลี่ยนอาจารย์','',{maxLength:2000}):null;
       controls(form,data.advisor?'เปลี่ยนอาจารย์ที่ปรึกษา':'มอบหมายอาจารย์ที่ปรึกษา',async op=>{
         const body=op({advisor_id:advisor.value,effective_to:new Date(`${end.value}T23:59:59+07:00`).toISOString(),expected_version:data.advisor?.version||data.version,...(reason?{reason:reason.value}:{plan_id:planId})});
-        await client.request(data.advisor?`/api/v3/staff/assignments/${data.advisor.id}/reassign`:'/api/v3/staff/assignments',{method:'POST',signal,body}).catch(error);await refresh();
+        await client.request(data.advisor?`/api/v3/staff/assignments/${data.advisor.id}/reassign`:'/api/v3/staff/assignments',{method:'POST',signal,body}).catch(error);await refresh('บันทึกการมอบหมายอาจารย์แล้ว');
       });assignment.append(form);
     }
     const placement=card('การตอบรับและยืนยันจากบริษัท','building');
@@ -186,8 +194,12 @@ export function renderPlanWorkflow(options) {
       }
       if(current.confirmed_at) note(placement,`Staff ยืนยันเมื่อ ${new Date(current.confirmed_at).toLocaleString('th-TH')}`);
     }
-    root.replaceChildren(documents,assignment,placement);
-    if(role==='STAFF' && data.status==='UNDER_REVIEW') {
+    const reload=el('details','workflow-disclosure');reload.append(el('summary',null,'โหลดข้อมูล Workflow ล่าสุด'));
+    note(reload,'การโหลดใหม่จะละทิ้งข้อมูลบนหน้านี้ที่ยังไม่ได้บันทึก');
+    const reloadButton=el('button','shell-button shell-button--secondary','ยืนยันโหลดข้อมูลล่าสุด');reloadButton.type='button';
+    reloadButton.addEventListener('click',async()=>{onDirtyChange?.(false);if(onChanged)await onChanged();else await refresh();});reload.append(reloadButton);
+    root.replaceChildren(reload,documents,assignment,placement);
+    if(role==='STAFF' && data.status==='UNDER_REVIEW' && data.cycle_status==='OPEN') {
       const rejection=card('ไม่ผ่านคุณสมบัติในรอบสมัครนี้','warning'), form=el('form','workflow-form');
       note(form,'ใช้สำหรับไม่ผ่านเกณฑ์เท่านั้น หากเอกสารผิดให้ใช้ “ส่งกลับให้แก้ไข” ในส่วนตรวจแผนแทน');
       const reason=field(form,'เหตุผลปฏิเสธแบบสิ้นสุด','',{type:'textarea',maxLength:2000});
@@ -195,15 +207,18 @@ export function renderPlanWorkflow(options) {
       controls(form,'ยืนยันไม่ผ่านคุณสมบัติในรอบนี้',op=>send('/reject','POST',op({expected_version:data.version,review_notes:reason.value})),{danger:true});rejection.append(form);root.append(rejection);
     }
   }
+  root.append(card('กำลังโหลด Project เอกสาร และการมอบหมาย…'));
   refresh();return root;
 }
 
 export function renderStaffWorkflow(options) {
   const {client,signal}=options, root=el('div','workflow-stack'), error=errorHandler(root,options);
-  async function load(){
+  let loadSequence=0;
+  async function load(message=''){
+    const currentLoad=++loadSequence;
     root.setAttribute('aria-busy','true');
     try {
-      const data=await client.request('/api/v3/staff/workflow',{signal});if(signal?.aborted)return;
+      const data=await client.request('/api/v3/staff/workflow',{signal});if(signal?.aborted||currentLoad!==loadSequence)return;
       const requirements=card('ข้อกำหนดเอกสารรายรอบ'), form=el('form','workflow-form');
       note(form,'ฉบับใหม่ใช้กับแผนใหม่ ไม่เปลี่ยนข้อกำหนดของรายการที่ส่งตรวจแล้ว ชื่อไฟล์รองรับ {student_number} แทนรหัสนักศึกษา');
       const cycle=select(form,'รอบสมัคร',data.cycles.map(c=>[c.id,`${c.name} · ${c.status==='OPEN'?'เปิด':'ปิด'}`]));
@@ -224,22 +239,41 @@ export function renderStaffWorkflow(options) {
         if(!acknowledgement.checked)return;
         const s=data.scopes[Number(scope.value)];
         await client.request('/api/v3/staff/document-policies',{method:'POST',signal,body:op({cycle_id:cycle.value,department:s.department,program:s.program||'',expected_version:current()?.version||0,
-          requirements:inputs.map(x=>({id:x.id,title:x.title.value,format:x.format.value,filename_pattern:x.filename.value,required:x.required.checked}))})}).catch(error);await load();
+          requirements:inputs.map(x=>({id:x.id,title:x.title.value,format:x.format.value,filename_pattern:x.filename.value,required:x.required.checked}))})}).catch(error);await load('เผยแพร่ข้อกำหนดฉบับใหม่แล้ว');
       });requirements.append(form);
       const advisors=card('อาจารย์และจำนวนที่ดูแลพร้อมกัน','user');
       note(advisors,'สูงสุด 5 คนรวมทุกปี/เทอม จำนวนนี้เป็นข้อมูลปัจจุบัน ระบบตรวจช่วงเวลาทับซ้อนอีกครั้งก่อนบันทึก');
+      note(advisors,'จำนวนดูแลนับรวมทุกขอบเขต แต่รายชื่อนักศึกษาด้านล่างจะแสดงเฉพาะขอบเขตที่คุณมีสิทธิ์');
       const grid=el('div','workflow-grid');for(const a of data.advisors){const item=el('article','workflow-document');item.append(el('h3',null,a.name),el('strong',a.active_count>=5?'workflow-capacity--full':'',`${a.active_count} / 5 คน`));grid.append(item);}advisors.append(grid);
       const roster=card('นักศึกษาและอาจารย์ที่ได้รับมอบหมาย','clipboard');
       note(roster,'เปิดแผนที่ผ่านเกณฑ์จาก “ค้นหาแผนสหกิจ” เพื่อมอบหมายหรือเปลี่ยนอาจารย์ ดูเฉพาะรายชื่อนักศึกษาในขอบเขตของคุณ');
-      if(!data.assignments.length)note(roster,'ยังไม่มีรายการมอบหมายในขอบเขตของคุณ');
-      for(const a of data.assignments){
+      const advisorFilter=select(roster,'กรองนักศึกษาตามอาจารย์',[['','อาจารย์ทุกคน'],...data.advisors.map(a=>[a.id,a.name])]);advisorFilter.required=false;
+      const list=el('div','workflow-stack');roster.append(list);let listSequence=0;
+      async function rosterPage(page=1){
+        const current=++listSequence;list.setAttribute('aria-busy','true');
+        try{
+          const params=new URLSearchParams({page:String(page),pageSize:'20',...(advisorFilter.value?{advisor_id:advisorFilter.value}:{})});
+          const result=await client.request(`/api/v3/staff/assignments?${params}`,{signal});
+          if(signal?.aborted||current!==listSequence||currentLoad!==loadSequence)return;
+          const items=result.items||[];list.replaceChildren();
+          if(!items.length)note(list,'ยังไม่มีนักศึกษาที่อยู่ระหว่างดูแลในขอบเขตนี้');
+          for(const a of items){
         const item=el('article','workflow-document');item.append(el('h3',null,`${a.full_name} (${a.student_number})`));note(item,`อาจารย์: ${a.advisor_name} · ${a.status==='ACTIVE'&&new Date(a.effective_to)>new Date()?'อยู่ระหว่างดูแล':'สิ้นสุด/ยกเลิก/ยังไม่เริ่ม'} · ถึง ${new Date(a.effective_to).toLocaleDateString('th-TH')}`);
         if(a.plan_id){const link=el('a','advisor-link','เปิดแผนและการมอบหมาย');link.href=`#/staff/plans/${encodeURIComponent(a.plan_id)}`;item.append(link);}
-        if(a.status==='ACTIVE'){const form=el('form','workflow-form'),reason=field(form,'เหตุผลยกเลิกการมอบหมาย','',{maxLength:2000});controls(form,'ยกเลิกการมอบหมายและคืนโควตา',async op=>{await client.request(`/api/v3/staff/assignments/${a.id}/revoke`,{method:'POST',signal,body:op({reason:reason.value,expected_version:a.version})}).catch(error);await load();},{danger:true});item.append(form);}
-        roster.append(item);
+        if(a.status==='ACTIVE'){const form=el('form','workflow-form'),reason=field(form,'เหตุผลยกเลิกการมอบหมาย','',{maxLength:2000});controls(form,'ยกเลิกการมอบหมายและคืนโควตา',async op=>{await client.request(`/api/v3/staff/assignments/${a.id}/revoke`,{method:'POST',signal,body:op({reason:reason.value,expected_version:a.version})}).catch(error);await load('ยกเลิกการมอบหมายและคืนโควตาแล้ว');},{danger:true});item.append(form);}
+        list.append(item);
+          }
+          const paging=el('div','workflow-paging');
+          for(const [label,target,disabled] of [['ก่อนหน้า',page-1,page<=1],['ถัดไป',page+1,page>=(result.pagination?.totalPages||1)]]){
+            const button=el('button','shell-button shell-button--secondary',label);button.type='button';button.disabled=disabled;button.addEventListener('click',()=>rosterPage(target));paging.append(button);
+          }
+          note(paging,`หน้า ${page} · พบ ${result.pagination?.total||0} รายการในขอบเขตที่คุณอ่านได้`);list.append(paging);list.setAttribute('aria-busy','false');
+        }catch(e){if(e.name!=='AbortError'&&!signal?.aborted&&current===listSequence&&currentLoad===loadSequence){list.replaceChildren(el('p','workflow-feedback',e.message));list.setAttribute('aria-busy','false');try{error(e);}catch{/* Scope feedback visible. */}}}
       }
+      advisorFilter.addEventListener('change',()=>rosterPage(1));rosterPage();
       root.replaceChildren(requirements,advisors,roster);root.setAttribute('aria-busy','false');
-    }catch(e){if(e.name!=='AbortError'&&!signal?.aborted){root.replaceChildren(el('p','workflow-feedback',e.message));root.setAttribute('aria-busy','false');try{error(e);}catch{/* Error visible. */}}}
+      if(message){const feedback=el('p','workflow-feedback',message);feedback.setAttribute('role','status');root.prepend(feedback);}
+    }catch(e){if(e.name!=='AbortError'&&!signal?.aborted&&currentLoad===loadSequence){root.replaceChildren(el('p','workflow-feedback',e.message));root.setAttribute('aria-busy','false');try{error(e);}catch{/* Error visible. */}}}
   }
   load();return root;
 }

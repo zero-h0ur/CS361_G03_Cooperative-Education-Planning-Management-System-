@@ -45,6 +45,7 @@
 .workflow-document h3 { margin-top: 0; color: var(--shell-ink); font-size: 1rem; }
 .workflow-document .workflow-field + .workflow-field { margin-top: 14px; }
 .workflow-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit,minmax(min(100%,240px),1fr)); }
+.workflow-paging { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .workflow-disclosure { margin-top: 18px; border-top: 1px solid var(--shell-line); padding-top: 10px; }
 .workflow-disclosure > summary { cursor: pointer; padding: 12px 4px; font-weight: 600; color: var(--shell-primary-dark); min-height: 44px; }
 .workflow-disclosure[open] > summary { margin-bottom: 12px; }

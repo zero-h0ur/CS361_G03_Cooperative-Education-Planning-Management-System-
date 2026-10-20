@@ -8,7 +8,7 @@ const params = new URLSearchParams(location.search);
 const defaultRoutes = { STUDENT: '#/student/plan', STAFF: '#/staff/students', ADVISOR: '#/advisor/students' };
 const roleLabel = document.createElement('label'); roleLabel.textContent = 'พื้นที่จำลอง ';
 const role = document.createElement('select'); role.setAttribute('aria-label', 'เลือกพื้นที่จำลอง');
-role.add(new Option('นักศึกษา', 'STUDENT')); role.add(new Option('เจ้าหน้าที่ (รายการอ่านอย่างเดียว)', 'STAFF'));
+role.add(new Option('นักศึกษา', 'STUDENT')); role.add(new Option('เจ้าหน้าที่ (จำลอง Workflow)', 'STAFF'));
 role.add(new Option('อาจารย์ที่ปรึกษา (อ่านอย่างเดียว)', 'ADVISOR'));
 role.value = Object.hasOwn(defaultRoutes, params.get('role')) ? params.get('role') : 'STUDENT';
 const scenarios = role.value === 'ADVISOR' ? ADVISOR_SCENARIOS : SCENARIOS;

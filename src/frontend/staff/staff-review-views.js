@@ -411,12 +411,15 @@ export function renderStaffPlanReviewView({
   }
 
   let currentPlan = null;
+  let workflowController = null;
+  signal?.addEventListener('abort',()=>workflowController?.abort(),{once:true});
   let isSending = false;
   // One operation per confirmed command; reused only to retry the same command with the
   // same notes after a network/service failure, so the server deduplicates it (#52 section 9)
   let pendingOperation = null;
 
   async function load(feedback = null) {
+    workflowController?.abort();
     renderLoading(container, 'กำลังโหลดแผนสหกิจ...');
     try {
       const bundle = await staffReviewClient.getPlanWithHistory(planId, { signal });
@@ -751,7 +754,10 @@ export function renderStaffPlanReviewView({
     }
 
     container.replaceChildren(back, summary, actionsCard, historyCard);
-    if (workflowClient) container.append(renderPlanWorkflow({client:workflowClient,planId,role:'STAFF',signal,onSessionExpired,onAccessDenied,onChanged:()=>load()}));
+    if (workflowClient) {
+      workflowController=new AbortController();
+      container.append(renderPlanWorkflow({client:workflowClient,planId,role:'STAFF',signal:workflowController.signal,onSessionExpired,onAccessDenied,onChanged:feedback=>load(feedback)}));
+    }
     if (initialFeedback) {
       feedbackRegion.focus({ preventScroll: false });
     }
