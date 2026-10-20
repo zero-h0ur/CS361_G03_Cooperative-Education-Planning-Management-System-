@@ -6,16 +6,22 @@ REVOKE ALL PRIVILEGES ON TABLE
   public.companies, public.positions, public.rounds, public.document_metadata,
   public.users, public.external_identity_links, public.students, public.plans,
   public.advisor_assignments, public.staff_scopes, public.plan_operations,
-  public.audit_events FROM coed_app;
+  public.audit_events, public.document_policies, public.plan_submissions,
+  public.placements, public.workflow_receipts, public.workflow_events FROM coed_app;
 REVOKE CREATE ON SCHEMA public FROM coed_app;
 GRANT USAGE ON SCHEMA public TO coed_app;
 GRANT SELECT ON TABLE
   public.companies, public.positions, public.rounds, public.document_metadata,
   public.users, public.external_identity_links, public.students, public.plans,
   public.advisor_assignments, public.staff_scopes, public.plan_operations,
-  public.audit_events TO coed_app;
+  public.audit_events, public.document_policies, public.plan_submissions,
+  public.placements, public.workflow_receipts, public.workflow_events TO coed_app;
 GRANT INSERT, UPDATE ON public.plans TO coed_app;
-GRANT UPDATE (preferred_name, version, updated_at) ON public.students TO coed_app;
+GRANT UPDATE (preferred_name, contact_address, contact_phone, version, updated_at) ON public.students TO coed_app;
+GRANT UPDATE (updated_at) ON public.staff_scopes TO coed_app;
+GRANT INSERT, UPDATE ON public.advisor_assignments, public.placements TO coed_app;
+GRANT INSERT ON public.document_policies, public.plan_submissions,
+  public.workflow_receipts, public.workflow_events TO coed_app;
 -- Migration 002's Student trigger SELECTs users FOR UPDATE. PostgreSQL requires
 -- UPDATE on at least one column for that lock; never grant role/account mutation.
 GRANT UPDATE (updated_at) ON public.users TO coed_app;

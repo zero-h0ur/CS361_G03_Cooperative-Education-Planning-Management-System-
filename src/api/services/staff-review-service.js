@@ -19,7 +19,7 @@ const PLAN_STATES = Object.freeze([
   'UNDER_REVIEW',
   'NEEDS_REVISION',
   'APPROVED',
-  'CANCELLED'
+  'CANCELLED', 'REJECTED'
 ]);
 
 const DEFAULT_PAGE_SIZE = 20;

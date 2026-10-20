@@ -32,6 +32,8 @@ const STUDENT_SELF_PROFILE_FIELDS = Object.freeze([
   'student_number',
   'full_name',
   'preferred_name',
+  'contact_address',
+  'contact_phone',
   'institutional_email',
   'department',
   'program',
@@ -270,6 +272,10 @@ class StudentProfileService {
       ACTIONS.STUDENT_UPDATE_SELF_PROFILE,
       { studentId: requestedStudentId }
     );
+
+    if (payload && ('contact_address' in payload || 'contact_phone' in payload)) {
+      return new (require('./three-role-service').ThreeRoleService)({pool:this.pool}).saveContact(authContext,payload);
+    }
 
     const { preferredName, expectedVersion } =
       validateAndNormalizeStudentProfileUpdate(payload);

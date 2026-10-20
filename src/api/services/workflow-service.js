@@ -27,16 +27,18 @@ const PLAN_STATES = Object.freeze({
   UNDER_REVIEW: 'UNDER_REVIEW',
   NEEDS_REVISION: 'NEEDS_REVISION',
   APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
   CANCELLED: 'CANCELLED'
 });
 
-const TERMINAL_STATES = new Set([PLAN_STATES.APPROVED, PLAN_STATES.CANCELLED]);
+const TERMINAL_STATES = new Set([PLAN_STATES.APPROVED, PLAN_STATES.REJECTED, PLAN_STATES.CANCELLED]);
 
 const ACTIONS = Object.freeze({
   PLAN_SUBMIT: 'plan:submit',
   PLAN_START_REVIEW: 'plan:start_review',
   PLAN_RETURN_FOR_REVISION: 'plan:return_for_revision',
   PLAN_APPROVE: 'plan:approve',
+  PLAN_REJECT: 'plan:reject',
   PLAN_CANCEL: 'plan:cancel'
 });
 
@@ -45,10 +47,13 @@ const AUDIT_ACTIONS = Object.freeze({
   [ACTIONS.PLAN_START_REVIEW]: 'PLAN_REVIEW_STARTED',
   [ACTIONS.PLAN_RETURN_FOR_REVISION]: 'PLAN_RETURNED',
   [ACTIONS.PLAN_APPROVE]: 'PLAN_APPROVED',
+  [ACTIONS.PLAN_REJECT]: 'PLAN_REJECTED',
   [ACTIONS.PLAN_CANCEL]: 'PLAN_CANCELLED'
 });
 
 const ACTION_ALIASES = Object.freeze({
+  'reject': ACTIONS.PLAN_REJECT,
+  'plan:reject': ACTIONS.PLAN_REJECT,
   'submit': ACTIONS.PLAN_SUBMIT,
   'SUBMIT': ACTIONS.PLAN_SUBMIT,
   'plan:submit': ACTIONS.PLAN_SUBMIT,
@@ -84,6 +89,17 @@ const ACTION_ALIASES = Object.freeze({
 });
 
 const TRANSITION_RULES = Object.freeze({
+  [ACTIONS.PLAN_REJECT]: Object.freeze({
+    allowedFrom: Object.freeze([PLAN_STATES.UNDER_REVIEW]),
+    targetState: PLAN_STATES.REJECTED,
+    allowedRoles: Object.freeze(['STAFF']),
+    isReviewAction: true,
+    validatePreconditions: (_plan, options) => {
+      if (typeof options?.review_notes !== 'string' || !options.review_notes.trim()) {
+        throw new ValidationError('กรุณาระบุเหตุผลที่ไม่ผ่านคุณสมบัติ');
+      }
+    }
+  }),
   [ACTIONS.PLAN_SUBMIT]: Object.freeze({
     allowedFrom: Object.freeze([PLAN_STATES.DRAFT, PLAN_STATES.NEEDS_REVISION]),
     targetState: PLAN_STATES.SUBMITTED,
@@ -179,10 +195,9 @@ const TRANSITION_RULES = Object.freeze({
   }),
 
   [ACTIONS.PLAN_CANCEL]: Object.freeze({
-    // #54: cancel allowed only from DRAFT, SUBMITTED, NEEDS_REVISION (UNDER_REVIEW removed)
+    // Submitted plans are locked until Staff returns them for revision.
     allowedFrom: Object.freeze([
       PLAN_STATES.DRAFT,
-      PLAN_STATES.SUBMITTED,
       PLAN_STATES.NEEDS_REVISION
     ]),
     targetState: PLAN_STATES.CANCELLED,
@@ -619,6 +634,9 @@ class WorkflowService {
           'IDEMPOTENCY_KEY_REUSED'
         );
       }
+      if (err.code === '23514' && /^submission_/.test(err.constraint || '')) {
+        throw new ValidationError(err.message);
+      }
       throw err;
     } finally {
       client.release();
@@ -645,6 +663,10 @@ class WorkflowService {
 
   async cancelPlan(params = {}) {
     return this.executeTransition({ ...params, action: ACTIONS.PLAN_CANCEL });
+  }
+
+  async rejectPlan(params = {}) {
+    return this.executeTransition({ ...params, action: ACTIONS.PLAN_REJECT });
   }
 
 }
