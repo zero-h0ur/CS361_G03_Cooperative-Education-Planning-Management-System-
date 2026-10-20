@@ -89,6 +89,22 @@ test.each([false, true])('opening the Plan editor scrolls without a focus jump (
   }
 });
 
+test('switches from Profile to the real Plan view without rebuilding Student chrome', async () => {
+  const { root } = await mount('draft', '#/student/profile');
+  const sidebar = root.querySelector('.shell-sidebar');
+  const topbar = root.querySelector('.shell-topbar');
+  const main = root.querySelector('main');
+  root.querySelector('[data-role="go-to-student-plan"]').click();
+  await flush(); await flush();
+  expect(root.querySelector('.student-plan-status')).not.toBeNull();
+  expect(root.querySelector('.shell-sidebar')).toBe(sidebar);
+  expect(root.querySelector('.shell-topbar')).toBe(topbar);
+  expect(root.querySelector('main')).toBe(main);
+  expect(main.dataset.studentRouteChange).toBe('true');
+  expect(root.querySelector('[aria-current="page"]').getAttribute('href')).toBe('#/student/plan');
+  expect(global.fetch).not.toHaveBeenCalled();
+});
+
 test('Staff preview renders real read-only search with the same campus shell and no network', async () => {
   const root = document.createElement('div'); document.body.append(root);
   const clients = createPreviewClients({ role: 'STAFF', delayMs: 0 });

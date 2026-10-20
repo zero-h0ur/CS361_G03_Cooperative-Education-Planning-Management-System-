@@ -478,19 +478,24 @@ describe('Student Profile read-only workflow UI', () => {
       return counter;
     }
 
-    it('renders the target route once when the dashboard navigates (no duplicate render from hashchange)', async () => {
+    it('updates content once without rebuilding the shell or duplicating the hashchange render', async () => {
       const { app, root } = startWithRealWindow('#/student/profile');
       await app.start();
       await flushPromises();
 
       const counter = countRenders(root);
+      const main = root.querySelector('main');
+      const update = jest.spyOn(main, 'replaceChildren');
+      const sidebar = root.querySelector('.shell-sidebar');
       const cta = [...root.querySelectorAll('main button, main a')]
         .find((node) => /แผนสหกิจ/.test(node.textContent));
       cta.click();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(window.location.hash).toBe('#/student/plan');
-      expect(counter.renders).toBe(1);
+      expect(counter.renders).toBe(0);
+      expect(update).toHaveBeenCalledTimes(1);
+      expect(root.querySelector('.shell-sidebar')).toBe(sidebar);
       app.destroy();
     });
 

@@ -355,8 +355,17 @@ export function createShellApp({
   let currentCanReviewPlan = false;
   let destroyed = false;
   let unsubscribeLogout = null;
+  let studentRouteTransition = null;
+
+  function cancelStudentRouteTransition() {
+    const pending = studentRouteTransition;
+    studentRouteTransition = null;
+    try { pending?.skipTransition(); } catch { /* Rendering must never depend on motion. */ }
+    root.ownerDocument.documentElement.classList.remove('student-route-transition');
+  }
 
   function abortRouteWork() {
+    cancelStudentRouteTransition();
     routeController?.abort();
     routeController = null;
     renderedHash = null;
@@ -618,6 +627,7 @@ export function createShellApp({
       }
     }
 
+    const previousHash = renderedHash;
     abortRouteWork();
     renderedHash = location.hash;
     const route = getRoute(location.hash);
@@ -641,8 +651,58 @@ export function createShellApp({
       onLogout: handleLogout,
       bodyNode: customBody
     });
-    replaceRoot(root, layout);
-    main.focus({ preventScroll: true });
+    const studentPages = ['#/student/profile', '#/student/plan'];
+    const existingLayout = root.querySelector('.protected-shell--student');
+    const existingMain = existingLayout?.querySelector('.shell-content');
+    const reuseStudentShell = currentRole === 'STUDENT' && existingMain &&
+      previousHash !== route.hash && studentPages.includes(previousHash) && studentPages.includes(route.hash);
+    const doc = root.ownerDocument;
+    const reducedMotion = doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    let useViewTransition = reuseStudentShell && !reducedMotion && typeof doc.startViewTransition === 'function';
+    let committed = false;
+    const commit = () => {
+      // skipTransition does not cancel its queued DOM callback. Fence it against
+      // newer navigation, expiry, logout, access denial and destroyed shells.
+      if (committed || destroyed || controller.signal.aborted || routeController !== controller ||
+          currentRole !== route.role || location.hash !== renderedHash) return;
+      committed = true;
+      if (reuseStudentShell) {
+        // Keep main itself, too: the persistent skip-link handler references it.
+        existingMain.dataset.studentRouteChange = 'true';
+        existingMain.dataset.routeMotion = useViewTransition ? 'view-transition' : 'css';
+        existingMain.replaceChildren(...main.childNodes);
+        for (const link of existingLayout.querySelectorAll('.shell-nav__link')) {
+          const active = link.getAttribute('href') === route.hash;
+          link.classList.toggle('shell-nav__link--active', active);
+          if (active) link.setAttribute('aria-current', 'page');
+          else link.removeAttribute('aria-current');
+        }
+        existingMain.focus({ preventScroll: true });
+      } else {
+        replaceRoot(root, layout);
+        main.focus({ preventScroll: true });
+      }
+    };
+    if (controller.signal.aborted || destroyed) return;
+    if (!useViewTransition) { commit(); return; }
+    doc.documentElement.classList.add('student-route-transition');
+    try {
+      const transition = doc.startViewTransition(commit);
+      studentRouteTransition = transition;
+      const finish = () => {
+        if (studentRouteTransition !== transition) return;
+        studentRouteTransition = null;
+        doc.documentElement.classList.remove('student-route-transition');
+      };
+      Promise.resolve(transition.finished).then(finish, finish);
+      Promise.resolve(transition.ready).catch(() => {});
+      Promise.resolve(transition.updateCallbackDone).catch(() => {});
+    } catch {
+      cancelStudentRouteTransition();
+      // Unsupported/failed animation never blocks the guarded route update.
+      useViewTransition = false;
+      commit();
+    }
   }
 
   function selectInitialRoute() {

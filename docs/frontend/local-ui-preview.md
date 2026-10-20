@@ -69,6 +69,24 @@ Loading scenario ค้างไว้ให้ตรวจหน้ารอโ
 ตรวจหน้า Profile ด้วย `?scenario=loading`, `error`, `expired` และ `forbidden`
 ส่วน `conflict` ใช้ทดสอบการบันทึก/ส่งแผน ไม่ใช่การแก้ Profile อีกต่อไป
 
+### Transition ระหว่าง Profile และ My Plan
+
+- เปลี่ยนเฉพาะเนื้อหาใน main เดิม ไม่สร้าง Sidebar, Session bar หรือ Skip link ใหม่
+- Browser ที่รองรับ `document.startViewTransition` ใช้ CSS snapshot ของเนื้อหา
+  fade ออก 320ms / fade เข้า 720ms โดยส่วนอื่นไม่ทำ crossfade
+- Browser ที่ไม่รองรับ/เรียก API ไม่สำเร็จ ใช้ CSS fade-in ของหน้าใหม่เป็น fallback
+- ไม่หน่วงการเปลี่ยน Route ด้วย timer และไม่รอ `animationend` เพื่อให้ navigation ทำงาน
+- Keyboard focus ไป main เดิม และ `aria-current` ของเมนูตรงกับหน้าใหม่
+- Reduced motion ไม่เริ่ม View Transition และ CSS fallback ไม่ animate
+- Logout, Session expired, Access denied, pagehide และ destroy ยกเลิก snapshot
+  และ fence callback ที่อาจมาช้าด้วย AbortController/route identity
+- กดสลับหน้าเร็ว ๆ จะใช้เฉพาะ Route ล่าสุด ไม่ให้ cleanup ของ Transition เก่าล้างตัวใหม่
+- ไม่มีการทำเอฟเฟกต์นี้ให้ Staff/Advisor หรือการเปลี่ยนสถานะ Authentication
+
+อ้างอิงแนวทาง [same-document CSS View Transitions ของ Chrome](https://developer.chrome.com/docs/web-platform/view-transitions/same-document)
+ผลทดสอบ jsdom ใช้ mock lifecycle เพื่อตรวจ guards/cancellation เท่านั้น ต้องตรวจ
+crossfade/snapshot จริงใน Browser ที่รองรับก่อน Merge
+
 ## ขอบเขตความปลอดภัยและข้อจำกัด
 
 - Server bind เฉพาะ `127.0.0.1` และให้บริการเฉพาะ HTML/bundle/logo ที่ allowlist
@@ -96,9 +114,9 @@ Browser visual review ต้องเปิดหน้าเว็บจริ�
 
 ### ผลตรวจ Student Profile refresh (2026-10-21)
 
-- Frontend: 13 suites / 321 tests ผ่าน รวม read-only, GET-only จากหน้า Profile,
+- Frontend: 13 suites / 335 tests ผ่าน รวม read-only, GET-only จากหน้า Profile,
   refresh/retry, focus, abort, cross-role denial และ reduced-motion CSS override
-- Preview: 41 component tests และ 2 server/production-isolation tests ผ่าน
+- Preview: 42 component tests และ 2 server/production-isolation tests ผ่าน
 - Production build และ `git diff --check` ผ่าน
 - `npm run test:docs`: 8 ผ่าน / 1 ติด Windows symlink permission (`EPERM`)
   ตัวตรวจลิงก์เอกสารแบบแยกผ่าน ไม่ได้รายงานว่าชุด docs tests ผ่านทั้งหมด
