@@ -126,4 +126,16 @@ describe('Company Directory - Real Dataset & Auth Lock State', () => {
       expect(card.textContent).toContain('นนทบุรี');
     });
   });
+
+  test('sets title attribute on company name headings to support tooltip and accessible full name inspection', () => {
+    loadDirectoryScript();
+
+    const headers = document.querySelectorAll('#companyList .partner-card-header h2');
+    expect(headers.length).toBeGreaterThan(0);
+    headers.forEach(h2 => {
+      expect(h2.title).toBe(h2.textContent);
+      expect(h2.title.length).toBeGreaterThan(0);
+    });
+  });
 });
+

@@ -215,6 +215,7 @@ function createCompanyCardFromAPI(company) {
   const headerRow = document.createElement('div');
   headerRow.className = 'partner-card-header';
   const nameEl = createElement('h2', '', company.name || 'ไม่มีชื่อ');
+  nameEl.title = company.name || '';
   headerRow.appendChild(nameEl);
   infoDiv.appendChild(headerRow);
 
