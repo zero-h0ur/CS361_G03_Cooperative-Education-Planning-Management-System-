@@ -287,6 +287,17 @@ function isUsableClient(client, methods) {
   return Boolean(client) && methods.every((method) => typeof client[method] === 'function');
 }
 
+function restoreReadingFocus(container, hadFocus) {
+  // A refreshed control is removed while loading. Restore a reading point only
+  // if the user has not focused something else (e.g. logout) in the meantime.
+  if (!hadFocus || !container.isConnected || document.activeElement !== document.body) return;
+  const heading = container.querySelector('h2');
+  if (heading) {
+    heading.tabIndex = -1;
+    heading.focus({ preventScroll: true });
+  }
+}
+
 export function renderAdvisorStudentListView({ advisorClient, signal, onSessionExpired, onAccessDenied } = {}) {
   const container = createWorkspace();
   if (!isUsableClient(advisorClient, ['listStudents'])) {
@@ -296,6 +307,7 @@ export function renderAdvisorStudentListView({ advisorClient, signal, onSessionE
   let loadVersion = 0;
   async function load(page = 1) {
     const requestVersion = ++loadVersion;
+    const hadFocus = container.contains(document.activeElement);
     renderLoading(container, 'กำลังโหลดรายชื่อนักศึกษาที่ได้รับมอบหมาย...');
     try {
       const result = await advisorClient.listStudents({ page, pageSize: DEFAULT_ADVISOR_PAGE_SIZE, signal });
@@ -303,6 +315,7 @@ export function renderAdvisorStudentListView({ advisorClient, signal, onSessionE
         return;
       }
       renderList(result);
+      restoreReadingFocus(container, hadFocus);
     } catch (error) {
       if (requestVersion !== loadVersion) return;
       handleLoadError(error, {
@@ -313,6 +326,7 @@ export function renderAdvisorStudentListView({ advisorClient, signal, onSessionE
         // No id in this request: a 403 means the account itself may not use the Advisor view
         notInScopeHandler: () => onAccessDenied?.('บัญชีนี้ไม่มีสิทธิ์อ่านรายชื่อนักศึกษาในฐานะอาจารย์ที่ปรึกษา')
       });
+      restoreReadingFocus(container, hadFocus);
     }
   }
 
@@ -364,6 +378,7 @@ export function renderAdvisorStudentDetailView({ advisorClient, studentId, signa
   let loadVersion = 0;
   async function load(planPage = 1) {
     const requestVersion = ++loadVersion;
+    const hadFocus = container.contains(document.activeElement);
     renderLoading(container, 'กำลังโหลดข้อมูลนักศึกษา...');
     try {
       const [student, plans] = await Promise.all([
@@ -374,6 +389,7 @@ export function renderAdvisorStudentDetailView({ advisorClient, studentId, signa
         return;
       }
       renderDetail(student, plans);
+      restoreReadingFocus(container, hadFocus);
     } catch (error) {
       if (requestVersion !== loadVersion) return;
       handleLoadError(error, {
@@ -383,6 +399,7 @@ export function renderAdvisorStudentDetailView({ advisorClient, studentId, signa
         retry: () => load(planPage),
         notInScopeHandler: () => renderNotInScope(container)
       });
+      restoreReadingFocus(container, hadFocus);
     }
   }
 
@@ -447,6 +464,7 @@ export function renderAdvisorPlanView({ advisorClient, planId, signal, onSession
   let loadVersion = 0;
   async function load() {
     const requestVersion = ++loadVersion;
+    const hadFocus = container.contains(document.activeElement);
     renderLoading(container, 'กำลังโหลดแผนสหกิจ...');
     try {
       const plan = await advisorClient.getPlan(planId, { signal });
@@ -454,6 +472,7 @@ export function renderAdvisorPlanView({ advisorClient, planId, signal, onSession
         return;
       }
       renderPlan(plan);
+      restoreReadingFocus(container, hadFocus);
     } catch (error) {
       if (requestVersion !== loadVersion) return;
       handleLoadError(error, {
@@ -463,6 +482,7 @@ export function renderAdvisorPlanView({ advisorClient, planId, signal, onSession
         retry: load,
         notInScopeHandler: () => renderNotInScope(container)
       });
+      restoreReadingFocus(container, hadFocus);
     }
   }
 

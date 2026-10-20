@@ -1,6 +1,6 @@
 # Local UI Preview (ไม่ใช้ AWS)
 
-ใช้ตรวจ UI ของ Student Profile, My Plan และหน้ารายการ Staff โดยใช้ shell, components และ CSS จริง
+ใช้ตรวจ UI ของ Student Profile, My Plan, หน้ารายการ Staff และ Advisor ทั้งสามหน้า โดยใช้ shell, components และ CSS จริง
 แต่ฉีด clients ที่ใช้ข้อมูลจำลองในหน่วยความจำจาก entry point แยกเท่านั้น
 ไม่ต้องมี Learner Lab, ฐานข้อมูล, Cognito configuration, token หรือ AWS credentials
 
@@ -14,17 +14,21 @@ npm.cmd run dev:ui
 - แผนสหกิจ: http://localhost:8081/app.html#/student/plan
 - ข้อมูลของฉัน: http://localhost:8081/app.html#/student/profile
 - Staff: http://localhost:8081/app.html?role=STAFF#/staff/students
+- Advisor: http://localhost:8081/app.html?role=ADVISOR#/advisor/students
 
 ใช้พอร์ต 8081 แยกจากเว็บจริงที่อาจเปิดอยู่บน 8080 ไม่ต้องรัน `npm run build`
-เลือกพื้นที่ Student/Staff จากแถบด้านบน Staff มีข้อมูลค้นหาแบบอ่านอย่างเดียวเท่านั้น
+เลือกพื้นที่ Student/Staff/Advisor จากแถบด้านบน Staff มีข้อมูลค้นหาแบบอ่านอย่างเดียวเท่านั้น
 ไม่มี Review command service หรือการจำลองสิทธิ์ Backend หน้า Detail/Review ที่ไม่ได้เตรียม Fixture
 จะแสดง Placeholder ไม่ใช่ผลการทดสอบการเชื่อมต่อจริง
+Advisor มีหน้ารายชื่อ รายละเอียดนักศึกษา/รายการแผน และรายละเอียดแผนจริง แต่ใช้เฉพาะข้อมูลสมมติ
+เลือกสถานการณ์มีนักศึกษา, ยังไม่ได้รับมอบหมาย, ไม่มีแผน, ชื่อยาว และถูกถอนการมอบหมายได้
+รายละเอียดขั้นตอนอยู่ใน [Advisor workspace](v3-advisor-workspace.md)
 เลือกสถานการณ์จำลองจากแถบสีเหลืองด้านบน เปลี่ยน scenario/refresh จะรีเซ็ตข้อมูล
 กด Ctrl+C ใน Terminal เพื่อหยุด Server หลังแก้ source ให้หยุดและเปิดคำสั่งใหม่
 
 ## สิ่งที่ตรวจได้
 
-- Logo CO-ED, สี, ระยะห่าง และข้อความของสองหน้าจริง
+- Logo CO-ED, สี, ระยะห่าง และข้อความของหน้าจริง
 - Responsive ที่ 320 / 768 / 1366px, ไม่มี horizontal overflow
 - Tab / Shift+Tab, focus, Enter, labels และการใช้ dropdown ด้วย keyboard
 - แก้ชื่อที่ต้องการให้แสดง, สร้าง Draft, ค้นหา Company, เลือก Position และบันทึก

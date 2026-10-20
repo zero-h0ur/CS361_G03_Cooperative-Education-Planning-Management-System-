@@ -253,6 +253,16 @@ describe('Issue #75: Advisor assigned-student and Plan pages', () => {
     expect(backend.calls.every((call) => call.method === 'GET')).toBe(true);
   });
 
+  it('restores a keyboard reading point after refresh removes the focused button', async () => {
+    const { root } = await mountAdvisorPage(createFakeBackend());
+    const refresh = root.querySelector('[data-role="advisor-refresh"]');
+    refresh.focus();
+    refresh.click();
+    await flush(10);
+    expect(document.activeElement).toBe(root.querySelector('#advisor-students-title'));
+    expect(document.activeElement.getAttribute('tabindex')).toBe('-1');
+  });
+
   it('keeps long/untrusted Student names as text in cards and accessible navigation labels', async () => {
     const name = '<img src=x onerror=alert(1)>' + 'นักศึกษาชื่อยาว'.repeat(12);
     const { root } = await mountAdvisorPage(createFakeBackend({ students: [studentRow({ full_name: name })] }));
