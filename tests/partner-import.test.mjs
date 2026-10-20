@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { buildCatalogue, parseCsv, validatePayload, stableId } from '../scripts/import-companies-csv.mjs';
 import { buildImportSql } from '../scripts/operations/partner-import-sql.mjs';
 const raw = [
@@ -33,6 +34,24 @@ test('contact columns never enter either JSON or SQL', () => {
   assert.ok(sql.includes('ON CONFLICT(id) DO UPDATE'));
   assert.ok(sql.includes('ROLLBACK;'));
   assert.ok(sql.includes('Private records changed'));
+});
+
+test('import verifies all seven reviewed migration checksums but executes only directory migration 003', () => {
+  const sql = buildImportSql(buildCatalogue(raw, options));
+  const names = [
+    '001_initial_schema.sql', '002_v3_identity_student_plan_assignment_audit.sql',
+    '003_partner_directory.sql', '004_three_role_workflow.sql',
+    '005_submission_snapshots.sql', '006_advisor_display_name.sql',
+    '007_submission_policy_integrity.sql',
+  ];
+  for (const name of names) {
+    const source = fs.readFileSync(new URL('../src/db/migrations/' + name, import.meta.url), 'utf8');
+    const checksum = crypto.createHash('sha256').update(source).digest('hex');
+    assert.ok(sql.includes(`('${name}','${checksum}')`), `${name} must have a verified checksum`);
+    assert.equal(sql.includes(source), name === '003_partner_directory.sql', `${name} execution boundary`);
+  }
+  assert.ok(sql.includes('LEFT JOIN expected_migrations'));
+  assert.ok(sql.includes('e.checksum IS DISTINCT FROM m.checksum'));
 });
 test('unmatched announcements stop instead of adding invented addresses', () => {
   assert.throws(() => buildCatalogue(raw.replace('1,บริษัท Synthetic Nimble จำกัด', '1,Other Company'), options), /Unmatched/);
