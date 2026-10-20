@@ -248,7 +248,8 @@ describe('Issue #56 forward-only V3 migration', () => {
       ORDER BY version
     `);
     expect(result.rows.map(row => row.version)).toEqual([
-      '001_initial_schema.sql', '002_v3_identity_student_plan_assignment_audit.sql', '003_partner_directory.sql'
+      '001_initial_schema.sql', '002_v3_identity_student_plan_assignment_audit.sql', '003_partner_directory.sql',
+      '004_three_role_workflow.sql','005_submission_snapshots.sql','006_advisor_display_name.sql','007_submission_policy_integrity.sql'
     ]);
     for (const row of result.rows) {
       expect(row.checksum).toMatch(/^[0-9a-f]{64}$/);
@@ -264,7 +265,7 @@ describe('Issue #56 forward-only V3 migration', () => {
         migrate({ pool: isolated.pool, logger: SILENT_LOGGER }),
       ]);
       const result = await isolated.pool.query(`SELECT COUNT(*) FROM schema_migrations`);
-      expect(Number(result.rows[0].count)).toBe(3);
+      expect(Number(result.rows[0].count)).toBe(7);
     } finally {
       await dropIsolatedPool(isolated.schema, isolated.pool);
     }
