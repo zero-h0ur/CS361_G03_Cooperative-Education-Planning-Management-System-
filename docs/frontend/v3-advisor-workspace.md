@@ -94,6 +94,12 @@ database just to run this UI verification.
   guard (`ALLOW_DB_RESET` not enabled), before seed/database writes. It is not
   reported as a passing integration run.
 - Production build and `git diff --check` passed.
+- Documentation scanner passed for the repository entry documents and the two
+  affected frontend guides. The optional full documentation unit suite had 8
+  passes and 1 environment failure: Windows denied creating its test symlink
+  (`EPERM`). No OS permissions were changed to bypass that restriction.
+- Preview was restarted with the final source and returned HTTP 200 with its
+  `connect-src 'none'` CSP intact.
 - Browser inventory contained no connected browser; visual/viewport/keyboard
   manual checks and real Cognito/API smoke checks remain pending.
 
