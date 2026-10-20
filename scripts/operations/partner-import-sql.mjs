@@ -15,7 +15,17 @@ export function buildImportSql(payload) {
   if (payload.catalog_key !== CATALOG || !Array.isArray(payload.companies) || !Array.isArray(payload.positions)) {
     throw new Error('Invalid catalogue payload.');
   }
-  const migrations = ['001_initial_schema.sql', '002_v3_identity_student_plan_assignment_audit.sql', '003_partner_directory.sql']
+  // Explicitly reviewed history: unknown migrations must still fail closed.
+  // Only migration 003 is executed by this importer; later entries verify history.
+  const migrations = [
+    '001_initial_schema.sql',
+    '002_v3_identity_student_plan_assignment_audit.sql',
+    '003_partner_directory.sql',
+    '004_three_role_workflow.sql',
+    '005_submission_snapshots.sql',
+    '006_advisor_display_name.sql',
+    '007_submission_policy_integrity.sql',
+  ]
     .map(name => ({ name, sql: fs.readFileSync(path.join(ROOT, 'src/db/migrations', name), 'utf8') }))
     .map(item => ({ ...item, hash: crypto.createHash('sha256').update(item.sql).digest('hex') }));
   const expected = migrations.map(m => '(' + quote(m.name) + ',' + quote(m.hash) + ')').join(',');

@@ -25,14 +25,16 @@ const payload = process.env.COED_DIRECTORY_MANIFEST
   : buildCatalogue(sample, { importedAt: '2026-10-21T00:00:00.000Z' });
 validatePayload(payload);
 
-async function runImport(input, apply = false) {
+async function runImport(input, apply = false, setup = null) {
   validatePayload(input);
   const body = buildImportSql(input).split('\\if :apply')[0]
     .split('\n').filter(line => !line.startsWith('\\')).join('\n') + (apply ? '\nCOMMIT;' : '\nROLLBACK;');
   const client = await pool.connect();
   try {
     await client.query("SET coed.allow_local_import = 'yes'");
-    return await client.query(body);
+    await client.query('BEGIN');
+    if (setup) await setup(client);
+    return await client.query(body.replace('BEGIN;', ''));
   } finally { await client.query('ROLLBACK'); client.release(); }
 }
 async function digest(tables) {
@@ -52,6 +54,50 @@ test('dry run rolls back catalogue rows and preserves private records', async ()
   const before = await digest(tables);
   await runImport(payload);
   assert.deepEqual(await digest(tables), before);
+});
+
+test('import accepts the complete reviewed migration history 001 through 007', async () => {
+  const { rows } = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
+  assert.deepEqual(rows.map(row => row.version), [
+    '001_initial_schema.sql', '002_v3_identity_student_plan_assignment_audit.sql',
+    '003_partner_directory.sql', '004_three_role_workflow.sql',
+    '005_submission_snapshots.sql', '006_advisor_display_name.sql',
+    '007_submission_policy_integrity.sql',
+  ]);
+  await runImport(payload);
+});
+
+// Shadow history only in a transaction-local temporary table. Never alter the
+// installed migration checksums, even inside this disposable test database.
+async function shadowMigrationHistory(client) {
+  const { rows } = await client.query('SELECT version, checksum FROM schema_migrations');
+  await client.query('CREATE TEMP TABLE schema_migrations (version text, checksum text) ON COMMIT DROP');
+  for (const row of rows) {
+    await client.query('INSERT INTO pg_temp.schema_migrations VALUES ($1, $2)', [row.version, row.checksum]);
+  }
+}
+
+test('import rejects altered checksums for every reviewed migration without changing stored history', async t => {
+  const before = await digest(['schema_migrations', 'companies', 'positions', 'students', 'plans']);
+  const { rows } = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
+  for (const { version } of rows) {
+    await t.test(version, async () => {
+      await assert.rejects(runImport(payload, true, async client => {
+        await shadowMigrationHistory(client);
+        await client.query('UPDATE pg_temp.schema_migrations SET checksum = $1 WHERE version = $2', ['0'.repeat(64), version]);
+      }), /Migration history differs from reviewed source/);
+      assert.deepEqual(await digest(Object.keys(before)), before);
+    });
+  }
+});
+
+test('import rejects unknown migrations without changing stored history or catalogue rows', async () => {
+  const before = await digest(['schema_migrations', 'companies', 'positions', 'students', 'plans']);
+  await assert.rejects(runImport(payload, true, async client => {
+    await shadowMigrationHistory(client);
+    await client.query('INSERT INTO pg_temp.schema_migrations VALUES ($1, $2)', ['999_unreviewed.sql', 'a'.repeat(64)]);
+  }), /Migration history differs from reviewed source/);
+  assert.deepEqual(await digest(Object.keys(before)), before);
 });
 test('apply is idempotent, private records stay unchanged, and real positions never enter legacy public APIs', async () => {
   const privateTables = ['users', 'external_identity_links', 'students', 'plans', 'advisor_assignments',
