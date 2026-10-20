@@ -54,7 +54,7 @@ const ROUTE_DEFINITIONS = Object.freeze([
     navLabel: 'นักศึกษาที่ดูแล',
     eyebrow: 'ADVISOR VIEW',
     title: 'นักศึกษาที่ได้รับมอบหมาย',
-    description: 'รายชื่อนักศึกษาที่อยู่ใน Assignment ของคุณ ณ ตอนนี้ (อ่านอย่างเดียว)',
+    description: 'ดูข้อมูลและแผนของนักศึกษาที่เจ้าหน้าที่มอบหมายให้คุณดูแล',
     status: 'Assigned-scope API (#68)'
   })
 ]);
@@ -80,7 +80,7 @@ const DETAIL_ROUTE_DEFINITIONS = Object.freeze([
     role: 'ADVISOR',
     eyebrow: 'ADVISOR VIEW · READ-ONLY',
     title: 'ข้อมูลนักศึกษาที่ได้รับมอบหมาย',
-    description: 'ข้อมูลนักศึกษาและแผนสหกิจที่คุณมีสิทธิ์อ่านตาม Assignment',
+    description: 'ข้อมูลและแผนสหกิจสำหรับให้คำปรึกษา ดูได้โดยไม่แก้ไขข้อมูล',
     status: 'Assigned-scope API (#68)'
   }),
   Object.freeze({

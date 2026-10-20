@@ -6,6 +6,7 @@
  */
 
 import { ADVISOR_ERROR_CODES, DEFAULT_ADVISOR_PAGE_SIZE } from './advisor-client.js';
+import { createWorkspaceIcon } from '../ui/workspace-presentation.js';
 
 const STUDENT_LIST_HASH = '#/advisor/students';
 
@@ -100,6 +101,7 @@ function statusBadge(status) {
 
 function readOnlyBadge() {
   const badge = element('span', 'student-badge student-badge--neutral advisor-readonly-badge', 'อ่านอย่างเดียว (Read-only)');
+  badge.prepend(createWorkspaceIcon('lock'));
   badge.dataset.role = 'advisor-readonly-badge';
   return badge;
 }
@@ -127,9 +129,8 @@ function renderLoading(container, title) {
   card.setAttribute('role', 'status');
   card.dataset.role = 'advisor-loading';
   card.append(
-    element('p', 'student-card__eyebrow', 'LOADING'),
     element('h2', 'student-card__title', title),
-    element('p', 'student-card__description', 'ระบบกำลังดึงข้อมูลตาม Assignment ปัจจุบันของคุณ')
+    element('p', 'student-card__description', 'กำลังตรวจสอบข้อมูลนักศึกษาที่อยู่ในความดูแลของคุณ')
   );
   container.replaceChildren(card);
 }
@@ -140,7 +141,6 @@ function renderNotInScope(container) {
   card.setAttribute('role', 'alert');
   card.dataset.role = 'advisor-not-in-scope';
   card.append(
-    element('p', 'student-card__eyebrow', 'NOT AVAILABLE'),
     element('h2', 'student-card__title', 'ไม่สามารถแสดงข้อมูลนี้ได้'),
     element('p', 'student-card__description', NOT_IN_SCOPE_MESSAGE),
     link(STUDENT_LIST_HASH, 'shell-button shell-button--secondary', 'กลับไปยังรายชื่อนักศึกษา')
@@ -154,7 +154,6 @@ function renderLoadError(container, retry) {
   card.setAttribute('role', 'alert');
   card.dataset.role = 'advisor-load-error';
   card.append(
-    element('p', 'student-card__eyebrow', 'SERVICE UNAVAILABLE'),
     element('h2', 'student-card__title', 'โหลดข้อมูลไม่สำเร็จ'),
     element('p', 'student-card__description', 'ระบบยังไม่พร้อมให้บริการในขณะนี้ กรุณาลองใหม่อีกครั้ง'),
     button('ลองโหลดอีกครั้ง', retry, false)
@@ -182,17 +181,22 @@ function handleLoadError(error, { container, signal, onSessionExpired, retry, no
   renderLoadError(container, retry);
 }
 
-function createCard({ eyebrow, title, titleId }) {
-  const card = element('section', 'student-card');
+function createCard({ title, titleId, icon = 'user' }) {
+  const card = element('section', 'student-card advisor-card');
   card.setAttribute('aria-labelledby', titleId);
   const heading = element('h2', 'student-card__title', title);
   heading.id = titleId;
-  card.append(element('p', 'student-card__eyebrow', eyebrow), heading);
+  const header = element('div', 'advisor-card__heading');
+  const mark = element('span', 'advisor-card__icon');
+  mark.append(createWorkspaceIcon(icon));
+  header.append(mark, heading);
+  card.append(header);
   return card;
 }
 
 function createReadOnlyNotice(text) {
   const notice = element('p', 'student-profile-official__notice advisor-readonly-notice', text);
+  notice.prepend(createWorkspaceIcon('lock'));
   notice.dataset.role = 'advisor-readonly-notice';
   return notice;
 }
@@ -214,42 +218,53 @@ function createDetailList(rows) {
   return list;
 }
 
-function createTable({ caption, columns, rows }) {
-  // Scrollable region is focusable so keyboard users can scroll a wide table on small screens
-  const region = element('div', 'advisor-table-wrap');
-  region.setAttribute('role', 'region');
-  region.setAttribute('aria-label', caption);
-  region.tabIndex = 0;
+function createRefresh(onClick) {
+  const control = button('รีเฟรชข้อมูล', onClick);
+  control.prepend(createWorkspaceIcon('refresh'));
+  control.dataset.role = 'advisor-refresh';
+  return control;
+}
 
-  const table = element('table', 'advisor-table');
-  const captionNode = element('caption', 'advisor-table__caption', caption);
-  const head = element('thead');
-  const headRow = element('tr');
-  for (const column of columns) {
-    const th = element('th', null, column);
-    th.scope = 'col';
-    headRow.append(th);
+function studentList(items) {
+  const list = element('ul', 'advisor-student-cards');
+  list.dataset.role = 'advisor-student-list';
+  list.setAttribute('aria-label', 'นักศึกษาที่ได้รับมอบหมาย');
+  for (const student of items) {
+    const item = element('li', 'advisor-student-card');
+    const heading = element('div', 'advisor-student-card__heading');
+    const name = element('h3', 'advisor-student-card__name', studentName(student));
+    const enrollment = element('span', 'student-badge student-badge--neutral',
+      ENROLLMENT_LABELS[student.enrollment_status] || displayText(student.enrollment_status));
+    heading.append(name, enrollment);
+    const open = link(`#/advisor/students/${student.id}`, 'shell-button shell-button--secondary', 'ดูข้อมูลและแผน');
+    open.setAttribute('aria-label', `ดูข้อมูลและแผนของ ${studentName(student)}`);
+    item.append(heading, createDetailList([
+      { label: 'รหัสนักศึกษา', value: displayText(student.student_number) },
+      { label: 'หลักสูตร / สาขา', value: studentProgram(student) },
+      { label: 'ปีการศึกษา (พ.ศ.)', value: displayText(student.academic_year) }
+    ]), open);
+    list.append(item);
   }
-  head.append(headRow);
+  return list;
+}
 
-  const body = element('tbody');
-  for (const cells of rows) {
-    const tr = element('tr');
-    for (const cell of cells) {
-      const td = element('td');
-      if (cell instanceof Node) {
-        td.append(cell);
-      } else {
-        td.textContent = cell;
-      }
-      tr.append(td);
-    }
-    body.append(tr);
+function planList(items) {
+  const list = element('ul', 'advisor-plan-cards');
+  list.dataset.role = 'advisor-plan-list';
+  list.setAttribute('aria-label', 'แผนสหกิจของนักศึกษา');
+  for (const plan of items) {
+    const item = element('li', 'advisor-plan-card');
+    item.append(statusBadge(plan.status), createDetailList([
+      { label: 'สถานประกอบการ', value: plan.company?.name || 'ยังไม่ได้ระบุ' },
+      { label: 'ตำแหน่งงาน', value: plan.position?.title || 'ยังไม่ได้ระบุ' },
+      { label: 'อัปเดตล่าสุด', value: formatTimestamp(plan.updated_at) }
+    ]));
+    const open = link(`#/advisor/plans/${plan.id}`, 'shell-button shell-button--secondary', 'ดูรายละเอียดแผน');
+    open.setAttribute('aria-label', `ดูรายละเอียดแผน ${plan.company?.name || 'ยังไม่ระบุสถานประกอบการ'} ${plan.position?.title || ''}`.trim());
+    item.append(open);
+    list.append(item);
   }
-
-  table.append(captionNode, head, body);
-  region.append(table);
-  return region;
+  return list;
 }
 
 function createPager(pagination, onPage) {
@@ -278,15 +293,18 @@ export function renderAdvisorStudentListView({ advisorClient, signal, onSessionE
     return renderFallback(container);
   }
 
+  let loadVersion = 0;
   async function load(page = 1) {
+    const requestVersion = ++loadVersion;
     renderLoading(container, 'กำลังโหลดรายชื่อนักศึกษาที่ได้รับมอบหมาย...');
     try {
       const result = await advisorClient.listStudents({ page, pageSize: DEFAULT_ADVISOR_PAGE_SIZE, signal });
-      if (signal?.aborted) {
+      if (signal?.aborted || requestVersion !== loadVersion) {
         return;
       }
       renderList(result);
     } catch (error) {
+      if (requestVersion !== loadVersion) return;
       handleLoadError(error, {
         container,
         signal,
@@ -300,35 +318,31 @@ export function renderAdvisorStudentListView({ advisorClient, signal, onSessionE
 
   function renderList({ items, pagination }) {
     container.setAttribute('aria-busy', 'false');
-    const card = createCard({ eyebrow: 'ASSIGNED STUDENTS', title: 'รายชื่อนักศึกษาที่ได้รับมอบหมาย', titleId: 'advisor-students-title' });
+    const card = createCard({ title: 'นักศึกษาในความดูแลของคุณ', titleId: 'advisor-students-title' });
+    const actions = element('div', 'advisor-toolbar');
     const badges = element('div', 'student-dashboard-summary__badges');
     badges.append(readOnlyBadge());
+    actions.append(badges, createRefresh(() => load(1)));
     card.append(
-      badges,
-      createReadOnlyNotice('แสดงเฉพาะนักศึกษาที่มี Assignment ที่มีผลอยู่ ณ ตอนนี้ อาจารย์ที่ปรึกษาอ่านข้อมูลได้อย่างเดียว ไม่สามารถแก้ไขหรือดำเนินการกับแผนได้')
+      actions,
+      createReadOnlyNotice('เจ้าหน้าที่เป็นผู้มอบหมายนักศึกษาและตรวจอนุมัติแผน คุณสามารถเปิดอ่านข้อมูลและแผนของนักศึกษาในความดูแลเพื่อให้คำปรึกษาได้')
     );
 
     if (items.length === 0) {
-      const empty = element('p', 'student-card__description', 'ยังไม่มีนักศึกษาที่ได้รับมอบหมายให้คุณในขณะนี้ หากข้อมูลไม่ถูกต้องกรุณาติดต่อเจ้าหน้าที่สหกิจศึกษา');
+      const empty = element('section', 'advisor-empty');
       empty.dataset.role = 'advisor-no-assignment';
+      const hasOtherPages = Number.isInteger(pagination?.total) && pagination.total > 0;
+      empty.append(createWorkspaceIcon('user'),
+        element('h3', null, hasOtherPages ? 'ไม่พบรายการในหน้านี้' : 'ยังไม่มีนักศึกษาที่ได้รับมอบหมาย'),
+        element('p', 'student-card__description', hasOtherPages
+          ? 'ข้อมูลอาจเปลี่ยนแปลง กรุณารีเฟรชเพื่อกลับไปยังรายชื่อปัจจุบัน'
+          : 'เมื่อเจ้าหน้าที่มอบหมายนักศึกษาให้คุณ รายชื่อจะแสดงที่นี่ ก่อนหน้านั้นคุณยังไม่สามารถเปิดข้อมูลนักศึกษาได้ หากมีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่สหกิจศึกษา'));
       card.append(empty);
       container.replaceChildren(card);
       return;
     }
 
-    const table = createTable({
-      caption: 'นักศึกษาที่ได้รับมอบหมาย',
-      columns: ['รหัสนักศึกษา', 'ชื่อ-นามสกุล', 'หลักสูตร / สาขา', 'ปีการศึกษา', 'สถานะการศึกษา'],
-      rows: items.map((student) => [
-        displayText(student.student_number),
-        link(`#/advisor/students/${student.id}`, 'advisor-link', studentName(student)),
-        studentProgram(student),
-        displayText(student.academic_year),
-        ENROLLMENT_LABELS[student.enrollment_status] || displayText(student.enrollment_status)
-      ])
-    });
-    table.dataset.role = 'advisor-student-list';
-    card.append(table);
+    card.append(studentList(items));
 
     const pager = createPager(pagination, (nextPage) => load(nextPage));
     if (pager) {
@@ -347,18 +361,21 @@ export function renderAdvisorStudentDetailView({ advisorClient, studentId, signa
     return renderFallback(container);
   }
 
+  let loadVersion = 0;
   async function load(planPage = 1) {
+    const requestVersion = ++loadVersion;
     renderLoading(container, 'กำลังโหลดข้อมูลนักศึกษา...');
     try {
       const [student, plans] = await Promise.all([
         advisorClient.getStudent(studentId, { signal }),
         advisorClient.listStudentPlans(studentId, { page: planPage, pageSize: DEFAULT_ADVISOR_PAGE_SIZE, signal })
       ]);
-      if (signal?.aborted) {
+      if (signal?.aborted || requestVersion !== loadVersion) {
         return;
       }
       renderDetail(student, plans);
     } catch (error) {
+      if (requestVersion !== loadVersion) return;
       handleLoadError(error, {
         container,
         signal,
@@ -373,11 +390,12 @@ export function renderAdvisorStudentDetailView({ advisorClient, studentId, signa
     container.setAttribute('aria-busy', 'false');
     const back = link(STUDENT_LIST_HASH, 'advisor-back-link', '← กลับไปยังรายชื่อนักศึกษา');
 
-    const profileCard = createCard({ eyebrow: 'STUDENT', title: studentName(student), titleId: 'advisor-student-title' });
+    const profileCard = createCard({ title: studentName(student), titleId: 'advisor-student-title' });
     const badges = element('div', 'student-dashboard-summary__badges');
     badges.append(readOnlyBadge());
     profileCard.append(
       badges,
+      createReadOnlyNotice('ข้อมูลสำหรับให้คำปรึกษา แสดงเฉพาะนักศึกษาที่เจ้าหน้าที่มอบหมายให้คุณดูแล'),
       createDetailList([
         { label: 'รหัสนักศึกษา', value: displayText(student.student_number), field: 'student_number' },
         { label: 'ชื่อ-นามสกุล', value: displayText(student.full_name), field: 'full_name' },
@@ -394,36 +412,26 @@ export function renderAdvisorStudentDetailView({ advisorClient, studentId, signa
       ])
     );
 
-    const plansCard = createCard({ eyebrow: 'CO-OP PLANS', title: 'แผนสหกิจของนักศึกษา', titleId: 'advisor-student-plans-title' });
+    const plansCard = createCard({ title: 'แผนสหกิจของนักศึกษา', titleId: 'advisor-student-plans-title', icon: 'file' });
     plansCard.append(
       createReadOnlyNotice('การรับเรื่องตรวจ ส่งกลับให้แก้ไข และอนุมัติแผนเป็นหน้าที่ของเจ้าหน้าที่สหกิจศึกษา อาจารย์ที่ปรึกษาอ่านสถานะได้อย่างเดียว')
     );
 
     if (items.length === 0) {
-      const empty = element('p', 'student-card__description', 'นักศึกษายังไม่มีแผนสหกิจศึกษา');
+      const empty = element('p', 'student-card__description advisor-empty', 'ยังไม่มีแผนสหกิจให้แสดงสำหรับนักศึกษาคนนี้');
       empty.dataset.role = 'advisor-no-plans';
       plansCard.append(empty);
     } else {
-      const table = createTable({
-        caption: 'แผนสหกิจของนักศึกษา',
-        columns: ['สถานะ', 'สถานประกอบการ', 'ตำแหน่งงาน', 'อัปเดตล่าสุด', 'รายละเอียด'],
-        rows: items.map((plan) => [
-          statusBadge(plan.status),
-          plan.company?.name || 'ยังไม่ได้ระบุ',
-          plan.position?.title || 'ยังไม่ได้ระบุ',
-          formatTimestamp(plan.updated_at),
-          link(`#/advisor/plans/${plan.id}`, 'advisor-link', 'ดูแผน')
-        ])
-      });
-      table.dataset.role = 'advisor-plan-list';
-      plansCard.append(table);
+      plansCard.append(planList(items));
       const pager = createPager(pagination, (nextPage) => load(nextPage));
       if (pager) {
         plansCard.append(pager);
       }
     }
 
-    container.replaceChildren(back, profileCard, plansCard);
+    const navigation = element('div', 'advisor-toolbar');
+    navigation.append(back, createRefresh(() => load()));
+    container.replaceChildren(navigation, profileCard, plansCard);
   }
 
   load();
@@ -436,15 +444,18 @@ export function renderAdvisorPlanView({ advisorClient, planId, signal, onSession
     return renderFallback(container);
   }
 
+  let loadVersion = 0;
   async function load() {
+    const requestVersion = ++loadVersion;
     renderLoading(container, 'กำลังโหลดแผนสหกิจ...');
     try {
       const plan = await advisorClient.getPlan(planId, { signal });
-      if (signal?.aborted) {
+      if (signal?.aborted || requestVersion !== loadVersion) {
         return;
       }
       renderPlan(plan);
     } catch (error) {
+      if (requestVersion !== loadVersion) return;
       handleLoadError(error, {
         container,
         signal,
@@ -460,7 +471,7 @@ export function renderAdvisorPlanView({ advisorClient, planId, signal, onSession
     container.dataset.planStatus = plan.status;
     const back = link(STUDENT_LIST_HASH, 'advisor-back-link', '← กลับไปยังรายชื่อนักศึกษา');
 
-    const card = createCard({ eyebrow: 'CO-OP PLAN · READ-ONLY', title: 'รายละเอียดแผนสหกิจ', titleId: 'advisor-plan-title' });
+    const card = createCard({ title: 'รายละเอียดแผนสหกิจ', titleId: 'advisor-plan-title', icon: 'file' });
     const badges = element('div', 'student-dashboard-summary__badges');
     badges.append(statusBadge(plan.status), readOnlyBadge());
     if (plan.version !== null) {
@@ -480,7 +491,9 @@ export function renderAdvisorPlanView({ advisorClient, planId, signal, onSession
       ])
     );
 
-    container.replaceChildren(back, card);
+    const navigation = element('div', 'advisor-toolbar');
+    navigation.append(back, createRefresh(load));
+    container.replaceChildren(navigation, card);
   }
 
   load();

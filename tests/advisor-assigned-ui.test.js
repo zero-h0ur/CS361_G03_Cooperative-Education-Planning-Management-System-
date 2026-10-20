@@ -223,8 +223,10 @@ describe('Issue #75: Advisor assigned-student and Plan pages', () => {
       `#/advisor/students/${STUDENT_A}`,
       `#/advisor/students/${STUDENT_B}`
     ]);
-    expect(links[0].textContent).toBe('สมชาย ใจดี (ชาย)');
-    expect(root.querySelector('[data-role="advisor-student-list"]').tabIndex).toBe(0);
+    expect(links[0].textContent).toBe('ดูข้อมูลและแผน');
+    expect(links[0].getAttribute('aria-label')).toContain('สมชาย ใจดี (ชาย)');
+    expect(root.querySelector('.advisor-student-card__name').textContent).toBe('สมชาย ใจดี (ชาย)');
+    expect(root.querySelector('[data-role="advisor-student-list"]').tagName).toBe('UL');
     expect(root.querySelector('[data-role="advisor-readonly-badge"]')).not.toBeNull();
     expect(root.textContent).not.toContain('leak-student@example.ac.th');
     expectNoMutationControls(root);
@@ -233,6 +235,47 @@ describe('Issue #75: Advisor assigned-student and Plan pages', () => {
   it('shows a no-assignment state', async () => {
     const { root } = await mountAdvisorPage(createFakeBackend({ students: [] }));
     expect(root.querySelector('[data-role="advisor-no-assignment"]').textContent).toContain('ยังไม่มีนักศึกษาที่ได้รับมอบหมาย');
+    expect(root.querySelector('[data-role="advisor-no-assignment"]').textContent).toContain('เมื่อเจ้าหน้าที่มอบหมาย');
+    expect(root.querySelector('[data-role="advisor-refresh"]')).not.toBeNull();
+    expectNoMutationControls(root);
+  });
+
+  it('refreshes the assigned list without retaining Students whose assignment was removed', async () => {
+    const students = [studentRow()];
+    const backend = createFakeBackend({ students });
+    const { root } = await mountAdvisorPage(backend);
+    expect(root.textContent).toContain('TEST000001');
+    students.splice(0);
+    root.querySelector('[data-role="advisor-refresh"]').click();
+    expect(root.textContent).not.toContain('TEST000001');
+    await flush(10);
+    expect(root.querySelector('[data-role="advisor-no-assignment"]')).not.toBeNull();
+    expect(backend.calls.every((call) => call.method === 'GET')).toBe(true);
+  });
+
+  it('keeps long/untrusted Student names as text in cards and accessible navigation labels', async () => {
+    const name = '<img src=x onerror=alert(1)>' + 'นักศึกษาชื่อยาว'.repeat(12);
+    const { root } = await mountAdvisorPage(createFakeBackend({ students: [studentRow({ full_name: name })] }));
+    const card = root.querySelector('.advisor-student-card');
+    expect(card.querySelector('img, script')).toBeNull();
+    expect(card.querySelector('h3').textContent).toContain(name);
+    expect(card.querySelector('a').getAttribute('aria-label')).toContain(name);
+    expect(card.querySelector('a').getAttribute('href')).toBe(`#/advisor/students/${STUDENT_A}`);
+  });
+
+  it('replaces Plan details with the same generic scope error when refresh finds a revoked assignment', async () => {
+    let revoked = false;
+    const backend = createFakeBackend({ override: () => revoked ? forbidden() : null });
+    const { root } = await mountAdvisorPage(backend, { hash: `#/advisor/plans/${PLAN_A}` });
+    expect(root.textContent).toContain('Example Tech Co.');
+    revoked = true;
+    root.querySelector('[data-role="advisor-refresh"]').click();
+    expect(root.textContent).not.toContain('Example Tech Co.');
+    await flush(10);
+    expect(root.querySelector('[data-role="advisor-not-in-scope"]').textContent)
+      .toContain('ไม่พบข้อมูลที่ร้องขอ หรือข้อมูลนี้ไม่อยู่ในขอบเขต');
+    expect(root.querySelector('[data-field="notes"]')).toBeNull();
+    expectNoMutationControls(root);
   });
 
   it('pages through the assigned list', async () => {
@@ -242,13 +285,13 @@ describe('Issue #75: Advisor assigned-student and Plan pages', () => {
     const backend = createFakeBackend({ students });
     const { root } = await mountAdvisorPage(backend);
 
-    expect(root.querySelectorAll('[data-role="advisor-student-list"] tbody tr')).toHaveLength(20);
+    expect(root.querySelectorAll('[data-role="advisor-student-list"] > li')).toHaveLength(20);
     const next = [...root.querySelectorAll('.advisor-pager button')].find((control) => control.textContent === 'หน้าถัดไป');
     next.click();
     await flush(10);
 
     expect(backend.calls.at(-1).query).toEqual({ page: '2', pageSize: '20' });
-    expect(root.querySelectorAll('[data-role="advisor-student-list"] tbody tr')).toHaveLength(5);
+    expect(root.querySelectorAll('[data-role="advisor-student-list"] > li')).toHaveLength(5);
     expect(root.querySelector('.advisor-pager__status').textContent).toContain('หน้า 2 จาก 2');
   });
 

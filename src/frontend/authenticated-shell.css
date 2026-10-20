@@ -1382,8 +1382,101 @@ a:focus-visible,
 }
 
 .advisor-readonly-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   margin-bottom: 18px;
-  border-left: 4px solid #94a3b8;
+  border-left: 3px solid var(--shell-gold);
+}
+
+.advisor-readonly-notice > .workspace-icon {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin-top: 3px;
+  color: var(--shell-muted);
+}
+
+.advisor-card { min-width: 0; }
+.advisor-card__heading,
+.advisor-student-card__heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.advisor-card__heading > .student-card__title { margin: 0; flex: 1 1 180px; }
+.advisor-card__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--shell-soft);
+  color: var(--shell-primary);
+}
+.advisor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.advisor-workspace > .advisor-toolbar { margin-bottom: 0; }
+.advisor-toolbar .student-dashboard-summary__badges { margin: 0; }
+.advisor-student-cards,
+.advisor-plan-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.advisor-student-card,
+.advisor-plan-card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--shell-line);
+  border-radius: 12px;
+  background: var(--shell-surface);
+}
+.advisor-student-card__heading { align-items: flex-start; }
+.advisor-student-card__name {
+  flex: 1 1 180px;
+  min-width: 0;
+  margin: 0;
+  font-size: 1.04rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.advisor-workspace .student-profile-list { margin: 16px 0; }
+.advisor-student-card .student-profile-list,
+.advisor-plan-card .student-profile-list { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.advisor-workspace .shell-button { min-height: 44px; gap: 8px; }
+.advisor-empty {
+  padding: 24px;
+  border: 1px dashed var(--shell-line);
+  border-radius: 12px;
+  background: var(--shell-canvas);
+}
+.advisor-empty > .workspace-icon { color: var(--shell-primary); width: 32px; height: 32px; }
+.advisor-empty > h3 { margin: 12px 0 8px; font-size: 1.08rem; }
+.advisor-empty > p { max-width: 64ch; }
+
+@media (max-width: 1100px) {
+  .advisor-student-cards, .advisor-plan-cards { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .advisor-workspace > .advisor-toolbar { align-items: stretch; }
+  .advisor-toolbar > .shell-button { width: 100%; }
+  .advisor-card__heading { gap: 10px; }
+  .advisor-card__icon { flex-basis: 40px; width: 40px; height: 40px; }
+  .advisor-student-card, .advisor-plan-card, .advisor-empty { padding: 16px; }
+  .advisor-student-card > .shell-button, .advisor-plan-card > .shell-button { width: 100%; }
 }
 
 .advisor-back-link {
@@ -1400,49 +1493,6 @@ a:focus-visible,
 .advisor-link {
   color: var(--shell-primary);
   font-weight: 600;
-}
-
-.advisor-table-wrap {
-  max-width: 100%;
-  overflow-x: auto;
-  border: 1px solid var(--shell-line);
-  border-radius: 8px;
-}
-
-.advisor-table {
-  width: 100%;
-  min-width: 560px;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.advisor-table__caption {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-.advisor-table th,
-.advisor-table td {
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--shell-line);
-  text-align: left;
-  vertical-align: middle;
-  overflow-wrap: anywhere;
-}
-
-.advisor-table th {
-  background: var(--shell-canvas);
-  color: var(--shell-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.advisor-table tbody tr:last-child td {
-  border-bottom: 0;
 }
 
 .advisor-pager {
