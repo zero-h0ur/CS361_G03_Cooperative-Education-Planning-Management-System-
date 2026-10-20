@@ -810,6 +810,22 @@ a:focus-visible,
   --profile-feedback-duration: 180ms;
   --profile-secondary-ink: #334155;
 }
+.student-profile-workspace > .student-card--illustrated {
+  transition: transform var(--profile-feedback-duration) ease-out,
+    box-shadow var(--profile-feedback-duration) ease-out,
+    border-color var(--profile-feedback-duration) ease-out;
+}
+.student-profile-workspace > .student-card--illustrated:focus-within {
+  border-color: var(--shell-primary);
+  box-shadow: 0 8px 24px rgba(200, 16, 46, 0.1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .student-profile-workspace > .student-card--illustrated:hover {
+    transform: translateY(-3px);
+    border-color: var(--shell-primary);
+    box-shadow: 0 12px 28px rgba(200, 16, 46, 0.12);
+  }
+}
 .student-profile-toolbar {
   display: flex;
   align-items: center;
@@ -888,6 +904,8 @@ a:focus-visible,
   to { opacity: 1; transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
+  .student-profile-workspace > .student-card--illustrated { transition: none; }
+  .student-profile-workspace > .student-card--illustrated:hover { transform: none; }
   .student-profile-workspace .student-profile-refresh > .workspace-icon,
   .student-profile-workspace .student-profile-guide__step[open] > .student-profile-guide__content { animation: none; }
   .student-profile-guide__summary { transition: none; }

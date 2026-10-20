@@ -377,7 +377,7 @@ describe('Student Profile read-only workflow UI', () => {
     expect(workspace.querySelector('.student-profile-metadata').textContent).toContain('ไม่ระบุวันที่อัปเดต');
   });
 
-  it('defines reduced-motion overrides for both animated states without animation-end dependencies', () => {
+  it('defines pointer-scoped card lift, keyboard emphasis and reduced-motion overrides', () => {
     const { readFileSync } = require('node:fs');
     const { join } = require('node:path');
     const css = readFileSync(join(__dirname, '../src/frontend/authenticated-shell.css'), 'utf8');
@@ -389,6 +389,14 @@ describe('Student Profile read-only workflow UI', () => {
       const motion = overrides.find((rule) => rule.selectorText?.includes('.student-profile-workspace .student-profile-guide__step[open] > .student-profile-guide__content'));
       expect(motion.style.getPropertyValue('animation')).toBe('none');
       expect(motion.selectorText).toContain('.student-profile-workspace .student-profile-refresh > .workspace-icon');
+      const hover = [...style.sheet.cssRules].find((rule) => rule.conditionText === '(hover: hover) and (pointer: fine)');
+      const lift = [...hover.cssRules].find((rule) => rule.selectorText === '.student-profile-workspace > .student-card--illustrated:hover');
+      expect(lift.style.getPropertyValue('transform')).toBe('translateY(-3px)');
+      const still = overrides.find((rule) => rule.selectorText === lift.selectorText);
+      expect(still.style.getPropertyValue('transform')).toBe('none');
+      const focus = [...style.sheet.cssRules].find((rule) => rule.selectorText === '.student-profile-workspace > .student-card--illustrated:focus-within');
+      expect(focus.style.getPropertyValue('border-color')).toBe('var(--shell-primary)');
+      expect(focus.style.getPropertyValue('transform')).toBe('');
     } finally { style.remove(); }
   });
 
