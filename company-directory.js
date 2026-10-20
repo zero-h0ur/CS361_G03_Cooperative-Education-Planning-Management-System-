@@ -1,5 +1,5 @@
 /**
- * Company Directory - Public V2 API Implementation
+ * Company Directory - Public V2 API & Real Dataset Implementation
  */
 
 // DOM Elements
@@ -16,12 +16,12 @@ const {
 } = window.CompanyDirectoryHelpers;
 
 // Fallback items
-const staticCompanyCards = Array.from(companyList.children);
+const staticCompanyCards = companyList ? Array.from(companyList.children) : [];
 let hasExpandedDirectory = false;
 
 // State
 let state = {
-  mode: 'api', // 'api' or 'static'
+  mode: 'api', // 'api', 'dataset', or 'static'
   query: '',
   location: '',
   page: 1,
@@ -90,30 +90,132 @@ function isValidCompanyListResponse(json) {
 }
 
 /**
- * Generates a company card from API data
+ * Checks if current user is authenticated
+ */
+function isUserAuthenticated() {
+  try {
+    if (typeof window.getCoEdSession === 'function') {
+      return Boolean(window.getCoEdSession());
+    }
+    if (window.sessionStorage && window.sessionStorage.getItem('co-ed:session')) {
+      return true;
+    }
+    if (window.sessionStorage) {
+      for (let i = 0; i < window.sessionStorage.length; i++) {
+        const key = window.sessionStorage.key(i);
+        if (key && (key.includes('.idToken') || key.endsWith('idToken'))) {
+          return true;
+        }
+      }
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+function getRoleTagClass(title) {
+  const t = String(title || '').toLowerCase();
+  if (t.includes('ซอฟต์แวร์') || t.includes('software') || t.includes('developer') || t.includes('frontend') || t.includes('backend') || t.includes('web') || t.includes('engineer') || t.includes('tester') || t.includes('programmer')) {
+    return 'tag-role-dev';
+  }
+  if (t.includes('ข้อมูล') || t.includes('data') || t.includes('ai') || t.includes('machine learning') || t.includes('nlp')) {
+    return 'tag-role-data';
+  }
+  if (t.includes('design') || t.includes('ux') || t.includes('ui') || t.includes('กราฟิก') || t.includes('creative') || t.includes('researcher')) {
+    return 'tag-role-design';
+  }
+  if (t.includes('security') || t.includes('cyber') || t.includes('cloud') || t.includes('network') || t.includes('ระบบคลาวด์') || t.includes('pentest')) {
+    return 'tag-role-sec';
+  }
+  if (t.includes('business') || t.includes('analyst') || t.includes('ธุรกิจ') || t.includes('marketing') || t.includes('การตลาด') || t.includes('scrum') || t.includes('manager')) {
+    return 'tag-role-biz';
+  }
+  return '';
+}
+
+function formatContactLinks(text = '') {
+  if (!text) return '';
+  const urlRegex = /(https?:\/\/[^\s<]+)/g;
+  let formatted = text.replace(urlRegex, (url) => {
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--tu-red); text-decoration:underline; font-weight:600;">${url}</a>`;
+  });
+  const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+  formatted = formatted.replace(emailRegex, (email) => {
+    return `<a href="mailto:${email}" style="color:var(--tu-red); text-decoration:underline; font-weight:600;">${email}</a>`;
+  });
+  return formatted;
+}
+
+/**
+ * Generates a company card from company data (handles both API and Dataset objects)
  */
 function createCompanyCardFromAPI(company) {
   const article = document.createElement('article');
   article.className = 'partner-card partner-card-dynamic';
+  article.tabIndex = 0;
 
-  const infoDiv = document.createElement('div');
-  infoDiv.className = 'partner-info';
+  const authenticated = isUserAuthenticated();
+  const isRecruiting = Boolean(company.is_recruiting || (Array.isArray(company.positions) && company.positions.length > 0));
 
-  const headerRow = document.createElement('div');
-  headerRow.className = 'partner-card-header';
+  // Top header area (Logo + Badges)
+  const topRow = document.createElement('div');
+  topRow.className = 'pricing-card-top';
 
-  const nameEl = createElement('h2', '', company.name || 'ไม่มีชื่อ');
-  headerRow.appendChild(nameEl);
+  if (company.logo) {
+    const logoDiv = createElement('div', 'partner-logo');
+    const logoImg = document.createElement('img');
+    logoImg.src = company.logo;
+    logoImg.alt = `โลโก้ ${company.name || ''}`;
+    logoDiv.appendChild(logoImg);
+    topRow.appendChild(logoDiv);
+  } else if (company.code) {
+    const monoDiv = createElement('div', 'partner-logo partner-logo-monogram');
+    monoDiv.textContent = company.code;
+    topRow.appendChild(monoDiv);
+  }
+
+  const badgesDiv = createElement('div', 'pricing-card-badges');
+
+  if (isRecruiting) {
+    if (authenticated) {
+      const quota = company.positions?.[0]?.quota;
+      const quotaText = quota && quota !== '-' ? `เปิดรับ ${quota} อัตรา` : 'กำลังเปิดรับสมัคร';
+      badgesDiv.appendChild(createElement('span', 'pricing-quota-pill', quotaText));
+    } else {
+      const lockPill = createElement('span', 'pricing-quota-pill auth-locked-pill');
+      lockPill.innerHTML = '<i class="fa-solid fa-lock"></i> เปิดรับสมัคร (ล็อก)';
+      badgesDiv.appendChild(lockPill);
+    }
+  } else if (company.code) {
+    const partnerPill = createElement('span', 'partner-status-pill partner-approved-pill');
+    partnerPill.innerHTML = '<i class="fa-solid fa-handshake"></i> พันธมิตรสหกิจ';
+    badgesDiv.appendChild(partnerPill);
+  }
 
   const statusIndicator = getDataStatusIndicator(company);
   if (statusIndicator) {
-    headerRow.appendChild(createElement(
+    badgesDiv.appendChild(createElement(
       'span',
       `partner-tag partner-status-badge ${statusIndicator.className}`,
       statusIndicator.label
     ));
   }
 
+  if (badgesDiv.children.length > 0) {
+    topRow.appendChild(badgesDiv);
+  }
+  if (topRow.children.length > 0) {
+    article.appendChild(topRow);
+  }
+
+  const infoDiv = document.createElement('div');
+  infoDiv.className = 'partner-info';
+
+  const headerRow = document.createElement('div');
+  headerRow.className = 'partner-card-header';
+  const nameEl = createElement('h2', '', company.name || 'ไม่มีชื่อ');
+  headerRow.appendChild(nameEl);
   infoDiv.appendChild(headerRow);
 
   if (company.location) {
@@ -123,60 +225,79 @@ function createCompanyCardFromAPI(company) {
     locItem.appendChild(document.createTextNode(' ' + company.location));
     subline.appendChild(locItem);
 
-    subline.appendChild(createElement('span', 'subline-dot', '•'));
-
-    const modeItem = createElement('span', 'card-subline-item mode-item');
-    modeItem.appendChild(createElement('i', 'fa-solid fa-laptop-house'));
-    modeItem.appendChild(document.createTextNode(' Hybrid'));
-    subline.appendChild(modeItem);
+    if (isRecruiting) {
+      subline.appendChild(createElement('span', 'subline-dot', '•'));
+      const modeItem = createElement('span', 'card-subline-item mode-item');
+      modeItem.appendChild(createElement('i', 'fa-solid fa-laptop-house'));
+      modeItem.appendChild(document.createTextNode(' Hybrid'));
+      subline.appendChild(modeItem);
+    }
 
     infoDiv.appendChild(subline);
   }
 
-  // Prominent Roles
-  const rolesRow = createElement('div', 'card-roles-row');
+  // Handle recruiting vs locked vs non-recruiting
+  if (isRecruiting) {
+    if (authenticated) {
+      const rolesRow = createElement('div', 'card-roles-row');
+      if (Array.isArray(company.positions)) {
+        company.positions.filter((position) => position && position.title).slice(0, 3).forEach((pos) => {
+          const roleClass = getRoleTagClass(pos.title);
+          const fullClass = roleClass ? `partner-tag tag-field ${roleClass}` : 'partner-tag tag-field';
+          rolesRow.appendChild(createElement('span', fullClass, pos.title));
+        });
+      }
+      if (company.location) {
+        rolesRow.appendChild(createElement('span', 'partner-tag tag-location', company.location));
+      }
+      infoDiv.appendChild(rolesRow);
 
-  function getRoleTagClass(title) {
-    const t = String(title || '').toLowerCase();
-    if (t.includes('ซอฟต์แวร์') || t.includes('software') || t.includes('developer') || t.includes('frontend') || t.includes('backend') || t.includes('web') || t.includes('engineer') || t.includes('tester')) {
-      return 'tag-role-dev';
+      const ctaBtn = createElement('button', 'pricing-cta-btn');
+      ctaBtn.type = 'button';
+      ctaBtn.innerHTML = 'ดูรายละเอียด & ยื่นสมัคร <i class="fa-solid fa-arrow-right"></i>';
+      ctaBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (typeof window.openCompanyModal === 'function') {
+          window.openCompanyModal(company.id || company.code);
+        }
+      };
+      infoDiv.appendChild(ctaBtn);
+    } else {
+      // Locked notice
+      const lockedNotice = createElement('div', 'auth-locked-notice');
+      lockedNotice.innerHTML = '<i class="fa-solid fa-lock"></i> <span>เข้าสู่ระบบเพื่อดูตำแหน่งงานและจำนวนอัตราที่เปิดรับ</span>';
+      infoDiv.appendChild(lockedNotice);
+
+      const ctaBtn = createElement('a', 'pricing-cta-btn btn-auth-locked');
+      ctaBtn.href = 'app.html';
+      ctaBtn.innerHTML = 'เข้าสู่ระบบเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right-to-bracket"></i>';
+      ctaBtn.onclick = (e) => { e.stopPropagation(); };
+      infoDiv.appendChild(ctaBtn);
     }
-    if (t.includes('ข้อมูล') || t.includes('data') || t.includes('ai') || t.includes('machine learning') || t.includes('nlp')) {
-      return 'tag-role-data';
+  } else {
+    const rolesRow = createElement('div', 'card-roles-row');
+    if (company.location) {
+      rolesRow.appendChild(createElement('span', 'partner-tag tag-location', company.location));
     }
-    if (t.includes('design') || t.includes('ux') || t.includes('ui') || t.includes('กราฟิก') || t.includes('creative') || t.includes('researcher')) {
-      return 'tag-role-design';
-    }
-    if (t.includes('security') || t.includes('cyber') || t.includes('cloud') || t.includes('network') || t.includes('ระบบคลาวด์')) {
-      return 'tag-role-sec';
-    }
-    if (t.includes('business') || t.includes('analyst') || t.includes('ธุรกิจ') || t.includes('marketing') || t.includes('การตลาด')) {
-      return 'tag-role-biz';
-    }
-    return '';
+    rolesRow.appendChild(createElement('span', 'partner-tag tag-standard', 'ยังไม่เปิดรับในรอบนี้'));
+    infoDiv.appendChild(rolesRow);
+
+    const ctaBtn = createElement('button', 'pricing-cta-btn secondary');
+    ctaBtn.type = 'button';
+    ctaBtn.style.background = '#F8FAFC';
+    ctaBtn.style.color = '#475569';
+    ctaBtn.style.borderColor = '#E2E8F0';
+    ctaBtn.innerHTML = 'ดูข้อมูลบริษัท <i class="fa-solid fa-circle-info"></i>';
+    ctaBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (typeof window.openCompanyModal === 'function') {
+        window.openCompanyModal(company.id || company.code);
+      }
+    };
+    infoDiv.appendChild(ctaBtn);
   }
-
-  if (Array.isArray(company.positions)) {
-    company.positions.filter((position) => position && position.title).slice(0, 2).forEach((pos) => {
-      const roleClass = getRoleTagClass(pos.title);
-      const fullClass = roleClass ? `partner-tag tag-field ${roleClass}` : 'partner-tag tag-field';
-      rolesRow.appendChild(createElement('span', fullClass, pos.title));
-    });
-  }
-
-  if (company.location) {
-    rolesRow.appendChild(createElement('span', 'partner-tag tag-location', company.location));
-  }
-
-  infoDiv.appendChild(rolesRow);
-
-  const ctaBtn = createElement('button', 'pricing-cta-btn');
-  ctaBtn.type = 'button';
-  ctaBtn.innerHTML = 'ดูรายละเอียดตำแหน่งงาน <i class="fa-solid fa-arrow-right"></i>';
-  infoDiv.appendChild(ctaBtn);
 
   article.appendChild(infoDiv);
-
   return article;
 }
 
@@ -186,9 +307,11 @@ function createCompanyCardFromAPI(company) {
 function activateStaticFallback() {
   if (state.mode === 'static') return; // Prevent duplicate execution
   state.mode = 'static';
-  searchResultStatus.removeAttribute('aria-busy');
-  companyList.innerHTML = '';
-  staticCompanyCards.forEach(card => companyList.appendChild(card));
+  if (searchResultStatus) searchResultStatus.removeAttribute('aria-busy');
+  if (companyList) {
+    companyList.innerHTML = '';
+    staticCompanyCards.forEach(card => companyList.appendChild(card));
+  }
 
   if (!document.getElementById('offlineBanner')) {
     const banner = document.createElement('div');
@@ -204,7 +327,7 @@ function activateStaticFallback() {
   }
 
   const updateStaticVisibility = () => {
-    const rawQuery = companySearch.value.trim().toLocaleLowerCase('th');
+    const rawQuery = (companySearch?.value || '').trim().toLocaleLowerCase('th');
     const roleEl = document.getElementById('roleFilter');
     const roleVal = roleEl ? roleEl.value.trim().toLocaleLowerCase('th') : '';
     const modeEl = document.getElementById('workModeFilter');
@@ -213,43 +336,52 @@ function activateStaticFallback() {
     const recEl = document.getElementById('recruitingToggle');
     const recruitingOnly = recEl ? recEl.classList.contains('active') : false;
     let visibleCount = 0;
-    Array.from(companyList.children).forEach((card) => {
-      const companyText = card.dataset.company ? card.dataset.company.toLocaleLowerCase('th') : '';
+    if (companyList) {
+      Array.from(companyList.children).forEach((card) => {
+        const companyText = card.dataset.company ? card.dataset.company.toLocaleLowerCase('th') : '';
 
-      let matchesQuery = true;
-      if (rawQuery) {
-        const subQueries = rawQuery.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
-        if (subQueries.length > 1) {
-          matchesQuery = subQueries.some(sub => companyText.includes(sub));
-        } else {
-          const words = rawQuery.split(/\s+/).filter(Boolean);
-          matchesQuery = words.every(word => companyText.includes(word));
+        let matchesQuery = true;
+        if (rawQuery) {
+          const subQueries = rawQuery.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+          if (subQueries.length > 1) {
+            matchesQuery = subQueries.some(sub => companyText.includes(sub));
+          } else {
+            const words = rawQuery.split(/\s+/).filter(Boolean);
+            matchesQuery = words.every(word => companyText.includes(word));
+          }
         }
+
+        const matchesRole = !roleVal || companyText.includes(roleVal);
+        const matchesMode = !modeVal || companyText.includes(modeVal);
+        const matchesLoc = !locVal || companyText.includes(locVal);
+        const matchesRecruiting = !recruitingOnly || companyText.includes('เปิดรับ');
+
+        const isExtraCard = card.classList.contains('partner-card-extra');
+        const hasAnyFilter = Boolean(rawQuery || roleVal || modeVal || locVal || recruitingOnly);
+        const canShowByGroup = !isExtraCard || hasExpandedDirectory || Boolean(rawQuery);
+        const shouldShow = matchesQuery && matchesRole && matchesMode && matchesLoc && matchesRecruiting && canShowByGroup;
+        card.hidden = !shouldShow;
+        if (shouldShow) visibleCount += 1;
+      });
+    }
+    if (loadMoreButton) {
+      loadMoreButton.hidden = Boolean(rawQuery) || hasExpandedDirectory;
+    }
+    if (searchResultStatus) {
+      if (rawQuery || roleVal || modeVal || locVal || recruitingOnly) {
+        searchResultStatus.textContent = visibleCount > 0
+          ? `พบสถานประกอบการ ${visibleCount} รายการ`
+          : 'ไม่พบสถานประกอบการที่ตรงกับคำค้นหา';
+      } else {
+        searchResultStatus.textContent = '';
       }
-
-      const matchesRole = !roleVal || companyText.includes(roleVal);
-      const matchesMode = !modeVal || companyText.includes(modeVal);
-      const matchesLoc = !locVal || companyText.includes(locVal);
-      const matchesRecruiting = !recruitingOnly || companyText.includes('เปิดรับ');
-
-      const isExtraCard = card.classList.contains('partner-card-extra');
-      const hasAnyFilter = Boolean(rawQuery || roleVal || modeVal || locVal || recruitingOnly);
-      const canShowByGroup = !isExtraCard || hasExpandedDirectory || Boolean(rawQuery);
-      const shouldShow = matchesQuery && matchesRole && matchesMode && matchesLoc && matchesRecruiting && canShowByGroup;
-      card.hidden = !shouldShow;
-      if (shouldShow) visibleCount += 1;
-    });
-    loadMoreButton.hidden = Boolean(rawQuery) || hasExpandedDirectory;
-    if (rawQuery || roleVal || modeVal || locVal || recruitingOnly) {
-      searchResultStatus.textContent = visibleCount > 0
-        ? `พบสถานประกอบการ ${visibleCount} รายการ`
-        : 'ไม่พบสถานประกอบการที่ตรงกับคำค้นหา';
-    } else {
-      searchResultStatus.textContent = '';
     }
   };
 
-  companySearch.removeEventListener('input', onSearchInput);
+  if (companySearch) {
+    companySearch.removeEventListener('input', onSearchInput);
+    companySearch.addEventListener('input', updateStaticVisibility);
+  }
   if (locationFilter) {
     locationFilter.removeEventListener('change', onFilterChange);
     if (typeof jest !== 'undefined') {
@@ -270,13 +402,14 @@ function activateStaticFallback() {
       locationFilter.addEventListener('change', updateStaticVisibility);
     }
   }
-  companySearch.addEventListener('input', updateStaticVisibility);
 
-  loadMoreButton.onclick = () => {
-    hasExpandedDirectory = true;
-    loadMoreButton.setAttribute('aria-expanded', 'true');
-    updateStaticVisibility();
-  };
+  if (loadMoreButton) {
+    loadMoreButton.onclick = () => {
+      hasExpandedDirectory = true;
+      loadMoreButton.setAttribute('aria-expanded', 'true');
+      updateStaticVisibility();
+    };
+  }
 
   updateStaticVisibility();
 }
@@ -285,59 +418,69 @@ function activateStaticFallback() {
  * Render the API state to DOM
  */
 function renderState() {
-  if (state.mode === 'static') return;
+  if (state.mode === 'static' || state.mode === 'dataset') return;
 
-  if (state.page === 1) {
+  if (state.page === 1 && companyList) {
     companyList.innerHTML = '';
   }
 
   if (state.loading && state.page === 1) {
-    searchResultStatus.textContent = 'กำลังโหลดข้อมูล...';
-    searchResultStatus.setAttribute('aria-busy', 'true');
-    companyList.innerHTML = '';
-    loadMoreButton.hidden = true;
+    if (searchResultStatus) {
+      searchResultStatus.textContent = 'กำลังโหลดข้อมูล...';
+      searchResultStatus.setAttribute('aria-busy', 'true');
+    }
+    if (companyList) companyList.innerHTML = '';
+    if (loadMoreButton) loadMoreButton.hidden = true;
     return;
   }
 
-  searchResultStatus.removeAttribute('aria-busy');
+  if (searchResultStatus) searchResultStatus.removeAttribute('aria-busy');
 
   if (state.error) {
-    searchResultStatus.textContent = typeof state.error === 'string' ? state.error : 'ไม่สามารถโหลดข้อมูลจากระบบได้ กรุณาลองใหม่อีกครั้ง';
-    companyList.innerHTML = '';
-    loadMoreButton.hidden = true;
+    if (searchResultStatus) {
+      searchResultStatus.textContent = typeof state.error === 'string' ? state.error : 'ไม่สามารถโหลดข้อมูลจากระบบได้ กรุณาลองใหม่อีกครั้ง';
+    }
+    if (companyList) companyList.innerHTML = '';
+    if (loadMoreButton) loadMoreButton.hidden = true;
     return;
   }
 
   if (state.page === 1 && apiDataStore.length === 0) {
-    searchResultStatus.textContent = 'ไม่พบสถานประกอบการที่ตรงกับคำค้นหา';
-    loadMoreButton.hidden = true;
+    if (searchResultStatus) searchResultStatus.textContent = 'ไม่พบสถานประกอบการที่ตรงกับคำค้นหา';
+    if (loadMoreButton) loadMoreButton.hidden = true;
     return;
   }
 
-  searchResultStatus.textContent = `แสดงสถานประกอบการ ${apiDataStore.length} รายการ`;
+  if (searchResultStatus) {
+    searchResultStatus.textContent = `แสดงสถานประกอบการ ${apiDataStore.length} รายการ`;
+  }
 
   // Render cards
-  const fragment = document.createDocumentFragment();
-  const startIdx = (state.page - 1) * state.pageSize;
-  const newItems = apiDataStore.slice(startIdx);
+  if (companyList) {
+    const fragment = document.createDocumentFragment();
+    const startIdx = (state.page - 1) * state.pageSize;
+    const newItems = apiDataStore.slice(startIdx);
 
-  newItems.forEach(company => {
-    fragment.appendChild(createCompanyCardFromAPI(company));
-  });
+    newItems.forEach(company => {
+      fragment.appendChild(createCompanyCardFromAPI(company));
+    });
 
-  companyList.appendChild(fragment);
+    companyList.appendChild(fragment);
+  }
 
   // Update Load More button
-  if (state.loading && state.page > 1) {
-    loadMoreButton.hidden = false;
-    loadMoreButton.disabled = true;
-    loadMoreButton.textContent = 'กำลังโหลด...';
-  } else if (state.page < state.totalPages) {
-    loadMoreButton.hidden = false;
-    loadMoreButton.disabled = false;
-    loadMoreButton.textContent = 'ดูเพิ่มเติม';
-  } else {
-    loadMoreButton.hidden = true;
+  if (loadMoreButton) {
+    if (state.loading && state.page > 1) {
+      loadMoreButton.hidden = false;
+      loadMoreButton.disabled = true;
+      loadMoreButton.textContent = 'กำลังโหลด...';
+    } else if (state.page < state.totalPages) {
+      loadMoreButton.hidden = false;
+      loadMoreButton.disabled = false;
+      loadMoreButton.textContent = 'ดูเพิ่มเติม';
+    } else {
+      loadMoreButton.hidden = true;
+    }
   }
 }
 
@@ -345,7 +488,7 @@ function renderState() {
  * Fetch data from API
  */
 async function fetchCompanies(isAppend = false) {
-  if (state.mode === 'static') return;
+  if (state.mode === 'static' || state.mode === 'dataset') return;
 
   if (abortController) {
     abortController.abort();
@@ -419,6 +562,288 @@ async function fetchCompanies(isAppend = false) {
 }
 
 /**
+ * Real Dataset Mode (112 Master Companies + 31 Announcements)
+ */
+let datasetAllCompanies = [];
+let datasetFilteredCompanies = [];
+let datasetPage = 1;
+const datasetPageSize = 12;
+
+function initRealDatasetMode(companies) {
+  state.mode = 'dataset';
+  datasetAllCompanies = companies;
+
+  // Populate location filter dropdown dynamically
+  if (locationFilter) {
+    const locations = [...new Set(companies.map(c => c.location).filter(Boolean))].sort();
+    const existingValues = new Set(Array.from(locationFilter.options).map(o => o.value));
+    locations.forEach(loc => {
+      if (!existingValues.has(loc)) {
+        const opt = document.createElement('option');
+        opt.value = loc;
+        opt.textContent = loc;
+        locationFilter.appendChild(opt);
+      }
+    });
+  }
+
+  // Bind recruiting toggle
+  const recToggle = document.getElementById('recruitingToggle');
+  if (recToggle) {
+    recToggle.addEventListener('click', () => {
+      const isActive = recToggle.classList.toggle('active');
+      recToggle.setAttribute('aria-pressed', String(isActive));
+      renderDatasetCards(true);
+    });
+  }
+
+  // Bind role filter
+  const roleFilter = document.getElementById('roleFilter');
+  if (roleFilter) {
+    roleFilter.addEventListener('change', () => {
+      renderDatasetCards(true);
+    });
+  }
+
+  // Bind reset button
+  const resetBtn = document.getElementById('filterResetBtn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      if (companySearch) companySearch.value = '';
+      if (locationFilter) locationFilter.value = '';
+      if (roleFilter) roleFilter.value = '';
+      if (recToggle) {
+        recToggle.classList.remove('active');
+        recToggle.setAttribute('aria-pressed', 'false');
+      }
+      state.query = '';
+      state.location = '';
+      renderDatasetCards(true);
+    });
+  }
+
+  // Search input
+  if (companySearch) {
+    companySearch.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        state.query = companySearch.value.trim();
+        renderDatasetCards(true);
+      }, 200);
+    });
+  }
+
+  // Location filter
+  if (locationFilter) {
+    locationFilter.addEventListener('change', () => {
+      state.location = locationFilter.value;
+      renderDatasetCards(true);
+    });
+  }
+
+  // Load more button
+  if (loadMoreButton) {
+    loadMoreButton.onclick = () => {
+      datasetPage += 1;
+      renderDatasetCards(false);
+    };
+  }
+
+  renderDatasetCards(true);
+}
+
+function renderDatasetCards(resetPage = false) {
+  if (resetPage) {
+    datasetPage = 1;
+    if (companyList) companyList.innerHTML = '';
+  }
+
+  const rawQuery = (companySearch?.value || state.query || '').trim().toLowerCase();
+  const locVal = locationFilter?.value || state.location || '';
+  const roleEl = document.getElementById('roleFilter');
+  const roleVal = roleEl ? roleEl.value.trim().toLowerCase() : '';
+  const recEl = document.getElementById('recruitingToggle');
+  const recruitingOnly = recEl ? recEl.classList.contains('active') : false;
+
+  datasetFilteredCompanies = datasetAllCompanies.filter(comp => {
+    // Search query
+    if (rawQuery) {
+      const matchName = (comp.name || '').toLowerCase().includes(rawQuery);
+      const matchCode = (comp.code || '').toLowerCase().includes(rawQuery);
+      const matchLoc = (comp.location || '').toLowerCase().includes(rawQuery);
+      const matchAddr = (comp.address || '').toLowerCase().includes(rawQuery);
+      const matchPos = Array.isArray(comp.positions) && comp.positions.some(p => (p.title || '').toLowerCase().includes(rawQuery));
+      if (!matchName && !matchCode && !matchLoc && !matchAddr && !matchPos) {
+        return false;
+      }
+    }
+
+    // Location filter
+    if (locVal && comp.location !== locVal) {
+      return false;
+    }
+
+    // Role filter
+    if (roleVal) {
+      const hasRole = Array.isArray(comp.positions) && comp.positions.some(p => (p.title || '').toLowerCase().includes(roleVal));
+      if (!hasRole) return false;
+    }
+
+    // Actively recruiting only
+    if (recruitingOnly && !comp.is_recruiting) {
+      return false;
+    }
+
+    return true;
+  });
+
+  const totalFiltered = datasetFilteredCompanies.length;
+  if (searchResultStatus) {
+    searchResultStatus.removeAttribute('aria-busy');
+    if (totalFiltered === 0) {
+      searchResultStatus.textContent = 'ไม่พบสถานประกอบการที่ตรงกับเงื่อนไขการค้นหา';
+      if (loadMoreButton) loadMoreButton.hidden = true;
+      return;
+    }
+
+    searchResultStatus.textContent = `แสดงสถานประกอบการ ${Math.min(datasetPage * datasetPageSize, totalFiltered)} จากทั้งหมด ${totalFiltered} รายการ`;
+  }
+
+  const startIndex = (datasetPage - 1) * datasetPageSize;
+  const endIndex = Math.min(datasetPage * datasetPageSize, totalFiltered);
+  const itemsToRender = datasetFilteredCompanies.slice(startIndex, endIndex);
+
+  if (companyList) {
+    const fragment = document.createDocumentFragment();
+    itemsToRender.forEach(comp => {
+      fragment.appendChild(createCompanyCardFromAPI(comp));
+    });
+    companyList.appendChild(fragment);
+  }
+
+  if (loadMoreButton) {
+    if (endIndex < totalFiltered) {
+      loadMoreButton.hidden = false;
+      loadMoreButton.disabled = false;
+      loadMoreButton.textContent = `ดูเพิ่มเติม (เหลืออีก ${totalFiltered - endIndex} รายการ)`;
+    } else {
+      loadMoreButton.hidden = true;
+    }
+  }
+}
+
+/**
+ * Global Modal Opener for Company Details
+ */
+window.openCompanyModal = function(id) {
+  const modal = document.getElementById('companyModal');
+  if (!modal) return;
+
+  let comp = null;
+  if (typeof window !== 'undefined' && window.COMPANIES_DATA && Array.isArray(window.COMPANIES_DATA.companies)) {
+    comp = window.COMPANIES_DATA.companies.find(c => c.id === id || c.code === id || String(c.id) === String(id));
+  }
+
+  if (!comp && typeof companiesData !== 'undefined' && companiesData[id]) {
+    if (typeof openModal === 'function') {
+      openModal(id);
+      return;
+    }
+  }
+
+  if (!comp) return;
+
+  const nameEl = document.getElementById('modalName');
+  const locEl = document.getElementById('modalLocation');
+  const descEl = document.getElementById('modalDescription');
+  const reqEl = document.getElementById('modalReq');
+  const logoEl = document.getElementById('modalLogo');
+
+  if (nameEl) nameEl.textContent = comp.name;
+  if (locEl) locEl.textContent = `สถานที่ตั้ง • ${comp.location} (${comp.address || comp.location})`;
+
+  if (logoEl) {
+    if (comp.logo) {
+      logoEl.innerHTML = `<img src="${comp.logo}" alt="โลโก้ ${comp.name}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
+      logoEl.style.backgroundColor = '#FFFFFF';
+    } else {
+      logoEl.innerHTML = `<div class="partner-logo-monogram" style="width:100%; height:100%; border-radius:10px;">${comp.code || 'CO'}</div>`;
+    }
+  }
+
+  const authenticated = isUserAuthenticated();
+
+  if (comp.is_recruiting) {
+    if (authenticated) {
+      let positionsHtml = '<div style="margin-top:8px;">';
+      if (Array.isArray(comp.positions) && comp.positions.length > 0) {
+        comp.positions.forEach(pos => {
+          positionsHtml += `
+            <div class="modal-position-item">
+              <div class="modal-position-title">
+                <span><i class="fa-solid fa-briefcase" style="color:var(--tu-red); margin-right:6px;"></i> ${pos.title}</span>
+                <span class="modal-position-quota">${pos.quota && pos.quota !== '-' ? pos.quota + ' อัตรา' : 'เปิดรับ'}</span>
+              </div>
+            </div>
+          `;
+        });
+      } else {
+        positionsHtml += '<p>เปิดรับสมัครนักศึกษาปฏิบัติสหกิจศึกษา</p>';
+      }
+      positionsHtml += '</div>';
+
+      if (comp.recruiting_period) {
+        positionsHtml += `<p style="margin-top:10px; font-size:13px; color:#475569;"><strong>ระยะเวลาปฏิบัติงาน:</strong> ${comp.recruiting_period}</p>`;
+      }
+
+      if (descEl) descEl.innerHTML = positionsHtml;
+
+      if (reqEl) {
+        let contactHtml = '';
+        if (comp.contact) {
+          contactHtml = `
+            <div class="modal-contact-box">
+              <strong style="display:block; margin-bottom:4px;"><i class="fa-solid fa-address-card"></i> ช่องทางการติดต่อและสมัคร:</strong>
+              <div>${formatContactLinks(comp.contact)}</div>
+            </div>
+          `;
+        }
+        contactHtml += `<p style="margin-top:12px; font-size:12.5px; color:#64748B;">• เอกสารที่ต้องเตรียม: ประวัติส่วนตัว (Resume), ใบแสดงผลการเรียน (Transcript)</p>`;
+        reqEl.innerHTML = contactHtml;
+      }
+    } else {
+      // Locked state
+      if (descEl) {
+        descEl.innerHTML = `
+          <div class="auth-locked-notice" style="font-size:13px; padding:12px 16px;">
+            <i class="fa-solid fa-lock" style="font-size:18px;"></i>
+            <div>
+              <strong>ข้อมูลตำแหน่งงานและอัตราเปิดรับถูกสงวนสิทธิ์</strong>
+              <div style="margin-top:2px; font-size:12px; color:#92400E;">กรุณาเข้าสู่ระบบด้วยบัญชีนักศึกษา/อาจารย์ เพื่อดูรายละเอียดตำแหน่งงาน โควตา และช่องทางการสมัคร</div>
+            </div>
+          </div>
+        `;
+      }
+      if (reqEl) {
+        reqEl.innerHTML = `
+          <div style="text-align:center; padding:12px 0;">
+            <a href="app.html" class="btn-signup" style="display:inline-block; text-decoration:none; padding:10px 24px;">
+              <i class="fa-solid fa-arrow-right-to-bracket"></i> เข้าสู่ระบบเพื่อดูรายละเอียด
+            </a>
+          </div>
+        `;
+      }
+    }
+  } else {
+    if (descEl) descEl.textContent = `สถานประกอบการพันธมิตรที่ได้รับอนุมัติในหลักสูตรสหกิจศึกษา ปีการศึกษา ${comp.academic_year || 2569} (ขณะนี้ยังไม่เปิดรับในรอบนี้)`;
+    if (reqEl) reqEl.innerHTML = `<p style="font-size:13px; color:#64748B;">• ที่ตั้ง: ${comp.address || comp.location}</p>`;
+  }
+
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+};
+
+/**
  * Event Handlers
  */
 function onSearchInput(e) {
@@ -438,16 +863,18 @@ function onFilterChange(e) {
   fetchCompanies(false);
 }
 
-// Bind Events
-companySearch.addEventListener('input', onSearchInput);
+// Bind Events for API mode
+if (companySearch) companySearch.addEventListener('input', onSearchInput);
 if (locationFilter) locationFilter.addEventListener('change', onFilterChange);
 
-loadMoreButton.onclick = () => {
-  if (state.mode === 'api' && !state.loading && state.page < state.totalPages) {
-    state.page += 1;
-    fetchCompanies(true);
-  }
-};
+if (loadMoreButton) {
+  loadMoreButton.onclick = () => {
+    if (state.mode === 'api' && !state.loading && state.page < state.totalPages) {
+      state.page += 1;
+      fetchCompanies(true);
+    }
+  };
+}
 
 // Read initial query parameters from URL if present
 if (typeof window !== 'undefined' && window.location && window.location.search) {
@@ -464,5 +891,9 @@ if (typeof window !== 'undefined' && window.location && window.location.search) 
   }
 }
 
-// Initial Load
-fetchCompanies(false);
+// Initial Load: prefer real dataset if COMPANIES_DATA is loaded, else API mode
+if (typeof window !== 'undefined' && window.COMPANIES_DATA && Array.isArray(window.COMPANIES_DATA.companies)) {
+  initRealDatasetMode(window.COMPANIES_DATA.companies);
+} else {
+  fetchCompanies(false);
+}

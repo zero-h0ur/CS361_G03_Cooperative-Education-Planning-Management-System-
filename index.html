@@ -8,6 +8,7 @@
   <link rel="icon" href="resources/images/logomini.png" type="image/png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
+  <script src="companies-data.js" defer></script>
 </head>
 <body class="relative">
 
@@ -370,7 +371,7 @@
         <!-- Card 1: Partner Organizations -->
         <div class="bento-stat-card">
           <div class="bento-stat-val">
-            <span class="bento-stat-number" data-target="12">0</span><span class="bento-stat-suffix">+</span>
+            <span class="bento-stat-number" data-target="100">0</span><span class="bento-stat-suffix">+</span>
           </div>
           <div class="bento-stat-label">สถานประกอบการพันธมิตร</div>
         </div>
@@ -1104,6 +1105,63 @@
     }
   </script>
   <script src="runtime-config.js" defer></script>
-  <script type="module" src="navbar-auth.js"></script>
+  <script type="module" src="navbar-auth.js"></script>
+
+  <script>
+    function syncIndexAuthCards() {
+      const isAuth = (function() {
+        try {
+          if (typeof window.getCoEdSession === 'function') return Boolean(window.getCoEdSession());
+          if (window.sessionStorage && window.sessionStorage.getItem('co-ed:session')) return true;
+          if (window.sessionStorage) {
+            for (let i = 0; i < window.sessionStorage.length; i++) {
+              const k = window.sessionStorage.key(i);
+              if (k && (k.includes('.idToken') || k.endsWith('idToken'))) return true;
+            }
+          }
+        } catch { return false; }
+        return false;
+      })();
+
+      const spotlightCards = document.querySelectorAll('#company-directory-preview .partner-card');
+      spotlightCards.forEach(card => {
+        const badgeArea = card.querySelector('.pricing-card-badges');
+        const infoArea = card.querySelector('.partner-info');
+        const rolesRow = card.querySelector('.card-roles-row');
+        const ctaBtn = card.querySelector('.pricing-cta-btn');
+
+        if (!isAuth) {
+          if (badgeArea) {
+            const quotaPill = badgeArea.querySelector('.pricing-quota-pill');
+            if (quotaPill && !quotaPill.classList.contains('auth-locked-pill')) {
+              quotaPill.className = 'pricing-quota-pill auth-locked-pill';
+              quotaPill.innerHTML = '<i class="fa-solid fa-lock"></i> เปิดรับสมัคร (ล็อก)';
+            }
+          }
+          if (infoArea && !infoArea.querySelector('.auth-locked-notice')) {
+            const notice = document.createElement('div');
+            notice.className = 'auth-locked-notice';
+            notice.innerHTML = '<i class="fa-solid fa-lock"></i> <span>เข้าสู่ระบบเพื่อดูตำแหน่งและจำนวนอัตรา</span>';
+            if (rolesRow) {
+              infoArea.insertBefore(notice, rolesRow);
+              rolesRow.style.display = 'none';
+            } else if (ctaBtn) {
+              infoArea.insertBefore(notice, ctaBtn);
+            }
+          }
+          if (ctaBtn) {
+            ctaBtn.outerHTML = '<a href="app.html" class="pricing-cta-btn btn-auth-locked" style="text-decoration:none;">เข้าสู่ระบบเพื่อดูรายละเอียด <i class="fa-solid fa-arrow-right-to-bracket"></i></a>';
+          }
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', syncIndexAuthCards);
+    } else {
+      syncIndexAuthCards();
+    }
+  </script>
+
 </body>
 </html>

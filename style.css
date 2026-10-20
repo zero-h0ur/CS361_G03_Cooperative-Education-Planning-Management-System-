@@ -5411,6 +5411,121 @@ a {
   }
 }
 
+
+/* ==========================================================================
+   Company Directory Real Data & Auth Locked Cards
+   ========================================================================== */
+.pricing-quota-pill.auth-locked-pill {
+  background: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.partner-status-pill.partner-approved-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #E2E8F0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.partner-logo-monogram {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #C8102E 0%, #E02847 100%);
+  box-shadow: 0 2px 8px rgba(200, 16, 46, 0.2);
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.auth-locked-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #FFFBEB;
+  border: 1px dashed #FCD34D;
+  font-size: 11.5px;
+  color: #B45309;
+  margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  line-height: 1.4;
+}
+
+.auth-locked-notice i {
+  font-size: 13px;
+  color: #D97706;
+  flex-shrink: 0;
+}
+
+.pricing-cta-btn.btn-auth-locked {
+  background: #FFF7ED;
+  color: #C2410C;
+  border: 1px solid #FFEDD5;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pricing-cta-btn.btn-auth-locked:hover {
+  background: #EA580C;
+  color: #FFFFFF;
+  border-color: #EA580C;
+}
+
+.modal-position-item {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  margin-bottom: 8px;
+}
+
+.modal-position-title {
+  font-weight: 700;
+  color: #0F172A;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-position-quota {
+  font-size: 12px;
+  font-weight: 700;
+  color: #15803D;
+  background: #DCFCE7;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.modal-contact-box {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1E40AF;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
 /* Keep after the base dropdown rules so reduced-motion cannot be overridden. */
 @media (prefers-reduced-motion: reduce) {
   .logo:hover .logo-tu-mark,
