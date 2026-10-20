@@ -40,6 +40,7 @@
     "test:staff-ui": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/staff-student-management.test.js",
     "test:migration": "jest --runInBand tests/v3-migration.test.js tests/v3-t01-migrations-constraints-fixtures.test.js",
     "test:deployment": "node --test tests/deployed-v2.test.mjs",
+    "test:docs": "node --test tests/docs-links.test.mjs && node scripts/verify-doc-links.mjs",
     "test:deployed-security": "node --test tests/deployed-v2.test.mjs tests/deployed-v3-anonymous.test.mjs",
     "seed": "node src/db/seed.js",
     "seed:v3": "node src/db/seed.js --v3",

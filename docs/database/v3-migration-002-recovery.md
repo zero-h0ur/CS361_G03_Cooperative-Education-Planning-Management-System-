@@ -33,9 +33,16 @@ the same lock and re-read the committed migration state.
 After it commits, run the read-only verification script:
 
 ```bash
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+psql 'host=<approved-rds-host> port=5432 dbname=<approved-database> user=<migration-user> sslmode=verify-full sslrootcert=<absolute-rds-ca-path> connect_timeout=10' \
+  -X -W -v ON_ERROR_STOP=1 -P pager=off \
   -f src/db/verification/002_v3_forward_only_verification.sql
 ```
+
+Replace the non-secret placeholders with the reviewed target and public CA path.
+Enter the database password at the hidden prompt rather than passing a
+credential-bearing DATABASE_URL as a command argument.
+See the [operating guide](../operations/v3-operating-guide.md) for environment
+configuration and migration-account requirements.
 
 Every verification row must return `passed = true`. The script reports only
 object metadata and aggregate counts; it does not print identity or Student

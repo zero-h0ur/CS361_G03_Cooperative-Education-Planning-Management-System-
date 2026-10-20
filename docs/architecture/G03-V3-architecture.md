@@ -1,7 +1,7 @@
 # CO-ED V3 architecture, trust boundaries, and privacy baseline
 
-เอกสารนี้เป็นจุดอ้างอิงเดียวสำหรับสถาปัตยกรรมและข้อกำหนดด้านความปลอดภัยของ
-V3 โดยสรุป Accepted Decisions D01-D08 เท่านั้น หากพบข้อขัดแย้ง ให้แก้ที่
+เอกสารนี้สรุปสถาปัตยกรรมที่ส่งมอบและ Accepted Decisions D01-D08 ของ
+V3 หากพบข้อขัดแย้ง ให้แก้ที่
 Decision Issue ต้นทางก่อน ไม่สร้าง policy ใหม่จากเอกสารนี้
 
 ## Implementation status
@@ -11,9 +11,14 @@ Decision Issue ต้นทางก่อน ไม่สร้าง policy �
   [#58](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/58)
 - Forward-only V3 schema และ audit structures ถูกเพิ่มใน
   [#56](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/56)
-- Protected identity context และ authorization enforcement เป็นงาน downstream
-  ของ #61 และ #62 ดังนั้น protected flow ด้านล่างคือ contract ที่ implementation
-  ต้องทำตาม ไม่ใช่การยืนยันว่าทุก protected endpoint deploy แล้ว
+- ระบบยืนยันตัวตน (#61), การตรวจสิทธิ์ส่วนกลาง (#62), Student/Staff workflow
+  และ Advisor read-only พัฒนาและรวมไว้ใน main แล้ว
+- ตรวจรับใน #84 เมื่อ 2026-10-20 สำหรับข้อมูลจำลองและการสาธิต
+  ดู commit, deployment และผลทดสอบใน [สรุปส่งมอบ](../evidence/v3-delivery-index.md)
+- Current-session Logout ใช้ RevokeToken ก่อน local cleanup และ Hosted UI logout
+  ไม่ใช่ GlobalSignOut/all-device logout; access JWT อาจยังผ่านจนหมดอายุตาม #48
+- Application logs ที่ `/aws/lambda/coed-api` ตั้ง retention 30 วันแล้ว แยกจาก RDS audit
+- คำสั่งรันและดูแลระบบอยู่ใน [คู่มือพัฒนา](../operations/v3-operating-guide.md)
 
 ## Component and data flow
 
@@ -26,6 +31,7 @@ flowchart LR
     Endpoint["Secrets Manager<br/>Interface VPC endpoint"]
     Secrets["AWS Secrets Manager<br/>RDS credential reference"]
     RDS["Private RDS PostgreSQL<br/>Users, Student, Plan, assignment, audit"]
+    Logs["CloudWatch application logs<br/>Sanitized / 30-day retention"]
 
     Browser -->|"Login / logout / token refresh"| Cognito
     Cognito -->|"Authorization code + PKCE"| Browser
@@ -35,6 +41,7 @@ flowchart LR
     Lambda -->|"GetSecretValue over HTTPS 443"| Endpoint
     Endpoint --> Secrets
     Lambda -->|"Parameterized SQL over TLS 5432"| RDS
+    Lambda -->|"Safe operational events, no raw tokens/PII"| Logs
 ```
 
 ### Request paths
@@ -109,6 +116,7 @@ UI route guard และการซ่อนปุ่มช่วยด้า�
 - ทุก mutation ต้องตรวจ current state และ optimistic concurrency `version`
 - Retry ใช้ operation/idempotency record เพื่อไม่สร้าง transition หรือ audit ซ้ำ
 - Plan ห้าม hard delete; ใช้ `CANCELLED` เพื่อรักษาประวัติ
+- `CANCELLED` เป็น state/service contract; ไม่มี HTTP `/cancel` route หรือ Cancel Plan UI ที่อ้างว่าส่งมอบใน V3
 
 ```text
 Trusted actor context

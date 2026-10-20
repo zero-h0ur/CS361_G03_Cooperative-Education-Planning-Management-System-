@@ -3,13 +3,14 @@
 เอกสารนี้อธิบายวิธี Build, ทดสอบ และ Deploy frontend shell ของ Issue #57 โดยอิง
 Accepted Decisions #48, #49 และ shared response/error contract จาก #55
 
-การแก้ Navbar Role, shared Student/Staff theme และ scoped Cognito logout ล่าสุด
-อธิบายใน [workspace-role-logout.md](workspace-role-logout.md) รวมขั้นตอนทดสอบจริงก่อน Merge
+รายละเอียด Navbar Role, shared Student/Staff theme, Cognito logout และวิธีทดสอบ
+อยู่ใน [workspace-role-logout.md](workspace-role-logout.md)
 
 ## Scope และ security boundary
 
 - หน้า Public เดิม (`index.html`, `requirements.html`, `company-directory.html`,
-  `faq.html`) เปิดอ่านได้โดยไม่ต้อง Login และไม่โหลด authenticated bundle
+  `faq.html`) เปิดอ่านได้โดยไม่ต้อง Login ไม่โหลด protected-shell bundle แต่โหลด
+  shared navbar auth bundle เพื่อยืนยัน role/session จาก backend ก่อนแสดง profile links
 - พื้นที่ Protected ใช้ `app.html` และ Hash routes เท่านั้น
 - Frontend ใช้ Cognito Managed Login ผ่าน Authorization Code + PKCE และส่ง
   Access Token ไปยัง `GET /api/v3/me`
@@ -17,8 +18,9 @@ Accepted Decisions #48, #49 และ shared response/error contract จาก #
   ของ Backend เท่านั้น ไม่อ่าน Role จาก URL, Token claims, DOM หรือ Browser storage
 - Route guard และการซ่อนเมนูเป็นเพียง UX; Backend ต้องตรวจ authentication,
   ownership, assignment และ scope ในทุก Protected request
-- ไม่มี Mock role หรือ Backend `/api/v3/me` ใน Production code ของ Issue #57
-  Endpoint ดังกล่าวเป็นความรับผิดชอบของ Issue #64
+- ไม่มี Mock role ใน Production; `/api/v3/me` จาก Issue #64 ใช้งานบน main แล้ว
+  ดู [ผลตรวจรับ](../evidence/v3-delivery-index.md) และ
+  [คู่มือพัฒนา](../operations/v3-operating-guide.md)
 
 ## Routes
 
@@ -30,7 +32,7 @@ Global selector conflicts กับ Form/Table/Nav ของ Protected workspace
 Sidebar และการตรวจ Role/Route คงเดิม หัวข้อและระยะห่างกระชับขึ้นเพื่อเข้าถึงเนื้อหาเร็วขึ้น
 มี Skip link ที่ย้าย Focus ไป Main โดยไม่เปลี่ยน Hash route และปรับกริดฟอร์มให้รองรับจอเล็ก
 
-Protected brand ใช้ชื่อ **CO-ED** และไฟล์ `resources/images/logomini.png` ตามคำขอล่าสุด
+Protected brand ใช้ชื่อ **CO-ED** และไฟล์ `resources/images/logomini.png`
 หน้า ข้อมูลของฉัน และ แผนสหกิจ ใช้ไอคอน SVG แบบ Code-native ที่ซ่อนจาก Screen reader
 พร้อม Section headings/Labels จริง หน้า Profile แยก Official read-only fields กับ Preferred name
 หน้า Plan แยก Status, Readiness, Submit และ History ที่แสดงเวลาภาษาไทยใน Asia/Bangkok
@@ -179,83 +181,14 @@ role ถูก Bundle เข้า Production
 Keyboard navigation และหน้าจอ Mobile/Tablet/Desktop พร้อมยืนยันว่า Public Company
 Directory ยังเปิดแบบ Anonymous ได้
 
-## AWS configuration และผล main rollout (#82)
+## Configuration และ deployment
 
-PR #94 เคย Merge โดยปิด Strict build ใน `amplify.yml` ชั่วคราวเพื่อรอ AWS configuration
-ใน rollout #82 ผู้ดูแลตั้งค่า Cognito และ main environment แล้ว และ Main Job 51 ผ่านครบ
-BUILD/DEPLOY/VERIFY ผู้ดูแลยืนยัน Login/Logout ทั้ง Student และ Staff บน main แล้ว
-รายละเอียด source/hash, screenshots, DB verification และ rollback อยู่ใน
-[main rollout evidence](../operations/v3-main-rollout.md)
+Strict build ใน `amplify.yml` เปิดใช้งานแล้ว ค่า Cognito/API อยู่ใน environment ของ Amplify และ artifact คือ `dist/` ไม่ตั้ง `NODE_ENV=production` ก่อน `npm ci` เพราะต้องติดตั้ง build tools ด้วย
 
-สถานะหลักฐาน Job 51 (ไม่ใช่การรับรอง UI ที่เปลี่ยนภายหลังโดยอัตโนมัติ):
+Callback ต้องเป็น `<origin>/app.html` และ sign-out เป็น `<origin>/index.html` ใน Cognito exact allowlist โดยเก็บ URLs ของ environment อื่นที่ยังใช้ไว้
 
-- [x] 1. เพิ่ม exact main Callback และ Sign-out URL โดยรักษา URL เดิม/preview
-- [x] 2. ตั้ง public environment variables ของ main รวม `CO_ED_REQUIRE_AUTH_CONFIG=1`
-- [ ] 3. นำ Strict build guard ใน `amplify.yml` ของ branch #82 ผ่าน PR checks/review และ Merge
-- [x] 4. Job 51 + public/API/CORS smoke + main Student/Staff Login/Logout
+ดูค่าที่ต้องตั้ง คำสั่ง build/deploy และ recovery ใน [คู่มือพัฒนา](../operations/v3-operating-guide.md) ส่วนผลตรวจรับ main อยู่ใน [สรุปส่งมอบ](../evidence/v3-delivery-index.md)
 
-ขั้นตอนต่อไปนี้เก็บไว้เป็นแนวทางตรวจ configuration ไม่ใช่คำสั่งให้ deploy ซ้ำหรือแก้ค่า AWS
-ที่ผ่านแล้ว การเปลี่ยน UI หลัง Job 51 ต้องผูกผลตรวจเข้ากับ artifact ของการเปลี่ยนนั้นแยกกัน
+## ภาพประกอบ
 
-### 1. อัปเดต Callback และ Sign-out URL ของ Cognito App Client
-
-ค่าเดิมใน #58 เคยใช้ main root `/` แต่ Shell Redirect ไป `/app.html` และ `/index.html`
-ใน rollout #82 เพิ่ม exact URLs ด้านล่างแล้ว พร้อมรักษา main root และ preview URLs เดิม
-หากตั้ง environment ใหม่ ให้ตรวจ URL ตาม #48 ไม่เช่นนั้น Cognito จะตอบ `redirect_mismatch`
-
-ค่าที่ต้องมีใน Cognito > User pool > App client > Login pages:
-
-- Allowed callback URLs: `https://main.d1d9qrqnsi5nl6.amplifyapp.com/app.html`
-- Allowed sign-out URLs: `https://main.d1d9qrqnsi5nl6.amplifyapp.com/index.html`
-- ยังคงเป็น Exact URL ห้ามใช้ Wildcard และห้ามลบ preview/URL อื่นที่ได้รับอนุญาตเดิม
-- ค่า Callback/Logout ปัจจุบันถูกบันทึกใน main rollout evidence ที่ลิงก์ไว้ข้างต้น
-
-### 2. ตั้ง Environment variables ใน Amplify Hosting
-
-ถ้าไม่ตั้งค่าเหล่านี้ `app.html` จะใช้ Login ไม่ได้ (Configuration required) ต้องตั้งให้ครบ
-**ก่อน** เปิด Strict build กลับในข้อ 3 ไม่อย่างนั้น Build ของ `main` จะล้มเหลวทุกครั้ง
-รวมถึงการแก้หน้า Public ด้วย
-
-ให้ตั้งค่าใน Amplify > App settings > Environment variables ของ Branch `main`:
-
-| Variable | ค่า |
-| --- | --- |
-| `CO_ED_API_BASE_URL` | `https://qtqlsb1aec.execute-api.us-east-1.amazonaws.com` |
-| `CO_ED_COGNITO_USER_POOL_ID` | User Pool ID จาก #58 |
-| `CO_ED_COGNITO_CLIENT_ID` | SPA App Client ID จาก #58 (ค่าเดียวกับ `AUTH_AUDIENCE`) |
-| `CO_ED_COGNITO_DOMAIN` | Cognito domain แบบ Host name |
-| `CO_ED_APP_ORIGIN` | `https://main.d1d9qrqnsi5nl6.amplifyapp.com` |
-
-ข้อควรรู้เพิ่มเติม:
-
-- `amplify.yml` ใน Repository จะ Override Build settings ที่ตั้งไว้ใน Amplify Console
-- Artifact ที่ Deploy เปลี่ยนจาก Root ของ Repository เป็น `dist/`
-- ห้ามตั้ง `NODE_ENV=production` ที่ระดับ Environment variables เพราะจะทำให้ `npm ci`
-  ไม่ติดตั้ง `esbuild` และ `aws-amplify` ซึ่งเป็น `devDependencies` ใน `amplify.yml`
-  กำหนด `NODE_ENV` เฉพาะขั้น Build ไว้แล้ว
-
-### 3. เปิด Strict build กลับ
-
-หลังข้อ 1 และ 2 เสร็จ ให้แก้บรรทัด Build ใน `amplify.yml` กลับเป็น
-
-```yaml
-        - NODE_ENV=production CO_ED_REQUIRE_AUTH_CONFIG=1 npm run build
-```
-
-branch #82 เปลี่ยนบรรทัดนี้และลบ Comment `TEMPORARY` แล้ว แต่ยังต้องผ่าน PR checks/review
-และ Merge ก่อนถือว่า Guard ใน Source บน main เสร็จ ระดับ main environment ตั้ง
-`CO_ED_REQUIRE_AUTH_CONFIG=1` แล้วตั้งแต่ Job 51 ไม่ต้องเริ่ม manual deploy ซ้ำ
-เมื่อ Merge และ auto-build ให้ตรวจผลของ Job ใหม่โดยอ้างอิง source/artifact จริง
-
-### 4. Smoke test หลัง Deploy
-
-Job 51 ผ่าน public/config smoke และผู้ดูแลยืนยัน Student/Staff Login/Logout แล้ว
-สำหรับ deployment ที่มีการเปลี่ยนแปลงภายหลัง ให้ทดสอบตาม procedure นี้ด้วยบัญชีทดสอบ
-ที่ Link กับ Internal user ใน RDS โดยไม่อ้างผล Job 51 แทน artifact ใหม่:
-
-1. เปิด `index.html` แล้วกด “เข้าสู่ระบบ” ต้องเห็นหน้า “กรุณาเข้าสู่ระบบ”
-2. กดเข้าสู่ระบบ ต้องไปที่ Cognito Managed Login และกลับมาที่ `/app.html` โดยไม่มี `redirect_mismatch`
-3. หลัง Login ต้องเห็นเมนูตาม Role ที่ `/api/v3/me` คืนมา
-4. กดออกจากระบบ ต้องกลับไปที่ `index.html` และเปิด `app.html` อีกครั้งต้องขอให้ Login ใหม่
-5. เปิด Company Directory โดยไม่ Login ต้องใช้งานได้ตามปกติ
-6. แนบ Screenshot ของ Desktop, Mobile และ Failure states ใน PR
+`resources/images/student-campus-banner.png` เป็นภาพ campus จำลองที่สร้างขึ้นสำหรับตกแต่ง ไม่ใช่ภาพถ่ายหรือแบบอาคารจริง ซ่อนจาก assistive technologies และไม่ใช้สื่อข้อมูลที่จำเป็น
