@@ -34,6 +34,7 @@ const {
   POSITION_PUBLIC_FIELDS
 } = require('./routes/public-company-routes');
 const { registerV3Routes, registerProtectedRoute } = require('./routes/v3-routes');
+const { registerPublicDirectoryRoutes } = require('./routes/directory-routes');
 const {
   extractBearerToken,
   attachRequestContext,
@@ -45,6 +46,7 @@ function createAppRouter(options = {}) {
 
   // Register public company & health routes
   registerPublicCompanyRoutes(router);
+  registerPublicDirectoryRoutes(router, options);
 
   // Register V3 protected extension routes
   registerV3Routes(router, options);

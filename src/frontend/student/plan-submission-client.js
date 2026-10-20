@@ -4,7 +4,8 @@
  * - GET  /api/v3/plans                    own Plans (#66, section 3.7)
  * - GET  /api/v3/plans/:planId/history    audit-derived history (#76, section 3.10)
  * - POST /api/v3/plans/:planId/submit     { expected_version, operation_id } (#69, section 3.9)
- * - GET  /api/companies/:id, /api/positions/:id   public display names (V2 directory)
+ * - GET  /api/companies/:id                     public company display name
+ * - GET  /api/v3/directory/positions/:id         authenticated position display name
  */
 
 export const STUDENT_PLAN_ERROR_CODES = Object.freeze({
@@ -301,12 +302,12 @@ export function createStudentPlanClient({
     }
   }
 
-  // Public directory names are display-only; a failure must not block the Plan view
+  // Display names are optional; a failed lookup must not block the Plan view.
   async function fetchPublicName(pathSuffix, field, signal) {
     try {
       const payload = await requestJson(buildApiUrl(apiBaseUrl, currentOrigin, pathSuffix), {
         signal,
-        authenticated: false
+        authenticated: pathSuffix.startsWith('/api/v3/')
       });
       return typeof payload?.data?.[field] === 'string' ? payload.data[field] : null;
     } catch (error) {
@@ -321,7 +322,7 @@ export function createStudentPlanClient({
         ? fetchPublicName(`/api/companies/${encodeURIComponent(plan.company_id)}`, 'name', signal)
         : null,
       plan.position_id
-        ? fetchPublicName(`/api/positions/${encodeURIComponent(plan.position_id)}`, 'title', signal)
+        ? fetchPublicName(`/api/v3/directory/positions/${encodeURIComponent(plan.position_id)}`, 'title', signal)
         : null
     ]);
     return { companyName, positionTitle };
@@ -340,7 +341,7 @@ export function createStudentPlanClient({
 
     async searchCompanies({ q = '', page = 1, signal } = {}) {
       const query = new URLSearchParams({ q: q.trim(), page: String(page), pageSize: '10' });
-      const payload = await requestJson(buildApiUrl(apiBaseUrl, currentOrigin, '/api/companies', query.toString()), {
+      const payload = await requestJson(buildApiUrl(apiBaseUrl, currentOrigin, '/api/directory/companies', query.toString()), {
         signal, authenticated: false
       });
       if (!Array.isArray(payload?.data) || payload.data.some((row) => !row || typeof row.id !== 'string' || typeof row.name !== 'string') ||
@@ -352,7 +353,7 @@ export function createStudentPlanClient({
 
     async getCompanyPositions({ companyId, signal } = {}) {
       const payload = await requestJson(buildApiUrl(apiBaseUrl, currentOrigin,
-        `/api/companies/${encodeURIComponent(companyId)}/positions`), { signal, authenticated: false });
+        `/api/v3/directory/companies/${encodeURIComponent(companyId)}/positions`), { signal });
       if (!Array.isArray(payload?.data) || payload.data.some((row) =>
         !row || typeof row.id !== 'string' || typeof row.title !== 'string' || row.company_id !== companyId)) {
         throw new StudentPlanError(STUDENT_PLAN_ERROR_CODES.INVALID_RESPONSE);

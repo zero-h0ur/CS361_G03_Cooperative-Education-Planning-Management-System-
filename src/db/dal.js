@@ -102,7 +102,7 @@ async function listPublicPositionsByCompany(companyId) {
     SELECT p.* FROM positions p
     JOIN companies c ON p.company_id = c.id
     WHERE p.company_id = $1 
-      AND p.visibility = 'public' 
+      AND p.visibility = 'public' AND p.data_status = 'mock'
       AND c.visibility = 'public'
     ORDER BY p.title ASC
   `;
@@ -120,7 +120,7 @@ async function searchPublicCompaniesAndPositions({ q = '', location = null, page
   const countQuery = `
     SELECT COUNT(DISTINCT c.id) 
     FROM companies c
-    LEFT JOIN positions pos ON c.id = pos.company_id AND pos.visibility = 'public'
+    LEFT JOIN positions pos ON c.id = pos.company_id AND pos.visibility = 'public' AND pos.data_status = 'mock'
     WHERE c.visibility = 'public'
       AND (
         (c.name ILIKE $1 OR pos.title ILIKE $1)
@@ -133,7 +133,7 @@ async function searchPublicCompaniesAndPositions({ q = '', location = null, page
   const query = `
     SELECT DISTINCT c.* 
     FROM companies c
-    LEFT JOIN positions pos ON c.id = pos.company_id AND pos.visibility = 'public'
+    LEFT JOIN positions pos ON c.id = pos.company_id AND pos.visibility = 'public' AND pos.data_status = 'mock'
     WHERE c.visibility = 'public'
       AND (
         (c.name ILIKE $1 OR pos.title ILIKE $1)
@@ -151,7 +151,7 @@ async function searchPublicCompaniesAndPositions({ q = '', location = null, page
       SELECT p.* FROM positions p
       JOIN companies c ON p.company_id = c.id
       WHERE p.company_id = ANY($1) 
-        AND p.visibility = 'public'
+        AND p.visibility = 'public' AND p.data_status = 'mock'
         AND c.visibility = 'public'
         AND (p.title ILIKE $2 OR $2 = '%%')
         AND ($3::text IS NULL OR p.location = $3)
@@ -198,7 +198,7 @@ async function getPublicPositionById(positionId) {
     SELECT p.* FROM positions p
     JOIN companies c ON p.company_id = c.id
     WHERE p.id = $1 
-      AND p.visibility = 'public'
+      AND p.visibility = 'public' AND p.data_status = 'mock'
       AND c.visibility = 'public'
   `;
   const res = await executeQuery(query, [positionId]);

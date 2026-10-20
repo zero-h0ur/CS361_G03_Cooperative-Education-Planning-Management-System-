@@ -46,6 +46,8 @@ const MIGRATION_002_SQL = fs.readFileSync(
 );
 const CHECKSUM_001 = sha256(MIGRATION_001_SQL);
 const CHECKSUM_002 = sha256(MIGRATION_002_SQL);
+const MIGRATION_003_SQL = fs.readFileSync(path.join(MIGRATIONS_DIR, '003_partner_directory.sql'), 'utf8');
+const CHECKSUM_003 = sha256(MIGRATION_003_SQL);
 
 const SENSITIVE_FIELD_PATTERN =
   /(?:^|_)(?:password|passwd|secret|token|api_key|access_key|secret_key|private_key|credential|database_url|connection_string)(?:$|_)/i;
@@ -238,7 +240,7 @@ function createMockMigrationPool({
 
 describe('Issue #78 [V3-T01]: Verify V3 migrations, constraints and safe fixtures', () => {
   describe('1. Migration Scenarios: Fresh DB, Representative V2 DB, Idempotency & Failure Rollback', () => {
-    it('migrates cleanly from a fresh empty database and records SHA-256 checksums for 001 and 002', async () => {
+    it('migrates cleanly from a fresh empty database and records each reviewed SHA-256 checksum', async () => {
       const harness = createMockMigrationPool({ initialApplied: [] });
 
       await migrate({ pool: harness.pool, logger: SILENT_LOGGER });
@@ -250,11 +252,12 @@ describe('Issue #78 [V3-T01]: Verify V3 migrations, constraints and safe fixture
         {
           version: '002_v3_identity_student_plan_assignment_audit.sql',
           checksum: CHECKSUM_002
-        }
+        },
+        { version: '003_partner_directory.sql', checksum: CHECKSUM_003 }
       ]);
     });
 
-    it('migrates from a representative existing V2 database by verifying V2 columns, backfilling 001 checksum, and applying only 002', async () => {
+    it('migrates from V2 without rerunning 001, backfills its checksum, and applies 002 and 003', async () => {
       const harness = createMockMigrationPool({
         initialApplied: [{ version: '001_initial_schema.sql', checksum: null }]
       });
@@ -266,13 +269,15 @@ describe('Issue #78 [V3-T01]: Verify V3 migrations, constraints and safe fixture
       expect(sqls).not.toContain(MIGRATION_001_SQL.trim());
       // 002 SQL MUST be executed
       expect(sqls).toContain(MIGRATION_002_SQL.trim());
+      expect(sqls).toContain(MIGRATION_003_SQL.trim());
 
       expect(harness.getCommittedMigrations()).toEqual([
         { version: '001_initial_schema.sql', checksum: CHECKSUM_001 },
         {
           version: '002_v3_identity_student_plan_assignment_audit.sql',
           checksum: CHECKSUM_002
-        }
+        },
+        { version: '003_partner_directory.sql', checksum: CHECKSUM_003 }
       ]);
     });
 
@@ -283,7 +288,8 @@ describe('Issue #78 [V3-T01]: Verify V3 migrations, constraints and safe fixture
           {
             version: '002_v3_identity_student_plan_assignment_audit.sql',
             checksum: CHECKSUM_002
-          }
+          },
+          { version: '003_partner_directory.sql', checksum: CHECKSUM_003 }
         ]
       });
 
@@ -292,7 +298,8 @@ describe('Issue #78 [V3-T01]: Verify V3 migrations, constraints and safe fixture
       const sqls = harness.getExecutedSqlLog().map((entry) => entry.sql);
       expect(sqls).not.toContain(MIGRATION_001_SQL.trim());
       expect(sqls).not.toContain(MIGRATION_002_SQL.trim());
-      expect(harness.getCommittedMigrations()).toHaveLength(2);
+      expect(sqls).not.toContain(MIGRATION_003_SQL.trim());
+      expect(harness.getCommittedMigrations()).toHaveLength(3);
     });
 
     it('rolls back the entire migration transaction on failure without leaving partial schema_migrations state', async () => {

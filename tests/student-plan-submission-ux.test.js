@@ -75,7 +75,7 @@ function createFakeBackend({ plans = [planRow()], history = [historyRow()], subm
     if (method === 'GET' && pathname === `/api/companies/${COMPANY_ID}`) {
       return json(200, { data: { id: COMPANY_ID, name: 'Mock Analytics Lab' } });
     }
-    if (method === 'GET' && pathname === `/api/positions/${POSITION_ID}`) {
+    if (method === 'GET' && pathname === `/api/v3/directory/positions/${POSITION_ID}`) {
       return json(200, { data: { id: POSITION_ID, company_id: COMPANY_ID, title: 'นักพัฒนาเว็บ' } });
     }
     const submitMatch = pathname.match(/^\/api\/v3\/plans\/([^/]+)\/submit$/);
@@ -177,10 +177,11 @@ describe('Issue #76: Student Plan submission client (contract)', () => {
       'GET /api/v3/plans',
       `GET /api/v3/plans/${PLAN_ID}/history`,
       `GET /api/companies/${COMPANY_ID}`,
-      `GET /api/positions/${POSITION_ID}`
+      `GET /api/v3/directory/positions/${POSITION_ID}`
     ]));
     // Protected endpoints carry the Access Token; the public directory does not
     expect(backend.calls.find((call) => call.pathname === '/api/v3/plans').auth).toBe('Bearer access-token');
+    expect(backend.calls.find((call) => call.pathname.startsWith('/api/v3/directory/positions')).auth).toBe('Bearer access-token');
     expect(backend.calls.find((call) => call.pathname.startsWith('/api/companies')).auth).toBeNull();
   });
 

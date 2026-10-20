@@ -18,6 +18,7 @@ const { registerStaffRoutes } = require('./staff-routes');
 const { registerStaffReviewRoutes } = require('./staff-review-routes');
 const { registerPlanSubmissionRoutes } = require('./plan-submission-routes');
 const { registerPlanHistoryRoutes } = require('./plan-history-routes');
+const { registerDirectoryRoutes } = require('./directory-routes');
 
 const VALID_ACTIONS = new Set(Object.values(ACTIONS));
 
@@ -106,6 +107,7 @@ function registerProtectedRoute(router, config = {}) {
  * @param {object} [options.authOptions] Auth/authz dependency overrides (tests)
  */
 function registerV3Routes(router, options = {}) {
+  registerDirectoryRoutes(router, registerProtectedRoute, options);
   // Issue #64: Authenticated /me and session context endpoint
   registerSessionRoutes(router, registerProtectedRoute, options);
 

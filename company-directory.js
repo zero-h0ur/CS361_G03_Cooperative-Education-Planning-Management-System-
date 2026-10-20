@@ -1,468 +1,221 @@
-/**
- * Company Directory - Public V2 API Implementation
- */
-
-// DOM Elements
-const companySearch = document.getElementById('companySearch');
-const searchResultStatus = document.getElementById('searchResultStatus');
-const companyList = document.getElementById('companyList');
-const loadMoreButton = document.getElementById('loadMoreCompanies');
-const locationFilter = document.getElementById('locationFilter');
-const {
-  buildCompanyQuery,
-  mergeUniqueCompanies,
-  getDataStatusIndicator,
-  createLatestRequestTracker
-} = window.CompanyDirectoryHelpers;
-
-// Fallback items
-const staticCompanyCards = Array.from(companyList.children);
-let hasExpandedDirectory = false;
-
-// State
-let state = {
-  mode: 'api', // 'api' or 'static'
-  query: '',
-  location: '',
-  page: 1,
-  pageSize: 10,
-  totalPages: 1,
-  loading: false,
-  error: null
-};
-
-let abortController = null;
-let debounceTimer = null;
-let apiDataStore = [];
-const requestTracker = createLatestRequestTracker();
-const apiBaseUrl = String(window.CO_ED_CONFIG?.apiBaseUrl || '')
-  .trim()
-  .replace(/\/+$/, '');
-
-function buildApiUrl(path) {
-  return `${apiBaseUrl}${path}`;
-}
-
-function cancelPendingRequest() {
-  requestTracker.invalidate();
-  if (abortController) {
-    abortController.abort();
-    abortController = null;
+/* Shared Directory/Spotlight view. All live data comes from the API. */
+(function () {
+  const list = document.getElementById('companyList') ||
+    document.querySelector('#company-directory-preview .partner-grid');
+  if (!list) return;
+  const isDirectory = list.id === 'companyList';
+  const status = document.getElementById('searchResultStatus') || document.createElement('p');
+  if (!status.parentNode) { status.setAttribute('role', 'status'); list.before(status); }
+  const search = document.getElementById('companySearch');
+  const location = document.getElementById('locationFilter');
+  const duration = document.getElementById('durationFilter');
+  const role = document.getElementById('roleFilter');
+  const recruiting = document.getElementById('recruitingToggle');
+  const more = document.getElementById('loadMoreCompanies');
+  let page = 1, sequence = 0, controller = null, timer = null, lastFocus = null;
+  let retryAppend = null, privateShown = false;
+  const initialQuery = new URLSearchParams(window.location.search);
+  let initialLocation = initialQuery.get('location') || '';
+  if (search) search.value = initialQuery.get('search') || initialQuery.get('q') || '';
+  const filters = { pageSize: isDirectory ? 12 : 6 };
+  function node(tag, className, text) {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text !== undefined && text !== null) el.textContent = String(text);
+    return el;
   }
-}
-
-/**
- * Creates a DOM element safely
- */
-function createElement(tag, className, textContent) {
-  const el = document.createElement(tag);
-  if (className) el.className = className;
-  if (textContent !== undefined && textContent !== null) el.textContent = textContent;
-  return el;
-}
-
-/**
- * Formats date
- */
-function formatDate(dateString) {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-function isValidCompanyListResponse(json) {
-  const pagination = json && json.pagination;
-
-  return Boolean(
-    json
-    && Array.isArray(json.data)
-    && pagination
-    && Number.isInteger(pagination.page)
-    && pagination.page >= 1
-    && Number.isInteger(pagination.pageSize)
-    && pagination.pageSize >= 1
-    && Number.isInteger(pagination.total)
-    && pagination.total >= 0
-    && Number.isInteger(pagination.totalPages)
-    && pagination.totalPages >= 0
-  );
-}
-
-/**
- * Generates a company card from API data
- */
-function createCompanyCardFromAPI(company) {
-  const article = document.createElement('article');
-  article.className = 'partner-card partner-card-dynamic';
-
-  const infoDiv = document.createElement('div');
-  infoDiv.className = 'partner-info';
-
-  const headerRow = document.createElement('div');
-  headerRow.className = 'partner-card-header';
-
-  const nameEl = createElement('h2', '', company.name || 'ไม่มีชื่อ');
-  headerRow.appendChild(nameEl);
-
-  const statusIndicator = getDataStatusIndicator(company);
-  if (statusIndicator) {
-    headerRow.appendChild(createElement(
-      'span',
-      `partner-tag partner-status-badge ${statusIndicator.className}`,
-      statusIndicator.label
-    ));
+  function image(company) {
+    const box = node('div', 'partner-logo');
+    if (/^resources\/images\/[a-zA-Z0-9_./-]+\.(png|jpg|jpeg|webp)$/.test(company.logo || '') && !company.logo.includes('..')) {
+      const img = node('img'); img.src = company.logo; img.alt = 'โลโก้ ' + company.name; img.loading = 'lazy';
+      img.addEventListener('error', () => box.replaceChildren(node('span', 'partner-logo-monogram', company.code || 'CO')), { once: true });
+      box.append(img);
+    } else box.append(node('span', 'partner-logo-monogram', company.code || 'CO'));
+    return box;
   }
-
-  infoDiv.appendChild(headerRow);
-
-  if (company.location) {
-    const subline = createElement('div', 'card-subline');
-    const locItem = createElement('span', 'card-subline-item');
-    locItem.appendChild(createElement('i', 'fa-solid fa-location-dot'));
-    locItem.appendChild(document.createTextNode(' ' + company.location));
-    subline.appendChild(locItem);
-
-    subline.appendChild(createElement('span', 'subline-dot', '•'));
-
-    const modeItem = createElement('span', 'card-subline-item mode-item');
-    modeItem.appendChild(createElement('i', 'fa-solid fa-laptop-house'));
-    modeItem.appendChild(document.createTextNode(' Hybrid'));
-    subline.appendChild(modeItem);
-
-    infoDiv.appendChild(subline);
+  function card(company) {
+    const article = node('article', 'partner-card partner-card-dynamic');
+    const top = node('div', 'pricing-card-top');
+    const badges = node('div', 'pricing-card-badges');
+    const positions = company.details_available && Array.isArray(company.positions) ? company.positions : [];
+    badges.append(node('span', company.details_available ? 'partner-status-pill' : 'pricing-quota-pill auth-locked-pill',
+      company.details_available ? (positions.length ? 'มีประกาศรับสมัคร' : 'ยังไม่มีประกาศในชุดข้อมูล') : 'รายละเอียดต้องเข้าสู่ระบบ'));
+    top.append(image(company), badges);
+    const info = node('div', 'partner-info');
+    const heading = node('div', 'partner-card-header'), title = node('h2', '', company.name);
+    title.title = company.name; heading.append(title); info.append(heading);
+    info.append(node('div', 'card-subline', company.location || 'ไม่ระบุจังหวัด'));
+    const tags = node('div', 'card-roles-row');
+    for (const position of positions.slice(0, 3)) tags.append(node('span', 'partner-tag tag-field', position.title));
+    if (!company.details_available) tags.append(node('span', 'auth-locked-notice', 'เข้าสู่ระบบเพื่อดูตำแหน่งและรายละเอียดประกาศ'));
+    info.append(tags);
+    const button = node('button', 'pricing-cta-btn', 'ดูข้อมูลบริษัท'); button.type = 'button';
+    button.addEventListener('click', () => window.openCompanyModal(company.id));
+    info.append(button); article.append(top, info); return article;
   }
-
-  // Prominent Roles
-  const rolesRow = createElement('div', 'card-roles-row');
-
-  function getRoleTagClass(title) {
-    const t = String(title || '').toLowerCase();
-    if (t.includes('ซอฟต์แวร์') || t.includes('software') || t.includes('developer') || t.includes('frontend') || t.includes('backend') || t.includes('web') || t.includes('engineer') || t.includes('tester')) {
-      return 'tag-role-dev';
+  function fillSelect(select, values, label) {
+    if (!select) return;
+    const old = select.value;
+    const first = node('option', '', label); first.value = '';
+    select.replaceChildren(first);
+    for (const value of [...new Set(values || [])]) {
+      const option = node('option', '', value); option.value = value; select.append(option);
     }
-    if (t.includes('ข้อมูล') || t.includes('data') || t.includes('ai') || t.includes('machine learning') || t.includes('nlp')) {
-      return 'tag-role-data';
-    }
-    if (t.includes('design') || t.includes('ux') || t.includes('ui') || t.includes('กราฟิก') || t.includes('creative') || t.includes('researcher')) {
-      return 'tag-role-design';
-    }
-    if (t.includes('security') || t.includes('cyber') || t.includes('cloud') || t.includes('network') || t.includes('ระบบคลาวด์')) {
-      return 'tag-role-sec';
-    }
-    if (t.includes('business') || t.includes('analyst') || t.includes('ธุรกิจ') || t.includes('marketing') || t.includes('การตลาด')) {
-      return 'tag-role-biz';
-    }
-    return '';
+    select.value = [...select.options].some(option => option.value === old) ? old : '';
   }
-
-  if (Array.isArray(company.positions)) {
-    company.positions.filter((position) => position && position.title).slice(0, 2).forEach((pos) => {
-      const roleClass = getRoleTagClass(pos.title);
-      const fullClass = roleClass ? `partner-tag tag-field ${roleClass}` : 'partner-tag tag-field';
-      rolesRow.appendChild(createElement('span', fullClass, pos.title));
-    });
-  }
-
-  if (company.location) {
-    rolesRow.appendChild(createElement('span', 'partner-tag tag-location', company.location));
-  }
-
-  infoDiv.appendChild(rolesRow);
-
-  const ctaBtn = createElement('button', 'pricing-cta-btn');
-  ctaBtn.type = 'button';
-  ctaBtn.innerHTML = 'ดูรายละเอียดตำแหน่งงาน <i class="fa-solid fa-arrow-right"></i>';
-  infoDiv.appendChild(ctaBtn);
-
-  article.appendChild(infoDiv);
-
-  return article;
-}
-
-/**
- * Fallback to static logic
- */
-function activateStaticFallback() {
-  if (state.mode === 'static') return; // Prevent duplicate execution
-  state.mode = 'static';
-  searchResultStatus.removeAttribute('aria-busy');
-  companyList.innerHTML = '';
-  staticCompanyCards.forEach(card => companyList.appendChild(card));
-
-  if (!document.getElementById('offlineBanner')) {
-    const banner = document.createElement('div');
-    banner.id = 'offlineBanner';
-    banner.className = 'directory-offline-banner';
-    banner.setAttribute('role', 'status');
-    banner.textContent = 'ไม่สามารถดึงข้อมูลล่าสุดได้ ขณะนี้กำลังแสดงข้อมูลตัวอย่าง โปรดรีเฟรชหน้าเพื่อลองอีกครั้ง';
-
-    const header = document.querySelector('.header');
-    if (header) {
-      header.appendChild(banner);
+  function privacyFilters(available, options) {
+    for (const element of [duration, role, recruiting]) if (element) {
+      element.disabled = !available;
+      element.title = available ? '' : 'เข้าสู่ระบบเพื่อใช้ตัวกรองรายละเอียดประกาศ';
+    }
+    fillSelect(location, options?.locations, 'ทุกสถานที่');
+    if (location && initialLocation) { location.value = initialLocation; initialLocation = ''; }
+    fillSelect(duration, available ? options?.durations : [], 'ทุกช่วงเวลา');
+    if (role && role.options.length <= 1) fillSelect(role,
+      ['Developer', 'Data', 'Cloud', 'Tester', 'Analyst', 'Security', 'Network'], 'ทุกสายงาน');
+    if (!available) {
+      if (duration) duration.value = '';
+      if (role) role.value = '';
+      if (recruiting) { recruiting.classList.remove('active'); recruiting.setAttribute('aria-pressed', 'false'); }
     }
   }
-
-  const updateStaticVisibility = () => {
-    const rawQuery = companySearch.value.trim().toLocaleLowerCase('th');
-    const roleEl = document.getElementById('roleFilter');
-    const roleVal = roleEl ? roleEl.value.trim().toLocaleLowerCase('th') : '';
-    const modeEl = document.getElementById('workModeFilter');
-    const modeVal = modeEl ? modeEl.value.trim().toLocaleLowerCase('th') : '';
-    const locVal = locationFilter && !locationFilter.disabled ? locationFilter.value.trim().toLocaleLowerCase('th') : '';
-    const recEl = document.getElementById('recruitingToggle');
-    const recruitingOnly = recEl ? recEl.classList.contains('active') : false;
-    let visibleCount = 0;
-    Array.from(companyList.children).forEach((card) => {
-      const companyText = card.dataset.company ? card.dataset.company.toLocaleLowerCase('th') : '';
-
-      let matchesQuery = true;
-      if (rawQuery) {
-        const subQueries = rawQuery.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
-        if (subQueries.length > 1) {
-          matchesQuery = subQueries.some(sub => companyText.includes(sub));
-        } else {
-          const words = rawQuery.split(/\s+/).filter(Boolean);
-          matchesQuery = words.every(word => companyText.includes(word));
+  async function load(append = false) {
+    const api = window.CO_ED_DIRECTORY_API;
+    if (!api) { status.textContent = 'กำลังเตรียมการเชื่อมต่อข้อมูล'; return; }
+    const current = ++sequence;
+    controller?.abort(); controller = new AbortController();
+    const active = controller;
+    const timeout = setTimeout(() => active.abort(), 20000);
+    if (!append) { page = 1; list.replaceChildren(); }
+    status.textContent = 'กำลังโหลดข้อมูลสถานประกอบการ'; status.setAttribute('aria-busy', 'true');
+    if (more) more.disabled = true;
+    try {
+      const result = await api.list({ ...filters, q: search?.value.trim(), location: initialLocation || location?.value,
+        role: role?.value, duration: duration?.value, recruitingOnly: recruiting?.classList.contains('active'), page }, { signal: active.signal });
+      if (current !== sequence) return;
+      if (!Array.isArray(result?.data) || !Number.isInteger(result?.pagination?.total) ||
+          !Number.isInteger(result?.pagination?.totalPages)) throw new Error('Invalid directory response.');
+      if (privateShown && !result.pagination.details_available) {
+        list.replaceChildren(); closeModal();
+        if (append) { privateShown = false; load(); return; }
+      }
+      privateShown = result.pagination.details_available === true;
+      privacyFilters(result.pagination.details_available === true, result.pagination.filters);
+      for (const company of result.data) list.append(card(company));
+      status.textContent = result.pagination.total ? 'พบสถานประกอบการ ' + result.pagination.total + ' รายการ' : 'ไม่พบสถานประกอบการตามเงื่อนไข';
+      retryAppend = null;
+      if (more) { more.hidden = page >= result.pagination.totalPages; more.disabled = false; more.textContent = 'โหลดเพิ่มเติม'; }
+      const total = document.querySelector('[data-directory-company-count]');
+      if (total) total.textContent = result.pagination.total;
+    } catch (error) {
+      if (current !== sequence) return;
+      if (!append) list.replaceChildren();
+      if (append) page--;
+      retryAppend = append;
+      status.textContent = 'ยังโหลดข้อมูลไม่ได้ กรุณาลองใหม่อีกครั้ง';
+      if (more) { more.hidden = false; more.disabled = false; more.textContent = 'ลองโหลดอีกครั้ง'; }
+    } finally {
+      clearTimeout(timeout);
+      if (current === sequence) status.removeAttribute('aria-busy');
+    }
+  }
+  function clearPrivate() {
+    ++sequence; controller?.abort(); window.CO_ED_DIRECTORY_API?.invalidate();
+    list.replaceChildren(); closeModal(); privacyFilters(false, {});
+    privateShown = false;
+    status.textContent = 'ออกจากระบบแล้ว กรุณาโหลดหน้าใหม่เพื่อดูข้อมูลสาธารณะ';
+  }
+  function closeModal() {
+    ++modalSequence; modalController?.abort();
+    const modal = document.getElementById('companyModal');
+    modal?.classList.remove('active');
+    document.body.style.overflow = '';
+    document.getElementById('modalDescription')?.replaceChildren();
+    document.getElementById('modalReq')?.replaceChildren();
+    lastFocus?.focus();
+  }
+  let modalSequence = 0, modalController = null;
+  window.closeModal = closeModal;
+  window.handleBackdropClick = event => { if (event.target.id === 'companyModal') closeModal(); };
+  window.openModal = id => window.openCompanyModal(id);
+  window.openCompanyModal = async id => {
+    const modal = document.getElementById('companyModal');
+    if (!modal || !window.CO_ED_DIRECTORY_API) return;
+    const current = ++modalSequence; modalController?.abort(); modalController = new AbortController();
+    const active = modalController, timeout = setTimeout(() => active.abort(), 20000);
+    lastFocus = document.activeElement;
+    modal.classList.add('active'); modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'modalName'); document.body.style.overflow = 'hidden';
+    const description = document.getElementById('modalDescription'), requirements = document.getElementById('modalReq');
+    document.getElementById('modalName').textContent = 'ข้อมูลสถานประกอบการ';
+    document.getElementById('modalLocation').textContent = '';
+    document.getElementById('modalLogo').replaceChildren();
+    description?.replaceChildren(node('p', '', 'กำลังโหลดข้อมูล')); requirements?.replaceChildren();
+    modal.querySelector('button')?.focus();
+    try {
+      const result = await window.CO_ED_DIRECTORY_API.detail(id, { signal: active.signal });
+      if (current !== modalSequence) return;
+      const company = result.data;
+      if (privateShown && !company.details_available) {
+        privateShown = false; list.replaceChildren(); privacyFilters(false, {}); load();
+      }
+      document.getElementById('modalName').textContent = company.name;
+      document.getElementById('modalLocation').textContent = company.address || company.location || 'ไม่ระบุที่ตั้ง';
+      document.getElementById('modalLogo').replaceChildren(image(company));
+      description?.replaceChildren();
+      if (company.details_available && Array.isArray(company.positions)) {
+        const groups = new Map();
+        for (const p of company.positions) {
+          const key = p.announcement_ref || p.id;
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(p);
         }
+        for (const group of groups.values()) {
+          const section = node('section', 'modal-position-item');
+          section.append(node('h4', 'modal-position-title', group.map(p => p.title).join(', ')));
+          section.append(node('p', '', 'อัตราตามประกาศ (รวม): ' + (group[0].quota || 'ไม่ระบุ')));
+          section.append(node('p', '', 'ช่วงเวลา: ' + (group[0].duration || 'ไม่ระบุ')));
+          description?.append(section);
+        }
+        if (!groups.size) description?.append(node('p', '', 'ยังไม่มีประกาศในชุดข้อมูลนี้'));
+        requirements?.append(node('p', '', 'ประกาศปีการศึกษา 2569 โปรดตรวจสอบสถานะล่าสุดกับช่องทางทางการของบริษัท ไม่มีข้อมูลผู้ติดต่อส่วนบุคคลในระบบ'));
+      } else {
+        description?.append(node('p', 'auth-locked-notice', 'เข้าสู่ระบบเพื่อดูตำแหน่ง อัตรา และช่วงเวลาตามประกาศ'));
+        const link = node('a', 'btn-signup', 'เข้าสู่ระบบ'); link.href = 'app.html'; requirements?.append(link);
       }
-
-      const matchesRole = !roleVal || companyText.includes(roleVal);
-      const matchesMode = !modeVal || companyText.includes(modeVal);
-      const matchesLoc = !locVal || companyText.includes(locVal);
-      const matchesRecruiting = !recruitingOnly || companyText.includes('เปิดรับ');
-
-      const isExtraCard = card.classList.contains('partner-card-extra');
-      const hasAnyFilter = Boolean(rawQuery || roleVal || modeVal || locVal || recruitingOnly);
-      const canShowByGroup = !isExtraCard || hasExpandedDirectory || Boolean(rawQuery);
-      const shouldShow = matchesQuery && matchesRole && matchesMode && matchesLoc && matchesRecruiting && canShowByGroup;
-      card.hidden = !shouldShow;
-      if (shouldShow) visibleCount += 1;
-    });
-    loadMoreButton.hidden = Boolean(rawQuery) || hasExpandedDirectory;
-    if (rawQuery || roleVal || modeVal || locVal || recruitingOnly) {
-      searchResultStatus.textContent = visibleCount > 0
-        ? `พบสถานประกอบการ ${visibleCount} รายการ`
-        : 'ไม่พบสถานประกอบการที่ตรงกับคำค้นหา';
-    } else {
-      searchResultStatus.textContent = '';
-    }
+    } catch {
+      if (current === modalSequence) description?.replaceChildren(node('p', '', 'ยังโหลดรายละเอียดไม่ได้ กรุณาลองใหม่อีกครั้ง'));
+    } finally { clearTimeout(timeout); }
   };
-
-  companySearch.removeEventListener('input', onSearchInput);
-  if (locationFilter) {
-    locationFilter.removeEventListener('change', onFilterChange);
-    if (typeof jest !== 'undefined') {
-      locationFilter.value = '';
-      locationFilter.disabled = true;
-      const filterContainer = locationFilter.closest('.directory-location-filter');
-      if (filterContainer) {
-        filterContainer.hidden = true;
-        filterContainer.style.display = 'none';
-      }
-    } else {
-      locationFilter.disabled = false;
-      const filterContainer = locationFilter.closest('.directory-location-filter');
-      if (filterContainer) {
-        filterContainer.hidden = false;
-        filterContainer.style.display = '';
-      }
-      locationFilter.addEventListener('change', updateStaticVisibility);
-    }
-  }
-  companySearch.addEventListener('input', updateStaticVisibility);
-
-  loadMoreButton.onclick = () => {
-    hasExpandedDirectory = true;
-    loadMoreButton.setAttribute('aria-expanded', 'true');
-    updateStaticVisibility();
-  };
-
-  updateStaticVisibility();
-}
-
-/**
- * Render the API state to DOM
- */
-function renderState() {
-  if (state.mode === 'static') return;
-
-  if (state.page === 1) {
-    companyList.innerHTML = '';
-  }
-
-  if (state.loading && state.page === 1) {
-    searchResultStatus.textContent = 'กำลังโหลดข้อมูล...';
-    searchResultStatus.setAttribute('aria-busy', 'true');
-    companyList.innerHTML = '';
-    loadMoreButton.hidden = true;
-    return;
-  }
-
-  searchResultStatus.removeAttribute('aria-busy');
-
-  if (state.error) {
-    searchResultStatus.textContent = typeof state.error === 'string' ? state.error : 'ไม่สามารถโหลดข้อมูลจากระบบได้ กรุณาลองใหม่อีกครั้ง';
-    companyList.innerHTML = '';
-    loadMoreButton.hidden = true;
-    return;
-  }
-
-  if (state.page === 1 && apiDataStore.length === 0) {
-    searchResultStatus.textContent = 'ไม่พบสถานประกอบการที่ตรงกับคำค้นหา';
-    loadMoreButton.hidden = true;
-    return;
-  }
-
-  searchResultStatus.textContent = `แสดงสถานประกอบการ ${apiDataStore.length} รายการ`;
-
-  // Render cards
-  const fragment = document.createDocumentFragment();
-  const startIdx = (state.page - 1) * state.pageSize;
-  const newItems = apiDataStore.slice(startIdx);
-
-  newItems.forEach(company => {
-    fragment.appendChild(createCompanyCardFromAPI(company));
+  search?.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => load(), 250); });
+  for (const input of [location, duration, role]) input?.addEventListener('change', () => load());
+  recruiting?.addEventListener('click', () => {
+    const active = recruiting.classList.toggle('active'); recruiting.setAttribute('aria-pressed', String(active)); load();
   });
-
-  companyList.appendChild(fragment);
-
-  // Update Load More button
-  if (state.loading && state.page > 1) {
-    loadMoreButton.hidden = false;
-    loadMoreButton.disabled = true;
-    loadMoreButton.textContent = 'กำลังโหลด...';
-  } else if (state.page < state.totalPages) {
-    loadMoreButton.hidden = false;
-    loadMoreButton.disabled = false;
-    loadMoreButton.textContent = 'ดูเพิ่มเติม';
-  } else {
-    loadMoreButton.hidden = true;
-  }
-}
-
-/**
- * Fetch data from API
- */
-async function fetchCompanies(isAppend = false) {
-  if (state.mode === 'static') return;
-
-  if (abortController) {
-    abortController.abort();
-  }
-  const controller = new AbortController();
-  abortController = controller;
-  const requestVersion = requestTracker.start();
-
-  state.loading = true;
-  state.error = null;
-  renderState();
-
-  try {
-    const queryString = buildCompanyQuery(state);
-
-    const response = await fetch(buildApiUrl(`/api/companies?${queryString}`), {
-      signal: controller.signal,
-      headers: { 'Accept': 'application/json' }
-    });
-
-    if (response.status === 400) {
-      let errorMsg = 'ข้อมูลการค้นหาไม่ถูกต้อง';
-      try {
-        const errJson = await response.json();
-        if (typeof errJson?.error?.message === 'string') {
-          errorMsg = errJson.error.message;
-        }
-      } catch (e) {}
-      const err = new Error('ValidationError');
-      err.validationMessage = errorMsg;
-      throw err;
+  document.getElementById('filterResetBtn')?.addEventListener('click', () => {
+    for (const input of [search, location, duration, role]) if (input) input.value = '';
+    recruiting?.classList.remove('active'); recruiting?.setAttribute('aria-pressed', 'false'); load();
+  });
+  more?.addEventListener('click', () => {
+    if (retryAppend === false) load();
+    else { page++; load(true); }
+  });
+  document.addEventListener('keydown', event => {
+    const modal = document.getElementById('companyModal');
+    if (!modal?.classList.contains('active')) return;
+    if (event.key === 'Escape') closeModal();
+    if (event.key === 'Tab') {
+      const items = [...modal.querySelectorAll('button:not([disabled]),a[href]')];
+      if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items.at(-1)?.focus(); }
+      else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0]?.focus(); }
     }
-
-    if (!response.ok) {
-      throw new Error('ServiceError: ' + response.status);
-    }
-
-    const json = await response.json();
-    if (!isValidCompanyListResponse(json)) {
-      throw new Error('ServiceError: invalid response contract');
-    }
-    if (!requestTracker.isCurrent(requestVersion)) return;
-
-    if (!isAppend) {
-      apiDataStore = [];
-    }
-
-    apiDataStore = mergeUniqueCompanies(apiDataStore, json.data);
-    state.totalPages = json.pagination.totalPages;
-
-    state.loading = false;
-    if (abortController === controller) abortController = null;
-    renderState();
-
-  } catch (error) {
-    if (error.name === 'AbortError' || !requestTracker.isCurrent(requestVersion)) return;
-    
-    console.error('Failed to fetch companies:', error);
-    state.loading = false;
-    if (abortController === controller) abortController = null;
-    
-    if (error.message === 'ValidationError') {
-      state.error = error.validationMessage;
-      renderState();
-      return;
-    }
-    
-    // Unconditional fallback on Service failure / Network error / Invalid JSON
-    activateStaticFallback();
-  }
-}
-
-/**
- * Event Handlers
- */
-function onSearchInput(e) {
-  state.query = e.target.value.trim();
-  state.page = 1;
-
-  cancelPendingRequest();
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    fetchCompanies(false);
-  }, 300);
-}
-
-function onFilterChange(e) {
-  state.location = e.target.value;
-  state.page = 1;
-  fetchCompanies(false);
-}
-
-// Bind Events
-companySearch.addEventListener('input', onSearchInput);
-if (locationFilter) locationFilter.addEventListener('change', onFilterChange);
-
-loadMoreButton.onclick = () => {
-  if (state.mode === 'api' && !state.loading && state.page < state.totalPages) {
-    state.page += 1;
-    fetchCompanies(true);
-  }
-};
-
-// Read initial query parameters from URL if present
-if (typeof window !== 'undefined' && window.location && window.location.search) {
-  const urlParams = new URLSearchParams(window.location.search);
-  const initialSearch = urlParams.get('search');
-  const initialLocation = urlParams.get('location');
-  if (initialSearch && companySearch) {
-    companySearch.value = initialSearch;
-    state.query = initialSearch.trim();
-  }
-  if (initialLocation && locationFilter) {
-    locationFilter.value = initialLocation;
-    state.location = initialLocation;
-  }
-}
-
-// Initial Load
-fetchCompanies(false);
+  });
+  window.addEventListener('coed:private-content-clear', clearPrivate);
+  window.addEventListener('co-ed:auth-logout', clearPrivate);
+  window.addEventListener('storage', event => { if (event.key === 'co-ed:auth-logout' && event.newValue) clearPrivate(); });
+  window.addEventListener('pagehide', () => { ++sequence; controller?.abort(); list.replaceChildren(); closeModal(); });
+  window.addEventListener('pageshow', event => { if (event.persisted) load(); });
+  window.addEventListener('coed:directory-ready', () => load());
+  for (const input of [duration, role, recruiting]) if (input) input.disabled = true;
+  if (window.CO_ED_DIRECTORY_API) load();
+})();

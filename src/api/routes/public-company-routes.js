@@ -1,6 +1,7 @@
 /**
  * Public Company Directory and Health routes for CO-ED V2/V3.
- * Preserves 100% backward compatibility with public read-only behavior.
+ * Legacy public position fields are limited to synthetic mock records.
+ * Real recruitment details are served by the authenticated Directory routes.
  */
 
 const { sendSuccess } = require('../response');
@@ -42,7 +43,7 @@ function toPublicPosition(record) {
 function toPublicCompany(record) {
   const company = pickFields(record, COMPANY_PUBLIC_FIELDS);
   if (Array.isArray(record.positions)) {
-    company.positions = record.positions.map(toPublicPosition);
+    company.positions = record.positions.filter(position => position.data_status === 'mock').map(toPublicPosition);
   }
   return company;
 }
