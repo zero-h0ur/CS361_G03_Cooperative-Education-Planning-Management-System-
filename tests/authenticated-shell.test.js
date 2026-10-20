@@ -36,6 +36,140 @@ function setup({ hash = '', session = { role: 'STUDENT' }, error } = {}) {
   return { app, root, location, eventTarget, loadSession, startLogin, restartLogin, logout };
 }
 
+describe('Student CSS route transitions', () => {
+  let context;
+  let originalTransition;
+  let originalMatchMedia;
+  let transitions;
+  beforeEach(() => {
+    originalTransition = document.startViewTransition;
+    originalMatchMedia = window.matchMedia;
+    transitions = [];
+    window.matchMedia = jest.fn(() => ({ matches: false }));
+    document.startViewTransition = jest.fn((update) => {
+      let finish;
+      const transition = {
+        update,
+        finish: () => finish(),
+        skipTransition: jest.fn(() => finish()),
+        ready: Promise.resolve(),
+        updateCallbackDone: Promise.resolve(),
+        finished: new Promise((resolve) => { finish = resolve; })
+      };
+      transitions.push(transition);
+      return transition;
+    });
+  });
+  afterEach(() => {
+    context?.app.destroy(); context = null;
+    if (originalTransition === undefined) delete document.startViewTransition;
+    else document.startViewTransition = originalTransition;
+    if (originalMatchMedia === undefined) delete window.matchMedia;
+    else window.matchMedia = originalMatchMedia;
+  });
+  function navigate(hash) {
+    context.location.hash = hash;
+    context.eventTarget.dispatchEvent(new Event('hashchange'));
+  }
+
+  it('crossfades only a Student route change while retaining main, Sidebar, topbar and skip-link focus', async () => {
+    context = setup({ hash: '#/student/profile' }); await context.app.start();
+    expect(document.startViewTransition).not.toHaveBeenCalled();
+    const main = context.root.querySelector('main');
+    const sidebar = context.root.querySelector('.shell-sidebar');
+    const topbar = context.root.querySelector('.shell-topbar');
+    navigate('#/student/plan');
+    expect(document.startViewTransition).toHaveBeenCalledTimes(1);
+    expect(context.root.querySelector('h1').textContent).toBe('ข้อมูลนักศึกษา');
+    transitions[0].update();
+    expect(context.root.querySelector('h1').textContent).toBe('แผนสหกิจของฉัน');
+    expect(context.root.querySelector('main')).toBe(main);
+    expect(context.root.querySelector('.shell-sidebar')).toBe(sidebar);
+    expect(context.root.querySelector('.shell-topbar')).toBe(topbar);
+    expect(context.root.querySelector('[aria-current="page"]').getAttribute('href')).toBe('#/student/plan');
+    topbar.querySelector('button').focus();
+    context.root.querySelector('.shell-skip-link').click();
+    expect(document.activeElement).toBe(main);
+    transitions[0].finish(); await Promise.resolve();
+    expect(document.documentElement.classList.contains('student-route-transition')).toBe(false);
+  });
+
+  it.each(['expired', 'logout', 'cross-tab', 'forbidden', 'pagehide', 'destroy'])('cancels a queued transition on %s without letting its callback resurrect a route', async (action) => {
+    context = setup({ hash: '#/student/profile' }); await context.app.start();
+    navigate('#/student/plan');
+    if (action === 'expired') context.app.expireSession();
+    if (action === 'logout') context.root.querySelector('.shell-topbar button').click();
+    if (action === 'cross-tab') context.eventTarget.dispatchEvent(new StorageEvent('storage', { key: 'co-ed:auth-logout', newValue: 'nonce' }));
+    if (action === 'forbidden') navigate('#/staff/students');
+    if (action === 'pagehide') context.eventTarget.dispatchEvent(new Event('pagehide'));
+    if (action === 'destroy') context.app.destroy();
+    const guardedHtml = context.root.innerHTML;
+    transitions[0].update(); await Promise.resolve();
+    expect(transitions[0].skipTransition).toHaveBeenCalledTimes(1);
+    expect(context.root.innerHTML).toBe(guardedHtml);
+    expect(document.documentElement.classList.contains('student-route-transition')).toBe(false);
+    if (action !== 'destroy') expect(context.root.querySelector('.protected-shell')).toBeNull();
+  });
+
+  it('cancels a running snapshot immediately on Session expiry after its DOM update', async () => {
+    context = setup({ hash: '#/student/profile' }); await context.app.start();
+    navigate('#/student/plan'); transitions[0].update();
+    context.app.expireSession();
+    expect(transitions[0].skipTransition).toHaveBeenCalledTimes(1);
+    expect(context.root.querySelector('.protected-shell')).toBeNull();
+    expect(context.root.textContent).toContain('Session หมดอายุ');
+    transitions[0].update();
+    expect(context.root.querySelector('.protected-shell')).toBeNull();
+  });
+
+  it('keeps only the latest rapid navigation and does not let older cleanup clear newer transition styles', async () => {
+    context = setup({ hash: '#/student/profile' }); await context.app.start();
+    navigate('#/student/plan'); navigate('#/student/profile');
+    transitions[0].update(); await Promise.resolve();
+    expect(document.documentElement.classList.contains('student-route-transition')).toBe(true);
+    transitions[1].update();
+    expect(context.root.querySelector('h1').textContent).toBe('ข้อมูลนักศึกษา');
+    transitions[1].finish(); await Promise.resolve();
+    expect(document.documentElement.classList.contains('student-route-transition')).toBe(false);
+  });
+
+  it.each(['reduced', 'unsupported', 'throws'])('falls back to immediate guarded DOM updates when native motion is %s', async (mode) => {
+    context = setup({ hash: '#/student/profile' }); await context.app.start();
+    const sidebar = context.root.querySelector('.shell-sidebar');
+    if (mode === 'reduced') window.matchMedia.mockReturnValue({ matches: true });
+    if (mode === 'unsupported') delete document.startViewTransition;
+    if (mode === 'throws') document.startViewTransition.mockImplementation(() => { throw new Error('Unavailable'); });
+    navigate('#/student/plan');
+    expect(context.root.querySelector('h1').textContent).toBe('แผนสหกิจของฉัน');
+    expect(context.root.querySelector('.shell-sidebar')).toBe(sidebar);
+    expect(document.documentElement.classList.contains('student-route-transition')).toBe(false);
+  });
+
+  it('does not start this effect for Staff or denied routes', async () => {
+    context = setup({ hash: '#/staff/students', session: { role: 'STAFF' } }); await context.app.start();
+    navigate('#/staff/plans'); navigate('#/student/profile');
+    expect(document.startViewTransition).not.toHaveBeenCalled();
+    expect(context.root.querySelector('.protected-shell')).toBeNull();
+  });
+
+  it('defines content-only CSS snapshots, non-blocking overlays and reduced-motion fallback', () => {
+    const css = fs.readFileSync(path.resolve(__dirname, '..', 'src/frontend/authenticated-shell.css'), 'utf8');
+    const style = document.createElement('style'); style.textContent = css; document.head.append(style);
+    try {
+      const rules = [...style.sheet.cssRules];
+      const named = rules.find((rule) => rule.selectorText === '.protected-shell--student .shell-content');
+      expect(named.style.getPropertyValue('view-transition-name')).toBe('student-route-content');
+      const overlay = rules.find((rule) => rule.selectorText === 'html.student-route-transition::view-transition');
+      expect(overlay.style.getPropertyValue('pointer-events')).toBe('none');
+      const entry = rules.find((rule) => rule.selectorText === 'html.student-route-transition::view-transition-new(student-route-content)');
+      expect(entry.style.getPropertyValue('animation')).toContain('student-route-in 720ms');
+      const reduced = rules.filter((rule) => rule.conditionText === '(prefers-reduced-motion: reduce)')
+        .flatMap((rule) => [...rule.cssRules]);
+      expect(reduced.find((rule) => rule.selectorText?.includes(entry.selectorText)).style.getPropertyValue('animation')).toBe('none');
+    } finally { style.remove(); }
+  });
+});
+
 describe('authenticated V3 shell and route guards', () => {
   it.each(['STUDENT', 'STAFF', 'ADVISOR'])('shares the faded campus theme and framed public logo for %s', async (role) => {
     const context = setup({ session: { role } }); await context.app.start();

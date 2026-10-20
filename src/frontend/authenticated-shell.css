@@ -806,8 +806,209 @@ a:focus-visible,
   background: transparent;
 }
 
-.student-profile-editable .student-profile-form {
-  max-width: 640px;
+.student-profile-workspace {
+  --profile-feedback-duration: 400ms;
+  --profile-secondary-ink: #334155;
+}
+/* Native anchor/focus scrolling only. Wheel and touch input stay browser-controlled. */
+html:has(.protected-shell--student) {
+  scroll-behavior: smooth;
+  scroll-padding-top: 88px;
+}
+.protected-shell--student .shell-content { view-transition-name: student-route-content; }
+/* Only the content crossfades. The chrome is retained in the DOM and not animated. */
+html.student-route-transition::view-transition { pointer-events: none; }
+html.student-route-transition::view-transition-old(root) { display: none; }
+html.student-route-transition::view-transition-new(root),
+html.student-route-transition::view-transition-group(student-route-content) { animation: none; }
+html.student-route-transition::view-transition-old(student-route-content) {
+  animation: student-route-out 320ms ease-in both;
+}
+html.student-route-transition::view-transition-new(student-route-content) {
+  animation: student-route-in 720ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+.protected-shell--student .shell-content[data-student-route-change] .student-workspace--ready {
+  animation: none;
+}
+.protected-shell--student .shell-content[data-route-motion="css"] > .shell-content__heading,
+.protected-shell--student .shell-content[data-route-motion="css"] > .student-workspace {
+  animation: student-route-in 720ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+@keyframes student-route-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes student-route-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+:is(.student-profile-workspace, .student-plan-workspace) {
+  /* Student-only contrast and motion: do not change Advisor/Staff cards. */
+  --shell-muted: #475569;
+  --shell-line: #d4c8c3;
+  --shell-shadow: 0 6px 22px rgba(15, 23, 42, 0.09);
+  --student-motion-fast: 400ms;
+  /* Hover starts and ends at rest, rather than jumping to peak speed at entry. */
+  --student-motion-ease: cubic-bezier(0.45, 0, 0.25, 1);
+  --student-entry-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+:is(.student-profile-workspace, .student-plan-workspace).student-workspace--ready {
+  animation: student-workspace-enter 900ms var(--student-entry-ease);
+}
+:is(.student-profile-workspace, .student-plan-workspace) .student-card {
+  position: relative;
+  transition: transform 650ms var(--student-motion-ease);
+}
+:is(.student-profile-workspace, .student-plan-workspace) .student-card::after {
+  /* Fade a fixed shadow instead of repainting an interpolated blur every frame. */
+  position: absolute;
+  inset: -1px;
+  content: '';
+  pointer-events: none;
+  border: 1px solid var(--shell-primary);
+  border-radius: inherit;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12), 0 3px 10px rgba(200, 16, 46, 0.08);
+  opacity: 0;
+  transition: opacity 600ms var(--student-motion-ease);
+}
+:is(.student-profile-workspace, .student-plan-workspace) .student-card__title {
+  color: var(--shell-ink);
+  font-weight: 700;
+}
+:is(.student-profile-workspace, .student-plan-workspace) .student-card__icon {
+  background: #fde2e8;
+  transition: transform 600ms var(--student-motion-ease);
+}
+:is(.student-profile-workspace, .student-plan-workspace) .shell-button > .workspace-icon {
+  transition: transform var(--student-motion-fast) var(--student-motion-ease);
+}
+:is(.student-profile-workspace, .student-plan-workspace) .student-card:focus-within {
+  border-color: var(--shell-primary);
+}
+:is(.student-profile-workspace, .student-plan-workspace) .student-card:focus-within::after { opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card:not(.student-card--loading):not(.student-card--error):hover {
+    transform: translateY(-6px);
+  }
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card:not(.student-card--loading):not(.student-card--error):hover::after { opacity: 1; }
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card--illustrated:hover > .student-card__icon {
+    transform: translateY(-2px) scale(1.025);
+  }
+  :is(.student-profile-workspace, .student-plan-workspace) .shell-button:not(:disabled):not([aria-disabled="true"]):hover > .workspace-icon {
+    transform: translateX(2px);
+  }
+}
+.student-plan-workspace .student-plan-tools[open] > .plan-editor > .student-card__body {
+  animation: student-profile-disclose 450ms var(--student-entry-ease);
+}
+.student-plan-workspace .student-plan-submit__readiness--ready { border-color: #b7dfc4; }
+@keyframes student-workspace-enter {
+  from { opacity: 0.65; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.student-profile-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+.student-profile-workspace .shell-button { gap: 8px; }
+.student-profile-workspace .student-profile-list__term {
+  color: var(--profile-secondary-ink);
+  font-size: 0.875rem;
+}
+.student-profile-workspace .student-profile-list__detail { font-size: 1rem; }
+.student-profile-refresh-status, .student-profile-metadata {
+  color: var(--shell-muted);
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+.student-profile-refresh-status { min-height: 1.7em; margin: 12px 0 0; }
+.student-profile-metadata { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 18px 0 0; }
+.student-profile-refresh[aria-busy="true"] > .workspace-icon {
+  animation: student-profile-refresh-spin 900ms linear infinite;
+}
+.student-profile-guide__steps {
+  margin: 20px 0;
+  padding-left: 26px;
+}
+.student-profile-guide__steps > li { padding-left: 8px; }
+.student-profile-guide__steps > li + li { margin-top: 10px; }
+.student-profile-guide__steps > li::marker { color: var(--shell-primary); font-weight: 600; }
+.student-profile-guide__step {
+  min-width: 0;
+  border: 1px solid var(--shell-line);
+  border-radius: 10px;
+}
+.student-profile-guide__summary {
+  padding: 14px 18px;
+  min-height: 48px;
+  cursor: pointer;
+  color: var(--shell-ink);
+  font-weight: 600;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  border-radius: 10px;
+  transition: background var(--profile-feedback-duration) ease;
+}
+.student-profile-guide__summary:hover, .student-profile-guide__summary:active {
+  background: var(--shell-soft);
+}
+.student-profile-guide__summary:focus-visible { outline: 3px solid var(--shell-focus); outline-offset: 3px; }
+.student-profile-guide__step[open] { border-color: var(--shell-accent-line); }
+.student-profile-guide__step[open] > .student-profile-guide__summary { color: var(--shell-primary-dark); }
+.student-profile-guide__content {
+  margin: 0;
+  padding: 0 18px 18px;
+  color: var(--profile-secondary-ink);
+  line-height: 1.8;
+  max-width: 75ch;
+  overflow-wrap: anywhere;
+}
+.student-profile-guide__step[open] > .student-profile-guide__content {
+  animation: student-profile-disclose var(--profile-feedback-duration) var(--student-entry-ease);
+}
+.student-profile-guide__external {
+  padding: 18px 20px;
+  border-left: 3px solid var(--shell-gold);
+  border-radius: 0 8px 8px 0;
+  background: var(--shell-canvas);
+}
+.student-profile-guide__external > h3 { margin: 0 0 8px; font-size: 1rem; line-height: 1.6; }
+.student-profile-guide__external > p { margin: 0; max-width: 75ch; color: var(--profile-secondary-ink); line-height: 1.8; }
+@keyframes student-profile-refresh-spin { to { transform: rotate(360deg); } }
+@keyframes student-profile-disclose {
+  from { opacity: 0.65; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:has(.protected-shell--student) { scroll-behavior: auto; }
+  html.student-route-transition::view-transition-old(student-route-content),
+  html.student-route-transition::view-transition-new(student-route-content),
+  .protected-shell--student .shell-content[data-route-motion="css"] > .shell-content__heading,
+  .protected-shell--student .shell-content[data-route-motion="css"] > .student-workspace { animation: none; }
+  :is(.student-profile-workspace, .student-plan-workspace).student-workspace--ready { animation: none; }
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card,
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card::after,
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card__icon,
+  :is(.student-profile-workspace, .student-plan-workspace) .shell-button > .workspace-icon { transition: none; }
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card:not(.student-card--loading):not(.student-card--error):hover,
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card--illustrated:hover > .student-card__icon,
+  :is(.student-profile-workspace, .student-plan-workspace) .shell-button:not(:disabled):not([aria-disabled="true"]):hover > .workspace-icon { transform: none; }
+  .student-plan-workspace .student-plan-tools[open] > .plan-editor > .student-card__body { animation: none; }
+  .student-profile-workspace .student-profile-refresh > .workspace-icon,
+  .student-profile-workspace .student-profile-guide__step[open] > .student-profile-guide__content { animation: none; }
+  .student-profile-guide__summary { transition: none; }
+}
+@media (max-width: 640px) {
+  .student-profile-refresh { width: 100%; }
+  .student-profile-guide__steps { padding-left: 20px; }
+  .student-profile-guide__steps > li { padding-left: 2px; }
+  .student-profile-guide__summary { padding: 12px; }
+  .student-profile-guide__content { padding: 0 12px 14px; }
+  .student-profile-guide__external { padding: 14px; }
 }
 
 .student-card__eyebrow {

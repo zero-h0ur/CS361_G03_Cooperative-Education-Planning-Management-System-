@@ -272,6 +272,7 @@ export function renderStudentPlanView({
     const picker = renderPlanPicker();
     const editor = makeEditor();
     container.replaceChildren(...[picker, card, editor].filter(Boolean));
+    container.classList.add('student-workspace--ready');
     syncEditorControls();
   }
 
@@ -661,8 +662,9 @@ export function renderStudentPlanView({
       manage.prepend(createWorkspaceIcon(editor ? 'edit' : 'file'));
       manage.addEventListener('click', () => {
         tools.open = true;
-        summary.focus();
-        tools.scrollIntoView?.({ block: 'start', behavior: 'auto' });
+        summary.focus({ preventScroll: true });
+        const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+        tools.scrollIntoView?.({ block: 'start', behavior: reducedMotion ? 'instant' : 'smooth' });
       });
       statusHeading.append(manage);
       if (plan.status === PLAN_STATUSES.NEEDS_REVISION) tools.open = true;
@@ -674,6 +676,8 @@ export function renderStudentPlanView({
       decorateStudentCard(historySection, 'clock'),
       tools
     ].filter(Boolean));
+    // Content is now readable; keep this class through saves and refreshes.
+    container.classList.add('student-workspace--ready');
     syncEditorControls();
   }
 

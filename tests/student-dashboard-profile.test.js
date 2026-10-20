@@ -40,6 +40,7 @@ function flushPromises() {
 
 function setupStudentShell({
   hash = '#/student/profile',
+  role = 'STUDENT',
   getOwnProfile = jest.fn().mockResolvedValue(SAMPLE_PROFILE_V1),
   updateOwnProfile = jest.fn().mockResolvedValue({
     ...SAMPLE_PROFILE_V1,
@@ -53,7 +54,7 @@ function setupStudentShell({
   const root = document.getElementById('authenticatedApp');
   const location = { pathname: '/app.html', search: '', hash };
   const eventTarget = new EventTarget();
-  const loadSession = jest.fn().mockResolvedValue({ role: 'STUDENT' });
+  const loadSession = jest.fn().mockResolvedValue({ role });
   const startLogin = jest.fn().mockResolvedValue(undefined);
   const restartLogin = jest.fn().mockResolvedValue(undefined);
   const logout = jest.fn().mockResolvedValue(undefined);
@@ -202,197 +203,248 @@ describe('Issue #72: Student Profile API client', () => {
   });
 });
 
-describe('Issue #72: Student Dashboard and My Profile UI view', () => {
-  it('separates profile summary, official data and preferred-name settings with decorative card icons', async () => {
-    const context = setupStudentShell();
+describe('Student Profile read-only workflow UI', () => {
+  it('starts the one-time page entrance only after profile data is available', async () => {
+    let resolveProfile;
+    const context = setupStudentShell({ getOwnProfile: jest.fn(() => new Promise((resolve) => { resolveProfile = resolve; })) });
     await context.app.start();
-    await flushPromises();
+    expect(context.root.querySelector('.student-profile-workspace.student-workspace--ready')).toBeNull();
+    resolveProfile(SAMPLE_PROFILE_V1); await flushPromises();
+    expect(context.root.querySelector('.student-profile-workspace.student-workspace--ready')).not.toBeNull();
+  });
+
+  it('separates identity, official data and an informational guide with decorative icons', async () => {
+    const context = setupStudentShell();
+    await context.app.start(); await flushPromises();
     const cards = context.root.querySelectorAll('.student-profile-workspace .student-card--illustrated');
     expect(cards).toHaveLength(3);
     for (const card of cards) {
       expect(card.querySelector('.student-card__icon svg').getAttribute('aria-hidden')).toBe('true');
       expect(card.querySelector('.student-card__body h2').id).toBe(card.getAttribute('aria-labelledby'));
     }
-    expect(context.root.querySelector('.student-profile-official input')).toBeNull();
-    expect(context.root.querySelector('.student-profile-editable input').name).toBe('preferred_name');
+    expect(context.root.querySelector('.student-profile-editable, #student-preferred-name')).toBeNull();
     expect(context.studentProfileClient.updateOwnProfile).not.toHaveBeenCalled();
     context.app.destroy();
   });
 
-  it('renders official student fields as read-only and exposes only preferred_name as an editable input', async () => {
+  it('uses only the official name and renders every official field without editable controls', async () => {
     const context = setupStudentShell();
-
-    await context.app.start();
-    await flushPromises();
-
-    // Official fields displayed in read-only definition list
-    expect(context.root.querySelector('[data-field="student_number"]').textContent).toBe('TEST000001');
-    expect(context.root.querySelector('[data-field="full_name"]').textContent).toBe('สมชาย ใจดี');
-    expect(context.root.querySelector('[data-field="institutional_email"]').textContent).toBe('test000001@student.example.com');
-    expect(context.root.querySelector('[data-field="department"]').textContent).toBe('วิทยาการคอมพิวเตอร์');
-    expect(context.root.querySelector('[data-field="program"]').textContent).toBe('วิทยาศาสตรบัณฑิต');
-    expect(context.root.querySelector('[data-field="major"]').textContent).toBe('วิทยาการคอมพิวเตอร์');
-    expect(context.root.querySelector('[data-field="academic_year"]').textContent).toBe('2569');
-    expect(context.root.querySelector('[data-field="enrollment_status"]').textContent).toContain('กำลังศึกษา (ACTIVE)');
-
-    // Only one form input exists in the entire workspace, and it is preferred_name
-    const inputs = [...context.root.querySelectorAll('input, textarea, select')];
-    expect(inputs).toHaveLength(1);
-    expect(inputs[0].id).toBe('student-preferred-name');
-    expect(inputs[0].name).toBe('preferred_name');
-    expect(inputs[0].value).toBe('ชาย');
-
-    // Label association and aria-describedby
-    const label = context.root.querySelector('label[for="student-preferred-name"]');
-    expect(label).not.toBeNull();
-    expect(inputs[0].getAttribute('aria-describedby')).toContain('student-preferred-name-hint');
-    expect(inputs[0].getAttribute('aria-describedby')).toContain('student-preferred-name-error');
+    await context.app.start(); await flushPromises();
+    const workspace = context.root.querySelector('.student-profile-workspace');
+    for (const field of ['student_number', 'full_name', 'institutional_email', 'department', 'program', 'major', 'academic_year']) {
+      expect(workspace.querySelector('[data-field="' + field + '"]').textContent).toBe(String(SAMPLE_PROFILE_V1[field]));
+    }
+    expect(workspace.querySelector('[data-field="enrollment_status"]').textContent).toContain('กำลังศึกษา (ACTIVE)');
+    expect(workspace.querySelector('[data-role="display-greeting"]').textContent).toBe('สวัสดี สมชาย ใจดี');
+    expect(workspace.querySelector('form, input, textarea, select, [contenteditable="true"]')).toBeNull();
+    expect(workspace.textContent).not.toContain('ตั้งค่าชื่อที่ต้องการให้แสดง');
+    expect(context.studentProfileClient.updateOwnProfile).not.toHaveBeenCalled();
   });
 
-  it('navigates from the Student Dashboard summary CTA to My Plan (#/student/plan)', async () => {
+  it('navigates to the real My Plan route without adding workflow actions', async () => {
     const context = setupStudentShell();
-
-    await context.app.start();
-    await flushPromises();
-
-    const planCta = context.root.querySelector('[data-role="go-to-student-plan"]');
-    expect(planCta).not.toBeNull();
-    planCta.click();
-
+    await context.app.start(); await flushPromises();
+    const plan = context.root.querySelector('[data-role="go-to-student-plan"]');
+    expect(plan.getAttribute('href')).toBe('#/student/plan');
+    plan.click();
     expect(context.location.hash).toBe('#/student/plan');
     expect(context.root.querySelector('h1').textContent).toBe('แผนสหกิจของฉัน');
-  });
-
-  it('validates preferred_name on blur, resets error state on input, and blocks invalid submit', async () => {
-    const context = setupStudentShell();
-
-    await context.app.start();
-    await flushPromises();
-
-    const input = context.root.querySelector('#student-preferred-name');
-    const errorNode = context.root.querySelector('#student-preferred-name-error');
-    const form = context.root.querySelector('form.student-profile-form');
-
-    input.value = 'ก'.repeat(101);
-    input.dispatchEvent(new Event('blur'));
-
-    expect(input.getAttribute('aria-invalid')).toBe('true');
-    expect(errorNode.hidden).toBe(false);
-    expect(errorNode.textContent).toContain('ต้องไม่เกิน 100 ตัวอักษร');
-
-    // Submitting invalid value does not call API
-    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     expect(context.studentProfileClient.updateOwnProfile).not.toHaveBeenCalled();
-
-    // Typing a correction immediately clears the error state
-    input.value = 'สมชาย (ต้น)';
-    input.dispatchEvent(new Event('input'));
-
-    expect(input.getAttribute('aria-invalid')).toBe('false');
-    expect(errorNode.hidden).toBe(true);
   });
 
-  it('saves preferred_name, disables submit during in-flight request, and syncs UI with updated server response', async () => {
-    let resolveUpdate;
-    const pendingUpdate = new Promise((resolve) => {
-      resolveUpdate = resolve;
-    });
-    const updateOwnProfile = jest.fn().mockReturnValue(pendingUpdate);
-    const context = setupStudentShell({ updateOwnProfile });
-
-    await context.app.start();
+  it('uses native expandable guidance, not a claimed progress or company-confirmation form', async () => {
+    const context = setupStudentShell();
+    await context.app.start(); await flushPromises();
+    const guide = context.root.querySelector('.student-profile-guide');
+    expect(guide.textContent).toContain('ไม่ใช่สถานะปัจจุบันของคุณ');
+    expect(guide.textContent).toContain('ไม่สามารถแก้ไข ลบ หรือส่งแผนเดิมซ้ำ');
+    expect(guide.textContent).toContain('การไม่อนุมัติเพราะคุณสมบัติไม่ผ่านต่างจากการส่งกลับให้แก้ไข');
+    expect(guide.textContent).toContain('อาจารย์จะอ่านข้อมูลของคุณได้เมื่อได้รับมอบหมายแล้ว');
+    expect(guide.textContent).toContain('ส่ง CV / Resume และสมัครกับบริษัทด้วยตนเอง');
+    expect(guide.querySelector('form, button, [role="progressbar"], [aria-current="step"]')).toBeNull();
+    const details = [...guide.querySelectorAll('details')];
+    expect(details).toHaveLength(4);
+    expect(details.every((item) => !item.open && item.firstElementChild.tagName === 'SUMMARY')).toBe(true);
+    details[1].open = true; details[1].dispatchEvent(new Event('toggle'));
+    context.root.querySelector('[data-role="profile-refresh"]').click();
     await flushPromises();
-
-    const input = context.root.querySelector('#student-preferred-name');
-    const form = context.root.querySelector('form.student-profile-form');
-    const submitButton = form.querySelector('button[type="submit"]');
-
-    input.value = '  สมชาย (ต้น)  ';
-    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-
-    // In-flight state
-    expect(submitButton.disabled).toBe(true);
-    expect(submitButton.textContent).toBe('กำลังบันทึก...');
-    expect(updateOwnProfile).toHaveBeenCalledWith(
-      expect.objectContaining({
-        preferredName: 'สมชาย (ต้น)',
-        version: 1
-      })
-    );
-
-    resolveUpdate({
-      ...SAMPLE_PROFILE_V1,
-      preferred_name: 'สมชาย (ต้น)',
-      version: 2
-    });
-    await flushPromises();
-
-    expect(context.root.querySelector('[data-role="display-greeting"]').textContent).toContain('สมชาย (ต้น) (สมชาย ใจดี)');
-    expect(context.root.querySelector('[data-role="profile-version"]').textContent).toContain('v2');
-    expect(context.root.querySelector('#student-preferred-name').value).toBe('สมชาย (ต้น)');
-    expect(context.root.querySelector('[data-role="profile-feedback"]').textContent).toContain(
-      'บันทึกชื่อที่ต้องการให้แสดงเรียบร้อยแล้ว'
-    );
+    expect(context.root.querySelectorAll('.student-profile-guide details')[1].open).toBe(true);
+    expect(context.studentProfileClient.updateOwnProfile).not.toHaveBeenCalled();
   });
 
-  it('recovers from 409 STALE_RECORD_CONFLICT by letting the student reload the latest server profile', async () => {
-    const getOwnProfile = jest
-      .fn()
-      .mockResolvedValueOnce(SAMPLE_PROFILE_V1)
-      .mockResolvedValueOnce({
-        ...SAMPLE_PROFILE_V1,
-        preferred_name: 'ชื่อจากแท็บอื่น',
-        version: 3
-      });
-    const updateOwnProfile = jest.fn().mockRejectedValue(
-      new StudentProfileError(STUDENT_PROFILE_ERROR_CODES.STALE_RECORD_CONFLICT)
-    );
-
-    const context = setupStudentShell({ getOwnProfile, updateOwnProfile });
-    await context.app.start();
-    await flushPromises();
-
-    const input = context.root.querySelector('#student-preferred-name');
-    const form = context.root.querySelector('form.student-profile-form');
-
-    input.value = 'ชื่อใหม่ที่ชนกัน';
-    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    await flushPromises();
-
-    const feedback = context.root.querySelector('[data-role="profile-feedback"]');
-    expect(feedback.getAttribute('role')).toBe('alert');
-    expect(feedback.textContent).toContain('กรุณาโหลดข้อมูลล่าสุดก่อนบันทึกใหม่');
-
-    const reloadButton = feedback.querySelector('button');
-    expect(reloadButton.textContent).toBe('โหลดข้อมูลล่าสุด');
-    reloadButton.click();
-    await flushPromises();
-
+  it('refreshes with one in-flight GET, loading feedback and restored keyboard focus', async () => {
+    let resolveRefresh;
+    const getOwnProfile = jest.fn().mockResolvedValueOnce(SAMPLE_PROFILE_V1)
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveRefresh = resolve; }));
+    const context = setupStudentShell({ getOwnProfile });
+    await context.app.start(); await flushPromises();
+    const refresh = context.root.querySelector('[data-role="profile-refresh"]');
+    refresh.focus(); refresh.click(); refresh.click();
     expect(getOwnProfile).toHaveBeenCalledTimes(2);
-    expect(context.root.querySelector('#student-preferred-name').value).toBe('ชื่อจากแท็บอื่น');
+    expect(refresh.disabled).toBe(true);
+    expect(refresh.getAttribute('aria-busy')).toBe('true');
+    expect(context.root.querySelector('[data-role="profile-refresh-status"]').textContent).toContain('กำลังโหลด');
+    resolveRefresh({ ...SAMPLE_PROFILE_V1, full_name: 'สมชาย ชื่อทางการใหม่', version: 3 });
+    await flushPromises();
+    expect(context.root.querySelector('[data-role="display-greeting"]').textContent).toBe('สวัสดี สมชาย ชื่อทางการใหม่');
     expect(context.root.querySelector('[data-role="profile-version"]').textContent).toContain('v3');
+    expect(context.root.querySelector('[data-role="profile-refresh-status"]').getAttribute('role')).toBe('status');
+    expect(context.root.querySelector('[data-role="profile-refresh-status"]').textContent).toContain('เรียบร้อย');
+    expect(document.activeElement).toBe(context.root.querySelector('[data-role="profile-refresh"]'));
+    expect(context.studentProfileClient.updateOwnProfile).not.toHaveBeenCalled();
   });
 
-  it('clears private profile data and shows the shell expired-session alert when save returns 401', async () => {
-    const updateOwnProfile = jest.fn().mockRejectedValue(
-      new StudentProfileError(STUDENT_PROFILE_ERROR_CODES.SESSION_EXPIRED)
-    );
-    const context = setupStudentShell({ updateOwnProfile });
+  it('does not steal focus from another shell control when refresh resolves', async () => {
+    let resolveRefresh;
+    const context = setupStudentShell({ getOwnProfile: jest.fn().mockResolvedValueOnce(SAMPLE_PROFILE_V1)
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveRefresh = resolve; })) });
+    await context.app.start(); await flushPromises();
+    const refresh = context.root.querySelector('[data-role="profile-refresh"]');
+    refresh.focus(); refresh.click();
+    const other = context.root.querySelector('.shell-nav a');
+    other.focus();
+    resolveRefresh(SAMPLE_PROFILE_V1); await flushPromises();
+    expect(document.activeElement).toBe(other);
+  });
 
-    await context.app.start();
-    await flushPromises();
-    expect(context.root.textContent).toContain('TEST000001');
+  it('preserves a guide reading point selected while refresh is pending', async () => {
+    let resolveRefresh;
+    const context = setupStudentShell({ getOwnProfile: jest.fn().mockResolvedValueOnce(SAMPLE_PROFILE_V1)
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveRefresh = resolve; })) });
+    await context.app.start(); await flushPromises();
+    const refresh = context.root.querySelector('[data-role="profile-refresh"]');
+    refresh.focus(); refresh.click();
+    context.root.querySelector('[data-profile-focus="guide-2"]').focus();
+    resolveRefresh(SAMPLE_PROFILE_V1); await flushPromises();
+    expect(document.activeElement).toBe(context.root.querySelector('[data-profile-focus="guide-2"]'));
+  });
 
-    const form = context.root.querySelector('form.student-profile-form');
-    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    await flushPromises();
+  it.each(['STAFF', 'ADVISOR', 'ADMIN'])('does not read a Student profile for the %s role', async (role) => {
+    const context = setupStudentShell({ role });
+    await context.app.start(); await flushPromises();
+    expect(context.studentProfileClient.getOwnProfile).not.toHaveBeenCalled();
+    expect(context.studentProfileClient.updateOwnProfile).not.toHaveBeenCalled();
+    expect(context.root.querySelector('.student-profile-workspace')).toBeNull();
+  });
 
+  it('recovers from an initial error and a failed refresh using retry, without profile writes', async () => {
+    const getOwnProfile = jest.fn()
+      .mockRejectedValueOnce(new StudentProfileError(STUDENT_PROFILE_ERROR_CODES.SERVICE_UNAVAILABLE))
+      .mockResolvedValueOnce(SAMPLE_PROFILE_V1)
+      .mockRejectedValueOnce(new StudentProfileError(STUDENT_PROFILE_ERROR_CODES.SERVICE_UNAVAILABLE))
+      .mockResolvedValueOnce(SAMPLE_PROFILE_V1);
+    const context = setupStudentShell({ getOwnProfile });
+    await context.app.start(); await flushPromises();
+    expect(context.root.querySelector('.student-card--error').getAttribute('role')).toBe('alert');
+    context.root.querySelector('.student-card--error button').click(); await flushPromises();
+    context.root.querySelector('[data-role="profile-refresh"]').click(); await flushPromises();
     expect(context.root.textContent).not.toContain('TEST000001');
-    expect(context.root.textContent).toContain('Session หมดอายุ');
-    expect(window.sessionStorage.getItem('co-ed:return-route')).toBe('#/student/profile');
+    context.root.querySelector('.student-card--error button').click(); await flushPromises();
+    expect(context.root.textContent).toContain('TEST000001');
+    expect(context.studentProfileClient.updateOwnProfile).not.toHaveBeenCalled();
   });
 
-  describe('navigation with a real browser window', () => {
+  it.each([
+    [STUDENT_PROFILE_ERROR_CODES.SESSION_EXPIRED, 'Session หมดอายุ'],
+    [STUDENT_PROFILE_ERROR_CODES.ACCESS_DENIED, 'ไม่มีสิทธิ์เข้าถึง']
+  ])('clears private data when refresh fails with %s', async (code, copy) => {
+    const context = setupStudentShell({ getOwnProfile: jest.fn().mockResolvedValueOnce(SAMPLE_PROFILE_V1)
+      .mockRejectedValueOnce(new StudentProfileError(code)) });
+    await context.app.start(); await flushPromises();
+    context.root.querySelector('[data-role="profile-refresh"]').click(); await flushPromises();
+    expect(context.root.textContent).not.toContain('TEST000001');
+    expect(context.root.textContent).not.toContain(SAMPLE_PROFILE_V1.institutional_email);
+    expect(context.root.textContent).toContain(copy);
+    if (code === STUDENT_PROFILE_ERROR_CODES.SESSION_EXPIRED) {
+      expect(window.sessionStorage.getItem('co-ed:return-route')).toBe('#/student/profile');
+    }
+  });
+
+  it('ignores an aborted refresh after navigation even if the client resolves late', async () => {
+    let resolveRefresh;
+    const context = setupStudentShell({ getOwnProfile: jest.fn().mockResolvedValueOnce(SAMPLE_PROFILE_V1)
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveRefresh = resolve; })) });
+    await context.app.start(); await flushPromises();
+    context.root.querySelector('[data-role="profile-refresh"]').click();
+    context.root.querySelector('[data-role="go-to-student-plan"]').click();
+    resolveRefresh({ ...SAMPLE_PROFILE_V1, full_name: 'ข้อมูลล่าช้าที่ต้องไม่แสดง' }); await flushPromises();
+    expect(context.root.querySelector('h1').textContent).toBe('แผนสหกิจของฉัน');
+    expect(context.root.textContent).not.toContain('ข้อมูลล่าช้าที่ต้องไม่แสดง');
+    expect(context.root.querySelector('.student-profile-workspace')).toBeNull();
+  });
+
+  it('renders untrusted long names as wrapping text, not markup, and handles missing values', async () => {
+    const full_name = '<img src=x onerror=alert(1)>' + 'ชื่อสมมติ'.repeat(30);
+    const context = setupStudentShell({ getOwnProfile: jest.fn().mockResolvedValue({
+      ...SAMPLE_PROFILE_V1, full_name, institutional_email: null, updated_at: 'invalid'
+    }) });
+    await context.app.start(); await flushPromises();
+    const workspace = context.root.querySelector('.student-profile-workspace');
+    expect(workspace.querySelector('img, script')).toBeNull();
+    expect(workspace.querySelector('[data-role="display-greeting"]').textContent).toContain(full_name);
+    expect(workspace.querySelector('[data-field="institutional_email"]').textContent).toBe('ไม่ระบุ');
+    expect(workspace.querySelector('.student-profile-metadata').textContent).toContain('ไม่ระบุวันที่อัปเดต');
+  });
+
+  it('shares pointer-scoped motion and reduced-motion overrides across both Student pages only', () => {
+    const { readFileSync } = require('node:fs');
+    const { join } = require('node:path');
+    const css = readFileSync(join(__dirname, '../src/frontend/authenticated-shell.css'), 'utf8');
+    const style = document.createElement('style');
+    style.textContent = css; document.head.append(style);
+    try {
+      const reduced = [...style.sheet.cssRules].filter((rule) => rule.conditionText === '(prefers-reduced-motion: reduce)');
+      const overrides = reduced.flatMap((rule) => [...rule.cssRules]);
+      const motion = overrides.find((rule) => rule.selectorText?.includes('.student-profile-workspace .student-profile-guide__step[open] > .student-profile-guide__content'));
+      expect(motion.style.getPropertyValue('animation')).toBe('none');
+      expect(motion.selectorText).toContain('.student-profile-workspace .student-profile-refresh > .workspace-icon');
+      const scope = ':is(.student-profile-workspace, .student-plan-workspace)';
+      const workspaceRule = [...style.sheet.cssRules].find((rule) => rule.selectorText === scope);
+      expect(workspaceRule.style.getPropertyValue('--shell-line')).toBe('#d4c8c3');
+      expect(workspaceRule.style.getPropertyValue('--shell-muted')).toBe('#475569');
+      expect(workspaceRule.style.getPropertyValue('--student-motion-ease')).toBe('cubic-bezier(0.45, 0, 0.25, 1)');
+      expect(workspaceRule.style.getPropertyValue('animation')).toBe('');
+      const cardRule = [...style.sheet.cssRules].find((rule) => rule.selectorText === scope + ' .student-card');
+      expect(cardRule.style.getPropertyValue('transition')).toContain('transform 650ms');
+      expect(cardRule.style.getPropertyValue('transition')).not.toContain('box-shadow');
+      const shadow = [...style.sheet.cssRules].find((rule) => rule.selectorText === scope + ' .student-card::after');
+      expect(shadow.style.getPropertyValue('transition')).toContain('opacity');
+      expect(shadow.style.getPropertyValue('pointer-events')).toBe('none');
+      const nativeScroll = [...style.sheet.cssRules].find((rule) => rule.selectorText === 'html:has(.protected-shell--student)');
+      expect(nativeScroll.style.getPropertyValue('scroll-behavior')).toBe('smooth');
+      const reducedScroll = overrides.find((rule) => rule.selectorText === nativeScroll.selectorText);
+      expect(reducedScroll.style.getPropertyValue('scroll-behavior')).toBe('auto');
+      const entrySelector = scope + '.student-workspace--ready';
+      const entry = [...style.sheet.cssRules].find((rule) => rule.selectorText === entrySelector);
+      expect(entry.style.getPropertyValue('animation')).toContain('student-workspace-enter');
+      expect(entry.style.getPropertyValue('animation')).toContain('900ms');
+      expect(entry.style.getPropertyValue('animation')).not.toContain('infinite');
+      for (const role of ['student-profile', 'student-plan', 'advisor', 'staff']) {
+        const workspace = document.createElement('div');
+        workspace.className = role + '-workspace';
+        expect(workspace.matches(scope)).toBe(role.startsWith('student-'));
+      }
+      const hover = [...style.sheet.cssRules].find((rule) => rule.conditionText === '(hover: hover) and (pointer: fine)');
+      const lift = [...hover.cssRules].find((rule) => rule.selectorText === scope + ' .student-card:not(.student-card--loading):not(.student-card--error):hover');
+      expect(lift.style.getPropertyValue('transform')).toBe('translateY(-6px)');
+      expect(lift.style.getPropertyValue('margin')).toBe('');
+      const iconMotion = [...hover.cssRules].find((rule) => rule.selectorText === scope + ' .student-card--illustrated:hover > .student-card__icon');
+      expect(iconMotion.style.getPropertyValue('transform')).toBe('translateY(-2px) scale(1.025)');
+      expect(iconMotion.style.getPropertyValue('transform')).not.toContain('rotate');
+      const still = overrides.find((rule) => rule.selectorText?.includes(lift.selectorText));
+      expect(still.style.getPropertyValue('transform')).toBe('none');
+      const reducedEntry = overrides.find((rule) => rule.selectorText === entrySelector);
+      expect(reducedEntry.style.getPropertyValue('animation')).toBe('none');
+      expect(still.selectorText).toContain('.shell-button:not(:disabled):not([aria-disabled="true"]):hover > .workspace-icon');
+      const focus = [...style.sheet.cssRules].find((rule) => rule.selectorText === scope + ' .student-card:focus-within');
+      expect(focus.style.getPropertyValue('border-color')).toBe('var(--shell-primary)');
+      expect(focus.style.getPropertyValue('transform')).toBe('');
+      const reducedEditor = overrides.find((rule) => rule.selectorText === '.student-plan-workspace .student-plan-tools[open] > .plan-editor > .student-card__body');
+      expect(reducedEditor.style.getPropertyValue('animation')).toBe('none');
+    } finally { style.remove(); }
+  });
+
+  describe('hash navigation using the jsdom window', () => {
     function startWithRealWindow(hash) {
       document.body.innerHTML = '<div id="authenticatedApp"></div>';
       window.location.hash = hash;
@@ -426,19 +478,24 @@ describe('Issue #72: Student Dashboard and My Profile UI view', () => {
       return counter;
     }
 
-    it('renders the target route once when the dashboard navigates (no duplicate render from hashchange)', async () => {
+    it('updates content once without rebuilding the shell or duplicating the hashchange render', async () => {
       const { app, root } = startWithRealWindow('#/student/profile');
       await app.start();
       await flushPromises();
 
       const counter = countRenders(root);
+      const main = root.querySelector('main');
+      const update = jest.spyOn(main, 'replaceChildren');
+      const sidebar = root.querySelector('.shell-sidebar');
       const cta = [...root.querySelectorAll('main button, main a')]
         .find((node) => /แผนสหกิจ/.test(node.textContent));
       cta.click();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(window.location.hash).toBe('#/student/plan');
-      expect(counter.renders).toBe(1);
+      expect(counter.renders).toBe(0);
+      expect(update).toHaveBeenCalledTimes(1);
+      expect(root.querySelector('.shell-sidebar')).toBe(sidebar);
       app.destroy();
     });
 

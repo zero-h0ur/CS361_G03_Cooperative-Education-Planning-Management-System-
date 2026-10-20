@@ -15,14 +15,19 @@ async function mount(scenario, hash = '#/student/plan', role = 'STUDENT') {
   return { root, clients };
 }
 
-test('mounts real profile UI and saves only in memory without any fetch', async () => {
+test('mounts the real read-only profile with realistic fictional data and no fetch or writes', async () => {
   const { root, clients } = await mount('draft', '#/student/profile');
-  expect(root.textContent).toContain('นักศึกษา ตัวอย่าง');
+  expect(root.textContent).toContain('ณัฐวดี ศิริกุล');
   expect(root.querySelector('.student-profile-workspace')).not.toBeNull();
   const profile = await clients.studentProfileClient.getOwnProfile();
-  await clients.studentProfileClient.updateOwnProfile({ preferredName: 'ทดลอง', version: profile.version });
-  expect((await clients.studentProfileClient.getOwnProfile()).preferred_name).toBe('ทดลอง');
-  expect((await createPreviewClients({ delayMs: 0 }).studentProfileClient.getOwnProfile()).preferred_name).toBe('นักศึกษาทดลอง');
+  expect(profile.student_number).toMatch(/^\d{10}$/);
+  expect(profile.institutional_email).toBe('nattawadee.s@example.invalid');
+  expect(profile.preferred_name).toBeNull();
+  expect(Object.keys(clients.studentProfileClient)).toEqual(['getOwnProfile']);
+  expect(root.querySelector('.student-profile-workspace form, #student-preferred-name')).toBeNull();
+  expect(root.querySelector('.student-profile-guide').textContent).toContain('ไม่ใช่สถานะปัจจุบันของคุณ');
+  root.querySelector('[data-role="profile-refresh"]').click(); await flush();
+  expect(root.querySelector('[data-role="profile-refresh-status"]').textContent).toContain('เรียบร้อย');
   expect(global.fetch).not.toHaveBeenCalled();
 });
 
@@ -64,6 +69,42 @@ test('uses the real decorative campus asset on both Student routes', async () =>
   expect(root.querySelector('.shell-brand__name').textContent).toBe('CO-ED');
 });
 
+test.each([false, true])('opening the Plan editor scrolls without a focus jump (reduced motion: %s)', async (reduced) => {
+  const original = window.matchMedia;
+  window.matchMedia = jest.fn(() => ({ matches: reduced }));
+  try {
+    const { root } = await mount('draft');
+    const tools = root.querySelector('.student-plan-tools');
+    tools.scrollIntoView = jest.fn();
+    const focus = jest.spyOn(tools.querySelector('summary'), 'focus');
+    root.querySelector('.student-plan-status__manage').click();
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    expect(document.activeElement).toBe(tools.querySelector('summary'));
+    expect(tools.open).toBe(true);
+    expect(tools.scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: reduced ? 'instant' : 'smooth' });
+    expect(global.fetch).not.toHaveBeenCalled();
+  } finally {
+    if (original === undefined) delete window.matchMedia;
+    else window.matchMedia = original;
+  }
+});
+
+test('switches from Profile to the real Plan view without rebuilding Student chrome', async () => {
+  const { root } = await mount('draft', '#/student/profile');
+  const sidebar = root.querySelector('.shell-sidebar');
+  const topbar = root.querySelector('.shell-topbar');
+  const main = root.querySelector('main');
+  root.querySelector('[data-role="go-to-student-plan"]').click();
+  await flush(); await flush();
+  expect(root.querySelector('.student-plan-status')).not.toBeNull();
+  expect(root.querySelector('.shell-sidebar')).toBe(sidebar);
+  expect(root.querySelector('.shell-topbar')).toBe(topbar);
+  expect(root.querySelector('main')).toBe(main);
+  expect(main.dataset.studentRouteChange).toBe('true');
+  expect(root.querySelector('[aria-current="page"]').getAttribute('href')).toBe('#/student/plan');
+  expect(global.fetch).not.toHaveBeenCalled();
+});
+
 test('Staff preview renders real read-only search with the same campus shell and no network', async () => {
   const root = document.createElement('div'); document.body.append(root);
   const clients = createPreviewClients({ role: 'STAFF', delayMs: 0 });
@@ -73,7 +114,7 @@ test('Staff preview renders real read-only search with the same campus shell and
   expect(root.querySelector('.protected-shell--staff.protected-shell--campus')).not.toBeNull();
   expect(root.querySelector('.student-campus-backdrop')).not.toBeNull();
   expect(root.querySelector('.staff-management')).not.toBeNull();
-  expect(root.textContent).toContain('นักศึกษา ตัวอย่าง');
+  expect(root.textContent).toContain('ณัฐวดี ศิริกุล');
   expect(root.querySelector('a[href="#/student/profile"]')).toBeNull();
   expect(global.fetch).not.toHaveBeenCalled();
 });

@@ -222,6 +222,7 @@ describe('Issue #76: Student Plan submission UI', () => {
   it('groups the real plan into four labelled, illustrated sections with a preliminary readiness notice', async () => {
     const backend = createFakeBackend();
     const { app, root } = await mountPlanPage(backend);
+    expect(root.querySelector('.student-plan-workspace.student-workspace--ready')).not.toBeNull();
     const cards = root.querySelectorAll('.student-plan-workspace .student-card--illustrated:not(.plan-editor)');
     expect(cards).toHaveLength(4);
     for (const card of cards) {

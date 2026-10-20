@@ -31,13 +31,61 @@ Advisor มีหน้ารายชื่อ รายละเอียด�
 - Logo CO-ED, สี, ระยะห่าง และข้อความของหน้าจริง
 - Responsive ที่ 320 / 768 / 1366px, ไม่มี horizontal overflow
 - Tab / Shift+Tab, focus, Enter, labels และการใช้ dropdown ด้วย keyboard
-- แก้ชื่อที่ต้องการให้แสดง, สร้าง Draft, ค้นหา Company, เลือก Position และบันทึก
+- ตรวจข้อมูลทางการแบบอ่านอย่างเดียว, รีเฟรชข้อมูล และเปิด/ปิดคู่มือ Flow
+- สร้าง Draft, ค้นหา Company, เลือก Position และบันทึก
 - Submit จำลอง, หน้าสถานะอ่านอย่างเดียว, ประวัติ, validation และ unsaved changes
 - กรณีข้อมูลไม่ครบ, ไม่มีแผน, loading, error, expired, forbidden และ stale conflict
 
 Conflict scenario จะคืน conflict เมื่อกดบันทึกหรือส่งแผน ไม่ใช่การจำลอง concurrent database
 Loading scenario ค้างไว้ให้ตรวจหน้ารอโหลด เปลี่ยน scenario เมื่อต้องการออก
 ลิงก์ไปหน้า Public ไม่อยู่ใน server นี้ ให้เปิดเว็บ Public ตามวิธีปกติแยกต่างหาก
+
+## Student Profile
+
+หน้า Profile ใช้ชื่อ-นามสกุลทางการ ไม่มีฟอร์มตั้งชื่อแสดงผล และไม่เรียก PATCH
+ข้อมูลสมมติใช้ชื่อ ณัฐวดี ศิริกุล รหัสรูปแบบ 10 หลัก และอีเมล `example.invalid`
+ทั้งหมดสร้างขึ้นเพื่อ Preview ไม่ใช่ข้อมูลนักศึกษาจริงหรือการรับรองว่ารหัสผ่าน TU API
+แถบด้านบนระบุว่าเป็นข้อมูลจำลองเสมอ ข้อมูลเดียวกันอาจแสดงใน Staff Preview ด้วย
+
+- ปุ่มรีเฟรชใช้ GET client เดิม มีข้อความรอโหลด/สำเร็จ ป้องกันการกดซ้ำระหว่างรอ
+- คู่มือกดขยายได้ด้วย Keyboard อธิบาย Draft, ส่งตรวจ, ส่งกลับแก้ไข และ Staff มอบหมาย Advisor
+- คู่มือไม่ใช่ Progress tracker ไม่ยืนยันว่าผู้ใช้ผ่านเกณฑ์หรือได้รับ Assignment แล้ว
+- การสมัครบริษัท การส่งเอกสาร และการยืนยันบริษัทเป็นคำแนะนำให้ดำเนินการผ่านช่องทางที่ Staff กำหนด ไม่ใช่ฟีเจอร์ใหม่ในหน้านี้
+- ที่อยู่/เบอร์โทรยังไม่มี API รองรับ จึงไม่มีฟอร์มที่บันทึกจริงไม่ได้
+- ข้อมูล `preferred_name` เดิมในฐานข้อมูลและ API เดิมไม่ได้ถูกลบหรือเปลี่ยน
+- Profile และ My Plan ใช้ขอบ/เงาการ์ดและข้อความรองที่เข้มขึ้น โดยไม่เปลี่ยนธีม Staff/Advisor
+- ทั้งสองหน้ามีจังหวะเปิดหน้าเมื่อข้อมูลพร้อมครั้งเดียว ไม่เล่นซ้ำเมื่อ Save/Refresh
+  การ์ดยกขึ้น 6px และไอคอนตอบสนองเมื่อ hover ด้วยเมาส์ ปุ่มที่ Disabled ไม่มี icon-hover effect
+  ส่วน Keyboard ใช้ขอบ/เงาเน้นการ์ดที่กำลังใช้งาน โดยไม่ทำให้ทั้งการ์ดคลิกได้
+- Motion ของหน้า การ์ด ไอคอน ปุ่ม และการเปิดรายละเอียดปิดเมื่อใช้ Reduced motion
+- การ์ดใช้ easing แบบค่อย ๆ ชะลอและ fade เงาด้วย opacity แทนการ animate blur
+  Hover ใช้ S-curve เริ่มช้าและหยุดช้า 650ms เงา 600ms และเปิดหน้า 900ms
+  ไอคอนค่อย ๆ ยก/ขยายเล็กน้อย ไม่มีการหมุนหรือเด้ง และไม่หน่วงการคลิกจริง
+  ปุ่มแก้ไขแผนย้าย focus โดยไม่กระโดดก่อน แล้วเลื่อนไปฟอร์มแบบ smooth
+  เมื่อเปิด Reduced motion จะเลื่อนไปทันที ไม่มีการดัก wheel/touch หรือเปลี่ยนความเร็วการเลื่อนของอุปกรณ์
+  CSS native smooth scrolling ใช้เฉพาะหน้า Student บน Browser ที่รองรับ `:has()`
+  ความลื่น/เฟรมเรตจริงต้องตรวจใน Browser ไม่ใช่ผลจาก jsdom
+
+ตรวจหน้า Profile ด้วย `?scenario=loading`, `error`, `expired` และ `forbidden`
+ส่วน `conflict` ใช้ทดสอบการบันทึก/ส่งแผน ไม่ใช่การแก้ Profile อีกต่อไป
+
+### Transition ระหว่าง Profile และ My Plan
+
+- เปลี่ยนเฉพาะเนื้อหาใน main เดิม ไม่สร้าง Sidebar, Session bar หรือ Skip link ใหม่
+- Browser ที่รองรับ `document.startViewTransition` ใช้ CSS snapshot ของเนื้อหา
+  fade ออก 320ms / fade เข้า 720ms โดยส่วนอื่นไม่ทำ crossfade
+- Browser ที่ไม่รองรับ/เรียก API ไม่สำเร็จ ใช้ CSS fade-in ของหน้าใหม่เป็น fallback
+- ไม่หน่วงการเปลี่ยน Route ด้วย timer และไม่รอ `animationend` เพื่อให้ navigation ทำงาน
+- Keyboard focus ไป main เดิม และ `aria-current` ของเมนูตรงกับหน้าใหม่
+- Reduced motion ไม่เริ่ม View Transition และ CSS fallback ไม่ animate
+- Logout, Session expired, Access denied, pagehide และ destroy ยกเลิก snapshot
+  และ fence callback ที่อาจมาช้าด้วย AbortController/route identity
+- กดสลับหน้าเร็ว ๆ จะใช้เฉพาะ Route ล่าสุด ไม่ให้ cleanup ของ Transition เก่าล้างตัวใหม่
+- ไม่มีการทำเอฟเฟกต์นี้ให้ Staff/Advisor หรือการเปลี่ยนสถานะ Authentication
+
+อ้างอิงแนวทาง [same-document CSS View Transitions ของ Chrome](https://developer.chrome.com/docs/web-platform/view-transitions/same-document)
+ผลทดสอบ jsdom ใช้ mock lifecycle เพื่อตรวจ guards/cancellation เท่านั้น ต้องตรวจ
+crossfade/snapshot จริงใน Browser ที่รองรับก่อน Merge
 
 ## ขอบเขตความปลอดภัยและข้อจำกัด
 
@@ -63,3 +111,15 @@ npm.cmd run build
 Preview tests ตรวจการใช้ components จริง, memory writes, read-only/conflict states,
 ไม่มี network calls จาก clients, server allowlist/CSP และแยก bundle ออกจาก auth SDK
 Browser visual review ต้องเปิดหน้าเว็บจริงตาม URL ด้านบน ไม่ใช่ผลจาก jsdom
+
+### ผลตรวจ Student Profile refresh (2026-10-21)
+
+- Frontend: 13 suites / 335 tests ผ่าน รวม read-only, GET-only จากหน้า Profile,
+  refresh/retry, focus, abort, cross-role denial และ reduced-motion CSS override
+- Preview: 42 component tests และ 2 server/production-isolation tests ผ่าน
+- Production build และ `git diff --check` ผ่าน
+- `npm run test:docs`: 8 ผ่าน / 1 ติด Windows symlink permission (`EPERM`)
+  ตัวตรวจลิงก์เอกสารแบบแยกผ่าน ไม่ได้รายงานว่าชุด docs tests ผ่านทั้งหมด
+- ยังไม่ได้ตรวจภาพจริงบน Browser, Responsive, Screen reader และ Reduced motion
+  ใน Browser เพราะไม่มี Browser เชื่อมต่อ การตรวจ CSS ด้วย jsdom ไม่ใช่ Visual review
+- ยังต้องทดสอบ Cognito/API จริงแยกต่างหาก ไม่มีการเปลี่ยน Backend หรือฐานข้อมูลในงานนี้
