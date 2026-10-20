@@ -40,6 +40,7 @@ function flushPromises() {
 
 function setupStudentShell({
   hash = '#/student/profile',
+  role = 'STUDENT',
   getOwnProfile = jest.fn().mockResolvedValue(SAMPLE_PROFILE_V1),
   updateOwnProfile = jest.fn().mockResolvedValue({
     ...SAMPLE_PROFILE_V1,
@@ -53,7 +54,7 @@ function setupStudentShell({
   const root = document.getElementById('authenticatedApp');
   const location = { pathname: '/app.html', search: '', hash };
   const eventTarget = new EventTarget();
-  const loadSession = jest.fn().mockResolvedValue({ role: 'STUDENT' });
+  const loadSession = jest.fn().mockResolvedValue({ role });
   const startLogin = jest.fn().mockResolvedValue(undefined);
   const restartLogin = jest.fn().mockResolvedValue(undefined);
   const logout = jest.fn().mockResolvedValue(undefined);
@@ -297,6 +298,26 @@ describe('Student Profile read-only workflow UI', () => {
     expect(document.activeElement).toBe(other);
   });
 
+  it('preserves a guide reading point selected while refresh is pending', async () => {
+    let resolveRefresh;
+    const context = setupStudentShell({ getOwnProfile: jest.fn().mockResolvedValueOnce(SAMPLE_PROFILE_V1)
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveRefresh = resolve; })) });
+    await context.app.start(); await flushPromises();
+    const refresh = context.root.querySelector('[data-role="profile-refresh"]');
+    refresh.focus(); refresh.click();
+    context.root.querySelector('[data-profile-focus="guide-2"]').focus();
+    resolveRefresh(SAMPLE_PROFILE_V1); await flushPromises();
+    expect(document.activeElement).toBe(context.root.querySelector('[data-profile-focus="guide-2"]'));
+  });
+
+  it.each(['STAFF', 'ADVISOR', 'ADMIN'])('does not read a Student profile for the %s role', async (role) => {
+    const context = setupStudentShell({ role });
+    await context.app.start(); await flushPromises();
+    expect(context.studentProfileClient.getOwnProfile).not.toHaveBeenCalled();
+    expect(context.studentProfileClient.updateOwnProfile).not.toHaveBeenCalled();
+    expect(context.root.querySelector('.student-profile-workspace')).toBeNull();
+  });
+
   it('recovers from an initial error and a failed refresh using retry, without profile writes', async () => {
     const getOwnProfile = jest.fn()
       .mockRejectedValueOnce(new StudentProfileError(STUDENT_PROFILE_ERROR_CODES.SERVICE_UNAVAILABLE))
@@ -356,7 +377,22 @@ describe('Student Profile read-only workflow UI', () => {
     expect(workspace.querySelector('.student-profile-metadata').textContent).toContain('ไม่ระบุวันที่อัปเดต');
   });
 
-  describe('navigation with a real browser window', () => {
+  it('defines reduced-motion overrides for both animated states without animation-end dependencies', () => {
+    const { readFileSync } = require('node:fs');
+    const { join } = require('node:path');
+    const css = readFileSync(join(__dirname, '../src/frontend/authenticated-shell.css'), 'utf8');
+    const style = document.createElement('style');
+    style.textContent = css; document.head.append(style);
+    try {
+      const reduced = [...style.sheet.cssRules].filter((rule) => rule.conditionText === '(prefers-reduced-motion: reduce)');
+      const overrides = reduced.flatMap((rule) => [...rule.cssRules]);
+      const motion = overrides.find((rule) => rule.selectorText?.includes('.student-profile-workspace .student-profile-guide__step[open] > .student-profile-guide__content'));
+      expect(motion.style.getPropertyValue('animation')).toBe('none');
+      expect(motion.selectorText).toContain('.student-profile-workspace .student-profile-refresh > .workspace-icon');
+    } finally { style.remove(); }
+  });
+
+  describe('hash navigation using the jsdom window', () => {
     function startWithRealWindow(hash) {
       document.body.innerHTML = '<div id="authenticatedApp"></div>';
       window.location.hash = hash;

@@ -90,6 +90,7 @@ export function renderStudentDashboardView({
     card.setAttribute('role', 'alert');
     const retry = element('button', 'shell-button', 'ลองโหลดข้อมูลอีกครั้ง');
     retry.type = 'button';
+    retry.dataset.profileFocus = 'retry';
     retry.addEventListener('click', () => loadProfile({ restoreFocus: true }));
     card.append(element('h2', 'student-card__title', 'โหลดข้อมูลนักศึกษาไม่สำเร็จ'),
       element('p', 'student-card__description', message), retry);
@@ -109,6 +110,7 @@ export function renderStudentDashboardView({
       const details = element('details', 'student-profile-guide__step');
       details.open = expandedSteps.has(index);
       const summary = element('summary', 'student-profile-guide__summary', step.title);
+      summary.dataset.profileFocus = `guide-${index}`;
       const body = element('p', 'student-profile-guide__content', step.text);
       details.addEventListener('toggle', () => {
         if (details.open) expandedSteps.add(index);
@@ -145,6 +147,7 @@ export function renderStudentDashboardView({
     const plan = element('a', 'shell-button', 'เปิดแผนสหกิจของฉัน');
     plan.href = '#/student/plan';
     plan.dataset.role = 'go-to-student-plan';
+    plan.dataset.profileFocus = 'plan';
     plan.prepend(createWorkspaceIcon('file'));
     plan.addEventListener('click', (event) => {
       if (typeof onNavigate === 'function' && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0) {
@@ -153,6 +156,7 @@ export function renderStudentDashboardView({
     });
     const directory = element('a', 'shell-button shell-button--secondary', 'ดูรายชื่อสถานประกอบการ');
     directory.href = 'company-directory.html';
+    directory.dataset.profileFocus = 'directory';
     directory.prepend(createWorkspaceIcon('building'));
     actions.append(plan, directory);
     cta.append(element('p', 'student-dashboard-summary__cta-copy',
@@ -169,6 +173,7 @@ export function renderStudentDashboardView({
     const refresh = element('button', 'shell-button shell-button--secondary student-profile-refresh', 'รีเฟรชข้อมูล');
     refresh.type = 'button';
     refresh.dataset.role = 'profile-refresh';
+    refresh.dataset.profileFocus = 'refresh';
     refresh.prepend(createWorkspaceIcon('refresh'));
     refresh.addEventListener('click', () => loadProfile({ refreshButton: refresh, restoreFocus: true }));
     toolbar.append(lock, refresh);
@@ -199,7 +204,9 @@ export function renderStudentDashboardView({
     if (isLoading || signal?.aborted) return;
     isLoading = true;
     const version = ++requestVersion;
-    const hadFocus = restoreFocus && container.contains(document.activeElement);
+    const captureFocus = () => restoreFocus && container.contains(document.activeElement)
+      ? document.activeElement.dataset.profileFocus : null;
+    let focusKey = captureFocus();
     if (refreshButton) {
       container.setAttribute('aria-busy', 'true');
       refreshButton.disabled = true;
@@ -211,9 +218,11 @@ export function renderStudentDashboardView({
     try {
       const profile = await profileClient.getOwnProfile({ signal });
       if (signal?.aborted || version !== requestVersion) return;
+      if (refreshButton) focusKey = captureFocus();
       renderDashboardAndProfile(profile, Boolean(refreshButton));
     } catch (error) {
       if (signal?.aborted || error?.name === 'AbortError' || version !== requestVersion) return;
+      if (refreshButton) focusKey = captureFocus();
       // Never leave private profile content behind on an authorization failure.
       if (error?.code === STUDENT_PROFILE_ERROR_CODES.SESSION_EXPIRED) {
         container.replaceChildren(); onSessionExpired?.(); return;
@@ -225,10 +234,13 @@ export function renderStudentDashboardView({
         ? 'ไม่พบระเบียนข้อมูลนักศึกษาที่เชื่อมโยงกับบัญชีนี้ กรุณาติดต่อเจ้าหน้าที่สหกิจศึกษา' : undefined);
     } finally {
       isLoading = false;
-      // Restore only when rerender removed the focused control, not if the user moved elsewhere.
-      if (!signal?.aborted && container.isConnected && hadFocus && document.activeElement === document.body) {
-        const target = container.querySelector('[data-role="profile-refresh"]') || container.querySelector('button');
-        target?.focus();
+      // Preserve the user's latest reading point, including a guide opened while
+      // GET was pending. Never pull focus back from another part of the shell.
+      if (!signal?.aborted && container.isConnected && focusKey && document.activeElement === document.body) {
+        const target = [...container.querySelectorAll('[data-profile-focus]')]
+          .find((node) => node.dataset.profileFocus === focusKey)
+          || container.querySelector('[data-role="profile-refresh"], button');
+        target?.focus({ preventScroll: true });
       }
     }
   }

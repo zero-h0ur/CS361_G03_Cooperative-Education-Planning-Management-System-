@@ -889,7 +889,7 @@ a:focus-visible,
 }
 @media (prefers-reduced-motion: reduce) {
   .student-profile-workspace .student-profile-refresh > .workspace-icon,
-  .student-profile-workspace .student-profile-guide__content { animation: none; }
+  .student-profile-workspace .student-profile-guide__step[open] > .student-profile-guide__content { animation: none; }
   .student-profile-guide__summary { transition: none; }
 }
 @media (max-width: 640px) {
