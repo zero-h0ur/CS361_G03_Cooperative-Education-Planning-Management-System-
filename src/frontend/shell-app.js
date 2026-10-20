@@ -203,7 +203,7 @@ function createNavigation(role, activeRoute) {
   for (const route of getRoutesForRole(role)) {
     const link = element('a', 'shell-nav__link', route.navLabel);
     link.href = route.hash;
-    if (role === 'STUDENT' || role === 'STAFF') {
+    if (['STUDENT', 'STAFF', 'ADVISOR'].includes(role)) {
       link.prepend(createWorkspaceIcon(route.hash.includes('students') || route.hash.endsWith('/profile')
         ? 'user' : route.hash.includes('review') ? 'clipboard' : 'file'));
     }
@@ -236,9 +236,10 @@ function createDefaultPlaceholder(route) {
 function createProtectedLayout({ role, route, onLogout, bodyNode }) {
   const layout = element('div', 'protected-shell');
   if (role === 'STUDENT') layout.classList.add('protected-shell--student');
-  const campusTheme = role === 'STUDENT' || role === 'STAFF';
+  const campusTheme = ['STUDENT', 'STAFF', 'ADVISOR'].includes(role);
   if (campusTheme) layout.classList.add('protected-shell--campus');
   if (role === 'STAFF') layout.classList.add('protected-shell--staff');
+  if (role === 'ADVISOR') layout.classList.add('protected-shell--advisor');
   const skipLink = element('a', 'shell-skip-link', 'ข้ามไปยังเนื้อหาหลัก');
   skipLink.href = '#shell-main-content';
   // Do not assign a fragment: this app uses the hash for guarded routes.

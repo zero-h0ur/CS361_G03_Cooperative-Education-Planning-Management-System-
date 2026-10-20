@@ -1,14 +1,14 @@
 /** @jest-environment jsdom */
-const { createPreviewClients, SCENARIOS } = require('../tmp/frontend-test-modules/preview-fixtures.cjs');
+const { createPreviewClients, SCENARIOS, ADVISOR_SCENARIOS } = require('../tmp/frontend-test-modules/preview-fixtures.cjs');
 const { createShellApp } = require('../tmp/frontend-test-modules/shell-app.cjs');
 const flush = () => new Promise((resolve) => setTimeout(resolve, 25));
 let app;
 beforeEach(() => { document.body.replaceChildren(); global.fetch = jest.fn(() => { throw new Error('No network allowed'); }); });
 afterEach(() => { app?.destroy(); app = null; delete global.fetch; });
 
-async function mount(scenario, hash = '#/student/plan') {
+async function mount(scenario, hash = '#/student/plan', role = 'STUDENT') {
   const root = document.createElement('div'); document.body.append(root);
-  const clients = createPreviewClients({ scenario, delayMs: 0 });
+  const clients = createPreviewClients({ scenario, role, delayMs: 0 });
   app = createShellApp({ ...clients, root, location: { pathname: '/app.html', search: '', hash },
     eventTarget: new EventTarget(), storage: null, startLogin: async () => {}, restartLogin: async () => {}, logout: async () => {} });
   await app.start(); await flush(); await flush();
@@ -109,4 +109,59 @@ test('empty scenario can create a draft and rejects duplicate active Cycle', asy
   expect(saved.status).toBe('DRAFT'); expect(saved.version).toBe(1);
   await expect(client.saveDraft({ content })).rejects.toMatchObject({ code: 'PLAN_ALREADY_EXISTS_FOR_CYCLE' });
   await expect(client.saveDraft({ planId: saved.id, expectedVersion: 99, content })).rejects.toMatchObject({ code: 'STALE_RECORD_CONFLICT' });
+});
+
+const ADVISOR_STUDENT = '40000000-0000-4000-8000-000000000101';
+const ADVISOR_PLAN = '50000000-0000-4000-8000-000000000101';
+
+test.each([
+  ['#/advisor/students', '[data-role="advisor-student-list"]'],
+  [`#/advisor/students/${ADVISOR_STUDENT}`, '[data-role="advisor-plan-list"]'],
+  [`#/advisor/plans/${ADVISOR_PLAN}`, '[data-field="company"]']
+])('Advisor preview mounts the real read-only view %s using the shared campus theme', async (hash, selector) => {
+  const { root, clients } = await mount('assigned', hash, 'ADVISOR');
+  expect(root.querySelector(selector)).not.toBeNull();
+  expect(root.querySelector('.protected-shell--advisor.protected-shell--campus')).not.toBeNull();
+  expect(root.querySelector('.student-campus-backdrop')).not.toBeNull();
+  expect(root.querySelector('.shell-content form, .shell-content input, .shell-content textarea')).toBeNull();
+  expect(root.querySelector('.shell-nav a[href*="staff"], .shell-nav a[href*="student/profile"]')).toBeNull();
+  expect(Object.keys(clients.advisorClient).sort()).toEqual(['getPlan', 'getStudent', 'listStudentPlans', 'listStudents']);
+  expect(clients.studentPlanClient).toBeUndefined();
+  expect(global.fetch).not.toHaveBeenCalled();
+});
+
+test.each(Object.keys(ADVISOR_SCENARIOS))('Advisor scenario %s uses synthetic read-only data without fetch', async (scenario) => {
+  const { root } = await mount(scenario, '#/advisor/students', 'ADVISOR');
+  expect(root.textContent.trim()).not.toBe('');
+  expect(global.fetch).not.toHaveBeenCalled();
+});
+
+test('Advisor empty and no-plan fixtures explain the actual next step without mutation actions', async () => {
+  const { root } = await mount('unassigned', '#/advisor/students', 'ADVISOR');
+  expect(root.querySelector('[data-role="advisor-no-assignment"]').textContent).toContain('เมื่อเจ้าหน้าที่มอบหมาย');
+  const clients = createPreviewClients({ role: 'ADVISOR', scenario: 'no-plans', delayMs: 0 });
+  expect((await clients.advisorClient.listStudents()).items).toHaveLength(3);
+  expect((await clients.advisorClient.listStudentPlans(ADVISOR_STUDENT)).items).toEqual([]);
+  expect(global.fetch).not.toHaveBeenCalled();
+});
+
+test('Advisor revoked fixture gives the generic scope denial instead of private detail', async () => {
+  const { root } = await mount('revoked', `#/advisor/plans/${ADVISOR_PLAN}`, 'ADVISOR');
+  expect(root.querySelector('[data-role="advisor-not-in-scope"]')).not.toBeNull();
+  expect(root.querySelector('[data-field="notes"]')).toBeNull();
+  const clients = createPreviewClients({ role: 'ADVISOR', delayMs: 0 });
+  await expect(clients.advisorClient.getStudent('unknown')).rejects.toMatchObject({ code: 'NOT_IN_SCOPE' });
+  expect(global.fetch).not.toHaveBeenCalled();
+});
+
+test('Advisor preview Student and Plan data use only existing safe API allowlists', async () => {
+  const clients = createPreviewClients({ role: 'ADVISOR', delayMs: 0 });
+  const student = await clients.advisorClient.getStudent(ADVISOR_STUDENT);
+  const plan = await clients.advisorClient.getPlan(ADVISOR_PLAN);
+  expect(student.institutional_email).toBeUndefined();
+  expect(student.external_subject).toBeUndefined();
+  expect(plan.review_notes).toBeUndefined();
+  expect(plan.project).toBeUndefined();
+  expect(plan.status).toBe('APPROVED');
+  expect(global.fetch).not.toHaveBeenCalled();
 });
