@@ -2,6 +2,7 @@ import '../../src/frontend/authenticated-shell.css';
 import './preview.css';
 import { createShellApp } from '../../src/frontend/shell-app.js';
 import { createPreviewClients, SCENARIOS, ADVISOR_SCENARIOS } from './fixtures.js';
+import { enhanceWorkflowPreview } from './workflow-fixtures.js';
 
 const params = new URLSearchParams(location.search);
 const defaultRoutes = { STUDENT: '#/student/plan', STAFF: '#/staff/students', ADVISOR: '#/advisor/students' };
@@ -39,7 +40,7 @@ reset.addEventListener('click', () => location.reload());
 document.getElementById('previewControls').append(notice, roleLabel, label, reset);
 
 if (!location.hash) location.hash = defaultRoutes[role.value];
-const clients = createPreviewClients({ scenario: select.value, role: role.value });
+const clients = enhanceWorkflowPreview(createPreviewClients({ scenario: select.value, role: role.value }),{scenario:select.value,role:role.value});
 createShellApp({
   ...clients, root: document.getElementById('authenticatedApp'),
   location, eventTarget: window, storage: null,

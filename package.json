@@ -45,7 +45,9 @@
     "seed": "node src/db/seed.js",
     "seed:v3": "node src/db/seed.js --v3",
     "seed:v2": "node src/db/seed.js --v2-only",
-    "test:directory-db": "node --test tests/partner-import-postgres.test.mjs"
+    "test:directory-db": "node --test tests/partner-import-postgres.test.mjs",
+    "test:three-role": "node --test tests/three-role-workflow.test.mjs",
+    "test:workflow-ui": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/three-role-ui.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "3.1152.0",

@@ -6,8 +6,10 @@ import {
 } from './plan-submission-client.js';
 import { renderPlanEditor } from './plan-editor-view.js';
 import { createWorkspaceIcon, decorateStudentCard } from '../ui/workspace-presentation.js';
+import { renderPlanWorkflow } from '../workflow/workflow-views.js';
 
 const STATUS_META = Object.freeze({
+  REJECTED: {label:'ไม่ผ่านเกณฑ์ในรอบนี้ (REJECTED)',badgeClass:'student-badge--danger',description:'ไม่สามารถแก้ไข ส่งซ้ำ หรือสร้างแผนใหม่ในรอบเดิมได้ สามารถยื่นรอบใหม่ให้ Staff ตรวจคุณสมบัติอีกครั้ง'},
   [PLAN_STATUSES.DRAFT]: {
     label: 'ฉบับร่าง (DRAFT)',
     badgeClass: 'student-badge--draft',
@@ -117,6 +119,7 @@ function defaultOperationId() {
 
 export function renderStudentPlanView({
   planClient,
+  workflowClient,
   signal,
   onSessionExpired,
   onAccessDenied,
@@ -142,6 +145,7 @@ export function renderStudentPlanView({
   let selectedPlanId = null;
   let editorController = null;
   let editorDirty = false;
+  let workflowDirty = false;
   let editorBusy = false;
   let loadSequence = 0;
   let submitNeedsRefresh = false;
@@ -156,12 +160,12 @@ export function renderStudentPlanView({
   signal?.addEventListener('abort', () => editorController?.abort(), { once: true });
 
   function syncEditorControls() {
-    const locked = editorDirty || editorBusy || isSubmitting;
+    const locked = editorDirty || workflowDirty || editorBusy || isSubmitting;
     for (const control of container.querySelectorAll('[data-editor-lock]')) {
       control.disabled = locked || control.dataset.unavailable === 'true';
     }
     const editorControls = container.querySelector('[data-role="plan-editor-controls"]');
-    if (editorControls) editorControls.disabled = isSubmitting || submitNeedsRefresh;
+    if (editorControls) editorControls.disabled = isSubmitting || submitNeedsRefresh || workflowDirty;
   }
 
   function renderPlanPicker() {
@@ -485,7 +489,7 @@ export function renderStudentPlanView({
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      if (isSubmitting || editorDirty || editorBusy) {
+      if (isSubmitting || editorDirty || workflowDirty || editorBusy) {
         return;
       }
 
@@ -672,6 +676,9 @@ export function renderStudentPlanView({
     container.replaceChildren(...[
       decorateStudentCard(statusSection, 'file'),
       decorateStudentCard(readinessSection, 'clipboard'),
+      workflowClient ? renderPlanWorkflow({client:workflowClient,planId:plan.id,role:'STUDENT',signal,
+        onSessionExpired,onAccessDenied,onChanged:()=>loadPlanBundle(),
+        onDirtyChange:dirty=>{workflowDirty=dirty;syncEditorControls();}}) : null,
       decorateStudentCard(submitSection, 'send'),
       decorateStudentCard(historySection, 'clock'),
       tools
@@ -685,6 +692,7 @@ export function renderStudentPlanView({
     const sequence = ++loadSequence;
     editorController?.abort();
     editorDirty = false;
+    workflowDirty = false;
     editorBusy = false;
     submitNeedsRefresh = false;
     pendingOperationId = null;

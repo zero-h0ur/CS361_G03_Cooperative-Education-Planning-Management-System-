@@ -48,6 +48,8 @@ const ROUTE_DEFINITIONS = Object.freeze([
     description: 'แผนที่รอตรวจในรอบที่เปิดอยู่ ภายในขอบเขตที่คุณได้รับมอบหมาย เรียงจากรอนานที่สุด',
     status: 'Review queue API (#67)'
   }),
+  Object.freeze({hash:'#/staff/workflow',role:'STAFF',navLabel:'เอกสารและอาจารย์ที่ปรึกษา',
+    title:'เอกสารและการมอบหมายอาจารย์',description:'จัดการข้อกำหนดรายรอบ และดูอาจารย์กับนักศึกษาในขอบเขตที่รับผิดชอบ',status:'Staff scoped workflow'}),
   Object.freeze({
     hash: '#/advisor/students',
     role: 'ADVISOR',

@@ -28,6 +28,7 @@ export const PLAN_STATUSES = Object.freeze({
   UNDER_REVIEW: 'UNDER_REVIEW',
   NEEDS_REVISION: 'NEEDS_REVISION',
   APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
   CANCELLED: 'CANCELLED'
 });
 
@@ -38,6 +39,7 @@ export const READ_ONLY_PLAN_STATUS_SET = new Set([
   PLAN_STATUSES.SUBMITTED,
   PLAN_STATUSES.UNDER_REVIEW,
   PLAN_STATUSES.APPROVED,
+  PLAN_STATUSES.REJECTED,
   PLAN_STATUSES.CANCELLED
 ]);
 
@@ -71,6 +73,7 @@ export const HISTORY_ACTION_LABELS = Object.freeze({
   PLAN_REVIEW_STARTED: 'เริ่มตรวจแผน',
   PLAN_RETURNED: 'ส่งกลับให้แก้ไข',
   PLAN_APPROVED: 'อนุมัติแผน',
+  PLAN_REJECTED: 'ไม่ผ่านคุณสมบัติในรอบนี้',
   PLAN_CANCELLED: 'ยกเลิกแผน'
 });
 

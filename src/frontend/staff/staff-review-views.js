@@ -16,9 +16,11 @@ import {
   validateReviewNotes
 } from './staff-review-client.js';
 
+import { renderPlanWorkflow } from '../workflow/workflow-views.js';
 const QUEUE_HASH = '#/staff/review';
 
 const STATUS_META = Object.freeze({
+  REJECTED: {label:'ไม่ผ่านเกณฑ์ในรอบนี้',badgeClass:'student-badge--danger'},
   [PLAN_STATUSES.DRAFT]: { label: 'ฉบับร่าง (DRAFT)', badgeClass: 'student-badge--neutral' },
   [PLAN_STATUSES.SUBMITTED]: { label: 'รอรับเรื่อง (SUBMITTED)', badgeClass: 'student-badge--warning' },
   [PLAN_STATUSES.UNDER_REVIEW]: { label: 'กำลังตรวจสอบ (UNDER_REVIEW)', badgeClass: 'student-badge--neutral' },
@@ -390,6 +392,8 @@ export function renderStaffReviewQueueView({ staffReviewClient, signal, onSessio
 /* ------------------------------------------------------------------ */
 
 export function renderStaffPlanReviewView({
+  workflowClient,
+  onAccessDenied,
   staffReviewClient,
   planId,
   canReviewPlan = false,
@@ -747,6 +751,7 @@ export function renderStaffPlanReviewView({
     }
 
     container.replaceChildren(back, summary, actionsCard, historyCard);
+    if (workflowClient) container.append(renderPlanWorkflow({client:workflowClient,planId,role:'STAFF',signal,onSessionExpired,onAccessDenied,onChanged:()=>load()}));
     if (initialFeedback) {
       feedbackRegion.focus({ preventScroll: false });
     }

@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700;800&display=swap');
 
 :root {
+  --workflow-border: #b9bec7;
   color: #0f172a;
   background: #faf8f5;
   font-family: 'Prompt', 'Inter', sans-serif;
@@ -21,6 +22,47 @@
   --shell-focus: #c8102e;
   --shell-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
   --shell-serif: 'Instrument Serif', Georgia, serif;
+}
+
+/* Three-role tasks inherit the CO-ED workspace, never the public-page globals. */
+.workflow-stack { display: grid; gap: 20px; min-width: 0; }
+.workflow-card { min-width: 0; background: var(--shell-surface); border-color: var(--shell-line); }
+.workflow-card__header { display: flex; gap: 14px; align-items: center; margin-bottom: 18px; color: var(--shell-primary); }
+.workflow-card__header h2 { color: var(--shell-ink); margin: 0; }
+.workflow-card__header .workspace-icon { flex: 0 0 24px; }
+.workflow-form { display: grid; gap: 16px; margin-top: 20px; max-width: 100%; }
+.workflow-form > .shell-button { justify-self: start; min-height: 44px; }
+.workflow-field { display: grid; gap: 8px; min-width: 0; color: var(--shell-ink); }
+.workflow-field input:not([type=checkbox]), .workflow-field textarea, .workflow-field select { width: 100%; min-height: 46px; border-color: var(--workflow-border); color: var(--shell-ink); background: var(--shell-surface); font: inherit; }
+.workflow-field textarea { min-height: 90px; resize: vertical; }
+.workflow-field:has(input[type=checkbox]) { grid-template-columns: auto 1fr; align-items: center; min-height: 44px; }
+.workflow-field:has(input[type=checkbox]) span { grid-column: 2; }
+.workflow-field input[type=checkbox] { grid-column: 1; grid-row: 1; width: 22px; height: 22px; accent-color: var(--shell-primary); }
+.workflow-field input:focus-visible, .workflow-field textarea:focus-visible, .workflow-field select:focus-visible, .workflow-disclosure summary:focus-visible { outline: 3px solid var(--shell-focus); outline-offset: 3px; }
+.workflow-note { color: var(--shell-muted); margin: 12px 0; line-height: 1.8; max-width: 78ch; overflow-wrap: anywhere; }
+.workflow-document { min-width: 0; margin: 0; padding: 20px; border: 1px solid var(--workflow-border); border-radius: 12px; background: var(--shell-canvas); }
+.workflow-document legend { padding: 0 8px; font-weight: 600; color: var(--shell-ink); }
+.workflow-document h3 { margin-top: 0; color: var(--shell-ink); font-size: 1rem; }
+.workflow-document .workflow-field + .workflow-field { margin-top: 14px; }
+.workflow-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit,minmax(min(100%,240px),1fr)); }
+.workflow-disclosure { margin-top: 18px; border-top: 1px solid var(--shell-line); padding-top: 10px; }
+.workflow-disclosure > summary { cursor: pointer; padding: 12px 4px; font-weight: 600; color: var(--shell-primary-dark); min-height: 44px; }
+.workflow-disclosure[open] > summary { margin-bottom: 12px; }
+.workflow-disclosure .workflow-document + .workflow-document { margin-top: 16px; }
+.workflow-feedback { color: var(--shell-ink); min-height: 1.7em; margin: 0; overflow-wrap: anywhere; }
+.workflow-feedback[role=alert], .workflow-capacity--full { color: var(--shell-primary-dark); font-weight: 600; }
+.workflow-reference-list { display: grid; gap: 12px; padding-left: 24px; }
+.workflow-reference-list li { overflow-wrap: anywhere; }
+.workflow-reference-list li > * { display: block; margin-bottom: 4px; }
+.workflow-form[aria-busy=true] { opacity: .75; }
+.workflow-danger { background: var(--shell-primary-dark); }
+@media (max-width: 600px) {
+  .workflow-document { padding: 16px; }
+  .workflow-form > .shell-button { justify-self: stretch; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .workflow-field input, .workflow-field textarea, .workflow-field select { transition: border-color .2s ease, box-shadow .2s ease; }
+  .workflow-form { transition: opacity .2s ease; }
 }
 
 * {

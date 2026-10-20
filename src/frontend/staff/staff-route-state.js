@@ -1,6 +1,6 @@
 /** #74: the #67 search contract; only non-keyword state belongs in browser URLs. */
 export const STAFF_PLAN_STATES = Object.freeze([
-  'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'NEEDS_REVISION', 'APPROVED', 'CANCELLED'
+  'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'NEEDS_REVISION', 'APPROVED', 'REJECTED', 'CANCELLED'
 ]);
 const COMMON = ['page', 'pageSize', 'academic_year'];
 const PLAN_ONLY = ['status', 'sort', 'order'];

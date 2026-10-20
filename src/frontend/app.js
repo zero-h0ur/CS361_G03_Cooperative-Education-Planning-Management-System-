@@ -8,6 +8,7 @@ import { createShellApp, renderStartupFailure } from './shell-app.js';
 import { createStaffReviewClient } from './staff/staff-review-client.js';
 import { createStudentPlanClient } from './student/plan-submission-client.js';
 import { createStudentProfileClient } from './student/profile-client.js';
+import { createWorkflowClient } from './workflow/workflow-client.js';
 
 const root = document.getElementById('authenticatedApp');
 
@@ -40,6 +41,7 @@ if (root) {
       getAccessToken: authClient.getAccessToken
     });
     const app = createShellApp({
+      workflowClient: createWorkflowClient({apiBaseUrl:config.apiBaseUrl,getAccessToken:authClient.getAccessToken}),
       root,
       loadSession: sessionClient.loadSession,
       startLogin: authClient.startLogin,
