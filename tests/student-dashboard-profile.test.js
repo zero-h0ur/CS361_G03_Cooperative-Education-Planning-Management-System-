@@ -402,9 +402,10 @@ describe('Student Profile read-only workflow UI', () => {
       const workspaceRule = [...style.sheet.cssRules].find((rule) => rule.selectorText === scope);
       expect(workspaceRule.style.getPropertyValue('--shell-line')).toBe('#d4c8c3');
       expect(workspaceRule.style.getPropertyValue('--shell-muted')).toBe('#475569');
+      expect(workspaceRule.style.getPropertyValue('--student-motion-ease')).toBe('cubic-bezier(0.45, 0, 0.25, 1)');
       expect(workspaceRule.style.getPropertyValue('animation')).toBe('');
       const cardRule = [...style.sheet.cssRules].find((rule) => rule.selectorText === scope + ' .student-card');
-      expect(cardRule.style.getPropertyValue('transition')).toContain('transform 380ms');
+      expect(cardRule.style.getPropertyValue('transition')).toContain('transform 650ms');
       expect(cardRule.style.getPropertyValue('transition')).not.toContain('box-shadow');
       const shadow = [...style.sheet.cssRules].find((rule) => rule.selectorText === scope + ' .student-card::after');
       expect(shadow.style.getPropertyValue('transition')).toContain('opacity');
@@ -416,6 +417,7 @@ describe('Student Profile read-only workflow UI', () => {
       const entrySelector = scope + '.student-workspace--ready';
       const entry = [...style.sheet.cssRules].find((rule) => rule.selectorText === entrySelector);
       expect(entry.style.getPropertyValue('animation')).toContain('student-workspace-enter');
+      expect(entry.style.getPropertyValue('animation')).toContain('900ms');
       expect(entry.style.getPropertyValue('animation')).not.toContain('infinite');
       for (const role of ['student-profile', 'student-plan', 'advisor', 'staff']) {
         const workspace = document.createElement('div');
@@ -426,6 +428,9 @@ describe('Student Profile read-only workflow UI', () => {
       const lift = [...hover.cssRules].find((rule) => rule.selectorText === scope + ' .student-card:not(.student-card--loading):not(.student-card--error):hover');
       expect(lift.style.getPropertyValue('transform')).toBe('translateY(-6px)');
       expect(lift.style.getPropertyValue('margin')).toBe('');
+      const iconMotion = [...hover.cssRules].find((rule) => rule.selectorText === scope + ' .student-card--illustrated:hover > .student-card__icon');
+      expect(iconMotion.style.getPropertyValue('transform')).toBe('translateY(-2px) scale(1.025)');
+      expect(iconMotion.style.getPropertyValue('transform')).not.toContain('rotate');
       const still = overrides.find((rule) => rule.selectorText?.includes(lift.selectorText));
       expect(still.style.getPropertyValue('transform')).toBe('none');
       const reducedEntry = overrides.find((rule) => rule.selectorText === entrySelector);
