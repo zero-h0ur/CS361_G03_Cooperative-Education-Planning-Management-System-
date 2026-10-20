@@ -82,3 +82,15 @@ npm.cmd run build
 Preview tests ตรวจการใช้ components จริง, memory writes, read-only/conflict states,
 ไม่มี network calls จาก clients, server allowlist/CSP และแยก bundle ออกจาก auth SDK
 Browser visual review ต้องเปิดหน้าเว็บจริงตาม URL ด้านบน ไม่ใช่ผลจาก jsdom
+
+### ผลตรวจ Student Profile refresh (2026-10-21)
+
+- Frontend: 13 suites / 320 tests ผ่าน รวม read-only, GET-only จากหน้า Profile,
+  refresh/retry, focus, abort, cross-role denial และ reduced-motion CSS override
+- Preview: 39 component tests และ 2 server/production-isolation tests ผ่าน
+- Production build และ `git diff --check` ผ่าน
+- `npm run test:docs`: 8 ผ่าน / 1 ติด Windows symlink permission (`EPERM`)
+  ตัวตรวจลิงก์เอกสารแบบแยกผ่าน ไม่ได้รายงานว่าชุด docs tests ผ่านทั้งหมด
+- ยังไม่ได้ตรวจภาพจริงบน Browser, Responsive, Screen reader และ Reduced motion
+  ใน Browser เพราะไม่มี Browser เชื่อมต่อ การตรวจ CSS ด้วย jsdom ไม่ใช่ Visual review
+- ยังต้องทดสอบ Cognito/API จริงแยกต่างหาก ไม่มีการเปลี่ยน Backend หรือฐานข้อมูลในงานนี้
