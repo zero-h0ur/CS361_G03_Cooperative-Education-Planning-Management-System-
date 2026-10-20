@@ -61,7 +61,7 @@ class ThreeRoleService {
       const p = await this.plan(c,actor,id);
       const policy = await r.policy(c,p), extras = await r.planExtras(c,p);
       return { plan_id: p.id, student_id: p.student_id, student_number: p.student_number,
-        cycle_id: p.cycle_id, status: p.status, version: p.version, project_title: p.project_title,
+        cycle_id: p.cycle_id, cycle_status: p.cycle_status, status: p.status, version: p.version, project_title: p.project_title,
         references: p.document_references, policy, legacy_submission: extras.submissions.length === 0 && p.status !== 'DRAFT',
         ...extras };
     });
@@ -84,14 +84,20 @@ class ThreeRoleService {
   }
   async saveContact(actor,body) {
     student(actor); v.fields(body,['contact_address','contact_phone','version','operation_id']);
-    const address=v.text(body.contact_address,'contact_address',1000,false), phone=v.text(body.contact_phone,'contact_phone',40,false);
-    if (phone && !/^[+()\d .-]{5,40}$/.test(phone)) throw new ValidationError('กรุณาตรวจสอบรูปแบบเบอร์โทรศัพท์');
+    if(!Object.hasOwn(body,'contact_address')&&!Object.hasOwn(body,'contact_phone'))throw new ValidationError('กรุณาระบุข้อมูลติดต่อที่ต้องการแก้ไข');
+    let address=body.contact_address;
+    if(address!=null) {
+      if(typeof address!=='string'||address.length>1000||/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(address))throw new ValidationError('กรุณาระบุที่อยู่ไม่เกิน 1000 ตัวอักษร');
+      address=address.replaceAll('\r\n','\n').trim()||null;
+    }
+    const phone=v.text(body.contact_phone,'contact_phone',40,false);
+    if (phone && (!/^[+()\d .-]{5,40}$/.test(phone)||!/\d/.test(phone))) throw new ValidationError('กรุณาตรวจสอบรูปแบบเบอร์โทรศัพท์');
     return this.transaction(actor,async (c,r) => {
-      const s=await r.one(c,'SELECT id,user_id,version FROM students WHERE id=$1 FOR UPDATE',[actor.studentId]);
+      const s=await r.one(c,'SELECT id,user_id,version,contact_address,contact_phone FROM students WHERE id=$1 FOR UPDATE',[actor.studentId]);
       if (!s || s.user_id !== actor.userId) throw new ForbiddenError();
       return this.write(c,actor,'contact:save',s.id,{...body,expected_version:body.version},async () => {
         version(s.version,body.version);
-        const updated=await r.contact(c,actor,address,phone);
+        const updated=await r.contact(c,actor,Object.hasOwn(body,'contact_address')?address:s.contact_address,Object.hasOwn(body,'contact_phone')?phone:s.contact_phone);
         return require('./student-profile-service').toStudentSelfProfile(updated);
       });
     });
@@ -119,6 +125,16 @@ class ThreeRoleService {
         version(prev?.version || 0,body.expected_version);
         return r.publish(c,actor,{...body,cycle_id: cycleId,department,program,requirements,id: crypto.randomUUID()});
       });
+    });
+  }
+  async listAssignments(actor,filters={}) {
+    staff(actor);v.fields(filters,['page','pageSize','advisor_id']);
+    const page=Number(filters.page||1),pageSize=Number(filters.pageSize||20);
+    if(!Number.isInteger(page)||page<1||!Number.isInteger(pageSize)||pageSize<1||pageSize>100)throw new ValidationError('Invalid assignment pagination.');
+    const advisorId=filters.advisor_id ? v.uuid(filters.advisor_id,'advisor_id') : null;
+    return this.transaction(actor,async(c,r)=>{
+      if(!(await r.scopes(c,actor.userId)).length)throw new ForbiddenError();
+      return r.listAssignments(c,actor,{page,pageSize,advisorId});
     });
   }
   async assign(actor,body) {

@@ -1,4 +1,4 @@
--- Run as the table owner after migration 002. Changes ACLs only, never data.
+-- Run as the table owner after all checked-in migrations. Changes ACLs only, never data.
 -- No CASCADE or PUBLIC revocation: inherited/external grants require review.
 \set ON_ERROR_STOP on
 BEGIN;

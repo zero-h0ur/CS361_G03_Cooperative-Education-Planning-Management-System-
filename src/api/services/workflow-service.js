@@ -634,6 +634,9 @@ class WorkflowService {
           'IDEMPOTENCY_KEY_REUSED'
         );
       }
+      if (err.constraint === 'submission_policy_changed') {
+        throw new ConflictError('ข้อกำหนดเอกสารเปลี่ยนแล้ว กรุณารีเฟรชและบันทึกเอกสารก่อนส่ง', 'STALE_RECORD_CONFLICT');
+      }
       if (err.code === '23514' && /^submission_/.test(err.constraint || '')) {
         throw new ValidationError(err.message);
       }

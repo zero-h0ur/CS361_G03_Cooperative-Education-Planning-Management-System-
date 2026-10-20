@@ -7,8 +7,9 @@ class ThreeRoleRepository extends WorkflowRepository {
   }
   async plan(client, id, lock) {
     return this.one(client, `SELECT p.*, s.student_number, s.department, s.program,
-      s.user_id AS student_user_id, r.academic_year, r.semester, r.end_date
-      FROM plans p JOIN students s ON s.id=p.student_id JOIN rounds r ON r.id=p.cycle_id
+      EXISTS(SELECT 1 FROM plan_submissions ps WHERE ps.plan_id=p.id) AS has_submission,
+      s.user_id AS student_user_id, r.academic_year, r.semester, r.end_date, r.status AS cycle_status
+      FROM plans p JOIN students s ON s.id=p.student_id LEFT JOIN rounds r ON r.id=p.cycle_id
       WHERE p.id=$1 ${lock ? 'FOR UPDATE OF p' : ''}`, [id]);
   }
   async scopes(client, actor) {
@@ -26,12 +27,14 @@ class ThreeRoleRepository extends WorkflowRepository {
       ($1::uuid IS NOT NULL AND id=$1 AND cycle_id=$2) OR
       ($1::uuid IS NULL AND cycle_id=$2 AND department=$3 AND program IN ('',$4))
       ORDER BY (program <> '') DESC, version DESC LIMIT 1`,
-    [plan.requirement_policy_id, plan.cycle_id, plan.department, plan.program]);
+    [plan.has_submission ? plan.requirement_policy_id : null, plan.cycle_id, plan.department, plan.program]);
   }
   async planExtras(client, plan) {
     const submissions = await this.rows(client, `SELECT id, plan_version, policy_id, snapshot, created_at
       FROM plan_submissions WHERE plan_id=$1 ORDER BY plan_version DESC`, [plan.id]);
-    const placement = await this.one(client, 'SELECT * FROM placements WHERE plan_id=$1', [plan.id]);
+    const placement = await this.one(client, `SELECT plan_id,status,version,payload,submitted_payload,
+      sent_reference,sent_at,confirmed_by,confirmed_at,evidence,feedback,updated_at
+      FROM placements WHERE plan_id=$1`, [plan.id]);
     const advisor = await this.one(client, `SELECT a.id, a.advisor_id, COALESCE(u.display_name,'Advisor '||left(u.id::text,8)) AS name,
       a.effective_from, a.effective_to, a.version FROM advisor_assignments a
       JOIN users u ON u.id=a.advisor_id WHERE a.student_id=$1 AND a.status='ACTIVE'
@@ -84,6 +87,22 @@ class ThreeRoleRepository extends WorkflowRepository {
   async lockAdvisors(client, ids) {
     return this.rows(client, `SELECT id,role,account_status FROM users WHERE id=ANY($1::uuid[]) ORDER BY id FOR UPDATE`, [ids]);
   }
+  async listAssignments(client, actor, {page,pageSize,advisorId}) {
+    const predicate=`FROM advisor_assignments a JOIN students s ON s.id=a.student_id
+      JOIN users u ON u.id=a.advisor_id WHERE a.status='ACTIVE' AND a.revoked_at IS NULL
+      AND a.effective_from<=CURRENT_TIMESTAMP AND a.effective_to>CURRENT_TIMESTAMP
+      AND ($2::uuid IS NULL OR a.advisor_id=$2) AND EXISTS
+      (SELECT 1 FROM staff_scopes sc WHERE sc.staff_id=$1 AND sc.status='ACTIVE'
+        AND sc.department=s.department AND (sc.program IS NULL OR sc.program=s.program)
+        AND (sc.academic_year IS NULL OR sc.academic_year=a.academic_year))`;
+    const params=[actor.userId,advisorId];
+    const total=Number((await this.one(client,`SELECT count(*)::int AS total ${predicate}`,params)).total);
+    const items=await this.rows(client,`SELECT a.id,a.student_id,a.advisor_id,a.plan_id,
+      a.effective_from,a.effective_to,a.status,a.version,s.full_name,s.student_number,
+      COALESCE(u.display_name,'Advisor '||left(u.id::text,8)) AS advisor_name ${predicate}
+      ORDER BY s.full_name,a.id LIMIT $3 OFFSET $4`,[...params,pageSize,(page-1)*pageSize]);
+    return {items,pagination:{page,pageSize,total,totalPages:Math.ceil(total/pageSize)}};
+  }
   async assignment(client, id, lock = false) {
     return this.one(client, `SELECT * FROM advisor_assignments WHERE id=$1 ${lock ? 'FOR UPDATE' : ''}`, [id]);
   }
@@ -113,7 +132,8 @@ class ThreeRoleRepository extends WorkflowRepository {
         payload=EXCLUDED.payload,submitted_payload=EXCLUDED.submitted_payload,
         sent_reference=EXCLUDED.sent_reference,sent_at=EXCLUDED.sent_at,confirmed_by=EXCLUDED.confirmed_by,
         confirmed_at=EXCLUDED.confirmed_at,evidence=EXCLUDED.evidence,feedback=EXCLUDED.feedback,
-        updated_at=CURRENT_TIMESTAMP RETURNING *`, [plan.id,next.status,next.version,
+        updated_at=CURRENT_TIMESTAMP RETURNING plan_id,status,version,payload,submitted_payload,
+          sent_reference,sent_at,confirmed_by,confirmed_at,evidence,feedback,updated_at`, [plan.id,next.status,next.version,
       JSON.stringify(next.payload),next.submitted_payload ? JSON.stringify(next.submitted_payload) : null,
       next.sent_reference || null,next.sent_at || null,next.confirmed_by || null,next.confirmed_at || null,
       next.evidence ? JSON.stringify(next.evidence) : null,next.feedback || null]);

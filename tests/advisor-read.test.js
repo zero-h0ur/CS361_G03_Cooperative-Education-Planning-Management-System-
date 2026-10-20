@@ -492,9 +492,13 @@ describe('Issue #68 Advisor assigned-scope read-only API', () => {
     });
 
     test('reads historical CANCELLED plans across cycles and paginates consistently', async () => {
-      const historical = fixtures.plans.find((row) => row.status === 'CANCELLED');
-      const olderCycle = fixtures.rounds.find((row) => row.id !== historical.cycle_id);
-      await client.query('UPDATE plans SET cycle_id = $1, round_id = $1 WHERE id = $2', [olderCycle.id, historical.id]);
+      const original = fixtures.plans.find((row) => row.status === 'CANCELLED');
+      const olderCycle = fixtures.rounds.find((row) => row.id !== original.cycle_id);
+      const historical = {...original,id:require('node:crypto').randomUUID()};
+      // Terminal rows are immutable: create the historical fixture in its correct cycle.
+      await client.query(`INSERT INTO plans(id,student_id,cycle_id,round_id,company_id,position_id,status,source,visibility,data_status)
+        VALUES($1,$2,$3,$3,$4,$5,'CANCELLED','test','private','mock')`,
+      [historical.id,historical.student_id,olderCycle.id,historical.company_id,historical.position_id]);
       const response = await handler(event(`/api/v3/advisor/plans/${historical.id}`));
       expect(response.statusCode).toBe(200);
       expect(JSON.parse(response.body).data.cycle_id).toBe(olderCycle.id);

@@ -16,7 +16,7 @@ function fields(body, allowed) {
   for (const key of Object.keys(body)) if (!allowed.includes(key)) throw new ValidationError(`Unsupported field: ${key}.`);
 }
 function https(value) {
-  if (!value) return null;
+  if (value === null || value === undefined || value === '') return null;
   const normalized = text(value, 'url', 2048);
   let url;
   try { url = new URL(normalized); } catch { throw new ValidationError('Document URL must be HTTPS.'); }

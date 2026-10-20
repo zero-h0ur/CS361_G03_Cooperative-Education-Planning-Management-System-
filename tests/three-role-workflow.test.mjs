@@ -24,6 +24,7 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
   assert.ok(['127.0.0.1','localhost'].includes(url.hostname),'Use an explicitly disposable local test server.');
   const admin=new Pool({connectionString:url.href}), schema=`wf_${randomUUID().replaceAll('-','')}`;
   let pool;
+  const legacyStudent=randomUUID(),legacyPlan=randomUUID();
   try {
     await admin.query(`CREATE SCHEMA "${schema}"`);
     const c=await admin.connect();
@@ -33,6 +34,10 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
       for (const [i,file] of files.entries()) {
         if (i===1) await c.query(`SET search_path TO "${schema}",public`);
         await c.query(await readFile(new URL(`../src/db/migrations/${file}`,import.meta.url),'utf8'));
+        if(i===0) {
+          await c.query(`INSERT INTO students(id,anonymous_ref,source,visibility,data_status) VALUES($1,'LEGACY-PRESERVE','test','private','mock')`,[legacyStudent]);
+          await c.query(`INSERT INTO plans(id,student_id,source,visibility,data_status) VALUES($1,$2,'test','private','mock')`,[legacyPlan,legacyStudent]);
+        }
       }
     } finally { await c.query('RESET search_path'); c.release(); }
     pool=new Pool({connectionString:url.href,options:`-c search_path=${schema},public`,max:12});
@@ -48,6 +53,10 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
     const service=new ThreeRoleService({pool});
     const workflow=new WorkflowService({repository:new WorkflowRepository({pool}),authorizationService:new AuthorizationService({pool})});
     const people=[];
+    await t.test('forward-only migrations retain legacy rows without inventing official data or project titles',async()=>{
+      const row=(await q('SELECT legacy_compatibility,status,project_title FROM plans WHERE id=$1',[legacyPlan])).rows[0];
+      assert.deepEqual(row,{legacy_compatibility:true,status:'DRAFT',project_title:null});
+    });
     for(let i=0;i<8;i++) {
       const user=randomUUID(),student=randomUUID(),plan=randomUUID();
       await q(`INSERT INTO users(id,role) VALUES($1,'STUDENT')`,[user]);
@@ -105,7 +114,7 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
       assert.equal((await service.getWorkflow(people[0].actor,people[0].plan)).placement,null);
     });
     const assignments=[];
-    await t.test('simultaneous fifth/sixth assignment: only one succeeds, even across terms',async()=>{
+    await t.test('simultaneous fifth/sixth assignment: only one succeeds',async()=>{
       const end=new Date(Date.now()+86400000*90).toISOString();
       for(const p of people.slice(0,4)) assignments.push(await service.assign(staff,{...command(5),plan_id:p.plan,advisor_id:advisorId,effective_to:end}));
       const results=await Promise.allSettled(people.slice(4,6).map(p=>service.assign(staff,{...command(5),plan_id:p.plan,advisor_id:advisorId,effective_to:end})));
@@ -131,6 +140,95 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
       const result=await service.placement(staff,p.plan,'confirm',{...command(3),company_name:'Actual Company',student_number:'6609000000',reference:'Return 42'});
       assert.equal(result.status,'CONFIRMED'); assert.equal(result.confirmed_by,staffId);
       assert.equal((await service.getWorkflow(p.actor,p.plan)).status,'APPROVED');
+    });
+    await t.test('policy published after draft save requires refresh; new-cycle submission is separate',async()=>{
+      const cycle2=randomUUID(),newPlan=randomUUID(),p=people[6];
+      await q(`INSERT INTO rounds(id,name,academic_year,semester,status,source,visibility,data_status) VALUES($1,'New cycle',2569,2,'OPEN','test','public','mock')`,[cycle2]);
+      await q(`INSERT INTO plans(id,student_id,cycle_id,company_id,position_id,source,visibility,data_status) VALUES($1,$2,$3,$4,$5,'test','private','mock')`,[newPlan,p.student,cycle2,company,position]);
+      const first=await service.publish(staff,{...command(0),cycle_id:cycle2,department:'CPE',program:'',requirements:[]});
+      await service.saveWorkflow(p.actor,newPlan,{...command(1),project_title:'New project',policy_id:first.id,references:[]});
+      await service.publish(staff,{...command(1),cycle_id:cycle2,department:'CPE',program:'',requirements:[]});
+      await assert.rejects(workflow.submitPlan({actor:p.actor,plan_id:newPlan,...command(2)}),e=>e.statusCode===409);
+      const data=await service.getWorkflow(p.actor,newPlan);assert.equal(data.policy.version,2);assert.equal(data.submissions.length,0);
+      await service.saveWorkflow(p.actor,newPlan,{...command(2),project_title:'New project',policy_id:data.policy.id,references:[]});
+      await workflow.submitPlan({actor:p.actor,plan_id:newPlan,...command(3)});
+    });
+    await t.test('direct SQL writers enforce future capacity across years/terms, including simultaneous fifth/sixth and touching boundaries',async()=>{
+      const start=new Date(Date.now()+86400000*100).toISOString(),end=new Date(Date.now()+86400000*120).toISOString();
+      const insert=(person,year=2570,from=start,to=end)=>q(`INSERT INTO advisor_assignments(id,advisor_id,student_id,academic_year,semester,effective_from,effective_to,assigned_by)
+        VALUES($1,$2,$3,$4,2,$5,$6,$7)`,[randomUUID(),advisorId,person.student,year,from,to,staffId]);
+      for(const p of people.slice(0,4))await insert(p);
+      const result=await Promise.allSettled([insert(people[4]),insert(people[5],2571)]);
+      assert.equal(result.filter(x=>x.status==='fulfilled').length,1);
+      assert.equal(result.find(x=>x.status==='rejected').reason.constraint,'advisor_capacity_five');
+      await assert.rejects(insert(people[6],2572,new Date(Date.now()+86400000*110).toISOString()),e=>e.constraint==='advisor_capacity_five');
+      await insert(people[6],2572,end,new Date(Date.now()+86400000*130).toISOString());
+    });
+    await t.test('Lambda routes preserve central policy and no-store response contract',async()=>{
+      const {createLambdaHandler}=require('../src/lambda');
+      const {attachRequestContext}=require('../src/api/context');
+      let actor=people[0].actor;
+      const handler=createLambdaHandler({threeRoleService:service,workflowService:workflow,
+        authOptions:{pool,authorizationService:new AuthorizationService({pool}),authMiddleware:async req=>attachRequestContext(req,actor)}});
+      const request=(path,method='GET',body)=>handler({rawPath:path,body:body?JSON.stringify(body):undefined,requestContext:{http:{method}}});
+      const response=await request(`/api/v3/plans/${people[0].plan}/workflow`);
+      assert.equal(response.statusCode,200);assert.equal(response.headers['Cache-Control'],'no-store');
+      assert.equal(JSON.parse(response.body).data.placement.status,'CONFIRMED');
+      const profile=await request('/api/v3/students/me');assert.equal(profile.statusCode,200);
+      const changed=await request('/api/v3/students/me','PATCH',{contact_address:'Synthetic address\nSecond line',version:JSON.parse(profile.body).data.version,operation_id:randomUUID()});
+      assert.equal(changed.statusCode,200);assert.equal(JSON.parse(changed.body).data.contact_phone,'+66 81 000 0000');
+      actor=advisor;
+      assert.equal((await request(`/api/v3/plans/${people[0].plan}/workflow`)).statusCode,403);
+      assert.equal((await request(`/api/v3/plans/${people[1].plan}/placement`,'PATCH',{})).statusCode,403);
+      actor=staff;
+      assert.equal((await request('/api/v3/staff/workflow')).statusCode,200);
+      const page=await service.listAssignments(staff,{page:'1',pageSize:'1',advisor_id:advisorId});
+      assert.equal(page.items.length,1);assert.equal(page.pagination.total,4);
+      const next=await service.listAssignments(staff,{page:'2',pageSize:'1',advisor_id:advisorId});
+      assert.notEqual(page.items[0].id,next.items[0].id);
+      assert.equal((await request(`/api/v3/plans/${people[7].plan}/reject`,'POST',{...command(8),actor:{role:'STAFF'},review_notes:'spoof'})).statusCode,400);
+    });
+    await t.test('out-of-scope and disabled Staff are rejected before data or receipts are exposed',async()=>{
+      const outside=randomUUID();await q(`INSERT INTO users(id,role) VALUES($1,'STAFF')`,[outside]);
+      await q(`INSERT INTO staff_scopes(id,staff_id,department) VALUES($1,$2,'OTHER')`,[randomUUID(),outside]);
+      const other={...staff,userId:outside};
+      await assert.rejects(service.getWorkflow(other,people[0].plan),e=>e.statusCode===403);
+      await assert.rejects(service.assign(other,{...command(5),plan_id:people[0].plan,advisor_id:advisorId,effective_to:'2027-01-01T00:00:00Z'}),e=>e.statusCode===403);
+      await q(`UPDATE users SET account_status='DISABLED' WHERE id=$1`,[outside]);
+      await assert.rejects(service.dashboard(other),e=>e.statusCode===403);
+    });
+    await t.test('runtime ACL permits scoped operations but denies official identity edits and immutable record writes',async()=>{
+      const runtimeRole=`wf_runtime_${randomUUID().replaceAll('-','')}`;
+      let runtimePool;
+      try {
+        await admin.query(`CREATE ROLE ${runtimeRole} NOLOGIN`);
+        const script=(await readFile(new URL('../src/db/operations/v3-runtime-grants.sql',import.meta.url),'utf8'))
+          .replace(/^\\set[^\n]*\n/m,'').replaceAll('public.',`${schema}.`).replaceAll('SCHEMA public',`SCHEMA ${schema}`)
+          .replaceAll("'public'",`'${schema}'`).replaceAll('coed_app',runtimeRole);
+        await q(script);
+        runtimePool=new Pool({connectionString:url.href,options:`-c search_path=${schema},public`,max:3});
+        const {ThreeRoleRepository}=require('../src/db/repositories/three-role-repository');
+        const repository=new ThreeRoleRepository({pool:runtimePool});
+        repository.getClient=async()=>{const c=await runtimePool.connect();await c.query(`SET ROLE ${runtimeRole}`);return c;};
+        const runtime=new ThreeRoleService({threeRoleRepository:repository});
+        assert.equal((await runtime.dashboard(staff)).advisors.length,2);
+        assert.equal((await runtime.getWorkflow(people[0].actor,people[0].plan)).placement.status,'CONFIRMED');
+        const profile=(await q('SELECT version FROM students WHERE id=$1',[people[0].student])).rows[0];
+        const contact=await runtime.saveContact(people[0].actor,{contact_address:'Updated synthetic address',contact_phone:'0810000000',version:profile.version,operation_id:randomUUID()});
+        assert.equal(contact.version,profile.version+1);
+        const c=await repository.getClient();
+        try {
+          await assert.rejects(c.query(`UPDATE students SET full_name='Spoof' WHERE id=$1`,[people[0].student]),e=>e.code==='42501');
+          await assert.rejects(c.query('DELETE FROM workflow_receipts'),e=>e.code==='42501');
+          await assert.rejects(c.query('UPDATE document_policies SET version=999'),e=>e.code==='42501');
+          await assert.rejects(c.query('UPDATE users SET role=\'ADMIN\''),e=>e.code==='42501');
+        }finally{c.release();}
+      } finally {
+        await runtimePool?.end();
+        // Drop only this test's isolated role and its grants; no application data reset.
+        await admin.query(`DROP OWNED BY ${runtimeRole}`);
+        await admin.query(`DROP ROLE ${runtimeRole}`);
+      }
     });
   } finally {
     await pool?.end();

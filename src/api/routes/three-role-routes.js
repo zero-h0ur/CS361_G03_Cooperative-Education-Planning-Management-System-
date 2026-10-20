@@ -6,17 +6,18 @@ const { toStaffReviewCommandResponse } = require('./staff-review-routes');
 const { parseJsonBody, assertAllowedQueryParameters } = require('../router');
 const { sendSuccess } = require('../response');
 const { fields } = require('../services/workflow-input');
+const { ValidationError } = require('../errors');
 function registerThreeRoleRoutes(router, protect, options = {}) {
   const service = options.threeRoleService || new ThreeRoleService({...options.authOptions,...options});
   const workflow = options.workflowService || new WorkflowService({...options.authOptions,repository: options.workflowRepository});
-  const register = (method, pattern, action, resource, handle) => protect(router, {
+  const register = (method, pattern, action, resource, handle, queryKeys=[]) => protect(router, {
     method, pattern, action, authOptions: options.authOptions || {}, resolveResource: resource,
     handler: async (req,res,ctx) => {
-      assertAllowedQueryParameters(ctx.url.searchParams,new Set());
+      assertAllowedQueryParameters(ctx.url.searchParams,new Set(queryKeys));
+      for(const key of queryKeys)if(ctx.url.searchParams.getAll(key).length>1)throw new ValidationError('Duplicate query parameter.');
       const body = method === 'GET' ? null : await parseJsonBody(req);
-      const result = await handle(ctx.authContext,ctx.params?.[0],body);
-      res.setHeader('Cache-Control','no-store');
-      sendSuccess(res,result,200);
+      const result = await handle(ctx.authContext,ctx.params?.[0],body,ctx.url.searchParams);
+      sendSuccess(res,result,200,null,{'Cache-Control':'no-store'});
     }
   });
   const plan = (_req,ctx) => ({planId:ctx.params[0]});
@@ -24,6 +25,10 @@ function registerThreeRoleRoutes(router, protect, options = {}) {
   register('GET',/^\/api\/v3\/plans\/([^/]+)\/workflow$/,ACTIONS.PLAN_LIST_READ,plan,(a,id) => service.getWorkflow(a,id));
   register('PATCH',/^\/api\/v3\/plans\/([^/]+)\/workflow$/,ACTIONS.PLAN_UPDATE_CONTENT,plan,(a,id,b) => service.saveWorkflow(a,id,b));
   register('GET','/api/v3/staff/workflow',ACTIONS.ASSIGNMENT_READ_SCOPED,listing,a => service.dashboard(a));
+  register('GET','/api/v3/staff/advisors',ACTIONS.ASSIGNMENT_READ_SCOPED,listing,async a => (await service.dashboard(a)).advisors);
+  register('GET','/api/v3/staff/assignments',ACTIONS.ASSIGNMENT_READ_SCOPED,listing,
+    (a,_id,_body,query)=>service.listAssignments(a,Object.fromEntries(query)),['page','pageSize','advisor_id']);
+  register('GET',/^\/api\/v3\/plans\/([^/]+)\/placement$/,ACTIONS.PLAN_LIST_READ,plan,async (a,id) => (await service.getWorkflow(a,id)).placement);
   register('POST','/api/v3/staff/document-policies',ACTIONS.WORKFLOW_STAFF_WRITE,listing,(a,_id,b) => service.publish(a,b));
   register('POST','/api/v3/staff/assignments',ACTIONS.WORKFLOW_STAFF_WRITE,listing,(a,_id,b) => service.assign(a,b));
   for (const name of ['revoke','reassign']) register('POST',new RegExp(`^/api/v3/staff/assignments/([^/]+)/${name}$`),
