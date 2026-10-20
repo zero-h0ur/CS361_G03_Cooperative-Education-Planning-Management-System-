@@ -39,6 +39,11 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
+      - name: Verify published documentation links without network access
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test:docs 2>&1 | tee docs-verification.log
       - name: Verify smoke operator safety without AWS access
         shell: bash
         env:
@@ -59,5 +64,6 @@ jobs:
           path: |
             v3-verification.log
             smoke-operator-verification.log
+            docs-verification.log
           if-no-files-found: warn
           retention-days: 14
