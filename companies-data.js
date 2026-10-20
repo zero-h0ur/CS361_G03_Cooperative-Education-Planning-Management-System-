@@ -10,7 +10,7 @@
     "academic_year": 2569,
     "total_companies": 103,
     "recruiting_companies": 24,
-    "updated_at": "2026-10-20T15:22:50.322Z"
+    "updated_at": "2026-10-20T16:36:40.913Z"
   },
   "companies": [
     {
@@ -19,19 +19,20 @@
       "name": "บริษัท ซีดีจี กรุ๊ป จำกัด",
       "location": "กรุงเทพฯ",
       "address": "202 ถนนนางลิ้นจี่ แขวงช่องนนทรี เขตยานนาวา กรุงเทพมหานคร 10120",
-      "logo": null,
+      "logo": "resources/images/company-logos/cdg.png",
       "is_recruiting": true,
+      "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
+      "recruiting_period": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
       "positions_count": 1,
       "positions": [
         {
           "title": "Application Developer ( Trainee )",
           "quota": "5",
           "contact": "วิธีการรับสมัครงาน : ส่ง Resume & Transcript มายัง ta-cdg@cdg.co.th  เพื่อพิจารณาคัดเลือกสัมภาษณ์",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : ส่ง Resume & Transcript มายัง ta-cdg@cdg.co.th  เพื่อพิจารณาคัดเลือกสัมภาษณ์",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -43,17 +44,18 @@
       "address": "ศูนย์เทคโนโลยีอิเล็กทรอนิกส์และคอมพิวเตอร์แห่งชาติ (NECTEC) 112 ถนนพหลโยธิน",
       "logo": "resources/images/nectec.png",
       "is_recruiting": true,
+      "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69",
+      "recruiting_period": "2 มิ.ย. 69 - 1 ธ.ค. 69",
       "positions_count": 1,
       "positions": [
         {
           "title": "AI Research & Development Intern",
           "quota": "2",
           "contact": "วิธีการรับสมัครงาน : สัมภาษณ์ online หรือ onsite ที่ Email :  rungkarn@nectec.or.th",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : สัมภาษณ์ online หรือ onsite ที่ Email :  rungkarn@nectec.or.th",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -65,10 +67,11 @@
       "address": "เลขที่ 93 ถนนรัชดาภิเษก แขวงดินแดง เขตดินแดง กรุงเทพฯ 10400",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -78,31 +81,32 @@
       "name": "ธนาคารกรุงเทพ จำกัด (มหาชน)",
       "location": "กรุงเทพฯ",
       "address": "333 ถนนสีลม แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500",
-      "logo": null,
+      "logo": "resources/images/company-logos/bangkokbank.png",
       "is_recruiting": true,
+      "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69",
+      "recruiting_period": "2 มิ.ย. 69 - 1 ธ.ค. 69",
       "positions_count": 3,
       "positions": [
         {
           "title": "Developer",
           "quota": "9",
           "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Cybersecurity",
           "quota": "9",
           "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Software Tester",
           "quota": "9",
           "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -112,12 +116,13 @@
       "name": "ธนาคารทหารไทยธนชาต จำกัด (มหาชน)",
       "location": "กรุงเทพฯ",
       "address": "ทีทีบี สำนักงานใหญ่  3000 ถนนพหลโยธิน แขวงจอมพล เขตจตุจักร กรุงเทพมหานคร 10900",
-      "logo": null,
+      "logo": "resources/images/company-logos/ttbbank.png",
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -129,10 +134,11 @@
       "address": "ธนาคารไทยพาณิชย์ จำกัด (มหาชน) สำนักงานใหญ่ 9 ถ.รัชดาภิเษก แขวงจตุจักร เขตจตุจักร กรุงเทพฯ 10900",
       "logo": "resources/images/SCB.jpg",
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -144,10 +150,11 @@
       "address": "500 หมู่ 3 ถนนติวานนท์ ตำบลบ้านใหม่ อำเภอปากเกร็ด จังหวัดนนทบุรี 11120",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -159,29 +166,30 @@
       "address": "127/30 อาคารปัญจธานี ชั้น 25 ถนนนนทรี แขวงช่องนนทรี เขตยานนาวา กรุงเทพมหานคร 10120",
       "logo": "resources/images/g-able.png",
       "is_recruiting": true,
+      "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
+      "recruiting_period": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
       "positions_count": 3,
       "positions": [
         {
           "title": "Developer",
           "quota": "9",
           "contact": "วิธีการรับสมัครงาน : Email Thanrada.c@g-able.com , Google Forms https://forms.gle/Tdz4GMNdDgmZL2iU7",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "System Engineer",
           "quota": "9",
           "contact": "วิธีการรับสมัครงาน : Email Thanrada.c@g-able.com , Google Forms https://forms.gle/Tdz4GMNdDgmZL2iU7",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Data Engineer",
           "quota": "9",
           "contact": "วิธีการรับสมัครงาน : Email Thanrada.c@g-able.com , Google Forms https://forms.gle/Tdz4GMNdDgmZL2iU7",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : Email Thanrada.c@g-able.com , Google Forms https://forms.gle/Tdz4GMNdDgmZL2iU7",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -193,10 +201,11 @@
       "address": "313 อาคารซี.พี. ทาวเวอร์ ถนนสีลม แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -208,10 +217,11 @@
       "address": "393 อาคาร 393 สีลม ชั้น 2, 4 และ 5 ถนนสีลม แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -223,10 +233,11 @@
       "address": "2 ห้องเลขที่ 1501-1504 ชั้น 15 อาคารสีลมเอจ ถนนสีลม แขวงสุริยวงศ์ เขตบางรัก กรุงเทพมหานคร 10500",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -236,19 +247,20 @@
       "name": "บริษัท ไทยประกันชีวิต จำกัด (มหาชน)",
       "location": "กรุงเทพฯ",
       "address": "123 อาคารไทยประกันชีวิต 1 ถนนรัชดาภิเษก แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400",
-      "logo": null,
+      "logo": "resources/images/company-logos/thailife.png",
       "is_recruiting": true,
+      "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
+      "recruiting_period": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
       "positions_count": 1,
       "positions": [
         {
           "title": "Business Analyst (BA)",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : ส่งเอกสำรประกอบการพิจารณา (resume และ transcript) และระยะเวลาเข้ามาฝึกงานที่อีเมล kanokluck.key@gmail.com",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : ส่งเอกสำรประกอบการพิจารณา (resume และ transcript) และระยะเวลาเข้ามาฝึกงานที่อีเมล kanokluck.key@gmail.com",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -260,23 +272,24 @@
       "address": "3199 อาคาร มาลีนนท์ ทาวเวอร์ ชั้น 2, 3, 4, 7, 9, 10, 30-34 ถนน พระราม 4 แขวงคลองตัน เขตคลองเตย กรุงเทพมหานคร 10110",
       "logo": null,
       "is_recruiting": true,
+      "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69",
+      "recruiting_period": "2 มิ.ย. 69 - 1 ธ.ค. 69",
       "positions_count": 2,
       "positions": [
         {
           "title": "Software Developer Trainee",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัครตามรูป",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Programmer Trainee",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัครตามรูป",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัครตามรูป",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -286,43 +299,44 @@
       "name": "บริษัท เบทาโกร จำกัด (มหาชน)",
       "location": "กรุงเทพฯ",
       "address": "323 หมู่ที่ 6 แขวงทุ่งสองห้อง เขตหลักสี่ กรุงเทพมหานคร 10210",
-      "logo": null,
+      "logo": "resources/images/company-logos/betagro.png",
       "is_recruiting": true,
+      "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
+      "recruiting_period": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
       "positions_count": 5,
       "positions": [
         {
           "title": "Developer",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : สแกน Qr Code สมัคร ตามรูปตำแหน่ง สอบถามข้อมูลเพิ่มเติม พี่รัตน์ 080-0455376",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Scrum Master",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : สแกน Qr Code สมัคร ตามรูปตำแหน่ง สอบถามข้อมูลเพิ่มเติม พี่รัตน์ 080-0455376",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Data Engineer",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : สแกน Qr Code สมัคร ตามรูปตำแหน่ง สอบถามข้อมูลเพิ่มเติม พี่รัตน์ 080-0455376",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Data Science",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : สแกน Qr Code สมัคร ตามรูปตำแหน่ง สอบถามข้อมูลเพิ่มเติม พี่รัตน์ 080-0455376",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Business Analyst Project Manager Office",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : สแกน Qr Code สมัคร ตามรูปตำแหน่ง สอบถามข้อมูลเพิ่มเติม พี่รัตน์ 080-0455376",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : สแกน Qr Code สมัคร ตามรูปตำแหน่ง สอบถามข้อมูลเพิ่มเติม พี่รัตน์ 080-0455376",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -334,10 +348,11 @@
       "address": "1 ถนนปูนซิเมนต์ไทย แขวงบางซื่อ เขตบางซื่อ กรุงเทพมหานคร 10800",
       "logo": "resources/images/SCG.png",
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -349,10 +364,11 @@
       "address": "131 อาคารกลุ่มนวัตกรรม 1 ชั้นที่ 2 ห้องเลขที่ ไอเอ็นซี 1-201 หมู่ที่ 9 ตำบลคลองหนึ่ง อำเภอคลองหลวง จ.ปทุมธานี",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -364,10 +380,11 @@
       "address": "88 อาคารเดอะ ปาร์ค ชั้น 5, 9-10 ถนนรัชดาภิเษก แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -377,31 +394,32 @@
       "name": "บริษัท เอ็ม 365 (ประเทศไทย) จำกัด",
       "location": "กรุงเทพฯ",
       "address": "287 อาคารลิเบอร์ตี้ สแควร์ ห้องเลขที่ 1804 ชั้นที่ 18 ถนนสีลม แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500",
-      "logo": null,
+      "logo": "resources/images/company-logos/m365.png",
       "is_recruiting": true,
+      "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
+      "recruiting_period": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
       "positions_count": 3,
       "positions": [
         {
           "title": "Software Engineer (full stack) / Business Application Developer (low code)",
           "quota": "1-2 (ขึ้นอยู่กับผลการคัดเลือก)",
           "contact": "วิธีการรับสมัครงาน : ส่งผลการศึกษาและประวัติส่วนตัวสั้นๆ (Resume) ไปที่ email:  info@m365.co.th เพื่อนัดสัมภาษณ์อีกครั้งหนึ่ง (MS Teams Conference)",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Technical Consultant (Security & Infra)",
           "quota": "1-2 (ขึ้นอยู่กับผลการคัดเลือก)",
           "contact": "วิธีการรับสมัครงาน : ส่งผลการศึกษาและประวัติส่วนตัวสั้นๆ (Resume) ไปที่ email:  info@m365.co.th เพื่อนัดสัมภาษณ์อีกครั้งหนึ่ง (MS Teams Conference)",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Data Engineer Trainee",
           "quota": "1-2 (ขึ้นอยู่กับผลการคัดเลือก)",
           "contact": "วิธีการรับสมัครงาน : ส่งผลการศึกษาและประวัติส่วนตัวสั้นๆ (Resume) ไปที่ email:  info@m365.co.th เพื่อนัดสัมภาษณ์อีกครั้งหนึ่ง (MS Teams Conference)",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : ส่งผลการศึกษาและประวัติส่วนตัวสั้นๆ (Resume) ไปที่ email:  info@m365.co.th เพื่อนัดสัมภาษณ์อีกครั้งหนึ่ง (MS Teams Conference)",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -413,10 +431,11 @@
       "address": "118/1 อาคารทิปโก้ ชั้น 21-22 ถนนพระราม 6 แขวงพญาไท เขตพญาไท กรุงเทพมหานคร 10400",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -428,10 +447,11 @@
       "address": "30 หมู่บ้านเศรษฐสิริ ราชพฤกษ์ จรัญฯ ซอยปากน้ำฝั่งเหนือ 11 แขวงคลองชักพระ เขตตลิ่งชัน กรุงเทพมหานคร 10170",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -443,10 +463,11 @@
       "address": "46/6 ถนนป๊อบปูล่า ตำบลบ้านใหม่ อำเภอปากเกร็ด จ.นนทบุรี 11120",
       "logo": "resources/images/KBTG.jpg",
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -458,10 +479,11 @@
       "address": "127 อาคารเกษร ทาวเวอร์ ชั้น 14-16 ถนนราชดำริ",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -471,49 +493,50 @@
       "name": "สำนักงานพัฒนาธุรกรรมทางอิเล็กทรอนิกส์ (สพธอ.)",
       "location": "กรุงเทพฯ",
       "address": "ศูนย์ราชการเฉลิมพระเกียรติ 80 พรรษา (อาคารบี) ชั้นที่ 6 เลขที่ 120 หมู่ที่ 3 ถนนแจ้งวัฒนะ",
-      "logo": null,
+      "logo": "resources/images/company-logos/etda.png",
       "is_recruiting": true,
+      "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69",
+      "recruiting_period": "2 มิ.ย. 69 - 1 ธ.ค. 69",
       "positions_count": 6,
       "positions": [
         {
           "title": "Software Developer (Innovation)",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : ส่งเอกสำรประกอบการพิจารณา (resume และ transcript) และระยะเวลาเข้ามาฝึกงานที่อีเมล hr@etda.or.th",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Data Scientist",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : ส่งเอกสำรประกอบการพิจารณา (resume และ transcript) และระยะเวลาเข้ามาฝึกงานที่อีเมล hr@etda.or.th",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Data Analyst",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : ส่งเอกสำรประกอบการพิจารณา (resume และ transcript) และระยะเวลาเข้ามาฝึกงานที่อีเมล hr@etda.or.th",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Data Engineer",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : ส่งเอกสำรประกอบการพิจารณา (resume และ transcript) และระยะเวลาเข้ามาฝึกงานที่อีเมล hr@etda.or.th",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "AI Adoption Engineer",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : ส่งเอกสำรประกอบการพิจารณา (resume และ transcript) และระยะเวลาเข้ามาฝึกงานที่อีเมล hr@etda.or.th",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "IT Auditor",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : ส่งเอกสำรประกอบการพิจารณา (resume และ transcript) และระยะเวลาเข้ามาฝึกงานที่อีเมล hr@etda.or.th",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : ส่งเอกสำรประกอบการพิจารณา (resume และ transcript) และระยะเวลาเข้ามาฝึกงานที่อีเมล hr@etda.or.th",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -525,35 +548,36 @@
       "address": "อาคาร THE TARA เลขที่ 58/28 หมู่ 2 ถนนแจ้งวัฒนะ ตำบลบางตลาด อำเภอปากเกร็ด จังหวัดนนทบุรี 11120",
       "logo": "resources/images/gosoft.png",
       "is_recruiting": true,
+      "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
+      "recruiting_period": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
       "positions_count": 4,
       "positions": [
         {
           "title": "Cloud Engineer Trainee",
           "quota": "2",
           "contact": "วิธีการรับสมัครงาน :  https://gosoft-thailand.careers-page.com/jobs/e6ee02e1-3ba6-4924-b175-dc87a67a33cd",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Penetration Testing (Pentest) Trainee",
           "quota": "2",
           "contact": "วิธีการรับสมัครงาน :  https://gosoft-thailand.careers-page.com/jobs/e6ee02e1-3ba6-4924-b175-dc87a67a33cd",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Tester / QA Trainee",
           "quota": "2",
           "contact": "วิธีการรับสมัครงาน :  https://gosoft-thailand.careers-page.com/jobs/e6ee02e1-3ba6-4924-b175-dc87a67a33cd",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Software Engineer",
           "quota": "5",
           "contact": "วิธีการรับสมัครงาน :  https://gosoft-thailand.careers-page.com/jobs/e6ee02e1-3ba6-4924-b175-dc87a67a33cd",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน :  https://gosoft-thailand.careers-page.com/jobs/e6ee02e1-3ba6-4924-b175-dc87a67a33cd",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -565,10 +589,11 @@
       "address": "19 อาคารไทยพาณิชย์ ปาร์ค พลาซ่า เวสท์ บี ชั้นที่ 21 ถนนรัชดาภิเษก แขวงจตุจักร เขตจตุจักร กรุงเทพมหานคร 10900",
       "logo": "resources/images/SCB-TechX.png",
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -580,10 +605,11 @@
       "address": "เลขที่ 59 ถนนราษฎร์นิยม ตำบลเนินพระ อำเภอเมืองระยอง จังหวัดระยอง 21150",
       "logo": "resources/images/PTT-Digital.png",
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -595,10 +621,11 @@
       "address": "99/207 หมู่บ้าน นนทรี รีเจ้นท์ หมู่ที่ 4 ถนนราชพฤกษ์ ตำบลบางขนุน อำเภอบางกรวย จ.นนทบุรี",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -610,10 +637,11 @@
       "address": "195 อาคารวัน แบงค็อก ทาวเวอร์ 4 ชั้นที่ 24 ห้องเลขที่ 2411-2412 และชั้นที่ 25 ห้องเลขที่ 2501-2514 ถนนวิทยุ แขวงลุมพินี เขตปทุมวัน กรุงเทพมหานคร 10330",
       "logo": "resources/images/wongnai.png",
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -625,10 +653,11 @@
       "address": "131 อาคารกลุ่มนวัตกรรม 1 ชั้นที่ 2 ห้องเลขที่ ไอเอ็นซี 1-201 หมู่ที่ 9 ตำบลคลองหนึ่ง อำเภอคลองหลวง จ.ปทุมธานี",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -640,10 +669,11 @@
       "address": "1 ถนนปูนซิเมนต์ไทย บางซื่อ กรุงเทพฯ 10800",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -653,25 +683,26 @@
       "name": "บริษัท สยามคูโบต้าคอร์ปอเรชั่น จำกัด",
       "location": "ปทุมธานี",
       "address": "สำนักงานใหญ่ 101/19-24 หมู่ที่ 20 นิคมอุตสาหกรรมนวนคร ต.คลองหนึ่ง อ.คลองหลวง จ.ปทุมธานี 12120",
-      "logo": null,
+      "logo": "resources/images/company-logos/siamkubota.png",
       "is_recruiting": true,
+      "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69",
+      "recruiting_period": "2 มิ.ย. 69 - 1 ธ.ค. 69",
       "positions_count": 2,
       "positions": [
         {
           "title": "Software developer – Web & Mobile",
           "quota": "2",
           "contact": "วิธีการรับสมัครงาน : อีเมล: Kanchana.o@kubota.com   พร้อมแนบ Resume+ผลการเรียนปีล่าสุด โดยผลการเรียน 2.7 ขึ้นไป",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Cloud Management Engineer",
           "quota": "2",
           "contact": "วิธีการรับสมัครงาน : อีเมล: Kanchana.o@kubota.com   พร้อมแนบ Resume+ผลการเรียนปีล่าสุด โดยผลการเรียน 2.7 ขึ้นไป",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : อีเมล: Kanchana.o@kubota.com   พร้อมแนบ Resume+ผลการเรียนปีล่าสุด โดยผลการเรียน 2.7 ขึ้นไป",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -683,10 +714,11 @@
       "address": "48/12 อาคารทิสโก้ทาวเวอร์ ชั้น 6 ถนนสาทรเหนือ แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -698,10 +730,11 @@
       "address": "121/1-2 ถนนเพชรบุรี แขวงทุ่งพญาไท เขตราชเทวี กรุงเทพฯ 10400",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -713,17 +746,18 @@
       "address": "112 Phahonyothin Road, Khlong Nueng,  Khlong Luang District, Pathumthani 12120, Thailand",
       "logo": "resources/images/nectec.png",
       "is_recruiting": true,
+      "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69",
+      "recruiting_period": "2 มิ.ย. 69 - 1 ธ.ค. 69",
       "positions_count": 1,
       "positions": [
         {
           "title": "AI Research & Development Intern",
           "quota": "2",
           "contact": "วิธีการรับสมัครงาน : สัมภาษณ์ online หรือ onsite ที่ Email :  rungkarn@nectec.or.th",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : สัมภาษณ์ online หรือ onsite ที่ Email :  rungkarn@nectec.or.th",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -735,41 +769,42 @@
       "address": "999/9 อาคารดิออฟฟิศเศส แอท เซ็นทรัลเวิลด์ ชั้น 6-9, 11-12, 16, 22, 27, 36 และ44 ถนนพระราม 1 แขวงปทุมวัน เขตปทุมวัน กรุงเทพมหานคร 10330",
       "logo": "resources/images/agoda.jpg",
       "is_recruiting": true,
+      "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
+      "recruiting_period": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
       "positions_count": 5,
       "positions": [
         {
           "title": "Tech Cooperative Intern roles:",
           "quota": "-",
-          "contact": "วิธีการรับสมัครงาน : Tech Cooperative Intern roles:\n(small yellow diamond)Full-stack\nhttps://grnh.se/gmfog4i71us   \n(small yellow diamond)Back-end\nhttps://grnh.se/rs9t5v0u1us",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "contact": "วิธีการรับสมัครงาน : Tech Cooperative Intern roles:\r\n(small yellow diamond)Full-stack\r\nhttps://grnh.se/gmfog4i71us   \r\n(small yellow diamond)Back-end\r\nhttps://grnh.se/rs9t5v0u1us",
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Full-stack",
           "quota": "-",
-          "contact": "วิธีการรับสมัครงาน : Tech Cooperative Intern roles:\n(small yellow diamond)Full-stack\nhttps://grnh.se/gmfog4i71us   \n(small yellow diamond)Back-end\nhttps://grnh.se/rs9t5v0u1us",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "contact": "วิธีการรับสมัครงาน : Tech Cooperative Intern roles:\r\n(small yellow diamond)Full-stack\r\nhttps://grnh.se/gmfog4i71us   \r\n(small yellow diamond)Back-end\r\nhttps://grnh.se/rs9t5v0u1us",
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "https://grnh.se/gmfog4i71us",
           "quota": "-",
-          "contact": "วิธีการรับสมัครงาน : Tech Cooperative Intern roles:\n(small yellow diamond)Full-stack\nhttps://grnh.se/gmfog4i71us   \n(small yellow diamond)Back-end\nhttps://grnh.se/rs9t5v0u1us",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "contact": "วิธีการรับสมัครงาน : Tech Cooperative Intern roles:\r\n(small yellow diamond)Full-stack\r\nhttps://grnh.se/gmfog4i71us   \r\n(small yellow diamond)Back-end\r\nhttps://grnh.se/rs9t5v0u1us",
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Back-end",
           "quota": "-",
-          "contact": "วิธีการรับสมัครงาน : Tech Cooperative Intern roles:\n(small yellow diamond)Full-stack\nhttps://grnh.se/gmfog4i71us   \n(small yellow diamond)Back-end\nhttps://grnh.se/rs9t5v0u1us",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "contact": "วิธีการรับสมัครงาน : Tech Cooperative Intern roles:\r\n(small yellow diamond)Full-stack\r\nhttps://grnh.se/gmfog4i71us   \r\n(small yellow diamond)Back-end\r\nhttps://grnh.se/rs9t5v0u1us",
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "https://grnh.se/rs9t5v0u1us",
           "quota": "-",
-          "contact": "วิธีการรับสมัครงาน : Tech Cooperative Intern roles:\n(small yellow diamond)Full-stack\nhttps://grnh.se/gmfog4i71us   \n(small yellow diamond)Back-end\nhttps://grnh.se/rs9t5v0u1us",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "contact": "วิธีการรับสมัครงาน : Tech Cooperative Intern roles:\r\n(small yellow diamond)Full-stack\r\nhttps://grnh.se/gmfog4i71us   \r\n(small yellow diamond)Back-end\r\nhttps://grnh.se/rs9t5v0u1us",
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
-      "contact": "วิธีการรับสมัครงาน : Tech Cooperative Intern roles:\n(small yellow diamond)Full-stack\nhttps://grnh.se/gmfog4i71us   \n(small yellow diamond)Back-end\nhttps://grnh.se/rs9t5v0u1us",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
+      "contact": "วิธีการรับสมัครงาน : Tech Cooperative Intern roles:\r\n(small yellow diamond)Full-stack\r\nhttps://grnh.se/gmfog4i71us   \r\n(small yellow diamond)Back-end\r\nhttps://grnh.se/rs9t5v0u1us",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -779,12 +814,13 @@
       "name": "กลุ่มบริษัทแอดวานซ์ อินโฟร์ เซอร์วิส จำกัด (มหาชน)",
       "location": "กรุงเทพฯ",
       "address": "เลขที่ 414 อาคาร เอไอเอส 1 ถนนพหลโยธิน แขวงสามเสนใน เขตพญาไท กรุงเทพฯ 10400",
-      "logo": null,
+      "logo": "resources/images/company-logos/ais.png",
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -794,12 +830,13 @@
       "name": "บริษัท บางจาก คอร์ปอเรชั่น จำกัด (มหาชน)",
       "location": "กรุงเทพฯ",
       "address": "2098 อาคารเอ็ม ทาวเวอร์ ชั้นที่ 8 ถนนสุขุมวิท แขวงพระโขนงใต้ เขตพระโขนง กรุงเทพมหานคร 10260",
-      "logo": null,
+      "logo": "resources/images/company-logos/bangchak.png",
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -811,10 +848,11 @@
       "address": "110/1 ถนนกรุงธนบุรี แขวงบางลำภูล่าง เขตคลองสาน กรุงเทพมหานคร 10600",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -826,10 +864,11 @@
       "address": "22 ซอยสมคิด ถนนเพลินจิต แขวงลุมพินี เขตปทุมวัน กรุงเทพมหานคร 10330",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -841,10 +880,11 @@
       "address": "499 ถนนกำแพงเพชร 6 แขวงลาดยาว เขตจตุจักร กรุงเทพมหานคร 10900",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -856,10 +896,11 @@
       "address": "171 ซอยพระรามที่ 3 ซ.77 แขวงช่องนนทรี เขตยานนาวา กรุงเทพมหานคร 10120",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -871,10 +912,11 @@
       "address": "3195/17-29 ถนนพระราม 4 แขวงคลองตัน เขตคลองเตย กรุงเทพมหานคร 10110",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -886,35 +928,36 @@
       "address": "9 อาคารจี ทาวเวอร์ แกรนด์ พระราม 9 ห้องเลขที่ จีเอ็น 01-04 ชั้น 34-39 ถนนพระราม 9 แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพมหานคร 10310",
       "logo": "resources/images/huawei.jpg",
       "is_recruiting": true,
+      "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
+      "recruiting_period": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
       "positions_count": 4,
       "positions": [
         {
           "title": "Telecomunication",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Cloud",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Digital Power",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Corporate function",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -926,10 +969,11 @@
       "address": "3 อาคารพร้อมพันธุ์ 3 ชั้นที่ 16 ห้องเลขที่ 1608-1614 ซอยลาดพร้าว 3 ถนนลาดพร้าว แขวงจอมพล เขตจตุจักร กรุงเทพมหานคร 10900",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -941,10 +985,11 @@
       "address": "8 ถนนรางน้ำ แขวงถนนพญาไท เขตราชเทวี กรุงเทพมหานคร 10400",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -956,10 +1001,11 @@
       "address": "968 U Chu Liang Building, 34th Floor, Silom, Bang Rak, Bangkok 10500, Thailand",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -971,10 +1017,11 @@
       "address": "77/77 หมู่ที่ 5 ตำบลรัษฎา อำเภอเมืองภูเก็ต จ.ภูเก็ต 83000",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -986,10 +1033,11 @@
       "address": "170/74-83 อาคารโอเชี่ยนทาวเวอร์ 1 ถนนรัชดาภิเษก แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1001,10 +1049,11 @@
       "address": "999/9 อาคารดิ ออฟฟิศเศส แอท เซ็นทรัลเวิลด์ ชั้น 16 ห้อง OFML1605-6 ถนนพระราม1 แขวงปทุมวัน เขตปทุมวัน กรุงเทพมหานคร 10330",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1016,10 +1065,11 @@
       "address": "1/7 ซอยลาดพร้าว 64 แยก 4 แขวงวังทองหลาง เขตวังทองหลาง กรุงเทพมหานคร 10310",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1029,19 +1079,20 @@
       "name": "ธนาคารเกียรตินาคินภัทร จำกัด (มหาชน)",
       "location": "กรุงเทพฯ",
       "address": "209 อาคารเคเคพี ทาวเวอร์ ถนนสุขุมวิท 21 (อโศก) แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพมหานคร 10110",
-      "logo": null,
+      "logo": "resources/images/company-logos/kkp.png",
       "is_recruiting": true,
+      "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69",
+      "recruiting_period": "2 มิ.ย. 69 - 1 ธ.ค. 69",
       "positions_count": 1,
       "positions": [
         {
           "title": "Software Engineer Intern",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : ส่ง Resume และ Portfolio ที่ Email : joinus@dime.co.th หรือ 02-1655555 สแกน QR code สมัคร",
-          "duration": "ช่วงระหว่างวันที่ 2 มิถุนายน 2569 - วันที่ 1 ธันวาคม 2569"
+          "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : ส่ง Resume และ Portfolio ที่ Email : joinus@dime.co.th หรือ 02-1655555 สแกน QR code สมัคร",
-      "recruiting_period": "ช่วงระหว่างวันที่ 2 มิถุนายน 2569 - วันที่ 1 ธันวาคม 2569",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1053,10 +1104,11 @@
       "address": "88/111 ต.บางพูน อ.เมือง จ.ปทุมธานี",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1068,10 +1120,11 @@
       "address": "1 อาคารเอ็มไพร์ ทาวเวอร์ ชั้นที่ 35 ห้องเลขที่ 3510,3511 ถนนสาทรใต้ แขวงยานนาวา เขตสาทร กรุงเทพมหานคร 10120",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1083,10 +1136,11 @@
       "address": "9/196 ซอยรัชประชา 4 ถนนรัชดาภิเษก แขวงจตุจักร เขตจตุจักร กรุงเทพมหานคร 10900",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1096,19 +1150,20 @@
       "name": "บริษัท ดาต้าฟาร์ม จำกัด",
       "location": "กรุงเทพฯ",
       "address": "3 อาคารซี.พี.ทาวเวอร์ 2 (ฟอร์จูนทาวน์) ชั้น 21 ถนนรัชดาภิเษก แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400",
-      "logo": null,
+      "logo": "resources/images/company-logos/datafarm.png",
       "is_recruiting": true,
+      "duration": "เปิดรับตลอดทั้งปี",
+      "recruiting_period": "เปิดรับตลอดทั้งปี",
       "positions_count": 1,
       "positions": [
         {
           "title": "Security Testing",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : ส่งผลการศึกษาและ Resume ไปที่ email:   df-hr@datafarm.co.th",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : ส่งผลการศึกษาและ Resume ไปที่ email:   df-hr@datafarm.co.th",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1120,10 +1175,11 @@
       "address": "111 ทรูดิจิทัล พาร์ค เวสต์ อาคารยูนิคอร์น ชั้น 5 ห้อง SH561 และ SH564 ถนนสุขุมวิท แขวงบางจาก เขตพระโขนง กรุงเทพมหานคร 10260",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1135,29 +1191,30 @@
       "address": "1222 อาคารธนาคารกรุงศรีอยุธยา จำกัด (มหาชน) สำนักงานใหญ่ ชั้นที่ 21 ถนนพระรามที่ 3 แขวงบางโพงพาง เขตยานนาวา กรุงเทพมหานคร 10120",
       "logo": "resources/images/krungsri.jpg",
       "is_recruiting": true,
+      "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69",
+      "recruiting_period": "2 มิ.ย. 69 - 1 ธ.ค. 69",
       "positions_count": 3,
       "positions": [
         {
           "title": "Developer",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน QR code สมัคร",
-          "duration": "ช่วงระหว่างวันที่ 2 มิถุนายน 2569 - วันที่ 1 ธันวาคม 2569"
+          "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69"
         },
         {
           "title": "System Analyst",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน QR code สมัคร",
-          "duration": "ช่วงระหว่างวันที่ 2 มิถุนายน 2569 - วันที่ 1 ธันวาคม 2569"
+          "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69"
         },
         {
           "title": "Software Tester/QA",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน QR code สมัคร",
-          "duration": "ช่วงระหว่างวันที่ 2 มิถุนายน 2569 - วันที่ 1 ธันวาคม 2569"
+          "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69"
         }
       ],
       "contact": "วิธีการรับสมัครงาน :  สแกน QR code สมัคร",
-      "recruiting_period": "ช่วงระหว่างวันที่ 2 มิถุนายน 2569 - วันที่ 1 ธันวาคม 2569",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1169,10 +1226,11 @@
       "address": "37/29 หมู่ที่ 3 ตำบลคูคต อำเภอลำลูกกา จ.ปทุมธานี 12130",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1184,17 +1242,18 @@
       "address": "เลขที่ 71 หมู่ 3 ถนนตัดใหม่ ต. บ้านใหม่ ปากเกร็ด นนทบุรี ประเทศไทย 11120",
       "logo": null,
       "is_recruiting": true,
+      "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
+      "recruiting_period": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
       "positions_count": 1,
       "positions": [
         {
           "title": "Mobile Developer (React Naive)",
           "quota": "2",
-          "contact": "วิธีการรับสมัครงาน : ส่งใบ Transcript และ Resume ที่ E-mail :\nKanyarat.C@Deriveteam.onmicrosoft.com CC: Derive.in8@gmail.com, คุณกัลยรัตน์ เบอร์โทรศัพท์\n0649340533\nSubject ของ E-mail : ชื่อ-นามสกุล ของ นักศึกษา เพื่อนัดสัมภาษณ์",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "contact": "วิธีการรับสมัครงาน : ส่งใบ Transcript และ Resume ที่ E-mail :\r\nKanyarat.C@Deriveteam.onmicrosoft.com CC: Derive.in8@gmail.com, คุณกัลยรัตน์ เบอร์โทรศัพท์\r\n0649340533\r\nSubject ของ E-mail : ชื่อ-นามสกุล ของ นักศึกษา เพื่อนัดสัมภาษณ์",
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
-      "contact": "วิธีการรับสมัครงาน : ส่งใบ Transcript และ Resume ที่ E-mail :\nKanyarat.C@Deriveteam.onmicrosoft.com CC: Derive.in8@gmail.com, คุณกัลยรัตน์ เบอร์โทรศัพท์\n0649340533\nSubject ของ E-mail : ชื่อ-นามสกุล ของ นักศึกษา เพื่อนัดสัมภาษณ์",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
+      "contact": "วิธีการรับสมัครงาน : ส่งใบ Transcript และ Resume ที่ E-mail :\r\nKanyarat.C@Deriveteam.onmicrosoft.com CC: Derive.in8@gmail.com, คุณกัลยรัตน์ เบอร์โทรศัพท์\r\n0649340533\r\nSubject ของ E-mail : ชื่อ-นามสกุล ของ นักศึกษา เพื่อนัดสัมภาษณ์",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1206,10 +1265,11 @@
       "address": "1011 ถนนพระราม 3 แขวงช่องนนทรี เขตยานนาวา กรุงเทพมหานคร 10120",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1221,35 +1281,36 @@
       "address": "9 อาคารจี ทาวเวอร์ แกรนด์ พระราม 9 ห้องเลขที่ จีเอ็น 01-04 ชั้น 34-39 ถนนพระราม 9 แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพมหานคร 10310",
       "logo": "resources/images/huawei.jpg",
       "is_recruiting": true,
+      "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
+      "recruiting_period": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
       "positions_count": 4,
       "positions": [
         {
           "title": "Telecomunication",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Cloud",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Digital Power",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Corporate function",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน :  สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1261,10 +1322,11 @@
       "address": "160/170-2 อาคารไอทีเอฟ-สีลมพาเลส ชั้น 13 ถนนสีลม แขวงสุริยวงศ์ เขตบางรัก กรุงเทพมหานคร 10500",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1276,10 +1338,11 @@
       "address": "313 อาคารซี.พี.ทาวเวอร์ ชั้นที่ 24 ถนนสีลม แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500",
       "logo": "resources/images/CP-ALL.png",
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1289,12 +1352,13 @@
       "name": "บริษัทบิ๊กซี ซูเปอร์เซ็นเตอร์ จํากัด (มหาชน)",
       "location": "กรุงเทพฯ",
       "address": "88/9 ซอยสมานฉันท์ - บาร์โบส แขวงพระโขนง เขตคลองเตย กรุงเทพมหานคร",
-      "logo": null,
+      "logo": "resources/images/company-logos/bigc.png",
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1306,10 +1370,11 @@
       "address": "1371 อาคารแคปปิตอลแมนชั่น แขวงพญาไท เขตพญาไท กรุงเทพมหานคร 10400",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1321,10 +1386,11 @@
       "address": "30/88 หมู่ที่ 1 ถนนเจษฎาวิถี ตำบลโคกขาม อำเภอเมืองสมุทรสาคร จ.สมุทรสาคร 74000",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1336,10 +1402,11 @@
       "address": "101 ทรู ดิจิทัล พาร์ค อาคารฟีนิกซ์ ชั้น 9-10 ถนนสุขุมวิท แขวงบางจาก เขตพระโขนง กรุงเทพมหานคร 10260",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1351,10 +1418,11 @@
       "address": "84/4 ซอยสุขุมวิท 62 ถนนสุขุมวิท แขวงบางจาก เขตพระโขนง กรุงเทพมหานคร 10260",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1366,10 +1434,11 @@
       "address": "110/1 อาคารเคเอกซ์ ชั้นที่ 18 ถนนกรุงธนบุรี แขวงบางลำภูล่าง เขตคลองสาน กรุงเทพมหานคร 10600",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1379,31 +1448,32 @@
       "name": "บริษัท เฮาส์ออฟเดฟ เทคโนโลยี จำกัด",
       "location": "กรุงเทพฯ",
       "address": "15 อาคารรัจนาการ ชั้น12บี ซอยประดิพัทธ์ 17 ถนนประดิพัทธ์ แขวงพญาไท เขตพญาไท กรุงเทพมหานคร 10400",
-      "logo": null,
+      "logo": "resources/images/company-logos/houseofdev.png",
       "is_recruiting": true,
+      "duration": "เปิดรับตลอดทั้งปี",
+      "recruiting_period": "เปิดรับตลอดทั้งปี",
       "positions_count": 3,
       "positions": [
         {
           "title": "Developer",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Management",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Designer",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : สแกน Qr Code สมัคร ตามรูปตำแหน่ง",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1415,10 +1485,11 @@
       "address": "523 ถนนมหาพฤฒาราม แขวงมหาพฤฒาราม เขตบางรัก กรุงเทพมหานคร 10500",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1430,10 +1501,11 @@
       "address": "625 อาคารทัศนียา ห้องเลขที่ ยูนิตดี ชั้นที่ 5 ซอยรามคำแหง 39 ถนนประชาอุทิศ แขวงวังทองหลาง เขตวังทองหลาง กรุงเทพมหานคร 10310",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1445,10 +1517,11 @@
       "address": "102 ถนนณ ระนอง แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1458,25 +1531,26 @@
       "name": "บริษัท โมบาย คอนเน็ค จำกัด",
       "location": "กรุงเทพฯ",
       "address": "1111/84 ถนนลาดพร้าว แขวงจันทรเกษม เขตจตุจักร กรุงเทพมหานคร 10900",
-      "logo": null,
+      "logo": "resources/images/company-logos/mobileconnect.png",
       "is_recruiting": true,
+      "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69",
+      "recruiting_period": "2 มิ.ย. 69 - 1 ธ.ค. 69",
       "positions_count": 2,
       "positions": [
         {
           "title": "Devops & Cloud administrator",
           "quota": "1",
           "contact": "วิธีการรับสมัครงาน : ส่ง email CV มาที่ hr@mobileconnect.co.th",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Web developer",
           "quota": "1",
           "contact": "วิธีการรับสมัครงาน : ส่ง email CV มาที่ hr@mobileconnect.co.th",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : ส่ง email CV มาที่ hr@mobileconnect.co.th",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1488,10 +1562,11 @@
       "address": "193/136-137 อาคารเลครัชดา ชั้น 33 ถนนรัชดาภิเษก แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1503,10 +1578,11 @@
       "address": "1 ถนนปูนซิเมนต์ไทย แขวงบางซื่อ เขตบางซื่อ กรุงเทพมหานคร 10800",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1518,10 +1594,11 @@
       "address": "11/1 ซอยประชาราษฎร์ 14 แยก 1 ตำบลตลาดขวัญ อำเภอเมืองนนทบุรี จ.นนทบุรี 11000",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1533,10 +1610,11 @@
       "address": "198/426 หมู่ที่ 7ซอย 2 ตำบลมหาสวัสดิ์ อำเภอบางกรวย จ.นนทบุรี 11130",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1546,12 +1624,13 @@
       "name": "บริษัท แคนนอน ไฮ-เทค (ประเทศไทย) จำกัด",
       "location": "พระนครศรีอยุธยา",
       "address": "89 หมู่ที่ 1 ตำบลบ้านเลน อำเภอบางปะอิน จ.พระนครศรีอยุธยา 13160",
-      "logo": null,
+      "logo": "resources/images/company-logos/canon.png",
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1561,31 +1640,32 @@
       "name": "บริษัท เวอร์นิตี้ จำกัด",
       "location": "นนทบุรี",
       "address": "111/151 หมู่ที่ 9 ตำบลบางพูด อำเภอปากเกร็ด จ.นนทบุรี 11120",
-      "logo": null,
+      "logo": "resources/images/company-logos/vernity.png",
       "is_recruiting": true,
+      "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69",
+      "recruiting_period": "2 มิ.ย. 69 - 1 ธ.ค. 69",
       "positions_count": 3,
       "positions": [
         {
           "title": "Business Analyst (BA)",
           "quota": "2",
           "contact": "วิธีการรับสมัครงาน : ส่ง Resume และ Portfolio ที่ Email : pattara@vernity.com หรือ 089-6983522 (คุณลม) ID Line : lomshi",
-          "duration": "ช่วงระหว่างวันที่ 2 มิถุนายน 2569 - วันที่ 1 ธันวาคม 2569"
+          "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69"
         },
         {
           "title": "Software Developer (Full Stack Developer)",
           "quota": "2",
           "contact": "วิธีการรับสมัครงาน : ส่ง Resume และ Portfolio ที่ Email : pattara@vernity.com หรือ 089-6983522 (คุณลม) ID Line : lomshi",
-          "duration": "ช่วงระหว่างวันที่ 2 มิถุนายน 2569 - วันที่ 1 ธันวาคม 2569"
+          "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69"
         },
         {
           "title": "Software Tester",
           "quota": "1",
           "contact": "วิธีการรับสมัครงาน : ส่ง Resume และ Portfolio ที่ Email : pattara@vernity.com หรือ 089-6983522 (คุณลม) ID Line : lomshi",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : ส่ง Resume และ Portfolio ที่ Email : pattara@vernity.com หรือ 089-6983522 (คุณลม) ID Line : lomshi",
-      "recruiting_period": "ช่วงระหว่างวันที่ 2 มิถุนายน 2569 - วันที่ 1 ธันวาคม 2569",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1597,10 +1677,11 @@
       "address": "1111/127 ถนนลาดพร้าว แขวงจันทรเกษม เขตจตุจักร กรุงเทพมหานคร 10900",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1612,10 +1693,11 @@
       "address": "719/5,8-9 ถนนพระรามที่ 6 แขวงวังใหม่ เขตปทุมวัน กรุงเทพมหานคร",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1627,10 +1709,11 @@
       "address": "อาคารพาราไดซ์ เพลส ห้องเลขที่ 3801 ชั้น 3 เลขที่ 59/5 ถ.ศรีนครินทร์ แขวงหนองบอน เขตประเวศ กรุงเทพฯ 10250",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1642,29 +1725,30 @@
       "address": "1222 ถนนพระรามที่ 3 แขวงบางโพงพาง เขตยานนาวา กรุงเทพมหานคร 10120",
       "logo": "resources/images/krungsri.jpg",
       "is_recruiting": true,
+      "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69",
+      "recruiting_period": "2 มิ.ย. 69 - 1 ธ.ค. 69",
       "positions_count": 3,
       "positions": [
         {
           "title": "Developer",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน QR code สมัคร",
-          "duration": "ช่วงระหว่างวันที่ 2 มิถุนายน 2569 - วันที่ 1 ธันวาคม 2569"
+          "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69"
         },
         {
           "title": "System Analyst",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน QR code สมัคร",
-          "duration": "ช่วงระหว่างวันที่ 2 มิถุนายน 2569 - วันที่ 1 ธันวาคม 2569"
+          "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69"
         },
         {
           "title": "Software Tester/QA",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน :  สแกน QR code สมัคร",
-          "duration": "ช่วงระหว่างวันที่ 2 มิถุนายน 2569 - วันที่ 1 ธันวาคม 2569"
+          "duration": "2 มิ.ย. 69 - 1 ธ.ค. 69"
         }
       ],
       "contact": "วิธีการรับสมัครงาน :  สแกน QR code สมัคร",
-      "recruiting_period": "ช่วงระหว่างวันที่ 2 มิถุนายน 2569 - วันที่ 1 ธันวาคม 2569",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1674,25 +1758,26 @@
       "name": "บริษัท นิภา เทคโนโลยี จำกัด",
       "location": "กรุงเทพฯ",
       "address": "บริษัท นิภา เทคโนโลยี จำกัด (สำนักงานใหญ่) 72 อาคารโทรคมนาคม บางรัก ชั้น 4 ห้อง 401-402 ถนนเจริญกรุง แขวงบางรัก เขตบางรัก กรุงเทพมหานคร 10500",
-      "logo": null,
+      "logo": "resources/images/company-logos/nipacloud.png",
       "is_recruiting": true,
+      "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
+      "recruiting_period": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)",
       "positions_count": 2,
       "positions": [
         {
           "title": "full-stack developers.",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : ส่งเอกสำรประกอบการพิจารณา (resume และ transcript) และระยะเวลาเข้ามาฝึกงานที่อีเมล pailin@nipa.cloud",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         },
         {
           "title": "Software Engineer (Internship)",
           "quota": "-",
           "contact": "วิธีการรับสมัครงาน : ส่งเอกสำรประกอบการพิจารณา (resume และ transcript) และระยะเวลาเข้ามาฝึกงานที่อีเมล pailin@nipa.cloud",
-          "duration": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)"
+          "duration": "มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)"
         }
       ],
       "contact": "วิธีการรับสมัครงาน : ส่งเอกสำรประกอบการพิจารณา (resume และ transcript) และระยะเวลาเข้ามาฝึกงานที่อีเมล pailin@nipa.cloud",
-      "recruiting_period": "ช่วงระหว่างเดือนมิถุนายน 2569 - เดือนธันวาคม 2569 (ไม่น้อยกว่า 6 เดือน)",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1702,12 +1787,13 @@
       "name": "บริษัท ดีไอทีซี  จำกัด",
       "location": "กรุงเทพฯ",
       "address": "178 อาคารธรรมนิติ ชั้น 4 ซอยเพิ่มทรัพย์ (ประชาชื่น20) ถนนประชาชื่น แขวงบางซื่อ เขตบางซื่อ กรุงเทพฯ 10800",
-      "logo": null,
+      "logo": "resources/images/company-logos/ditc.png",
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1717,12 +1803,13 @@
       "name": "บริษัท โตโยต้า มอเตอร์ ประเทศไทย จำกัด",
       "location": "สมุทรปราการ",
       "address": "186/1 หมู่ 1 ถ.ทางรถไฟเก่า ต.สำโรงใต้ อ.พระประแดง จ.สมุทรปราการ 10130",
-      "logo": null,
+      "logo": "resources/images/company-logos/toyota.png",
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1734,10 +1821,11 @@
       "address": "990 อาคารอับดุลราฮิม เพลส ห้องเลขที่ 2110 ชั้น 21 ถนนพระรามที่ 4 แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1749,10 +1837,11 @@
       "address": "260 หมู่ 4 ต. ดอนแก้ว อ. แม่ริม จ. เชียงใหม่ 50180",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1764,10 +1853,11 @@
       "address": "252/69 อาคารเมืองไทย-ภัทร คอมเพล็กซ์ อาคารบี ชั้น 2 ถนนรัชดาภิเษก แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพมหานคร 10310",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1779,10 +1869,11 @@
       "address": "1115 ถนนพระราม 3 แขวงช่องนนทรี เขตยานนาวา กรุงเทพมหานคร 10120",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1794,10 +1885,11 @@
       "address": "35 ถนนสุขุมวิท แขวงคลองตันเหนือ เขตวัฒนา กรุงเทพมหานคร 10110",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1809,10 +1901,11 @@
       "address": "98 อาคารสาทรสแควร์ ออฟฟิศ ทาวเวอร์ ชั้น 37 ถนนสาทรเหนือ แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1824,10 +1917,11 @@
       "address": "80/359 หมู่ที่ 3 ซ. คลองหลวง 26 ถ. พหลโยธิน ต.คลองหนึ่ง อ.คลองหลวง ปทุมธานี 12120 ประเทศไทย",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1839,10 +1933,11 @@
       "address": "111 ทรูดิจิทัล พาร์ค เวสต์ อาคารยูนิคอร์น ชั้น 5 ห้อง SH554 ถนนสุขุมวิท แขวงบางจาก เขตพระโขนง กรุงเทพมหานคร 10260",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1854,10 +1949,11 @@
       "address": "บริษัทหลักทรัพย์ อินโนเวสท์ เอกซ์ จำกัด ไทยพาณิชย์ ปาร์ค พลาซ่า เลขที่ 18 อาคาร 1 ชั้น 2, 4 ถนนรัชดาภิเษก แขวงจตุจักร เขตจตุจักร กรุงเทพมหานคร 10900",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1869,10 +1965,11 @@
       "address": "18 อาคารไทยพาณิชย์ ปาร์ค พลาซ่า เวสท์ บี ชั้นที่ 7 ถนนรัชดาภิเษก แขวงจตุจักร เขตจตุจักร กรุงเทพมหานคร 10900",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1884,10 +1981,11 @@
       "address": "979/49-50 อาคารเอส เอ็ม ทาวเวอร์ ชั้นที่ 20 ถนนพหลโยธิน แขวงพญาไท เขตพญาไท กรุงเทพมหานคร 10400",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1899,10 +1997,11 @@
       "address": "89 อาคารเอไอเอ แคปปิตอล เซ็นเตอร์ ชั้นที่ 15 ถนนรัชดาภิเษก แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1914,10 +2013,11 @@
       "address": "60 หมู่ 6 ตำบลคลองหนึ่ง อำเภอคลองหลวง จังหวัดปทุมธานี 12120",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1929,10 +2029,11 @@
       "address": "เลขที่ 32 หมู่ 2 ถนนปู่เจ้าสมิงพราย ตำบลสำโรงกลาง อำเภอพระประแดง จังหวัดสมุทรปราการ 10130",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1944,10 +2045,11 @@
       "address": "อาคารทรู ดิจิทัล พาร์ค อาคารฟีนิกซ์ ชั้น 7-8 ถนนสุขุมวิท เขตพระโขนง กรุงเทพฯ 10260",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     },
@@ -1959,10 +2061,11 @@
       "address": "306 เซ็นทรัลสีลมทาวเวอร์ ชั้น 5,6,7,8 ถนนสีลม แขวงสุริยวงศ์ เขตบางรัก กรุงเทพมหานคร 10500",
       "logo": null,
       "is_recruiting": false,
+      "duration": null,
+      "recruiting_period": null,
       "positions_count": 0,
       "positions": [],
       "contact": "",
-      "recruiting_period": "",
       "academic_year": 2569,
       "data_status": "verified"
     }

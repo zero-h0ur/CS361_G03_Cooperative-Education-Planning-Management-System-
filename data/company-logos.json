@@ -1,0 +1,170 @@
+{
+  "bangkokbank": {
+    "path": "resources/images/company-logos/bangkokbank.png",
+    "keywords": [
+      "ธนาคารกรุงเทพ",
+      "bangkok bank"
+    ]
+  },
+  "cdg": {
+    "path": "resources/images/company-logos/cdg.png",
+    "keywords": [
+      "ซีดีจี",
+      "cdg"
+    ]
+  },
+  "vernity": {
+    "path": "resources/images/company-logos/vernity.png",
+    "keywords": [
+      "เวอร์นิตี้",
+      "vernity"
+    ]
+  },
+  "mobileconnect": {
+    "path": "resources/images/company-logos/mobileconnect.png",
+    "keywords": [
+      "โมบาย คอนเน็ค",
+      "mobile connect"
+    ]
+  },
+  "houseofdev": {
+    "path": "resources/images/company-logos/houseofdev.png",
+    "keywords": [
+      "เฮาส์ออฟเดฟ",
+      "house of dev"
+    ]
+  },
+  "siamkubota": {
+    "path": "resources/images/company-logos/siamkubota.png",
+    "keywords": [
+      "คูโบต้า",
+      "kubota"
+    ]
+  },
+  "datafarm": {
+    "path": "resources/images/company-logos/datafarm.png",
+    "keywords": [
+      "ดาต้าฟาร์ม",
+      "data farm"
+    ]
+  },
+  "m365": {
+    "path": "resources/images/company-logos/m365.png",
+    "keywords": [
+      "เอ็ม 365",
+      "m 365",
+      "m365"
+    ]
+  },
+  "etda": {
+    "path": "resources/images/company-logos/etda.png",
+    "keywords": [
+      "สพธอ",
+      "ธุรกรรมทางอิเล็กทรอนิกส์",
+      "etda"
+    ]
+  },
+  "nipacloud": {
+    "path": "resources/images/company-logos/nipacloud.png",
+    "keywords": [
+      "นิภา",
+      "nipa"
+    ]
+  },
+  "betagro": {
+    "path": "resources/images/company-logos/betagro.png",
+    "keywords": [
+      "เบทาโกร",
+      "betagro"
+    ]
+  },
+  "thailife": {
+    "path": "resources/images/company-logos/thailife.png",
+    "keywords": [
+      "ไทยประกันชีวิต",
+      "thai life"
+    ]
+  },
+  "kkp": {
+    "path": "resources/images/company-logos/kkp.png",
+    "keywords": [
+      "เกียรตินาคิน",
+      "kkp",
+      "dime"
+    ]
+  },
+  "toyota": {
+    "path": "resources/images/company-logos/toyota.png",
+    "keywords": [
+      "โตโยต้า",
+      "toyota"
+    ]
+  },
+  "ditc": {
+    "path": "resources/images/company-logos/ditc.png",
+    "keywords": [
+      "ดีไอทีซี",
+      "ditc",
+      "ธรรมนิติ"
+    ]
+  },
+  "canon": {
+    "path": "resources/images/company-logos/canon.png",
+    "keywords": [
+      "แคนนอน",
+      "canon"
+    ]
+  },
+  "ttbbank": {
+    "path": "resources/images/company-logos/ttbbank.png",
+    "keywords": [
+      "ทหารไทยธนชาต",
+      "ttb",
+      "ทีทีบี"
+    ]
+  },
+  "kasikornbank": {
+    "path": "resources/images/company-logos/kasikornbank.png",
+    "keywords": [
+      "กสิกรไทย",
+      "kasikorn"
+    ]
+  },
+  "bigc": {
+    "path": "resources/images/company-logos/bigc.png",
+    "keywords": [
+      "บิ๊กซี",
+      "big c"
+    ]
+  },
+  "ais": {
+    "path": "resources/images/company-logos/ais.png",
+    "keywords": [
+      "แอดวานซ์ อินโฟร์",
+      "ais",
+      "เอไอเอส"
+    ]
+  },
+  "true": {
+    "path": "resources/images/company-logos/true.png",
+    "keywords": [
+      "ทรู",
+      "true"
+    ]
+  },
+  "bangchak": {
+    "path": "resources/images/company-logos/bangchak.png",
+    "keywords": [
+      "บางจาก",
+      "bangchak"
+    ]
+  },
+  "pttor": {
+    "path": "resources/images/company-logos/pttor.png",
+    "keywords": [
+      "ปตท. น้ำมัน",
+      "ptt or",
+      "or"
+    ]
+  }
+}

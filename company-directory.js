@@ -226,30 +226,25 @@ function createCompanyCardFromAPI(company) {
     locItem.appendChild(document.createTextNode(' ' + company.location));
     subline.appendChild(locItem);
 
-    if (isRecruiting) {
-      subline.appendChild(createElement('span', 'subline-dot', '•'));
-      const modeItem = createElement('span', 'card-subline-item mode-item');
-      modeItem.appendChild(createElement('i', 'fa-solid fa-laptop-house'));
-      modeItem.appendChild(document.createTextNode(' Hybrid'));
-      subline.appendChild(modeItem);
-    }
-
     infoDiv.appendChild(subline);
   }
 
   // Handle recruiting vs locked vs non-recruiting
   if (isRecruiting) {
+    const rolesRow = createElement('div', 'card-roles-row');
+    if (company.duration || company.recruiting_period) {
+      const durationTag = createElement('span', 'partner-tag tag-duration');
+      durationTag.innerHTML = `<i class="fa-regular fa-calendar-check"></i> ${company.duration || company.recruiting_period}`;
+      rolesRow.appendChild(durationTag);
+    }
+
     if (authenticated) {
-      const rolesRow = createElement('div', 'card-roles-row');
       if (Array.isArray(company.positions)) {
         company.positions.filter((position) => position && position.title).slice(0, 3).forEach((pos) => {
           const roleClass = getRoleTagClass(pos.title);
           const fullClass = roleClass ? `partner-tag tag-field ${roleClass}` : 'partner-tag tag-field';
           rolesRow.appendChild(createElement('span', fullClass, pos.title));
         });
-      }
-      if (company.location) {
-        rolesRow.appendChild(createElement('span', 'partner-tag tag-location', company.location));
       }
       infoDiv.appendChild(rolesRow);
 
@@ -264,6 +259,8 @@ function createCompanyCardFromAPI(company) {
       };
       infoDiv.appendChild(ctaBtn);
     } else {
+      infoDiv.appendChild(rolesRow);
+
       // Locked notice
       const lockedNotice = createElement('div', 'auth-locked-notice');
       lockedNotice.innerHTML = '<i class="fa-solid fa-lock"></i> <span>เข้าสู่ระบบเพื่อดูตำแหน่งงานและจำนวนอัตราที่เปิดรับ</span>';
@@ -277,9 +274,6 @@ function createCompanyCardFromAPI(company) {
     }
   } else {
     const rolesRow = createElement('div', 'card-roles-row');
-    if (company.location) {
-      rolesRow.appendChild(createElement('span', 'partner-tag tag-location', company.location));
-    }
     rolesRow.appendChild(createElement('span', 'partner-tag tag-standard', 'ยังไม่เปิดรับในรอบนี้'));
     infoDiv.appendChild(rolesRow);
 
@@ -574,17 +568,44 @@ function initRealDatasetMode(companies) {
   state.mode = 'dataset';
   datasetAllCompanies = companies;
 
-  // Populate location filter dropdown dynamically
+  // Populate location filter dropdown dynamically with actual locations
   if (locationFilter) {
-    const locations = [...new Set(companies.map(c => c.location).filter(Boolean))].sort();
-    const existingValues = new Set(Array.from(locationFilter.options).map(o => o.value));
+    locationFilter.innerHTML = '<option value="">ทุกสถานที่</option>';
+    const locations = [...new Set(companies.map(c => c.location).filter(Boolean))].sort((a, b) => {
+      if (a === 'กรุงเทพฯ') return -1;
+      if (b === 'กรุงเทพฯ') return 1;
+      return a.localeCompare(b, 'th');
+    });
     locations.forEach(loc => {
-      if (!existingValues.has(loc)) {
-        const opt = document.createElement('option');
-        opt.value = loc;
-        opt.textContent = loc;
-        locationFilter.appendChild(opt);
-      }
+      const opt = document.createElement('option');
+      opt.value = loc;
+      opt.textContent = loc;
+      locationFilter.appendChild(opt);
+    });
+  }
+
+  // Populate role filter dropdown dynamically with actual job roles
+  const roleFilter = document.getElementById('roleFilter');
+  if (roleFilter) {
+    roleFilter.innerHTML = '<option value="">ทุกสายงาน</option>';
+    const roleOptions = [
+      { label: 'Software Developer / Engineer', value: 'developer' },
+      { label: 'Data Engineer / Data Scientist / AI', value: 'data' },
+      { label: 'Cloud & DevOps / Infra', value: 'cloud' },
+      { label: 'QA / Software Tester', value: 'tester' },
+      { label: 'Business Analyst / System Analyst', value: 'analyst' },
+      { label: 'Cybersecurity / Pentest', value: 'security' },
+      { label: 'Telecom & Network', value: 'telecom' }
+    ];
+    roleOptions.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.value;
+      opt.textContent = r.label;
+      roleFilter.appendChild(opt);
+    });
+
+    roleFilter.addEventListener('change', () => {
+      renderDatasetCards(true);
     });
   }
 
@@ -594,14 +615,6 @@ function initRealDatasetMode(companies) {
     recToggle.addEventListener('click', () => {
       const isActive = recToggle.classList.toggle('active');
       recToggle.setAttribute('aria-pressed', String(isActive));
-      renderDatasetCards(true);
-    });
-  }
-
-  // Bind role filter
-  const roleFilter = document.getElementById('roleFilter');
-  if (roleFilter) {
-    roleFilter.addEventListener('change', () => {
       renderDatasetCards(true);
     });
   }
@@ -667,16 +680,9 @@ function renderDatasetCards(resetPage = false) {
   const recruitingOnly = recEl ? recEl.classList.contains('active') : false;
 
   datasetFilteredCompanies = datasetAllCompanies.filter(comp => {
-    // Search query
-    if (rawQuery) {
-      const matchName = (comp.name || '').toLowerCase().includes(rawQuery);
-      const matchCode = (comp.code || '').toLowerCase().includes(rawQuery);
-      const matchLoc = (comp.location || '').toLowerCase().includes(rawQuery);
-      const matchAddr = (comp.address || '').toLowerCase().includes(rawQuery);
-      const matchPos = Array.isArray(comp.positions) && comp.positions.some(p => (p.title || '').toLowerCase().includes(rawQuery));
-      if (!matchName && !matchCode && !matchLoc && !matchAddr && !matchPos) {
-        return false;
-      }
+    // Actively recruiting only
+    if (recruitingOnly && !comp.is_recruiting) {
+      return false;
     }
 
     // Location filter
@@ -686,28 +692,50 @@ function renderDatasetCards(resetPage = false) {
 
     // Role filter
     if (roleVal) {
-      const hasRole = Array.isArray(comp.positions) && comp.positions.some(p => (p.title || '').toLowerCase().includes(roleVal));
+      const hasRole = Array.isArray(comp.positions) && comp.positions.some(p => {
+        const titleLower = (p.title || '').toLowerCase();
+        if (roleVal === 'developer') return titleLower.includes('developer') || titleLower.includes('software') || titleLower.includes('programmer');
+        if (roleVal === 'data') return titleLower.includes('data') || titleLower.includes('ai') || titleLower.includes('scientist');
+        if (roleVal === 'cloud') return titleLower.includes('cloud') || titleLower.includes('devops') || titleLower.includes('infra');
+        if (roleVal === 'tester') return titleLower.includes('tester') || titleLower.includes('qa') || titleLower.includes('test');
+        if (roleVal === 'analyst') return titleLower.includes('analyst') || titleLower.includes('ba') || titleLower.includes('scrum');
+        if (roleVal === 'security') return titleLower.includes('security') || titleLower.includes('pentest') || titleLower.includes('cyber');
+        if (roleVal === 'telecom') return titleLower.includes('telecom') || titleLower.includes('network');
+        return titleLower.includes(roleVal);
+      });
       if (!hasRole) return false;
     }
 
-    // Actively recruiting only
-    if (recruitingOnly && !comp.is_recruiting) {
-      return false;
+    // Search query
+    if (rawQuery) {
+      const matchName = (comp.name || '').toLowerCase().includes(rawQuery);
+      const matchCode = (comp.code || '').toLowerCase().includes(rawQuery);
+      const matchLoc = (comp.location || '').toLowerCase().includes(rawQuery);
+      const matchAddr = (comp.address || '').toLowerCase().includes(rawQuery);
+      const matchPos = Array.isArray(comp.positions) && comp.positions.some(p => (p.title || '').toLowerCase().includes(rawQuery));
+      const matchDuration = (comp.duration || comp.recruiting_period || '').toLowerCase().includes(rawQuery);
+      if (!matchName && !matchCode && !matchLoc && !matchAddr && !matchPos && !matchDuration) {
+        return false;
+      }
     }
 
     return true;
   });
 
   const totalFiltered = datasetFilteredCompanies.length;
+  const hasFilter = Boolean(rawQuery || locVal || roleVal || recruitingOnly);
+
   if (searchResultStatus) {
     searchResultStatus.removeAttribute('aria-busy');
-    if (totalFiltered === 0) {
+    if (!hasFilter) {
+      searchResultStatus.textContent = '';
+    } else if (totalFiltered === 0) {
       searchResultStatus.textContent = 'ไม่พบสถานประกอบการที่ตรงกับเงื่อนไขการค้นหา';
       if (loadMoreButton) loadMoreButton.hidden = true;
       return;
+    } else {
+      searchResultStatus.textContent = `พบสถานประกอบการ ${totalFiltered} รายการ`;
     }
-
-    searchResultStatus.textContent = `แสดงสถานประกอบการ ${Math.min(datasetPage * datasetPageSize, totalFiltered)} จากทั้งหมด ${totalFiltered} รายการ`;
   }
 
   const startIndex = (datasetPage - 1) * datasetPageSize;
@@ -726,7 +754,7 @@ function renderDatasetCards(resetPage = false) {
     if (endIndex < totalFiltered) {
       loadMoreButton.hidden = false;
       loadMoreButton.disabled = false;
-      loadMoreButton.textContent = `ดูเพิ่มเติม (เหลืออีก ${totalFiltered - endIndex} รายการ)`;
+      loadMoreButton.textContent = `ดูเพิ่มเติม (แสดง ${endIndex} จาก ${totalFiltered} รายการ)`;
     } else {
       loadMoreButton.hidden = true;
     }

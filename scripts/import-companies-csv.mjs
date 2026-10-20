@@ -41,11 +41,24 @@ const LOGO_MAP = {
   'ไลน์แมน': 'resources/images/wongnai.png'
 };
 
+let DYNAMIC_LOGOS = {};
+const DYNAMIC_LOGOS_PATH = path.resolve(__dirname, '../data/company-logos.json');
+if (fs.existsSync(DYNAMIC_LOGOS_PATH)) {
+  try {
+    DYNAMIC_LOGOS = JSON.parse(fs.readFileSync(DYNAMIC_LOGOS_PATH, 'utf-8'));
+  } catch {}
+}
+
 function findLogo(name = '') {
   const lower = name.toLowerCase();
   for (const [key, logoPath] of Object.entries(LOGO_MAP)) {
     if (lower.includes(key)) {
       return logoPath;
+    }
+  }
+  for (const [slug, info] of Object.entries(DYNAMIC_LOGOS)) {
+    if (info.keywords && info.keywords.some(kw => lower.includes(kw.toLowerCase()))) {
+      return info.path;
     }
   }
   return null;
@@ -76,6 +89,21 @@ function normalizeCompanyName(name = '') {
     .replace(/\s*\(สำนักงานใหญ่\)/g, '')
     .replace(/\s*เซอร์วิสเซส/g, '')
     .trim();
+}
+
+export function normalizeDuration(raw = '') {
+  if (!raw) return '';
+  const str = String(raw).trim();
+  if (str.includes('ทุกช่วงเวลา') || str.includes('เปิดรับตลอดปี') || str.includes('ตลอดปี')) {
+    return 'เปิดรับตลอดทั้งปี';
+  }
+  if (str.includes('2 มิถุนายน') && str.includes('1 ธันวาคม')) {
+    return '2 มิ.ย. 69 - 1 ธ.ค. 69';
+  }
+  if (str.includes('มิถุนายน') && str.includes('ธันวาคม')) {
+    return 'มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)';
+  }
+  return str;
 }
 
 function parseCsv(content) {
@@ -189,6 +217,20 @@ export function importCompanies() {
     announcementsByCompany.get(norm).push(ann);
   }
 
+  // Read form responses CSV if available
+  const FORM_CSV_PATH = path.resolve(__dirname, '../data/form-responses-2569.csv');
+  const formDurationsByCompany = new Map();
+  if (fs.existsSync(FORM_CSV_PATH)) {
+    const formRaw = fs.readFileSync(FORM_CSV_PATH, 'utf-8');
+    const formRows = parseCsv(formRaw);
+    for (const row of formRows.slice(1)) {
+      if (row[2] && row[3]) {
+        const cName = normalizeCompanyName(row[2]).toLowerCase();
+        formDurationsByCompany.set(cName, row[3].trim());
+      }
+    }
+  }
+
   // Build master companies list
   const companies = [];
   const matchedAnnouncementIndices = new Set();
@@ -228,6 +270,14 @@ export function importCompanies() {
     let duration = '';
 
     if (isRecruiting) {
+      // Check form responses first for latest duration
+      for (const [fName, fDur] of formDurationsByCompany.entries()) {
+        if (normPartner.includes(fName) || fName.includes(normPartner)) {
+          duration = fDur;
+          break;
+        }
+      }
+
       for (const ann of matchedAnnList) {
         if (!contactInfo && ann.contact) contactInfo = ann.contact;
         if (!duration && ann.duration) duration = ann.duration;
@@ -239,11 +289,13 @@ export function importCompanies() {
             title: title.replace(/^[-\s•(small yellow diamond)]+/, '').trim(),
             quota: ann.quota || '-',
             contact: ann.contact || contactInfo,
-            duration: ann.duration || duration
+            duration: normalizeDuration(ann.duration || duration)
           });
         }
       }
     }
+
+    const normalizedDuration = normalizeDuration(duration);
 
     companies.push({
       id: partner.code,
@@ -253,10 +305,11 @@ export function importCompanies() {
       address: partner.address,
       logo,
       is_recruiting: isRecruiting,
+      duration: isRecruiting ? (normalizedDuration || 'เปิดรับตลอดทั้งปี') : null,
+      recruiting_period: isRecruiting ? (normalizedDuration || 'เปิดรับตลอดทั้งปี') : null,
       positions_count: positions.length,
       positions,
       contact: contactInfo,
-      recruiting_period: duration,
       academic_year: 2569,
       data_status: 'verified'
     });

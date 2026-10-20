@@ -2561,7 +2561,7 @@ a {
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-height: 2.7em;
+  min-height: auto;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -2970,7 +2970,7 @@ a {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  min-height: 2.7em;
+  min-height: auto;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -3006,6 +3006,18 @@ a {
 }
 
 .tag-field,
+.tag-duration,
+.partner-tag.tag-duration {
+  color: #1E40AF;
+  background: #EFF6FF;
+  border: 1px solid #DBEAFE;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
 .partner-tag.tag-field {
   color: #334155;
   background: #F1F5F9;
@@ -3357,7 +3369,7 @@ a {
     font-size: 16.5px;
     line-height: 1.3;
     white-space: normal;
-    min-height: 2.6em;
+    min-height: auto;
   }
 
   .partner-tag {

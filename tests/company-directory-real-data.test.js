@@ -107,7 +107,7 @@ describe('Company Directory - Real Dataset & Auth Lock State', () => {
     // Reset filters
     document.getElementById('filterResetBtn').click();
     expect(recruitingToggle.classList.contains('active')).toBe(false);
-    expect(status.textContent).toContain('103'); // Total 103 companies
+    expect(status.textContent).toBe('');
   });
 
   test('populates location options and filters by location', () => {
@@ -120,11 +120,28 @@ describe('Company Directory - Real Dataset & Auth Lock State', () => {
     locationFilter.dispatchEvent(new Event('change', { bubbles: true }));
 
     const status = document.getElementById('searchResultStatus');
-    expect(status.textContent).toContain('แสดงสถานประกอบการ');
+    expect(status.textContent).toContain('พบสถานประกอบการ');
     const cards = document.querySelectorAll('#companyList .partner-card');
     cards.forEach(card => {
       expect(card.textContent).toContain('นนทบุรี');
     });
+  });
+
+  test('displays normalized duration tag on recruiting cards and standard tag on non-recruiting', () => {
+    loadDirectoryScript();
+
+    const recruitingCard = Array.from(document.querySelectorAll('#companyList .partner-card'))
+      .find(c => c.querySelector('.auth-locked-pill'));
+    expect(recruitingCard).not.toBeUndefined();
+    const durationTag = recruitingCard.querySelector('.tag-duration');
+    expect(durationTag).not.toBeNull();
+    expect(durationTag.textContent.length).toBeGreaterThan(3);
+
+    // Non-recruiting card
+    const nonRecruitingCard = Array.from(document.querySelectorAll('#companyList .partner-card'))
+      .find(c => !c.querySelector('.auth-locked-pill') && !c.querySelector('.pricing-quota-pill'));
+    expect(nonRecruitingCard).not.toBeUndefined();
+    expect(nonRecruitingCard.textContent).toContain('ยังไม่เปิดรับในรอบนี้');
   });
 
   test('sets title attribute on company name headings to support tooltip and accessible full name inspection', () => {
