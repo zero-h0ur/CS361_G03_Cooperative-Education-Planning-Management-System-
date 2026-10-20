@@ -48,6 +48,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   server.listen(8081, '127.0.0.1', () => {
     console.log('Local UI Preview (synthetic data only): http://localhost:8081/app.html#/student/plan');
     console.log('Profile: http://localhost:8081/app.html#/student/profile');
+    console.log('Advisor: http://localhost:8081/app.html?role=ADVISOR#/advisor/students');
     console.log('No Cognito/API configuration needed. Ctrl+C to stop.');
   });
 }

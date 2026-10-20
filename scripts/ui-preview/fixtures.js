@@ -1,5 +1,6 @@
 // Development-only, synthetic data. Never imported by src/frontend/app.js.
 import { sanitizeStatusHistoryEntry } from '../../src/frontend/student/plan-submission-client.js';
+import { sanitizeAdvisorStudent, sanitizeAdvisorPlanSummary, sanitizeAdvisorPlanDetail } from '../../src/frontend/advisor/advisor-client.js';
 
 export const SCENARIOS = Object.freeze({
   draft: 'ฉบับร่าง พร้อมแก้ไข',
@@ -17,6 +18,18 @@ export const SCENARIOS = Object.freeze({
   forbidden: 'ไม่มีสิทธิ์เข้าถึง'
 });
 
+export const ADVISOR_SCENARIOS = Object.freeze({
+  assigned: 'มีนักศึกษาในความดูแล',
+  unassigned: 'ยังไม่ได้รับมอบหมายนักศึกษา',
+  'no-plans': 'มีนักศึกษา แต่ยังไม่มีแผน',
+  'long-text': 'ชื่อและข้อมูลยาว',
+  revoked: 'ถอนการมอบหมาย (เปิดรายละเอียดเพื่อทดสอบ)',
+  loading: SCENARIOS.loading,
+  error: SCENARIOS.error,
+  expired: SCENARIOS.expired,
+  forbidden: SCENARIOS.forbidden
+});
+
 const ids = {
   plan: '50000000-0000-4000-8000-000000000101',
   cycle: '30000000-0000-4000-8000-000000000101',
@@ -31,9 +44,72 @@ const stamp = '2026-10-20T03:00:00.000Z';
 const copy = (value) => JSON.parse(JSON.stringify(value));
 const failure = (code) => Object.assign(new Error('Local UI preview scenario'), { code });
 
-export function createPreviewClients({ scenario = 'draft', delayMs = 250, role = 'STUDENT' } = {}) {
+// Presentation fixtures only: no network, credentials, writes or mutation methods.
+function createAdvisorPreviewClient({ scenario, delayMs }) {
+  const names = ['กานต์ ตัวอย่าง', 'ปณิตา ทดลอง', 'ธนกฤต สมมติ'];
+  const students = scenario === 'unassigned' ? [] : names.map((name, index) => sanitizeAdvisorStudent({
+    id: `40000000-0000-4000-8000-00000000010${index + 1}`,
+    student_number: `DEMO00000${index + 1}`,
+    full_name: scenario === 'long-text' ? `${name} ${'ชื่อสมมติสำหรับตรวจการตัดบรรทัด'.repeat(5)}` : name,
+    preferred_name: null, department: 'ภาควิชาวิทยาการคอมพิวเตอร์',
+    program: 'วิทยาศาสตรบัณฑิต', major: 'วิทยาการคอมพิวเตอร์',
+    academic_year: 2569, enrollment_status: 'ACTIVE'
+  }));
+  const plan = sanitizeAdvisorPlanDetail({
+    id: ids.plan, cycle_id: ids.cycle,
+    company: { id: ids.company, name: 'บริษัทตัวอย่างเพื่อทดสอบ จำกัด' },
+    position: { id: ids.position, title: 'Software Developer' },
+    status: 'APPROVED', version: 2, created_at: stamp, updated_at: stamp,
+    notes: 'ข้อมูลสมมติสำหรับตรวจหน้าจอให้คำปรึกษา ไม่ใช่ข้อมูลนักศึกษาจริง'
+  });
+  async function read({ signal } = {}, detail = false) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    await new Promise((resolve, reject) => {
+      let timer;
+      const abort = () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); };
+      signal?.addEventListener('abort', abort, { once: true });
+      if (scenario !== 'loading') timer = setTimeout(() => {
+        signal?.removeEventListener('abort', abort); resolve();
+      }, delayMs);
+    });
+    if (scenario === 'error') throw failure('SERVICE_UNAVAILABLE');
+    if (scenario === 'expired') throw failure('SESSION_EXPIRED');
+    if (scenario === 'forbidden' || (scenario === 'revoked' && detail)) throw failure('NOT_IN_SCOPE');
+  }
+  function requireStudent(studentId) {
+    const student = students.find((item) => item.id === studentId);
+    if (!student) throw failure('NOT_IN_SCOPE');
+    return student;
+  }
+  function pageOf(items, { page = 1, pageSize = 20 } = {}) {
+    const safePage = Number.isInteger(page) && page > 0 ? page : 1;
+    const safeSize = Number.isInteger(pageSize) && pageSize > 0 && pageSize <= 100 ? pageSize : 20;
+    return copy({ items: items.slice((safePage - 1) * safeSize, safePage * safeSize),
+      pagination: { page: safePage, pageSize: safeSize, total: items.length, totalPages: Math.ceil(items.length / safeSize) } });
+  }
+  return Object.freeze({
+    async listStudents(options = {}) { await read(options); return pageOf(students, options); },
+    async getStudent(studentId, options = {}) { await read(options, true); return copy(requireStudent(studentId)); },
+    async listStudentPlans(studentId, options = {}) {
+      await read(options, true); requireStudent(studentId);
+      return pageOf(scenario === 'no-plans' || studentId !== students[0]?.id ? [] : [sanitizeAdvisorPlanSummary(plan)], options);
+    },
+    async getPlan(planId, options = {}) {
+      await read(options, true);
+      if (planId !== plan.id || !students.length || scenario === 'no-plans') throw failure('NOT_IN_SCOPE');
+      return copy(plan);
+    }
+  });
+}
+
+export function createPreviewClients({ role = 'STUDENT', scenario = role === 'ADVISOR' ? 'assigned' : 'draft', delayMs = 250 } = {}) {
+  if (!['STUDENT', 'STAFF', 'ADVISOR'].includes(role)) throw new Error('Unsupported preview role');
+  if (role === 'ADVISOR') {
+    if (!Object.hasOwn(ADVISOR_SCENARIOS, scenario)) throw new Error('Unknown Advisor preview scenario');
+    return { loadSession: async () => ({ role, canReviewPlan: false }),
+      advisorClient: createAdvisorPreviewClient({ scenario, delayMs }) };
+  }
   if (!Object.hasOwn(SCENARIOS, scenario)) throw new Error('Unknown preview scenario');
-  if (!['STUDENT', 'STAFF'].includes(role)) throw new Error('Unsupported preview role');
   const status = { revision: 'NEEDS_REVISION', submitted: 'SUBMITTED', review: 'UNDER_REVIEW',
     approved: 'APPROVED', cancelled: 'CANCELLED' }[scenario] || 'DRAFT';
   let profile = {
@@ -90,7 +166,7 @@ export function createPreviewClients({ scenario = 'draft', delayMs = 250, role =
     { id: ids.position2, company_id: ids.company2, title: 'UX/UI Designer' }];
 
   return {
-    // Simulates a Student only in this separate entry point, not authentication.
+    // Synthetic role in this separate entry point, never authentication.
     loadSession: async () => ({ role, canReviewPlan: false }),
     // Synthetic read-only list data, not a mock permission or review-command service.
     staffClient: {
