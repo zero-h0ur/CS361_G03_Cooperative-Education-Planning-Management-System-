@@ -272,6 +272,8 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
           student_number: '6509610001',
           full_name: 'Somchai Jaidee',
           preferred_name: 'Chai',
+          contact_address: null,
+          contact_phone: null,
           institutional_email: 'somchai.jai@dome.tu.ac.th',
           department: 'Computer Science',
           program: 'B.Sc. Computer Science',
@@ -365,7 +367,7 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
         keyPair.privateKey
       );
 
-      expect(STUDENT_SELF_EDITABLE_FIELDS).toEqual(['preferred_name']);
+      expect(STUDENT_SELF_EDITABLE_FIELDS).toEqual(['preferred_name','contact_address','contact_phone']);
 
       const response = await handler(
         buildEvent('/api/v3/students/me', token, {

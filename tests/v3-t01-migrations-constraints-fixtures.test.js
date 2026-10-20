@@ -48,6 +48,9 @@ const CHECKSUM_001 = sha256(MIGRATION_001_SQL);
 const CHECKSUM_002 = sha256(MIGRATION_002_SQL);
 const MIGRATION_003_SQL = fs.readFileSync(path.join(MIGRATIONS_DIR, '003_partner_directory.sql'), 'utf8');
 const CHECKSUM_003 = sha256(MIGRATION_003_SQL);
+const WORKFLOW_MIGRATIONS = ['004_three_role_workflow.sql','005_submission_snapshots.sql',
+  '006_advisor_display_name.sql','007_submission_policy_integrity.sql']
+  .map(version=>({version,checksum:sha256(fs.readFileSync(path.join(MIGRATIONS_DIR,version),'utf8'))}));
 
 const SENSITIVE_FIELD_PATTERN =
   /(?:^|_)(?:password|passwd|secret|token|api_key|access_key|secret_key|private_key|credential|database_url|connection_string)(?:$|_)/i;
@@ -253,7 +256,8 @@ describe('Issue #78 [V3-T01]: Verify V3 migrations, constraints and safe fixture
           version: '002_v3_identity_student_plan_assignment_audit.sql',
           checksum: CHECKSUM_002
         },
-        { version: '003_partner_directory.sql', checksum: CHECKSUM_003 }
+        { version: '003_partner_directory.sql', checksum: CHECKSUM_003 },
+        ...WORKFLOW_MIGRATIONS
       ]);
     });
 
@@ -277,7 +281,8 @@ describe('Issue #78 [V3-T01]: Verify V3 migrations, constraints and safe fixture
           version: '002_v3_identity_student_plan_assignment_audit.sql',
           checksum: CHECKSUM_002
         },
-        { version: '003_partner_directory.sql', checksum: CHECKSUM_003 }
+        { version: '003_partner_directory.sql', checksum: CHECKSUM_003 },
+        ...WORKFLOW_MIGRATIONS
       ]);
     });
 
@@ -289,7 +294,8 @@ describe('Issue #78 [V3-T01]: Verify V3 migrations, constraints and safe fixture
             version: '002_v3_identity_student_plan_assignment_audit.sql',
             checksum: CHECKSUM_002
           },
-          { version: '003_partner_directory.sql', checksum: CHECKSUM_003 }
+          { version: '003_partner_directory.sql', checksum: CHECKSUM_003 },
+          ...WORKFLOW_MIGRATIONS
         ]
       });
 
@@ -299,7 +305,10 @@ describe('Issue #78 [V3-T01]: Verify V3 migrations, constraints and safe fixture
       expect(sqls).not.toContain(MIGRATION_001_SQL.trim());
       expect(sqls).not.toContain(MIGRATION_002_SQL.trim());
       expect(sqls).not.toContain(MIGRATION_003_SQL.trim());
-      expect(harness.getCommittedMigrations()).toHaveLength(3);
+      expect(harness.getCommittedMigrations()).toHaveLength(7);
+      for(const migration of WORKFLOW_MIGRATIONS) {
+        expect(sqls).not.toContain(fs.readFileSync(path.join(MIGRATIONS_DIR,migration.version),'utf8').trim());
+      }
     });
 
     it('rolls back the entire migration transaction on failure without leaving partial schema_migrations state', async () => {

@@ -14,7 +14,7 @@ const NO_QUERY_PARAMS = new Set([]);
 
 // Review comments are readable by the Student owner (#50: "Return reason/review comment:
 // Owner and authorized review scope"). Notes of any other event are never exposed.
-const REVIEW_COMMENT_ACTIONS = new Set(['PLAN_RETURNED', 'PLAN_APPROVED']);
+const REVIEW_COMMENT_ACTIONS = new Set(['PLAN_RETURNED', 'PLAN_APPROVED', 'PLAN_REJECTED']);
 
 function toIsoOrNull(value) {
   if (value instanceof Date) return value.toISOString();

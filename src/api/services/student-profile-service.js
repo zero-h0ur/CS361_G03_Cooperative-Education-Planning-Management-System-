@@ -32,6 +32,8 @@ const STUDENT_SELF_PROFILE_FIELDS = Object.freeze([
   'student_number',
   'full_name',
   'preferred_name',
+  'contact_address',
+  'contact_phone',
   'institutional_email',
   'department',
   'program',
@@ -62,7 +64,7 @@ const STUDENT_SELF_MASKED_FIELDS = Object.freeze([
 /**
  * Explicit allowlist of fields editable by the Student (#51 & #65).
  */
-const STUDENT_SELF_EDITABLE_FIELDS = Object.freeze(['preferred_name']);
+const STUDENT_SELF_EDITABLE_FIELDS = Object.freeze(['preferred_name','contact_address','contact_phone']);
 
 /**
  * Explicit allowlist of fields accepted in Student self-profile update payloads (#51 & #65).
@@ -206,6 +208,7 @@ class StudentProfileService {
    */
   constructor(options = {}) {
     this.pool = options.pool || null;
+    this.contactService = options.threeRoleService || null;
     this.repository =
       options.studentProfileRepository ||
       options.repository ||
@@ -270,6 +273,10 @@ class StudentProfileService {
       ACTIONS.STUDENT_UPDATE_SELF_PROFILE,
       { studentId: requestedStudentId }
     );
+
+    if (payload && typeof payload === 'object' && !Array.isArray(payload) && ('contact_address' in payload || 'contact_phone' in payload)) {
+      return (this.contactService || new (require('./three-role-service').ThreeRoleService)({pool:this.pool})).saveContact(authContext,payload);
+    }
 
     const { preferredName, expectedVersion } =
       validateAndNormalizeStudentProfileUpdate(payload);

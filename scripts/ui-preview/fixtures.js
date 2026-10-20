@@ -3,6 +3,12 @@ import { sanitizeStatusHistoryEntry } from '../../src/frontend/student/plan-subm
 import { sanitizeAdvisorStudent, sanitizeAdvisorPlanSummary, sanitizeAdvisorPlanDetail } from '../../src/frontend/advisor/advisor-client.js';
 
 export const SCENARIOS = Object.freeze({
+  rejected:'ไม่ผ่านคุณสมบัติในรอบนี้',
+  'company-confirmed':'ผ่านเกณฑ์และบริษัทยืนยันแล้ว',
+  'company-pending':'รอแบบฟอร์มบริษัทตอบกลับ',
+  'capacity-full':'Advisor ครบ 5 คน',
+  'missing-policy':'Staff ยังไม่กำหนดเอกสาร',
+  legacy:'รายการเก่าที่ไม่มี snapshot',
   draft: 'ฉบับร่าง พร้อมแก้ไข',
   incomplete: 'ฉบับร่าง ข้อมูลยังไม่ครบ',
   revision: 'ส่งกลับให้แก้ไข',
@@ -111,7 +117,8 @@ export function createPreviewClients({ role = 'STUDENT', scenario = role === 'AD
   }
   if (!Object.hasOwn(SCENARIOS, scenario)) throw new Error('Unknown preview scenario');
   const status = { revision: 'NEEDS_REVISION', submitted: 'SUBMITTED', review: 'UNDER_REVIEW',
-    approved: 'APPROVED', cancelled: 'CANCELLED' }[scenario] || 'DRAFT';
+    approved: 'APPROVED', cancelled: 'CANCELLED',rejected:'REJECTED',
+    'company-confirmed':'APPROVED','company-pending':'APPROVED','capacity-full':'APPROVED' }[scenario] || 'DRAFT';
   // Invented identity with a realistic display format, not a TU record. The reserved
   // .invalid domain is deliberate: never use a real student's contact details.
   const profile = {

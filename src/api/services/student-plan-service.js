@@ -19,7 +19,7 @@ const {
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PLAN_STATES = new Set([
-  'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'NEEDS_REVISION', 'APPROVED', 'CANCELLED'
+  'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'NEEDS_REVISION', 'APPROVED', 'REJECTED', 'CANCELLED'
 ]);
 const EDITABLE_STATES = new Set(['DRAFT', 'NEEDS_REVISION']);
 const RESPONSE_FIELDS = Object.freeze([
@@ -362,6 +362,9 @@ class StudentPlanService {
         positionId: hasOwn(normalizedPatch, 'position_id') ? normalizedPatch.position_id : current.position_id,
         notes: hasOwn(normalizedPatch, 'notes') ? normalizedPatch.notes : current.notes
       };
+      if (current.status !== 'DRAFT' && next.cycleId !== current.cycle_id) {
+        throw new ValidationError('Cannot move a submitted application to another cycle.');
+      }
       if (next.positionId !== null && next.companyId === null) {
         throw new ValidationError('position_id requires company_id.');
       }

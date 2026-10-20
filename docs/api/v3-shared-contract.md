@@ -1,5 +1,9 @@
 # V3 Modular API and Shared Response/Error Contract
 
+ส่วนขยายล่าสุด: [Workflow Student / Staff / Advisor](three-role-workflow.md)
+เพิ่ม `REJECTED`, ข้อมูลติดต่อ, เอกสารอ้างอิง, Assignment และการยืนยันบริษัทแยกจากผลตรวจคุณสมบัติ
+โดยคง Authentication/สิทธิ์เดิม เอกสารส่วนขยายระบุ Contract ของความสามารถใหม่อย่างครบถ้วน
+
 เอกสารข้อกำหนดมาตรฐานการสื่อสาร (Response/Error Contract) และสถาปัตยกรรม Modular API สำหรับ CO-ED Version 3 เพื่อใช้เป็นบรรทัดฐานกลางสำหรับ Feature Issues ถัดไป (#61–#70)
 
 ---
@@ -241,7 +245,7 @@ Error: ไม่มี/ผิด/หมดอายุ token → `401`, ไม�
 | Method | หน้าที่ |
 |---|---|
 | `GET` | อ่าน Profile ของตนเอง |
-| `PATCH`, `PUT` | แก้ `preferred_name` ของตนเอง (ทั้งสอง Method ทำงานเหมือนกัน) |
+| `PATCH`, `PUT` | คงการแก้ `preferred_name` เดิม หรือแก้ข้อมูลติดต่อด้วย `version`/`operation_id` ตามส่วนขยาย Workflow |
 
 Response (`GET` และผลของการ Update) ส่งเฉพาะ Field ใน Allowlist ตาม #50/#51:
 
@@ -393,7 +397,7 @@ Response (`data`): `{ id, cycle_id, company_id, position_id, notes, status, vers
 | `expected_version` เก่า | `409 STALE_RECORD_CONFLICT` |
 | ใช้ `operation_id` เดิมกับ Payload อื่น | `409 IDEMPOTENCY_KEY_REUSED` |
 | มี Plan ที่ไม่ใช่ `CANCELLED` ใน Cycle เดียวกันอยู่แล้ว | `409 PLAN_ALREADY_EXISTS_FOR_CYCLE` |
-| แก้ Plan ในสถานะที่ไม่อนุญาต (`SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, `CANCELLED`) | `422 INVALID_STATE_TRANSITION` |
+| แก้ Plan ในสถานะที่ไม่อนุญาต (`SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, `REJECTED`, `CANCELLED`) | `422 INVALID_STATE_TRANSITION` |
 | Database ไม่พร้อมใช้งาน | `503 SERVICE_UNAVAILABLE` |
 
 Retry ด้วย `operation_id` เดิมและ Payload เดิมคืนผลสำเร็จเดิมโดยไม่เพิ่ม `version` และไม่สร้าง Audit ซ้ำ ส่วน Company ที่ใช้เลือกอ่านจาก `GET /api/directory/companies` และ Position อ่านผ่าน `GET /api/v3/directory/companies/:id/positions` โดยแนบ Access Token ตำแหน่งจริงไม่เปิดผ่าน Public API เดิม
@@ -407,6 +411,7 @@ Retry ด้วย `operation_id` เดิมและ Payload เดิมค�
 | `/start-review` | `SUBMITTED` → `UNDER_REVIEW` | ไม่ใช้ | `PLAN_REVIEW_STARTED` |
 | `/return` | `UNDER_REVIEW` → `NEEDS_REVISION` | **จำเป็น** (ไม่ว่าง) | `PLAN_RETURNED` |
 | `/approve` | `UNDER_REVIEW` → `APPROVED` | Optional | `PLAN_APPROVED` |
+| `/reject` | `UNDER_REVIEW` → `REJECTED` (สิ้นสุดในรอบนี้) | **จำเป็น** | `PLAN_REJECTED` |
 
 Request body:
 

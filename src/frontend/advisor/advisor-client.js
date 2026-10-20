@@ -25,7 +25,7 @@ export const ADVISOR_PLAN_STATUSES = Object.freeze([
   'UNDER_REVIEW',
   'NEEDS_REVISION',
   'APPROVED',
-  'CANCELLED'
+  'CANCELLED', 'REJECTED'
 ]);
 
 // Response allowlists mirror src/api/services/advisor-read-serializers.js (#53, #68)

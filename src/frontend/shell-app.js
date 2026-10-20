@@ -18,6 +18,7 @@ import { renderStudentDashboardView } from './student/student-dashboard-view.js'
 import { renderStudentPlanView } from './student/student-plan-view.js';
 import { renderStaffStudentManagementView } from './staff/staff-student-management-view.js';
 import { createWorkspaceIcon } from './ui/workspace-presentation.js';
+import { renderContactPanel, renderStaffWorkflow } from './workflow/workflow-views.js';
 
 const RETURN_ROUTE_KEY = 'co-ed:return-route';
 const SENSITIVE_QUERY_PARAMS = Object.freeze([
@@ -333,6 +334,7 @@ export function createShellApp({
   staffClient = null,
   advisorClient = null,
   staffReviewClient = null,
+  workflowClient = null,
   renderRouteContent
 }) {
   if (
@@ -529,17 +531,22 @@ export function createShellApp({
     }
 
     if (role === 'STUDENT' && route.hash === '#/student/profile' && studentProfileClient) {
-      return renderStudentDashboardView({
+      const profile = renderStudentDashboardView({
         profileClient: studentProfileClient,
         signal,
         onSessionExpired: handleSessionExpired,
         onAccessDenied: (message) => renderForbidden(message),
         onNavigate: navigateToAllowlistedRoute
       });
+      if (!workflowClient) return profile;
+      const wrapper=element('div','workflow-stack');
+      wrapper.append(profile,renderContactPanel({client:workflowClient,signal,onSessionExpired:handleSessionExpired,onAccessDenied:message=>renderForbidden(message)}));
+      return wrapper;
     }
 
     if (role === 'STUDENT' && route.hash === '#/student/plan' && studentPlanClient) {
       return renderStudentPlanView({
+        workflowClient,
         planClient: studentPlanClient,
         signal,
         onSessionExpired: handleSessionExpired,
@@ -548,6 +555,7 @@ export function createShellApp({
     }
 
     if (role === 'STAFF') {
+      if (route.hash === '#/staff/workflow' && workflowClient) return renderStaffWorkflow({client:workflowClient,signal,onSessionExpired:handleSessionExpired,onAccessDenied:message=>renderForbidden(message)});
       if (route.staffMode && staffClient) {
         return renderStaffStudentManagementView({
           mode: route.staffMode,
@@ -570,6 +578,7 @@ export function createShellApp({
     }
     if (role === 'STAFF' && staffReviewClient) {
       const staffViewOptions = {
+        workflowClient,
         staffReviewClient,
         signal,
         onSessionExpired: handleSessionExpired,
@@ -589,6 +598,7 @@ export function createShellApp({
 
     if (role === 'ADVISOR' && advisorClient) {
       const advisorViewOptions = {
+        workflowClient,
         advisorClient,
         signal,
         onSessionExpired: handleSessionExpired,

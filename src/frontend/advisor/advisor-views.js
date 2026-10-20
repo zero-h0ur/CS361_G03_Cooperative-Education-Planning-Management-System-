@@ -7,10 +7,12 @@
 
 import { ADVISOR_ERROR_CODES, DEFAULT_ADVISOR_PAGE_SIZE } from './advisor-client.js';
 import { createWorkspaceIcon } from '../ui/workspace-presentation.js';
+import { renderPlanWorkflow } from '../workflow/workflow-views.js';
 
 const STUDENT_LIST_HASH = '#/advisor/students';
 
 const PLAN_STATUS_META = Object.freeze({
+  REJECTED: {label:'ไม่ผ่านเกณฑ์ในรอบนี้ (REJECTED)',badgeClass:'student-badge--danger'},
   DRAFT: { label: 'ฉบับร่าง (DRAFT)', badgeClass: 'student-badge--neutral' },
   SUBMITTED: { label: 'ส่งแผนแล้ว (SUBMITTED)', badgeClass: 'student-badge--status' },
   UNDER_REVIEW: { label: 'กำลังตรวจสอบ (UNDER_REVIEW)', badgeClass: 'student-badge--status' },
@@ -458,7 +460,9 @@ export function renderAdvisorStudentDetailView({ advisorClient, studentId, signa
   return container;
 }
 
-export function renderAdvisorPlanView({ advisorClient, planId, signal, onSessionExpired } = {}) {
+export function renderAdvisorPlanView({ advisorClient, workflowClient, planId, signal, onSessionExpired, onAccessDenied } = {}) {
+  let workflowController=null;
+  signal?.addEventListener('abort',()=>workflowController?.abort(),{once:true});
   const container = createWorkspace();
   if (!isUsableClient(advisorClient, ['getPlan'])) {
     return renderFallback(container);
@@ -517,6 +521,10 @@ export function renderAdvisorPlanView({ advisorClient, planId, signal, onSession
     const navigation = element('div', 'advisor-toolbar');
     navigation.append(back, createRefresh(load));
     container.replaceChildren(navigation, card);
+    if (workflowClient) {
+      workflowController?.abort();workflowController=new AbortController();
+      container.append(renderPlanWorkflow({client:workflowClient,planId,role:'ADVISOR',signal:workflowController.signal,onSessionExpired,onAccessDenied}));
+    }
   }
 
   load();

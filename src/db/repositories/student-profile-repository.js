@@ -51,6 +51,8 @@ class StudentProfileRepository {
         s.student_number,
         s.full_name,
         s.preferred_name,
+        s.contact_address,
+        s.contact_phone,
         s.institutional_email,
         s.department,
         s.program,

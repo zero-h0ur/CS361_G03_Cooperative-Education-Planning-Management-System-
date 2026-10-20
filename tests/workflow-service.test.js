@@ -420,11 +420,9 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       expect(repoNoNotes.auditLogs[0].notes).toBeNull();
     });
 
-    it('allows Student to cancel Plan from DRAFT, SUBMITTED, and NEEDS_REVISION -> CANCELLED (#54)', async () => {
-      // #54: CANCEL only from DRAFT, SUBMITTED, NEEDS_REVISION (UNDER_REVIEW removed)
+    it('allows cancellation only from editable DRAFT and NEEDS_REVISION states', async () => {
       const allowedStates = [
         PLAN_STATES.DRAFT,
-        PLAN_STATES.SUBMITTED,
         PLAN_STATES.NEEDS_REVISION
       ];
 

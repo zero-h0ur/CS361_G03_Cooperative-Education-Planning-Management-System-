@@ -105,15 +105,24 @@ async function seed(options = {}) {
       ALTER TABLE advisor_assignments DISABLE TRIGGER trg_advisor_assignments_no_delete;
       ALTER TABLE plan_operations DISABLE TRIGGER trg_plan_operations_immutable;
       ALTER TABLE audit_events DISABLE TRIGGER trg_audit_events_immutable;
+      ALTER TABLE workflow_events DISABLE TRIGGER workflow_events_immutable;
+      ALTER TABLE workflow_receipts DISABLE TRIGGER workflow_receipts_immutable;
+      ALTER TABLE plan_submissions DISABLE TRIGGER plan_submissions_immutable;
+      ALTER TABLE document_policies DISABLE TRIGGER document_policies_immutable;
     `);
 
     // 1. Reset tables in reverse order of foreign key dependencies
     console.log('Resetting tables...');
+    await client.query('DELETE FROM workflow_events');
+    await client.query('DELETE FROM workflow_receipts');
+    await client.query('DELETE FROM placements');
+    await client.query('DELETE FROM plan_submissions');
     await client.query('DELETE FROM audit_events');
     await client.query('DELETE FROM plan_operations');
     await client.query('DELETE FROM advisor_assignments');
     await client.query('DELETE FROM staff_scopes');
     await client.query('DELETE FROM plans');
+    await client.query('DELETE FROM document_policies');
     await client.query('DELETE FROM students');
     await client.query('DELETE FROM external_identity_links');
     await client.query('DELETE FROM users');
@@ -196,6 +205,10 @@ async function seed(options = {}) {
       ALTER TABLE advisor_assignments ENABLE TRIGGER trg_advisor_assignments_no_delete;
       ALTER TABLE plan_operations ENABLE TRIGGER trg_plan_operations_immutable;
       ALTER TABLE audit_events ENABLE TRIGGER trg_audit_events_immutable;
+      ALTER TABLE workflow_events ENABLE TRIGGER workflow_events_immutable;
+      ALTER TABLE workflow_receipts ENABLE TRIGGER workflow_receipts_immutable;
+      ALTER TABLE plan_submissions ENABLE TRIGGER plan_submissions_immutable;
+      ALTER TABLE document_policies ENABLE TRIGGER document_policies_immutable;
     `);
 
     let totalV3Records = 0;

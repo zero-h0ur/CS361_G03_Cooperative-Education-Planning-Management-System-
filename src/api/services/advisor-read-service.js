@@ -30,7 +30,7 @@ const PLAN_STATUSES = new Set([
   'UNDER_REVIEW',
   'NEEDS_REVISION',
   'APPROVED',
-  'CANCELLED'
+  'CANCELLED', 'REJECTED'
 ]);
 
 function genericForbidden() {

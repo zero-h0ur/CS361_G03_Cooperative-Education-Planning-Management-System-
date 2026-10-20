@@ -47,6 +47,7 @@ function registerStudentProfileRoutes(router, registerProtectedRoute, options = 
     options.studentProfileService ||
     new StudentProfileService({
       ...authOptions,
+      threeRoleService: options.threeRoleService,
       studentProfileRepository: options.studentProfileRepository
     });
 
@@ -57,7 +58,7 @@ function registerStudentProfileRoutes(router, registerProtectedRoute, options = 
     );
 
     const profile = await studentProfileService.getOwnProfile(context.authContext);
-    sendSuccess(response, profile, 200);
+    sendSuccess(response, profile, 200, null, {'Cache-Control':'no-store'});
   };
 
   const handleUpdateOwnProfile = async (request, response, context) => {
@@ -71,7 +72,7 @@ function registerStudentProfileRoutes(router, registerProtectedRoute, options = 
       context.authContext,
       body
     );
-    sendSuccess(response, updatedProfile, 200);
+    sendSuccess(response, updatedProfile, 200, null, {'Cache-Control':'no-store'});
   };
 
   registerProtectedRoute(router, {
