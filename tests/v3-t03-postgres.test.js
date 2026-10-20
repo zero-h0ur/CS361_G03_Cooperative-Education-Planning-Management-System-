@@ -66,13 +66,14 @@ describe('Issue #80 PostgreSQL workflow guarantees (required test database)', ()
     [IDS.student, IDS.studentUser]);
     await pool.query(`INSERT INTO rounds (id, name, academic_year, semester, status, source, visibility, data_status)
       VALUES ($1, 'Synthetic cycle', 2569, 1, 'OPEN', 'issue80-test', 'private', 'mock')`, [IDS.cycle]);
+    await publishTestPolicy(IDS.cycle);
     await pool.query(`INSERT INTO companies (id, name, source, visibility, data_status)
       VALUES ($1, 'Synthetic Company', 'issue80-test', 'public', 'mock')`, [IDS.company]);
     await pool.query(`INSERT INTO positions (id, company_id, title, source, visibility, data_status)
       VALUES ($1, $2, 'Synthetic Position', 'issue80-test', 'public', 'mock')`, [IDS.position, IDS.company]);
     await pool.query(`INSERT INTO plans (id, student_id, cycle_id, round_id, company_id, position_id,
-      notes, status, version, source, visibility, data_status)
-      VALUES ($1, $2, $3, $3, $4, $5, 'Student-authored notes', 'DRAFT', 1, 'issue80-test', 'private', 'mock')`,
+      notes, status, version, source, visibility, data_status, project_title)
+      VALUES ($1, $2, $3, $3, $4, $5, 'Student-authored notes', 'DRAFT', 1, 'issue80-test', 'private', 'mock', 'Synthetic workflow project')`,
     [IDS.plan, IDS.student, IDS.cycle, IDS.company, IDS.position]);
     await pool.query(`INSERT INTO staff_scopes (id, staff_id, department, academic_year)
       VALUES ($1, $2, 'CPE', 2569)`, [crypto.randomUUID(), IDS.staffUser]);
@@ -98,6 +99,14 @@ describe('Issue #80 PostgreSQL workflow guarantees (required test database)', ()
   });
   afterAll(async () => { if (admin) await admin.end(); });
 
+  async function publishTestPolicy(cycleId) {
+    // No required documents in this transaction-focused fixture; the policy
+    // itself remains mandatory and is pinned by the real submission trigger.
+    await pool.query(`INSERT INTO document_policies
+      (id, cycle_id, department, version, requirements, published_by)
+      VALUES ($1, $2, 'CPE', 1, '[]', $3)`, [crypto.randomUUID(), cycleId, IDS.staffUser]);
+  }
+
   function command(action, sub, version, operationId = crypto.randomUUID(), notes, planId = IDS.plan) {
     return handler({ rawPath: `/api/v3/plans/${planId}/${action}`,
       body: JSON.stringify({ expected_version: version, operation_id: operationId,
@@ -112,7 +121,8 @@ describe('Issue #80 PostgreSQL workflow guarantees (required test database)', ()
     const plan = await pool.query('SELECT status, version, notes FROM plans WHERE id = $1', [IDS.plan]);
     const audits = await pool.query('SELECT * FROM audit_events WHERE plan_id = $1 ORDER BY created_at, event_id', [IDS.plan]);
     const operations = await pool.query('SELECT * FROM plan_operations WHERE plan_id = $1 ORDER BY created_at, operation_id', [IDS.plan]);
-    return { plan: plan.rows[0], audits: audits.rows, operations: operations.rows };
+    const submissions = await pool.query('SELECT * FROM plan_submissions WHERE plan_id = $1 ORDER BY plan_version', [IDS.plan]);
+    return { plan: plan.rows[0], audits: audits.rows, operations: operations.rows, submissions: submissions.rows };
   }
 
   async function race(actions) {
@@ -168,7 +178,7 @@ describe('Issue #80 PostgreSQL workflow guarantees (required test database)', ()
     }
   });
 
-  test.each(['DRAFT', 'SUBMITTED', 'NEEDS_REVISION'])('cancels %s through WorkflowService and persists one audit/operation', async (from) => {
+  test.each(['DRAFT', 'NEEDS_REVISION'])('cancels %s through WorkflowService and persists one audit/operation', async (from) => {
     await pool.query('UPDATE plans SET status = $1 WHERE id = $2', [from, IDS.plan]);
     await service.cancelPlan({ actor: STUDENT, plan_id: IDS.plan, expected_version: 1, operation_id: crypto.randomUUID() });
     const snapshot = await state();
@@ -177,6 +187,14 @@ describe('Issue #80 PostgreSQL workflow guarantees (required test database)', ()
     expect(snapshot.operations).toHaveLength(1);
     expect(snapshot.audits).toHaveLength(1);
     expect(snapshot.audits[0]).toMatchObject({ action: 'PLAN_CANCELLED', from_state: from, to_state: 'CANCELLED' });
+  });
+
+  test('rejects cancellation while SUBMITTED without modifying the plan, snapshot or history', async () => {
+    expect((await command('submit', 'student', 1)).statusCode).toBe(200);
+    const before = await state();
+    const response = await command('cancel', 'student', 2);
+    expect(response.statusCode).toBe(422);
+    expect(await state()).toEqual(before);
   });
 
   test.each([['plans', 'UPDATE'], ['plan_operations', 'INSERT'], ['audit_events', 'INSERT']])(
@@ -260,8 +278,9 @@ describe('Issue #80 PostgreSQL workflow guarantees (required test database)', ()
     const otherCycle = crypto.randomUUID();
     await pool.query(`INSERT INTO rounds (id, name, academic_year, semester, status, source, visibility, data_status)
       VALUES ($1, 'Other synthetic cycle', 2569, 2, 'OPEN', 'issue80-test', 'private', 'mock')`, [otherCycle]);
+    await publishTestPolicy(otherCycle);
     await pool.query(`INSERT INTO plans (id, student_id, cycle_id, round_id, company_id, position_id,
-      status, source, visibility, data_status) VALUES ($1, $2, $3, $3, $4, $5, 'DRAFT', 'issue80-test', 'private', 'mock')`,
+      status, source, visibility, data_status, project_title) VALUES ($1, $2, $3, $3, $4, $5, 'DRAFT', 'issue80-test', 'private', 'mock', 'Other synthetic project')`,
     [otherPlan, IDS.student, otherCycle, IDS.company, IDS.position]);
     const opId = crypto.randomUUID();
     const blocker = await pool.connect();

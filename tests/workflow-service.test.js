@@ -4,7 +4,7 @@
  *
  * Verifies:
  * 1. State machine rules and allowed transitions (#54, #63)
- *    - CANCEL allowed only from DRAFT, SUBMITTED, NEEDS_REVISION (not UNDER_REVIEW)
+ *    - CANCEL allowed only from DRAFT and NEEDS_REVISION (not pending review)
  * 2. Preconditions and editable constraints (#52 ข้อ 3, ข้อ 6)
  *    - Cycle, public company, and matching public position required for submit
  *    - Review notes optional for approve, mandatory for return_for_revision
@@ -1475,6 +1475,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       const testPositionId = crypto.randomUUID();
       const realPlanId = crypto.randomUUID();
       const testOperationId = makeOperationId();
+      const testPolicyId = crypto.randomUUID();
+      const testPolicyStaffId = crypto.randomUUID();
 
       try {
         await pool.query(`INSERT INTO users (id, role, account_status) VALUES ($1, 'STUDENT', 'ACTIVE')`, [testStudentUserId]);
@@ -1513,9 +1515,16 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
           VALUES ($1, $2, 'Software Intern', 'public', 'mock', 'v3_test')
         `, [testPositionId, testCompanyId]);
 
+        // This atomicity test has no required external documents, but submission
+        // still requires a Staff-published policy and a project under #135.
+        await pool.query(`INSERT INTO users (id, role) VALUES ($1, 'STAFF')`, [testPolicyStaffId]);
+        await pool.query(`INSERT INTO document_policies
+          (id, cycle_id, department, version, requirements, published_by)
+          VALUES ($1, $2, 'Computer Science', 1, '[]', $3)`, [testPolicyId, testRoundId, testPolicyStaffId]);
+
         await pool.query(`
-          INSERT INTO plans (id, student_id, cycle_id, round_id, company_id, position_id, status, version, source, visibility, data_status)
-          VALUES ($1, $2, $3, $3, $4, $5, 'DRAFT', 1, 'v3_test', 'private', 'mock')
+          INSERT INTO plans (id, student_id, cycle_id, round_id, company_id, position_id, status, version, source, visibility, data_status, project_title)
+          VALUES ($1, $2, $3, $3, $4, $5, 'DRAFT', 1, 'v3_test', 'private', 'mock', 'Synthetic workflow project')
         `, [realPlanId, testStudentId, testRoundId, testCompanyId, testPositionId]);
 
         const studentActor = {
@@ -1579,6 +1588,9 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
 
         const opAfterRetry = await pool.query('SELECT * FROM plan_operations WHERE plan_id = $1', [realPlanId]);
         expect(opAfterRetry.rows).toHaveLength(1);
+        const snapshots = await pool.query('SELECT * FROM plan_submissions WHERE plan_id = $1', [realPlanId]);
+        expect(snapshots.rows).toHaveLength(1);
+        expect(snapshots.rows[0].policy_id).toBe(testPolicyId);
 
         // 3. Stale update attempt -> 409
         await expect(
@@ -1592,22 +1604,34 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       } finally {
         const client = await pool.connect();
         try {
+          await client.query('BEGIN');
           await client.query('ALTER TABLE audit_events DISABLE TRIGGER trg_audit_events_immutable');
           await client.query('ALTER TABLE plan_operations DISABLE TRIGGER trg_plan_operations_immutable');
           await client.query('ALTER TABLE plans DISABLE TRIGGER trg_plans_no_delete');
+          await client.query('ALTER TABLE plan_submissions DISABLE TRIGGER plan_submissions_immutable');
+          await client.query('ALTER TABLE document_policies DISABLE TRIGGER document_policies_immutable');
 
           await client.query('DELETE FROM audit_events WHERE plan_id = $1', [realPlanId]);
           await client.query('DELETE FROM plan_operations WHERE plan_id = $1', [realPlanId]);
+          await client.query('DELETE FROM plan_submissions WHERE plan_id = $1', [realPlanId]);
           await client.query('DELETE FROM plans WHERE id = $1', [realPlanId]);
+          await client.query('DELETE FROM document_policies WHERE id = $1', [testPolicyId]);
           await client.query('DELETE FROM positions WHERE id = $1', [testPositionId]);
           await client.query('DELETE FROM companies WHERE id = $1', [testCompanyId]);
           await client.query('DELETE FROM rounds WHERE id = $1', [testRoundId]);
           await client.query('DELETE FROM students WHERE id = $1', [testStudentId]);
           await client.query('DELETE FROM users WHERE id = $1', [testStudentUserId]);
+          await client.query('DELETE FROM users WHERE id = $1', [testPolicyStaffId]);
 
+          await client.query('ALTER TABLE document_policies ENABLE TRIGGER document_policies_immutable');
+          await client.query('ALTER TABLE plan_submissions ENABLE TRIGGER plan_submissions_immutable');
           await client.query('ALTER TABLE plans ENABLE TRIGGER trg_plans_no_delete');
           await client.query('ALTER TABLE plan_operations ENABLE TRIGGER trg_plan_operations_immutable');
           await client.query('ALTER TABLE audit_events ENABLE TRIGGER trg_audit_events_immutable');
+          await client.query('COMMIT');
+        } catch (error) {
+          await client.query('ROLLBACK');
+          throw error;
         } finally {
           client.release();
         }
