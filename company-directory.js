@@ -568,6 +568,14 @@ function initRealDatasetMode(companies) {
   state.mode = 'dataset';
   datasetAllCompanies = companies;
 
+  // Remove API-mode event listeners to prevent duplicate triggers and double rendering
+  if (companySearch) {
+    companySearch.removeEventListener('input', onSearchInput);
+  }
+  if (locationFilter) {
+    locationFilter.removeEventListener('change', onFilterChange);
+  }
+
   // Populate location filter dropdown dynamically with actual locations
   if (locationFilter) {
     locationFilter.innerHTML = '<option value="">ทุกสถานที่</option>';

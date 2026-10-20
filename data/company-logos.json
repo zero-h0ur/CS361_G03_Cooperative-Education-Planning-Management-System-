@@ -56,6 +56,14 @@
       "m365"
     ]
   },
+  "becworld": {
+    "path": "resources/images/company-logos/becworld.png",
+    "keywords": [
+      "บีอีซี",
+      "bec world",
+      "ช่อง 3"
+    ]
+  },
   "etda": {
     "path": "resources/images/company-logos/etda.png",
     "keywords": [
@@ -165,6 +173,292 @@
       "ปตท. น้ำมัน",
       "ptt or",
       "or"
+    ]
+  },
+  "set": {
+    "path": "resources/images/company-logos/set.png",
+    "keywords": [
+      "ตลาดหลักทรัพย์แห่งประเทศไทย",
+      "set"
+    ]
+  },
+  "cpf": {
+    "path": "resources/images/company-logos/cpf.png",
+    "keywords": [
+      "เจริญโภคภัณฑ์อาหาร",
+      "cpf",
+      "ซีพีเอฟ"
+    ]
+  },
+  "cjexpress": {
+    "path": "resources/images/company-logos/cjexpress.png",
+    "keywords": [
+      "ซี.เจ. เอ็กซ์เพรส",
+      "cj express"
+    ]
+  },
+  "krungsriauto": {
+    "path": "resources/images/company-logos/krungsriauto.png",
+    "keywords": [
+      "อยุธยา แคปปิตอล",
+      "krungsri auto"
+    ]
+  },
+  "arise": {
+    "path": "resources/images/company-logos/arise.png",
+    "keywords": [
+      "อะไรส์",
+      "arise",
+      "อิน ฟินิธัส"
+    ]
+  },
+  "botnoi": {
+    "path": "resources/images/company-logos/botnoi.png",
+    "keywords": [
+      "ไอบอทน้อย",
+      "botnoi"
+    ]
+  },
+  "yuanta": {
+    "path": "resources/images/company-logos/yuanta.png",
+    "keywords": [
+      "หยวนต้า",
+      "yuanta"
+    ]
+  },
+  "tisco": {
+    "path": "resources/images/company-logos/tisco.png",
+    "keywords": [
+      "ทิสโก้",
+      "tisco"
+    ]
+  },
+  "pea": {
+    "path": "resources/images/company-logos/pea.png",
+    "keywords": [
+      "การไฟฟ้าส่วนภูมิภาค",
+      "pea"
+    ]
+  },
+  "blendata": {
+    "path": "resources/images/company-logos/blendata.png",
+    "keywords": [
+      "เบลนเดต้า",
+      "blendata"
+    ]
+  },
+  "cloudhm": {
+    "path": "resources/images/company-logos/cloudhm.png",
+    "keywords": [
+      "คลาวด์ เอชเอ็ม",
+      "cloud hm"
+    ]
+  },
+  "exxonmobil": {
+    "path": "resources/images/company-logos/exxonmobil.png",
+    "keywords": [
+      "เอ็กซอนโมบิล",
+      "exxonmobil",
+      "esso"
+    ]
+  },
+  "inext": {
+    "path": "resources/images/company-logos/inext.png",
+    "keywords": [
+      "อินโนเวทีฟ เอ็กซ์ตรีมิสต์",
+      "inext"
+    ]
+  },
+  "kingpower": {
+    "path": "resources/images/company-logos/kingpower.png",
+    "keywords": [
+      "คิง เพาเวอร์",
+      "king power"
+    ]
+  },
+  "lseg": {
+    "path": "resources/images/company-logos/lseg.png",
+    "keywords": [
+      "ตลาดหลักทรัพย์ลอนดอน",
+      "lseg"
+    ]
+  },
+  "groupib": {
+    "path": "resources/images/company-logos/groupib.png",
+    "keywords": [
+      "กรุ๊ป-ไอบี",
+      "group-ib"
+    ]
+  },
+  "dohome": {
+    "path": "resources/images/company-logos/dohome.png",
+    "keywords": [
+      "ดูโฮม",
+      "dohome"
+    ]
+  },
+  "skilllane": {
+    "path": "resources/images/company-logos/skilllane.png",
+    "keywords": [
+      "สกิลเลน",
+      "skilllane"
+    ]
+  },
+  "edvisory": {
+    "path": "resources/images/company-logos/edvisory.png",
+    "keywords": [
+      "เอ็ดไวซอรี่",
+      "เอดไวซอรี่",
+      "edvisory"
+    ]
+  },
+  "synphaet": {
+    "path": "resources/images/company-logos/synphaet.png",
+    "keywords": [
+      "สินแพทย์",
+      "synphaet"
+    ]
+  },
+  "supalai": {
+    "path": "resources/images/company-logos/supalai.png",
+    "keywords": [
+      "ศุภาลัย",
+      "supalai"
+    ]
+  },
+  "cubesofttech": {
+    "path": "resources/images/company-logos/cubesofttech.png",
+    "keywords": [
+      "คิวบ์ ซอฟท์เทค",
+      "cube softtech"
+    ]
+  },
+  "merxil": {
+    "path": "resources/images/company-logos/merxil.png",
+    "keywords": [
+      "เมอร์ซิล",
+      "merxil"
+    ]
+  },
+  "gofive": {
+    "path": "resources/images/company-logos/gofive.png",
+    "keywords": [
+      "โกไฟว์",
+      "gofive"
+    ]
+  },
+  "ascendcorp": {
+    "path": "resources/images/company-logos/ascendcorp.png",
+    "keywords": [
+      "แอสเซนด์ กรุ๊ป",
+      "ascend group"
+    ]
+  },
+  "yipintsoi": {
+    "path": "resources/images/company-logos/yipintsoi.png",
+    "keywords": [
+      "ยิบอินซอย",
+      "yip in tsoi"
+    ]
+  },
+  "jobbkk": {
+    "path": "resources/images/company-logos/jobbkk.png",
+    "keywords": [
+      "จ๊อบบีเคเค",
+      "jobbkk"
+    ]
+  },
+  "loxley": {
+    "path": "resources/images/company-logos/loxley.png",
+    "keywords": [
+      "ล็อกซเล่ย์",
+      "loxley"
+    ]
+  },
+  "ey": {
+    "path": "resources/images/company-logos/ey.png",
+    "keywords": [
+      "อีวาย",
+      "ey"
+    ]
+  },
+  "unisecurity": {
+    "path": "resources/images/company-logos/unisecurity.png",
+    "keywords": [
+      "ยูนิ ซีเคียวริตี้",
+      "uni security"
+    ]
+  },
+  "jitta": {
+    "path": "resources/images/company-logos/jitta.png",
+    "keywords": [
+      "จิตตะ",
+      "jitta"
+    ]
+  },
+  "narit": {
+    "path": "resources/images/company-logos/narit.png",
+    "keywords": [
+      "สถาบันวิจัยดาราศาสตร์",
+      "narit"
+    ]
+  },
+  "dhipaya": {
+    "path": "resources/images/company-logos/dhipaya.png",
+    "keywords": [
+      "ทิพยประกันภัย",
+      "dhipaya"
+    ]
+  },
+  "krungthai": {
+    "path": "resources/images/company-logos/krungthai.png",
+    "keywords": [
+      "กรุงไทย",
+      "krungthai",
+      "ktb"
+    ]
+  },
+  "iapp": {
+    "path": "resources/images/company-logos/iapp.png",
+    "keywords": [
+      "ไอแอพพ์",
+      "iapp"
+    ]
+  },
+  "innovestx": {
+    "path": "resources/images/company-logos/innovestx.png",
+    "keywords": [
+      "อินโนเวสท์ เอกซ์",
+      "innovestx"
+    ]
+  },
+  "avision": {
+    "path": "resources/images/company-logos/avision.png",
+    "keywords": [
+      "เอวิชั่น",
+      "avision"
+    ]
+  },
+  "sirisoft": {
+    "path": "resources/images/company-logos/sirisoft.png",
+    "keywords": [
+      "สิริซอฟต์",
+      "sirisoft"
+    ]
+  },
+  "michelin": {
+    "path": "resources/images/company-logos/michelin.png",
+    "keywords": [
+      "มิชลิน",
+      "michelin"
+    ]
+  },
+  "truemoney": {
+    "path": "resources/images/company-logos/truemoney.png",
+    "keywords": [
+      "แอสเซนด์ มันนี่",
+      "truemoney",
+      "true money"
     ]
   }
 }
