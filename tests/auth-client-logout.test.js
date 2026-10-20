@@ -32,7 +32,7 @@ test('SDK sees tokens before cleanup; both stores retain unrelated data and Host
     expect(sessionStorage.getItem('CognitoIdentityServiceProvider.client-test.user.accessToken')).toBe('access');
   });
   await client().logout();
-  expect(signOut).toHaveBeenCalledWith({ global: true });
+  expect(signOut).toHaveBeenCalledWith();
   for (const store of [localStorage, sessionStorage]) {
     expect(store.getItem('CognitoIdentityServiceProvider.client-test.user.accessToken')).toBeNull();
     expect(store.getItem('CognitoIdentityServiceProvider.client-test.user.refreshToken')).toBeNull();

@@ -158,8 +158,11 @@ export function createAmplifyAuthClient({ config, currentOrigin = window.locatio
       signedOut = true;
       logoutPromise = (async () => {
         try {
-          // Do not erase tokens/OAuth metadata before the SDK uses them to sign out.
-          await signOut({ global: true });
+          // Client sign-out attempts refresh-token revocation before removal.
+          // GlobalSignOut needs aws.cognito.signin.user.admin, which our public
+          // OAuth client deliberately does not request. Do not widen its scopes.
+          // Keep tokens/OAuth metadata intact until the SDK has used them.
+          await signOut();
         } catch { /* Still clear local state and visit Hosted UI logout on failure. */ }
         try {
           await cognitoUserPoolsTokenProvider.tokenOrchestrator.clearTokens();
