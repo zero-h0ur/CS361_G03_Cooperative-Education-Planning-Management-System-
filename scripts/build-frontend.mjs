@@ -12,7 +12,6 @@ const staticFiles = [
   'style.css',
   'company-directory.js',
   'company-directory-helpers.js',
-  'companies-data.js',
   'app.html'
 ];
 

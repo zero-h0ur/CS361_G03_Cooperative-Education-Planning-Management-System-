@@ -1,384 +1,151 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { buildImportSql } from './operations/partner-import-sql.mjs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const CSV_PATH = path.resolve(__dirname, '../data/raw-companies-2569.csv');
-const OUTPUT_JSON_PATH = path.resolve(__dirname, '../data/companies.json');
-
-// Map of known company logos in resources/images
-const LOGO_MAP = {
-  'agoda': 'resources/images/agoda.jpg',
-  'อโกดา': 'resources/images/agoda.jpg',
-  'cp all': 'resources/images/CP-ALL.png',
-  'ซีพี ออลล์': 'resources/images/CP-ALL.png',
-  'g-able': 'resources/images/g-able.png',
-  'จีเอเบิล': 'resources/images/g-able.png',
-  'gosoft': 'resources/images/gosoft.png',
-  'โกซอฟท์': 'resources/images/gosoft.png',
-  'huawei': 'resources/images/huawei.jpg',
-  'หัวเว่ย': 'resources/images/huawei.jpg',
-  'kbtg': 'resources/images/KBTG.jpg',
-  'กสิกร บิซิเนส': 'resources/images/KBTG.jpg',
-  'krungsri': 'resources/images/krungsri.jpg',
-  'กรุงศรี': 'resources/images/krungsri.jpg',
-  'nectec': 'resources/images/nectec.png',
-  'เนคเทค': 'resources/images/nectec.png',
-  'อิเล็กทรอนิกส์และคอมพิวเตอร์แห่งชาติ': 'resources/images/nectec.png',
-  'ptt digital': 'resources/images/PTT-Digital.png',
-  'พีทีที ดิจิตอล': 'resources/images/PTT-Digital.png',
-  'ptt': 'resources/images/PTT.png',
-  'scb techx': 'resources/images/SCB-TechX.png',
-  'เอสซีบี เทคเอกซ์': 'resources/images/SCB-TechX.png',
-  'scb': 'resources/images/SCB.jpg',
-  'ไทยพาณิชย์': 'resources/images/SCB.jpg',
-  'scbx': 'resources/images/SCBX.jpg',
-  'scg': 'resources/images/SCG.png',
-  'ปูนซิเมนต์ไทย': 'resources/images/SCG.png',
-  'วงใน': 'resources/images/wongnai.png',
-  'ไลน์แมน': 'resources/images/wongnai.png'
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+export const CATALOG = 'partner-registry-2569';
+export const stableId = key => {
+  const h = crypto.createHash('sha256').update('coed-directory:' + key).digest('hex').slice(0, 32);
+  return h.slice(0, 8) + '-' + h.slice(8, 12) + '-5' + h.slice(13, 16) + '-a' + h.slice(17, 20) + '-' + h.slice(20);
 };
+const normalize = s => String(s || '').normalize('NFKC').toLowerCase()
+  .replace(/^บริษัท\s*/, '').replace(/\s*จำกัด(?:\s*\(มหาชน\))?/g, '')
+  .replace(/\s*\((?:ประเทศไทย|สำนักงานใหญ่|มหาชน)\)/g, '').replace(/\s+/g, ' ').trim();
+const nullable = s => String(s || '').trim() || null;
 
-let DYNAMIC_LOGOS = {};
-const DYNAMIC_LOGOS_PATH = path.resolve(__dirname, '../data/company-logos.json');
-if (fs.existsSync(DYNAMIC_LOGOS_PATH)) {
-  try {
-    DYNAMIC_LOGOS = JSON.parse(fs.readFileSync(DYNAMIC_LOGOS_PATH, 'utf-8'));
-  } catch {}
+export function parseCsv(input) {
+  const rows = []; let row = [], field = '', quoted = false;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    if (ch === '"') {
+      if (quoted && input[i + 1] === '"') { field += '"'; i++; } else quoted = !quoted;
+    } else if (ch === ',' && !quoted) { row.push(field.trim()); field = ''; }
+    else if ((ch === '\r' || ch === '\n') && !quoted) {
+      if (ch === '\r' && input[i + 1] === '\n') i++;
+      row.push(field.trim()); if (row.some(Boolean)) rows.push(row); row = []; field = '';
+    } else field += ch;
+  }
+  if (quoted) throw new Error('Malformed CSV.');
+  if (field || row.length) { row.push(field.trim()); if (row.some(Boolean)) rows.push(row); }
+  return rows;
 }
-
-function findLogo(name = '') {
-  const lower = name.toLowerCase();
-  for (const [key, logoPath] of Object.entries(LOGO_MAP)) {
-    if (lower.includes(key)) {
-      return logoPath;
-    }
-  }
-  for (const [slug, info] of Object.entries(DYNAMIC_LOGOS)) {
-    if (info.keywords && info.keywords.some(kw => lower.includes(kw.toLowerCase()))) {
-      return info.path;
-    }
-  }
-  return null;
+export function normalizeDuration(s = '') { return String(s || '').trim().replace(/\s+/g, ' '); }
+function region(address) {
+  if (/กรุงเทพ|bangkok|กทม/i.test(address)) return 'กรุงเทพฯ';
+  return ['นนทบุรี', 'ปทุมธานี', 'เชียงใหม่', 'ชลบุรี', 'ระยอง', 'สมุทรปราการ',
+    'สมุทรสาคร', 'ภูเก็ต', 'พระนครศรีอยุธยา'].find(s => address.includes(s)) || null;
 }
-
-function normalizeLocation(address = '') {
-  const addr = String(address);
-  if (addr.includes('กรุงเทพ') || addr.includes('Bangkok')) return 'กรุงเทพฯ';
-  if (addr.includes('นนทบุรี')) return 'นนทบุรี';
-  if (addr.includes('ปทุมธานี') || addr.includes('Pathumthani')) return 'ปทุมธานี';
-  if (addr.includes('เชียงใหม่')) return 'เชียงใหม่';
-  if (addr.includes('ชลบุรี')) return 'ชลบุรี';
-  if (addr.includes('ระยอง')) return 'ระยอง';
-  if (addr.includes('สมุทรปราการ')) return 'สมุทรปราการ';
-  if (addr.includes('สมุทรสาคร')) return 'สมุทรสาคร';
-  if (addr.includes('ภูเก็ต')) return 'ภูเก็ต';
-  if (addr.includes('พระนครศรีอยุธยา') || addr.includes('อยุธยา')) return 'พระนครศรีอยุธยา';
-  return 'กรุงเทพฯ';
+function safeText(value, max = 1000) {
+  if (typeof value !== 'string' || !value.trim() || value.length > max ||
+      /[<>@]|(?:\+66|0)[\d ()-]{8,}/.test(value)) throw new Error('Unsafe catalogue field; review source privately.');
+  return value.trim();
 }
-
-function normalizeCompanyName(name = '') {
-  return name
-    .replace(/^บริษัท\s*/i, '')
-    .replace(/\s*จำกัด\s*\(มหาชน\)/g, '')
-    .replace(/\s*จำกัด/g, '')
-    .replace(/\s*\(มหาชน\)/g, '')
-    .replace(/\s*\(ประเทศไทย\)/g, '')
-    .replace(/\s*\(สำนักงานใหญ่\)/g, '')
-    .replace(/\s*เซอร์วิสเซส/g, '')
-    .trim();
+export function validatePayload(payload) {
+  const rootFields = new Set(['catalog_key', 'academic_year', 'imported_at', 'companies', 'positions', 'registry_aliases']);
+  if (!payload || Object.keys(payload).some(key => !rootFields.has(key))) throw new Error('Unexpected catalogue field.');
+  const sets = [
+    [payload.companies, new Set(['id', 'code', 'name', 'address', 'location', 'logo', 'source', 'data_status', 'updated_at'])],
+    [payload.positions, new Set(['id', 'company_id', 'title', 'announcement_ref', 'quota', 'duration', 'academic_year', 'source', 'data_status', 'updated_at'])]
+  ];
+  if (payload.catalog_key !== CATALOG || payload.academic_year !== 2569 || !payload.companies?.length) throw new Error('Wrong catalogue target.');
+  const ids = new Set();
+  const codes = new Set();
+  const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+  const validDate = value => typeof value === 'string' && value.length <= 40 && Number.isFinite(Date.parse(value));
+  if (!validDate(payload.imported_at)) throw new Error('Invalid import date.');
+  for (const [items, fields] of sets) {
+    if (!Array.isArray(items)) throw new Error('Invalid records.');
+    for (const item of items) {
+      if (!item || Object.keys(item).some(k => !fields.has(k)) || ids.has(item.id) || !uuid.test(item.id)) throw new Error('Unexpected field or duplicate ID.');
+      ids.add(item.id);
+      if (item.source !== CATALOG || item.data_status !== 'to_validate') throw new Error('Invalid source/status.');
+      if (!validDate(item.updated_at)) throw new Error('Invalid record date.');
+      for (const k of ['name', 'address', 'location', 'title', 'quota', 'duration']) {
+        if (item[k] !== null && item[k] !== undefined) safeText(item[k], k === 'address' ? 1500 : 1000);
+      }
+      if (item.logo && (!/^resources\/images\/[a-zA-Z0-9_./-]+\.(png|jpg|jpeg|webp)$/.test(item.logo) || item.logo.includes('..'))) throw new Error('Invalid logo path.');
+    }
+  }
+  for (const company of payload.companies) {
+    if (!/^C\d{2,}$/.test(company.code) || codes.has(company.code)) throw new Error('Invalid/duplicate registry code.');
+    codes.add(company.code); safeText(company.name);
+  }
+  const companyIds = new Set(payload.companies.map(c => c.id));
+  if (payload.positions.some(p => !companyIds.has(p.company_id) || p.academic_year !== 2569 ||
+      !/^2569:\d+$/.test(p.announcement_ref))) throw new Error('Invalid announcement reference.');
+  for (const position of payload.positions) safeText(position.title, 250);
+  if (!Array.isArray(payload.registry_aliases) || payload.registry_aliases.some(group =>
+    !Array.isArray(group) || group.some(code => !codes.has(code)))) throw new Error('Invalid registry aliases.');
 }
-
-export function normalizeDuration(raw = '') {
-  if (!raw) return '';
-  const str = String(raw).trim();
-  if (str.includes('ทุกช่วงเวลา') || str.includes('เปิดรับตลอดปี') || str.includes('ตลอดปี')) {
-    return 'เปิดรับตลอดทั้งปี';
+export function buildCatalogue(raw, { forms = '', logos = {}, importedAt = new Date().toISOString() } = {}) {
+  let section = ''; const partners = [], announcements = [];
+  for (const r of parseCsv(raw)) {
+    if (r[0] === 'ลำดับ') { section = 'announcements'; continue; }
+    if (r[0] === 'Code') { section = 'partners'; continue; }
+    if (section === 'announcements' && /^\d+$/.test(r[0])) {
+      // Only these columns are permitted; contact/identity columns are discarded.
+      announcements.push({ key: r[0], company: r[1], title: r[2], quota: nullable(r[3]), duration: normalizeDuration(r[5]) });
+    }
+    if (section === 'partners' && /^C\d+$/.test(r[0])) partners.push({ code: r[0], name: r[1], address: r[2] || '' });
   }
-  if (str.includes('2 มิถุนายน') && str.includes('1 ธันวาคม')) {
-    return '2 มิ.ย. 69 - 1 ธ.ค. 69';
+  if (!partners.length || new Set(partners.map(p => p.code)).size !== partners.length) throw new Error('Missing/duplicate registry codes.');
+  const durations = new Map();
+  for (const r of parseCsv(forms).slice(1)) if (r[2] && r[3]) durations.set(normalize(r[2]), normalizeDuration(r[3]));
+  const companies = partners.map(p => ({
+    id: stableId(CATALOG + ':' + p.code), code: p.code, name: safeText(p.name),
+    address: nullable(p.address), location: region(p.address), logo: logos[p.code] || null,
+    source: CATALOG, data_status: 'to_validate', updated_at: importedAt
+  }));
+  const byName = new Map();
+  for (const c of companies) { const key = normalize(c.name); if (!byName.has(key)) byName.set(key, []); byName.get(key).push(c); }
+  for (const group of byName.values()) group.sort((a, b) => Number(a.code.slice(1)) - Number(b.code.slice(1)));
+  // Exact legal-name aliases only. No brand/substring matching across subsidiaries.
+  const aliases = new Map([
+    ['ศูนย์เทคโนโลยีอิเล็กทรอนิกส์และคอมพิวเตอร์แห่งชาติ', 'C02'],
+    ['สำนักงานพัฒนาธุรกรรมทางอิเล็กทรอนิกส์', 'C31']
+  ].map(([name, code]) => [normalize(name), code]));
+  const positions = [], unmatched = [];
+  for (const a of announcements) {
+    const name = normalize(a.company), c = byName.get(name)?.[0] || companies.find(c => c.code === aliases.get(name));
+    if (!c) { unmatched.push(a.key); continue; }
+    for (const title of String(a.title || '').split(/[\r\n,]+/).map(s => s.replace(/^[-•\s]+/, '').trim()).filter(Boolean)) {
+      positions.push({ id: stableId(CATALOG + ':' + c.code + ':' + a.key + ':' + normalize(title)),
+        company_id: c.id, title: safeText(title, 250), announcement_ref: '2569:' + a.key,
+        quota: a.quota, duration: nullable(durations.get(name) || a.duration), academic_year: 2569,
+        source: CATALOG, data_status: 'to_validate', updated_at: importedAt });
+    }
   }
-  if (str.includes('มิถุนายน') && str.includes('ธันวาคม')) {
-    return 'มิ.ย. 69 - ธ.ค. 69 (≥ 6 เดือน)';
-  }
-  return str;
+  if (unmatched.length) throw new Error('Unmatched announcement rows: ' + unmatched.join(', ') + '. Add an exact reviewed alias.');
+  const payload = { catalog_key: CATALOG, academic_year: 2569, imported_at: importedAt, companies, positions,
+    registry_aliases: [...byName.values()].filter(g => g.length > 1).map(g => g.map(c => c.code)) };
+  validatePayload(payload); return payload;
 }
-
-function parseCsv(content) {
-  const lines = [];
-  let currentLine = [];
-  let currentField = '';
-  let insideQuote = false;
-
-  for (let i = 0; i < content.length; i++) {
-    const char = content[i];
-    const nextChar = content[i + 1];
-
-    if (char === '"') {
-      if (insideQuote && nextChar === '"') {
-        currentField += '"';
-        i++; // skip next quote
-      } else {
-        insideQuote = !insideQuote;
-      }
-    } else if (char === ',' && !insideQuote) {
-      currentLine.push(currentField.trim());
-      currentField = '';
-    } else if ((char === '\r' || char === '\n') && !insideQuote) {
-      if (char === '\r' && nextChar === '\n') {
-        i++; // skip \n
-      }
-      currentLine.push(currentField.trim());
-      currentField = '';
-      if (currentLine.some(f => f.length > 0)) {
-        lines.push(currentLine);
-      }
-      currentLine = [];
-    } else {
-      currentField += char;
-    }
-  }
-
-  if (currentField.length > 0 || currentLine.length > 0) {
-    currentLine.push(currentField.trim());
-    if (currentLine.some(f => f.length > 0)) {
-      lines.push(currentLine);
-    }
-  }
-
-  return lines;
+function main() {
+  const args = process.argv.slice(2), value = flag => { const i = args.indexOf(flag); return i < 0 ? null : args[i + 1]; };
+  const input = value('--input'), out = value('--output-directory');
+  if (!input || !out || !path.isAbsolute(out)) throw new Error('Use --input <private-csv> --output-directory <absolute-private-directory>.');
+  const target = path.resolve(out);
+  if (target === ROOT || target.startsWith(ROOT + path.sep)) throw new Error('Private output must be outside the repository.');
+  fs.mkdirSync(target, { recursive: true, mode: 0o700 });
+  if (fs.realpathSync(target) !== target) throw new Error('Output must not contain symlinks.');
+  if ((fs.statSync(target).mode & 0o077) !== 0) throw new Error('Output directory must be private (0700).');
+  const current = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/companies.json'), 'utf8'));
+  const logos = Object.fromEntries(current.companies.map(c => [c.code, c.logo]));
+  const payload = buildCatalogue(fs.readFileSync(input, 'utf8'), {
+    logos, forms: value('--forms') ? fs.readFileSync(value('--forms'), 'utf8') : ''
+  });
+  const sql = buildImportSql(payload);
+  fs.writeFileSync(path.join(target, 'partner-import.json'), JSON.stringify(payload, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
+  fs.writeFileSync(path.join(target, 'partner-import.sql'), sql, { mode: 0o600, flag: 'wx' });
+  if (args.includes('--write-public')) fs.writeFileSync(path.join(ROOT, 'data/companies.json'),
+    JSON.stringify({ metadata: { academic_year: 2569, source: CATALOG, total_companies: payload.companies.length },
+      companies: payload.companies }, null, 2) + '\n');
+  console.log(JSON.stringify({ companies: payload.companies.length, positions: payload.positions.length,
+    registryAliases: payload.registry_aliases, contactsIncluded: false,
+    sqlSha256: crypto.createHash('sha256').update(sql).digest('hex'), outputDirectory: target }, null, 2));
 }
-
-export function importCompanies() {
-  if (!fs.existsSync(CSV_PATH)) {
-    throw new Error(`CSV file not found at: ${CSV_PATH}`);
-  }
-
-  const raw = fs.readFileSync(CSV_PATH, 'utf-8');
-  const rows = parseCsv(raw);
-
-  // Split into Section 1 (Announcements) and Section 2 (Master Partners)
-  const announcements = [];
-  const partners = [];
-
-  let currentSection = null;
-
-  for (const row of rows) {
-    const firstCell = (row[0] || '').trim();
-
-    if (firstCell === 'ลำดับ') {
-      currentSection = 'announcements';
-      continue;
-    }
-
-    if (firstCell === 'Code') {
-      currentSection = 'partners';
-      continue;
-    }
-
-    if (currentSection === 'announcements') {
-      // Check if this row is a valid announcement row (row[0] is a number)
-      const num = parseInt(firstCell, 10);
-      if (!isNaN(num) && row.length >= 6) {
-        announcements.push({
-          index: num,
-          companyName: (row[1] || '').trim(),
-          positionTitle: (row[2] || '').trim(),
-          quota: (row[3] || '').trim(),
-          contact: (row[4] || '').trim(),
-          duration: (row[5] || '').trim(),
-          updatedAt: (row[6] || '').trim(),
-          status: (row[7] || '').trim()
-        });
-      }
-    } else if (currentSection === 'partners') {
-      if (firstCell.startsWith('C') && row.length >= 3) {
-        partners.push({
-          code: firstCell,
-          name: (row[1] || '').trim(),
-          address: (row[2] || '').trim()
-        });
-      }
-    }
-  }
-
-  console.log(`Parsed ${announcements.length} announcements and ${partners.length} master partners.`);
-
-  // Group announcements by company
-  const announcementsByCompany = new Map();
-
-  for (const ann of announcements) {
-    const norm = normalizeCompanyName(ann.companyName).toLowerCase();
-    if (!announcementsByCompany.has(norm)) {
-      announcementsByCompany.set(norm, []);
-    }
-    announcementsByCompany.get(norm).push(ann);
-  }
-
-  // Read form responses CSV if available
-  const FORM_CSV_PATH = path.resolve(__dirname, '../data/form-responses-2569.csv');
-  const formDurationsByCompany = new Map();
-  if (fs.existsSync(FORM_CSV_PATH)) {
-    const formRaw = fs.readFileSync(FORM_CSV_PATH, 'utf-8');
-    const formRows = parseCsv(formRaw);
-    for (const row of formRows.slice(1)) {
-      if (row[2] && row[3]) {
-        const cName = normalizeCompanyName(row[2]).toLowerCase();
-        formDurationsByCompany.set(cName, row[3].trim());
-      }
-    }
-  }
-
-  // Build master companies list
-  const companies = [];
-  const matchedAnnouncementIndices = new Set();
-
-  for (const partner of partners) {
-    const normPartner = normalizeCompanyName(partner.name).toLowerCase();
-    const location = normalizeLocation(partner.address);
-    const logo = findLogo(partner.name);
-
-    // Look for matching announcements
-    let matchedAnnList = [];
-
-    for (const [annNorm, annList] of announcementsByCompany.entries()) {
-      if (
-        normPartner === annNorm ||
-        normPartner.includes(annNorm) ||
-        annNorm.includes(normPartner) ||
-        (normPartner.includes('nectec') && annNorm.includes('อิเล็กทรอนิกส์และคอมพิวเตอร์แห่งชาติ')) ||
-        (normPartner.includes('เกียรตินาคิน') && annNorm.includes('เกียรตินาคิน')) ||
-        (normPartner.includes('เอ็ม 365') && annNorm.includes('เอ็ม 365')) ||
-        (normPartner.includes('สพธอ') && annNorm.includes('ธุรกรรมทางอิเล็กทรอนิกส์')) ||
-        (normPartner.includes('เบทาโกร') && annNorm.includes('เบทาโกร')) ||
-        (normPartner.includes('คูโบต้า') && annNorm.includes('คูโบต้า')) ||
-        (normPartner.includes('กรุงศรี') && annNorm.includes('กรุงศรี')) ||
-        (normPartner.includes('ซีดีจี') && annNorm.includes('ซีดีจี'))
-      ) {
-        matchedAnnList.push(...annList);
-        annList.forEach(a => matchedAnnouncementIndices.add(a.index));
-      }
-    }
-
-    const isRecruiting = matchedAnnList.length > 0;
-
-    // Collect positions
-    const positions = [];
-    let contactInfo = '';
-    let duration = '';
-
-    if (isRecruiting) {
-      // Check form responses first for latest duration
-      for (const [fName, fDur] of formDurationsByCompany.entries()) {
-        if (normPartner.includes(fName) || fName.includes(normPartner)) {
-          duration = fDur;
-          break;
-        }
-      }
-
-      for (const ann of matchedAnnList) {
-        if (!contactInfo && ann.contact) contactInfo = ann.contact;
-        if (!duration && ann.duration) duration = ann.duration;
-
-        // Check if position title contains multiple titles separated by comma or newlines
-        const titles = ann.positionTitle.split(/[\r\n,]+/).map(t => t.trim()).filter(Boolean);
-        for (const title of titles) {
-          positions.push({
-            title: title.replace(/^[-\s•(small yellow diamond)]+/, '').trim(),
-            quota: ann.quota || '-',
-            contact: ann.contact || contactInfo,
-            duration: normalizeDuration(ann.duration || duration)
-          });
-        }
-      }
-    }
-
-    const normalizedDuration = normalizeDuration(duration);
-
-    companies.push({
-      id: partner.code,
-      code: partner.code,
-      name: partner.name,
-      location,
-      address: partner.address,
-      logo,
-      is_recruiting: isRecruiting,
-      duration: isRecruiting ? (normalizedDuration || 'เปิดรับตลอดทั้งปี') : null,
-      recruiting_period: isRecruiting ? (normalizedDuration || 'เปิดรับตลอดทั้งปี') : null,
-      positions_count: positions.length,
-      positions,
-      contact: contactInfo,
-      academic_year: 2569,
-      data_status: 'verified'
-    });
-  }
-
-  // Check if any announcements didn't match master partners list
-  const unmatchedAnnouncements = announcements.filter(a => !matchedAnnouncementIndices.has(a.index));
-  if (unmatchedAnnouncements.length > 0) {
-    console.log(`Unmatched announcements (${unmatchedAnnouncements.length}):`);
-    for (const u of unmatchedAnnouncements) {
-      console.log(`  - #${u.index}: ${u.companyName} (${u.positionTitle})`);
-      // Add as standalone recruiting partner if not found in master C-list
-      const location = normalizeLocation(u.contact);
-      companies.push({
-        id: `C_EXTRA_${u.index}`,
-        code: `C+${u.index}`,
-        name: u.companyName,
-        location,
-        address: u.companyName,
-        logo: findLogo(u.companyName),
-        is_recruiting: true,
-        positions_count: 1,
-        positions: [{
-          title: u.positionTitle,
-          quota: u.quota || '-',
-          contact: u.contact,
-          duration: u.duration
-        }],
-        contact: u.contact,
-        recruiting_period: u.duration,
-        academic_year: 2569,
-        data_status: 'verified'
-      });
-    }
-  }
-
-  const recruitingCount = companies.filter(c => c.is_recruiting).length;
-
-  const dataset = {
-    metadata: {
-      title: 'รายชื่อสถานประกอบการสหกิจศึกษา สาขาวิชาวิทยาการคอมพิวเตอร์ มหาวิทยาลัยธรรมศาสตร์',
-      academic_year: 2569,
-      total_companies: companies.length,
-      recruiting_companies: recruitingCount,
-      updated_at: new Date().toISOString()
-    },
-    companies
-  };
-
-  fs.writeFileSync(OUTPUT_JSON_PATH, JSON.stringify(dataset, null, 2), 'utf-8');
-  console.log(`Successfully generated ${OUTPUT_JSON_PATH}`);
-
-  const OUTPUT_JS_PATH = path.resolve(__dirname, '../companies-data.js');
-  const jsContent = `/**
- * Auto-generated by scripts/import-companies-csv.mjs
- * Academic Year: ${dataset.metadata.academic_year}
- * Total: ${dataset.metadata.total_companies}, Recruiting: ${dataset.metadata.recruiting_companies}
- */
-(function(root) {
-  root.COMPANIES_DATA = Object.freeze(${JSON.stringify(dataset, null, 2)});
-})(typeof window !== 'undefined' ? window : globalThis);
-`;
-  fs.writeFileSync(OUTPUT_JS_PATH, jsContent, 'utf-8');
-  console.log(`Successfully generated ${OUTPUT_JS_PATH}`);
-  console.log(`Total companies: ${companies.length}, Actively recruiting: ${recruitingCount}`);
-
-  return dataset;
-}
-
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  importCompanies();
+  try { main(); } catch (error) { console.error(error.message); process.exitCode = 1; }
 }

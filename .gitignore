@@ -9,6 +9,10 @@
 .DS_Store
 
 # Node.js
+data/raw-companies-*.csv
+data/form-responses-*.csv
+partner-import.json
+partner-import.sql
 node_modules/
 .env
 .env.*.local

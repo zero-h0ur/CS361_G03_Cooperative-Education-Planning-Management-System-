@@ -87,7 +87,7 @@ a {
 /* Ambient Blur Blobs */
 .blur-blob {
   position: absolute;
-  width: 440px;
+  width: min(440px, 100vw);
   height: 440px;
   background: var(--tu-red);
   filter: blur(130px);
@@ -99,7 +99,7 @@ a {
 
 .blur-blob-gold {
   position: absolute;
-  width: 380px;
+  width: min(380px, 100vw);
   height: 380px;
   background: var(--tu-gold);
   filter: blur(140px);

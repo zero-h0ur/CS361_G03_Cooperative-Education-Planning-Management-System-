@@ -45,6 +45,7 @@ export function createPublicNavbar({ container, authClient, sessionClient, event
   async function signOut() {
     if (signingOut) return;
     signingOut = true; sequence += 1; request?.abort();
+    eventTarget.dispatchEvent(new Event('coed:private-content-clear'));
     anonymous('กำลังออกจากระบบ');
     container.querySelector('a').removeAttribute('href');
     try { await authClient.logout(); }

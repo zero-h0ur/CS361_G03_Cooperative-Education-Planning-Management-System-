@@ -625,6 +625,10 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
   });
 
   const PROTECTED_ENDPOINTS = [
+    { method: 'GET', path: '/api/v3/directory/companies' },
+    { method: 'GET', path: `/api/v3/directory/companies/${PLANS.planA_Draft.company_id}` },
+    { method: 'GET', path: `/api/v3/directory/companies/${PLANS.planA_Draft.company_id}/positions` },
+    { method: 'GET', path: `/api/v3/directory/positions/${PLANS.planA_Draft.id}` },
     ...ADVISOR_READ_ENDPOINTS.map((path) => ({ method: 'GET', path })),
     { method: 'GET', path: '/api/v3/me' },
     { method: 'GET', path: '/api/v3/students/me' },

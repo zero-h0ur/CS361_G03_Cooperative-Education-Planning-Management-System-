@@ -14,6 +14,7 @@ await build({
     resolve(workspace, 'src/frontend/auth/session-client.js'),
     resolve(workspace, 'src/frontend/auth/auth-storage.js'),
     resolve(workspace, 'src/frontend/public-navbar.js'),
+    resolve(workspace, 'src/frontend/directory-client.js'),
     resolve(workspace, 'src/frontend/student/profile-client.js'),
     resolve(workspace, 'src/frontend/student/student-dashboard-view.js'),
     resolve(workspace, 'src/frontend/student/plan-submission-client.js'),

@@ -396,7 +396,7 @@ Response (`data`): `{ id, cycle_id, company_id, position_id, notes, status, vers
 | แก้ Plan ในสถานะที่ไม่อนุญาต (`SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, `CANCELLED`) | `422 INVALID_STATE_TRANSITION` |
 | Database ไม่พร้อมใช้งาน | `503 SERVICE_UNAVAILABLE` |
 
-Retry ด้วย `operation_id` เดิมและ Payload เดิมคืนผลสำเร็จเดิมโดยไม่เพิ่ม `version` และไม่สร้าง Audit ซ้ำ ส่วน Company/Position ที่ใช้เลือกให้อ่านจาก Public Directory เดิม (`GET /api/companies`, `GET /api/companies/:id/positions`)
+Retry ด้วย `operation_id` เดิมและ Payload เดิมคืนผลสำเร็จเดิมโดยไม่เพิ่ม `version` และไม่สร้าง Audit ซ้ำ ส่วน Company ที่ใช้เลือกอ่านจาก `GET /api/directory/companies` และ Position อ่านผ่าน `GET /api/v3/directory/companies/:id/positions` โดยแนบ Access Token ตำแหน่งจริงไม่เปิดผ่าน Public API เดิม
 
 ### 3.8 Staff Review Commands: `POST /api/v3/plans/:planId/{start-review,return,approve}` (#70)
 
@@ -535,6 +535,20 @@ Read API สำหรับหน้าตรวจแผนของ Staff (#77
 | Database ไม่พร้อมใช้งาน | `503 SERVICE_UNAVAILABLE` |
 
 ---
+
+### 3.13 Partner Directory (#129)
+
+| เส้นทาง GET | การเข้าถึง |
+| --- | --- |
+| `/api/directory/companies` และ `/api/directory/companies/:id` | Public: รหัส ชื่อ ที่ตั้ง โลโก้ และ metadata ของบริษัท ไม่มีตำแหน่ง อัตราหรือช่วงเวลา |
+| `/api/v3/directory/companies` และ `/api/v3/directory/companies/:id` | Student / Staff / Advisor ที่บัญชียังใช้งานได้ เพิ่มรายการตำแหน่ง อัตรารวมตามประกาศ ช่วงเวลาและปีการศึกษา |
+| `/api/v3/directory/companies/:id/positions` และ `/api/v3/directory/positions/:id` | สิทธิ์เดียวกัน ใช้เป็นตัวเลือกและชื่ออ้างอิงในแผน |
+
+รายการรับ `q`, `location`, `page` (เริ่ม 1) และ `pageSize` (1–100) เส้นทางที่ Login แล้วรับ `role` (คำค้นในชื่อตำแหน่ง), `duration` (ตรงตามข้อความ) และ `recruitingOnly=true/false` เพิ่มได้ ตัวกรอง `recruitingOnly` หมายถึงมีประกาศในชุดข้อมูล ไม่ยืนยันว่าบริษัทยังเปิดรับปัจจุบัน
+
+Response ใช้ envelope เดิม เพิ่ม `pagination.details_available` และ `pagination.filters.locations` ส่วน `filters.durations` และ `company.positions` มีเฉพาะเส้นทางที่ Login แล้ว ทุกเส้นทางเป็น read-only และส่ง `Cache-Control: no-store` ไม่มีชื่อ อีเมลหรือเบอร์โทรของผู้ติดต่อบริษัทใน response
+
+API เดิม `/api/companies` และ `/api/positions` ยังคงรองรับข้อมูลตำแหน่งจำลอง (`data_status=mock`) แต่ไม่คืนรายละเอียดตำแหน่งจริง รายชื่อหลักเลือกชุดนำเข้าเมื่อมีข้อมูล โดยไม่ลบบริษัทเดิมที่แผนอ้างอิงอยู่ ดู [ขั้นตอนนำเข้า](../operations/partner-directory.md)
 
 ## 4. Architectural Boundaries
 

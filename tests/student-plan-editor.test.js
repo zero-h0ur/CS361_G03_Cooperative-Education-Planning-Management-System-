@@ -295,7 +295,7 @@ describe('Issue #73 client wire contract', () => {
       const path = new URL(url).pathname;
       if (path.endsWith('/cycles')) return json(200, { data: cycles });
       if (path.endsWith('/positions')) return json(200, { data: [{ id: POSITION, company_id: COMPANY, title: 'Developer' }] });
-      if (path === '/api/companies') return json(200, { data: [{ id: COMPANY, name: 'A' }], pagination: { totalPages: 1 } });
+      if (path === '/api/directory/companies') return json(200, { data: [{ id: COMPANY, name: 'A' }], pagination: { totalPages: 1 } });
       return json(init.method === 'POST' ? 201 : 200, { data: basePlan });
     });
     const api = createStudentPlanClient({ apiBaseUrl: 'https://api.example.com', currentOrigin: 'https://app.example.com',
@@ -305,7 +305,8 @@ describe('Issue #73 client wire contract', () => {
     await api.saveDraft({ content, operationId: OP });
     await api.saveDraft({ planId: PLAN, content, operationId: OP, expectedVersion: 3 });
     expect(fetchImpl.mock.calls[0][1].headers.Authorization).toBe('Bearer TOKEN');
-    for (const index of [1, 2]) expect(fetchImpl.mock.calls[index][1].headers.Authorization).toBeUndefined();
+    expect(fetchImpl.mock.calls[1][1].headers.Authorization).toBeUndefined();
+    expect(fetchImpl.mock.calls[2][1].headers.Authorization).toBe('Bearer TOKEN');
     expect(new URL(fetchImpl.mock.calls[1][0]).searchParams.get('page')).toBe('2');
     expect(fetchImpl.mock.calls[3][1].method).toBe('POST');
     expect(JSON.parse(fetchImpl.mock.calls[4][1].body)).toEqual({

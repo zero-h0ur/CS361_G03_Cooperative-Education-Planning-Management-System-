@@ -47,6 +47,7 @@ const ACTIONS = Object.freeze({
   COMPANY_READ_PUBLIC: 'company:read_public',
   POSITION_READ_PUBLIC: 'position:read_public',
   DIRECTORY_SEARCH_PUBLIC: 'directory:search_public',
+  DIRECTORY_READ_DETAILS: 'directory:read_details',
   COMPANY_READ_PRIVATE: 'company:read_private',
   COMPANY_CREATE: 'company:create',
   COMPANY_UPDATE: 'company:update',
@@ -155,6 +156,11 @@ const PERMISSION_MATRIX = Object.freeze({
   }),
 
   // Company & Position
+  [ACTIONS.DIRECTORY_READ_DETAILS]: Object.freeze({
+    [ROLES.STUDENT]: PERMISSION_SCOPES.AUTHENTICATED,
+    [ROLES.ADVISOR]: PERMISSION_SCOPES.AUTHENTICATED,
+    [ROLES.STAFF]: PERMISSION_SCOPES.AUTHENTICATED
+  }),
   [ACTIONS.COMPANY_READ_PUBLIC]: Object.freeze({
     [ROLES.PUBLIC]: PERMISSION_SCOPES.PUBLIC,
     [ROLES.STUDENT]: PERMISSION_SCOPES.PUBLIC,
