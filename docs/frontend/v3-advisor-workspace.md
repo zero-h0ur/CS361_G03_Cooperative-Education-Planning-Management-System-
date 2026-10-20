@@ -87,7 +87,10 @@ database just to run this UI verification.
 
 ### Results recorded for this change (2026-10-21)
 
-- Frontend: 13 suites, 310 tests passed.
+- Frontend: 13 suites, 311 tests passed (including the Student-card readability follow-up).
+- Student cards now use darker field labels, larger names, plain divided detail
+  rows, a stronger card boundary and primary navigation links. Only `ACTIVE`
+  enrollment uses the green badge; other statuses retain their own text.
 - Preview: 39 component tests and 2 server/bundle-isolation tests passed.
 - Advisor backend unit checks: 13 passed; 5 PostgreSQL integration tests excluded.
 - Initial full Advisor suite attempt was blocked by the existing reset safety

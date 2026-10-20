@@ -233,10 +233,13 @@ function studentList(items) {
     const item = element('li', 'advisor-student-card');
     const heading = element('div', 'advisor-student-card__heading');
     const name = element('h3', 'advisor-student-card__name', studentName(student));
-    const enrollment = element('span', 'student-badge student-badge--neutral',
+    const enrollmentClass = student.enrollment_status === 'ACTIVE'
+      ? 'student-badge--status' : 'student-badge--neutral';
+    const enrollment = element('span', `student-badge ${enrollmentClass}`,
       ENROLLMENT_LABELS[student.enrollment_status] || displayText(student.enrollment_status));
     heading.append(name, enrollment);
-    const open = link(`#/advisor/students/${student.id}`, 'shell-button shell-button--secondary', 'ดูข้อมูลและแผน');
+    const open = link(`#/advisor/students/${student.id}`, 'shell-button advisor-student-card__open', 'ดูข้อมูลและแผน');
+    open.prepend(createWorkspaceIcon('file'));
     open.setAttribute('aria-label', `ดูข้อมูลและแผนของ ${studentName(student)}`);
     item.append(heading, createDetailList([
       { label: 'รหัสนักศึกษา', value: displayText(student.student_number) },

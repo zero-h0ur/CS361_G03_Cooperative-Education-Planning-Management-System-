@@ -225,10 +225,27 @@ describe('Issue #75: Advisor assigned-student and Plan pages', () => {
     ]);
     expect(links[0].textContent).toBe('ดูข้อมูลและแผน');
     expect(links[0].getAttribute('aria-label')).toContain('สมชาย ใจดี (ชาย)');
+    expect(links[0].classList.contains('advisor-student-card__open')).toBe(true);
+    expect(links[0].classList.contains('shell-button--secondary')).toBe(false);
+    expect(links[0].querySelector('svg').getAttribute('aria-hidden')).toBe('true');
+    links[0].focus();
+    expect(document.activeElement).toBe(links[0]);
     expect(root.querySelector('.advisor-student-card__name').textContent).toBe('สมชาย ใจดี (ชาย)');
     expect(root.querySelector('[data-role="advisor-student-list"]').tagName).toBe('UL');
     expect(root.querySelector('[data-role="advisor-readonly-badge"]')).not.toBeNull();
     expect(root.textContent).not.toContain('leak-student@example.ac.th');
+    expectNoMutationControls(root);
+  });
+
+  it('highlights active enrollment only and retains readable labels for other statuses', async () => {
+    const { root } = await mountAdvisorPage(createFakeBackend({ students: [
+      studentRow(),
+      studentRow({ id: STUDENT_B, enrollment_status: 'INACTIVE' })
+    ] }));
+    const cards = [...root.querySelectorAll('.advisor-student-card')];
+    expect(cards[0].querySelector('.student-badge--status').textContent).toBe('กำลังศึกษา');
+    expect(cards[1].querySelector('.student-badge--status')).toBeNull();
+    expect(cards[1].querySelector('.student-badge--neutral').textContent).toBe('ไม่ได้ลงทะเบียนเรียน');
     expectNoMutationControls(root);
   });
 
