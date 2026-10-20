@@ -58,6 +58,11 @@ Loading scenario ค้างไว้ให้ตรวจหน้ารอโ
   การ์ดยกขึ้น 6px และไอคอนตอบสนองเมื่อ hover ด้วยเมาส์ ปุ่มที่ Disabled ไม่มี icon-hover effect
   ส่วน Keyboard ใช้ขอบ/เงาเน้นการ์ดที่กำลังใช้งาน โดยไม่ทำให้ทั้งการ์ดคลิกได้
 - Motion ของหน้า การ์ด ไอคอน ปุ่ม และการเปิดรายละเอียดปิดเมื่อใช้ Reduced motion
+- การ์ดใช้ easing แบบค่อย ๆ ชะลอและ fade เงาด้วย opacity แทนการ animate blur
+  ปุ่มแก้ไขแผนย้าย focus โดยไม่กระโดดก่อน แล้วเลื่อนไปฟอร์มแบบ smooth
+  เมื่อเปิด Reduced motion จะเลื่อนไปทันที ไม่มีการดัก wheel/touch หรือเปลี่ยนความเร็วการเลื่อนของอุปกรณ์
+  CSS native smooth scrolling ใช้เฉพาะหน้า Student บน Browser ที่รองรับ `:has()`
+  ความลื่น/เฟรมเรตจริงต้องตรวจใน Browser ไม่ใช่ผลจาก jsdom
 
 ตรวจหน้า Profile ด้วย `?scenario=loading`, `error`, `expired` และ `forbidden`
 ส่วน `conflict` ใช้ทดสอบการบันทึก/ส่งแผน ไม่ใช่การแก้ Profile อีกต่อไป
@@ -91,7 +96,7 @@ Browser visual review ต้องเปิดหน้าเว็บจริ�
 
 - Frontend: 13 suites / 321 tests ผ่าน รวม read-only, GET-only จากหน้า Profile,
   refresh/retry, focus, abort, cross-role denial และ reduced-motion CSS override
-- Preview: 39 component tests และ 2 server/production-isolation tests ผ่าน
+- Preview: 41 component tests และ 2 server/production-isolation tests ผ่าน
 - Production build และ `git diff --check` ผ่าน
 - `npm run test:docs`: 8 ผ่าน / 1 ติด Windows symlink permission (`EPERM`)
   ตัวตรวจลิงก์เอกสารแบบแยกผ่าน ไม่ได้รายงานว่าชุด docs tests ผ่านทั้งหมด

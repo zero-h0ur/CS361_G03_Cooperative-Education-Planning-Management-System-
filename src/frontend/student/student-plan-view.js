@@ -662,8 +662,9 @@ export function renderStudentPlanView({
       manage.prepend(createWorkspaceIcon(editor ? 'edit' : 'file'));
       manage.addEventListener('click', () => {
         tools.open = true;
-        summary.focus();
-        tools.scrollIntoView?.({ block: 'start', behavior: 'auto' });
+        summary.focus({ preventScroll: true });
+        const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+        tools.scrollIntoView?.({ block: 'start', behavior: reducedMotion ? 'instant' : 'smooth' });
       });
       statusHeading.append(manage);
       if (plan.status === PLAN_STATUSES.NEEDS_REVISION) tools.open = true;

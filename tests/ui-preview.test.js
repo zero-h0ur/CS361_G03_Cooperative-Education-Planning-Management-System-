@@ -69,6 +69,26 @@ test('uses the real decorative campus asset on both Student routes', async () =>
   expect(root.querySelector('.shell-brand__name').textContent).toBe('CO-ED');
 });
 
+test.each([false, true])('opening the Plan editor scrolls without a focus jump (reduced motion: %s)', async (reduced) => {
+  const original = window.matchMedia;
+  window.matchMedia = jest.fn(() => ({ matches: reduced }));
+  try {
+    const { root } = await mount('draft');
+    const tools = root.querySelector('.student-plan-tools');
+    tools.scrollIntoView = jest.fn();
+    const focus = jest.spyOn(tools.querySelector('summary'), 'focus');
+    root.querySelector('.student-plan-status__manage').click();
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    expect(document.activeElement).toBe(tools.querySelector('summary'));
+    expect(tools.open).toBe(true);
+    expect(tools.scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: reduced ? 'instant' : 'smooth' });
+    expect(global.fetch).not.toHaveBeenCalled();
+  } finally {
+    if (original === undefined) delete window.matchMedia;
+    else window.matchMedia = original;
+  }
+});
+
 test('Staff preview renders real read-only search with the same campus shell and no network', async () => {
   const root = document.createElement('div'); document.body.append(root);
   const clients = createPreviewClients({ role: 'STAFF', delayMs: 0 });

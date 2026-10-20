@@ -807,23 +807,40 @@ a:focus-visible,
 }
 
 .student-profile-workspace {
-  --profile-feedback-duration: 180ms;
+  --profile-feedback-duration: 220ms;
   --profile-secondary-ink: #334155;
+}
+/* Native anchor/focus scrolling only. Wheel and touch input stay browser-controlled. */
+html:has(.protected-shell--student) {
+  scroll-behavior: smooth;
+  scroll-padding-top: 88px;
 }
 :is(.student-profile-workspace, .student-plan-workspace) {
   /* Student-only contrast and motion: do not change Advisor/Staff cards. */
   --shell-muted: #475569;
   --shell-line: #d4c8c3;
   --shell-shadow: 0 6px 22px rgba(15, 23, 42, 0.09);
-  --student-motion-fast: 180ms;
-  --student-motion-ease: cubic-bezier(0.2, 0.75, 0.25, 1);
+  --student-motion-fast: 220ms;
+  --student-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 :is(.student-profile-workspace, .student-plan-workspace).student-workspace--ready {
-  animation: student-workspace-enter 420ms var(--student-motion-ease);
+  animation: student-workspace-enter 480ms var(--student-motion-ease);
 }
 :is(.student-profile-workspace, .student-plan-workspace) .student-card {
-  transition: transform 240ms var(--student-motion-ease),
-    box-shadow 240ms ease-out, border-color var(--student-motion-fast) ease-out;
+  position: relative;
+  transition: transform 380ms var(--student-motion-ease);
+}
+:is(.student-profile-workspace, .student-plan-workspace) .student-card::after {
+  /* Fade a fixed shadow instead of repainting an interpolated blur every frame. */
+  position: absolute;
+  inset: -1px;
+  content: '';
+  pointer-events: none;
+  border: 1px solid var(--shell-primary);
+  border-radius: inherit;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12), 0 3px 10px rgba(200, 16, 46, 0.08);
+  opacity: 0;
+  transition: opacity 300ms var(--student-motion-ease);
 }
 :is(.student-profile-workspace, .student-plan-workspace) .student-card__title {
   color: var(--shell-ink);
@@ -831,24 +848,22 @@ a:focus-visible,
 }
 :is(.student-profile-workspace, .student-plan-workspace) .student-card__icon {
   background: #fde2e8;
-  transition: transform 240ms var(--student-motion-ease), background var(--student-motion-fast) ease-out;
+  transition: transform 340ms var(--student-motion-ease);
 }
 :is(.student-profile-workspace, .student-plan-workspace) .shell-button > .workspace-icon {
   transition: transform var(--student-motion-fast) var(--student-motion-ease);
 }
 :is(.student-profile-workspace, .student-plan-workspace) .student-card:focus-within {
   border-color: var(--shell-primary);
-  box-shadow: 0 8px 24px rgba(200, 16, 46, 0.14);
 }
+:is(.student-profile-workspace, .student-plan-workspace) .student-card:focus-within::after { opacity: 1; }
 @media (hover: hover) and (pointer: fine) {
   :is(.student-profile-workspace, .student-plan-workspace) .student-card:not(.student-card--loading):not(.student-card--error):hover {
     transform: translateY(-6px);
-    border-color: var(--shell-primary);
-    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12), 0 3px 10px rgba(200, 16, 46, 0.08);
   }
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card:not(.student-card--loading):not(.student-card--error):hover::after { opacity: 1; }
   :is(.student-profile-workspace, .student-plan-workspace) .student-card--illustrated:hover > .student-card__icon {
     transform: translateY(-2px) rotate(-6deg) scale(1.08);
-    background: #fbd2dc;
   }
   :is(.student-profile-workspace, .student-plan-workspace) .shell-button:not(:disabled):not([aria-disabled="true"]):hover > .workspace-icon {
     transform: translateX(3px) rotate(-5deg);
@@ -940,8 +955,10 @@ a:focus-visible,
   to { opacity: 1; transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
+  html:has(.protected-shell--student) { scroll-behavior: auto; }
   :is(.student-profile-workspace, .student-plan-workspace).student-workspace--ready { animation: none; }
   :is(.student-profile-workspace, .student-plan-workspace) .student-card,
+  :is(.student-profile-workspace, .student-plan-workspace) .student-card::after,
   :is(.student-profile-workspace, .student-plan-workspace) .student-card__icon,
   :is(.student-profile-workspace, .student-plan-workspace) .shell-button > .workspace-icon { transition: none; }
   :is(.student-profile-workspace, .student-plan-workspace) .student-card:not(.student-card--loading):not(.student-card--error):hover,

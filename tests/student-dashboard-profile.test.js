@@ -403,6 +403,16 @@ describe('Student Profile read-only workflow UI', () => {
       expect(workspaceRule.style.getPropertyValue('--shell-line')).toBe('#d4c8c3');
       expect(workspaceRule.style.getPropertyValue('--shell-muted')).toBe('#475569');
       expect(workspaceRule.style.getPropertyValue('animation')).toBe('');
+      const cardRule = [...style.sheet.cssRules].find((rule) => rule.selectorText === scope + ' .student-card');
+      expect(cardRule.style.getPropertyValue('transition')).toContain('transform 380ms');
+      expect(cardRule.style.getPropertyValue('transition')).not.toContain('box-shadow');
+      const shadow = [...style.sheet.cssRules].find((rule) => rule.selectorText === scope + ' .student-card::after');
+      expect(shadow.style.getPropertyValue('transition')).toContain('opacity');
+      expect(shadow.style.getPropertyValue('pointer-events')).toBe('none');
+      const nativeScroll = [...style.sheet.cssRules].find((rule) => rule.selectorText === 'html:has(.protected-shell--student)');
+      expect(nativeScroll.style.getPropertyValue('scroll-behavior')).toBe('smooth');
+      const reducedScroll = overrides.find((rule) => rule.selectorText === nativeScroll.selectorText);
+      expect(reducedScroll.style.getPropertyValue('scroll-behavior')).toBe('auto');
       const entrySelector = scope + '.student-workspace--ready';
       const entry = [...style.sheet.cssRules].find((rule) => rule.selectorText === entrySelector);
       expect(entry.style.getPropertyValue('animation')).toContain('student-workspace-enter');
