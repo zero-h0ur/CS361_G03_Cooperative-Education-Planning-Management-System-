@@ -268,7 +268,7 @@ describe('Issue #67: Staff Student/Plan search and review queue API', () => {
         reviewQueue: false, sort: 'updated_at', order: 'desc', page: 1, pageSize: 20
       }));
       expect(staffReviewRepository.searchPlans).toHaveBeenNthCalledWith(2, expect.objectContaining({
-        reviewQueue: true, sort: 'updated_at', order: 'asc', page: 1, pageSize: 20
+        reviewQueue: true, sort: 'submitted_at', order: 'asc', page: 1, pageSize: 20
       }));
     });
 

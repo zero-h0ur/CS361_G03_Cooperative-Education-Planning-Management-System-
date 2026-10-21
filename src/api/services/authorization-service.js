@@ -42,6 +42,7 @@ const PERMISSION_SCOPES = Object.freeze({
 const ACTIONS = Object.freeze({
   // Session bootstrap (#64)
   SESSION_READ_ME: 'session:read_me',
+  ADMIN_READ_OPERATIONS: 'admin:read_operations',
 
   // Company & Position permissions (#49)
   COMPANY_READ_PUBLIC: 'company:read_public',
@@ -151,6 +152,7 @@ const MUTATION_ACTIONS = new Set([
 const STUDENT_EDITABLE_PLAN_STATES = new Set(['DRAFT', 'NEEDS_REVISION']);
 
 const PERMISSION_MATRIX = Object.freeze({
+  [ACTIONS.ADMIN_READ_OPERATIONS]: Object.freeze({ [ROLES.ADMIN]: PERMISSION_SCOPES.AUTHENTICATED }),
   [ACTIONS.PLAN_REJECT]: Object.freeze({ [ROLES.STAFF]: PERMISSION_SCOPES.SCOPED }),
   [ACTIONS.WORKFLOW_STAFF_WRITE]: Object.freeze({ [ROLES.STAFF]: PERMISSION_SCOPES.SCOPED }),
   [ACTIONS.SESSION_READ_ME]: Object.freeze({

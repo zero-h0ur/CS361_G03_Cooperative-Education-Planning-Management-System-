@@ -1,9 +1,10 @@
-# Three-role workflow: verification and rollout
+# Workflow verification and rollout
 
 The [API contract](../api/three-role-workflow.md) covers Student, Staff and Advisor.
 This change contains source and forward migrations only. It does not deploy the
 gateway/Lambda/frontend, run production migrations, provision storage, change Cognito
-users, send email or implement a Company/Admin business area.
+users or send email automatically. Admin has a separate operations view and owner-only
+maintenance scripts, not a Student-review business area.
 
 ## Local verification
 
@@ -63,7 +64,8 @@ API calls and is excluded from production dependency graphs.
    assignments, approve applicants or invent files. Existing legacy data is retained.
 2. Apply all unapplied migrations in order using the migration owner. This feature adds
    `004_three_role_workflow.sql`, `005_submission_snapshots.sql`,
-   `006_advisor_display_name.sql`, `007_submission_policy_integrity.sql` after the
+   `006_advisor_display_name.sql`, `007_submission_policy_integrity.sql`,
+   `008_returned_plan_cancellation.sql` after the
    existing directory migration 003. Applied checksums 001-003 must remain unchanged.
 3. Apply the reviewed [runtime ACL script](../../src/db/operations/v3-runtime-grants.sql)
    as the owner. The app must not receive role/account/official TU field edits or
@@ -117,3 +119,102 @@ After recording `REJECTED`, policies, snapshots or placements, do not blindly de
 old serializer/state machine or delete schema/history. Freeze affected writes and use
 a compatibility-aware release/forward fix. Any production recovery or data correction
 needs a separate reviewed operation; no reset/seed script is a rollback procedure.
+
+## Preparing a Live Challenge cohort
+
+Use the reviewed `scripts/operations/live-challenge.py`, not the development reset
+seed against RDS. It creates exactly three new Student logins, two Advisor logins,
+one scoped Staff and one Admin. All names and official-profile fields are synthetic.
+It does not connect to a real TU API or invent academic eligibility thresholds.
+
+Run the identity phase from normal CloudShell, outside a checkout:
+
+```bash
+python3 live-challenge.py identities --private-file /home/cloudshell-user/coed-live135-private.json
+python3 live-challenge.py export-manifest \
+  --private-file /home/cloudshell-user/coed-live135-private.json \
+  --manifest /home/cloudshell-user/coed-live135-identities.json
+```
+
+Passwords are generated once, set permanent, and saved only in the `0600` private
+file. Confirmed accounts are never reset on resume. No invitation is sent. Export
+only the identity manifest to the private release bucket; never upload passwords.
+Verify its SHA-256 when moving it into VPC CloudShell. The VPC environment cannot
+use the normal CloudShell Upload/Download actions and has no general STS access.
+
+After applying migrations and runtime ACLs, run from VPC CloudShell:
+
+```bash
+python3 live-challenge.py database --manifest /home/cloudshell-user/coed-live135-identities.json
+```
+
+The owner password is entered at a hidden prompt. Provisioning is one transaction,
+checks existing rows in 16 tables, creates no Plans for the three new Students,
+and stores an idempotent receipt/event. It creates a clearly labelled synthetic
+round and synthetic PDF-reference requirement; these are not real course rules.
+Staff scope is CPE / CS / 2569. Both new Advisors initially have no assignments.
+Re-running the provisioner never clears a demo Plan or resets a role.
+
+Confirm real Managed Login and `/api/v3/me` for every account after linking.
+`CONFIRMED` in Cognito alone does not establish application access. Retain a separate
+untouched Student for a fresh demonstration if smoke tests use one of the three.
+
+## Account operations
+
+Admin's `/api/v3/admin/operations` view shows account role/status/version, migration
+names and catalogue counts. It contains no Student profile or review controls.
+Changing an account uses `scripts/operations/admin-account.py` in two Ops phases,
+an active Admin Access Token and a database owner credential. No credential is
+placed in the Browser and `coed_app` keeps no role/status update privilege.
+
+Prepare a private `0600` JSON request containing `user_id`, `role`, `account_status`,
+`expected_version`, a fresh `operation_id` UUID and `reason`, then run:
+
+```bash
+# Normal CloudShell: token is entered at a hidden prompt, never saved.
+python3 admin-account.py --prepare --request /absolute/private/account-change.json \
+  --approval /absolute/private/account-approval.json
+
+# Transfer the approval through the private release bucket. In VPC CloudShell,
+# use the exact SHA256 printed above, not a hash supplied with an untrusted file.
+python3 admin-account.py --apply --approval /absolute/private/account-approval.json \
+  --sha256 <hash-from-prepare>
+```
+
+The first phase obtains the Admin identity from the authenticated API and produces
+a request-bound approval valid for ten minutes. It contains no token or password.
+The second phase requires the database owner, an exact operator-pinned approval
+hash and a fresh active-Admin check in RDS. These are trusted owner operations;
+approvals are not browser-submitted API credentials. This split avoids requiring
+STS or public API access from the private VPC. It serializes account changes and stores the update, receipt and audit
+in one transaction. It rejects self-changes, removal of the last active Admin,
+changes conflicting with existing Student links/Staff scopes/Advisor assignments,
+stale versions and operation reuse with a changed request. It never approves,
+rejects or assigns a Student. Catalogue imports continue through the reviewed
+[partner importer](partner-directory.md), not an unrestricted browser SQL endpoint.
+
+## Building an operator release
+
+Run `npm test`, `npm run lint`, `npm run test:docs` and the production auth-configured
+build first. Lint currently checks JavaScript syntax; tests enforce behavior and
+permission rules. Commit the reviewed source, build the Lambda ZIP with the trusted
+RDS CA, then prepare the separate operator artifacts:
+
+```bash
+node scripts/operations/prepare-workflow-release.mjs \
+  /absolute/path/coed-v3-lambda.zip /absolute/private/workflow-release
+```
+
+The output includes the source SHA, file hashes, Lambda ZIP, guarded migration SQL
+and the two operator scripts. SQL validates the complete migration history, uses
+the migration-runner lock, preserves existing column values across additive schema
+changes, and defaults to `ROLLBACK`. Apply only after a fresh available RDS snapshot
+and Lambda/frontend recovery points have been recorded. Check both dry run and apply
+output; `RuntimeRoleMutation` must be false. Do not change a recorded checksum to
+make a mismatch disappear.
+
+After DB and backend verification, merge the frontend and wait for its existing
+Amplify job instead of starting a duplicate build. Verify all four roles, a full
+review/revision/approval cycle, assignment isolation, company mismatch and at least
+three permission denials on the deployed commit. A successful build or local Preview
+does not replace this acceptance gate.

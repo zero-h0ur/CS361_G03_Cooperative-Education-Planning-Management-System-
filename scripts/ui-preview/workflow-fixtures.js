@@ -51,6 +51,12 @@ export function enhanceWorkflowPreview(clients,{role,scenario}={}) {
     if(signal?.aborted)throw new DOMException('Aborted','AbortError');
     if(['expired','forbidden','error'].includes(scenario))throw Object.assign(new Error('สถานการณ์จำลอง: อ่านข้อมูลไม่ได้'),{status:scenario==='expired'?401:scenario==='forbidden'?403:503});
     if(role==='ADVISOR' && scenario==='revoked')throw Object.assign(new Error('ยกเลิก Assignment แล้ว (จำลอง)'),{status:403});
+    if(path==='/api/v3/admin/operations') {
+      if(role!=='ADMIN')throw Object.assign(new Error('Admin only (จำลอง)'),{status:403});
+      return {accounts:[{id:'10000000-0000-4000-8000-000000000135',role:'ADMIN',account_status:'ACTIVE',version:1}],
+        pagination:{page:1,pageSize:50,total:1,totalPages:1},migrations:['008_returned_plan_cancellation.sql'],
+        catalogue:{companies:103,positions:56},student_workflow_access:false};
+    }
     if(path==='/api/v3/students/me'){
       if(method==='GET')return copy(contact);
       Object.assign(contact,body,{version:contact.version+1});return copy(contact);
@@ -77,14 +83,18 @@ export function enhanceWorkflowPreview(clients,{role,scenario}={}) {
     const data=await record(match[1]), action=match[2];
     if(method==='GET')return copy(data);
     if(action==='workflow'){check(data.version,body);Object.assign(data,{project_title:body.project_title,references:copy(body.references),version:data.version+1});return copy(data);}
-    if(action==='cancel'||action==='reject'){data.status=action==='cancel'?'CANCELLED':'REJECTED';data.version++;return copy(data);}
+    if(action==='cancel'||action==='reject'){
+      if(action==='cancel'&&data.status!=='DRAFT')throw new Error('ยกเลิกได้เฉพาะฉบับร่าง (จำลอง)');
+      data.status=action==='cancel'?'CANCELLED':'REJECTED';data.version++;return copy(data);
+    }
     if(action==='placement') {data.placement={status:'DRAFT',version:(data.placement?.version||0)+1,payload:copy(body)};return copy(data.placement);}
     const p=data.placement;if(!p)throw new Error('ยังไม่มีข้อมูลตอบรับบริษัทจำลอง');check(p.version,body);
     if(action==='placement/submit'){p.status='SUBMITTED';p.submitted_payload=copy(p.payload);}
     if(action==='placement/mark-sent')p.status='AWAITING_COMPANY';
     if(action==='placement/return'){p.status='NEEDS_REVISION';p.feedback=body.reason;}
     if(action==='placement/confirm'){
-      if(body.company_name!==p.payload.company_name||body.student_number!==data.student_number)throw new Error('บริษัทหรือรหัสนักศึกษาไม่ตรงกัน (จำลอง)');
+      const key=value=>value.normalize('NFC').replace(/\s+/gu,'').toLowerCase();
+      if(key(body.company_name)!==key(p.payload.company_name)||body.student_number!==data.student_number)throw new Error('บริษัทหรือรหัสนักศึกษาไม่ตรงกัน (จำลอง)');
       p.status='CONFIRMED';p.confirmed_at=new Date().toISOString();
     }
     p.version++;return copy(p);

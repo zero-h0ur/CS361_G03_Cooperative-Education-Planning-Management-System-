@@ -160,7 +160,7 @@ function parsePlanFilters(searchParams, { reviewQueue }) {
     advisorId: parseUuid(readParam(searchParams, 'advisor_id', details), 'advisor_id', details),
     // Review queue defaults to oldest-waiting first; search defaults to most recently updated
     sort: parseEnum(readParam(searchParams, 'sort', details), 'sort', Object.keys(PLAN_SORT_COLUMNS), details) ||
-      'updated_at',
+      (reviewQueue ? 'submitted_at' : 'updated_at'),
     order: parseEnum(readParam(searchParams, 'order', details), 'order', ['asc', 'desc'], details) ||
       (reviewQueue ? 'asc' : 'desc')
   };

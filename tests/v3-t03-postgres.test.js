@@ -178,7 +178,7 @@ describe('Issue #80 PostgreSQL workflow guarantees (required test database)', ()
     }
   });
 
-  test.each(['DRAFT', 'NEEDS_REVISION'])('cancels %s through WorkflowService and persists one audit/operation', async (from) => {
+  test.each(['DRAFT'])('cancels %s through WorkflowService and persists one audit/operation', async (from) => {
     await pool.query('UPDATE plans SET status = $1 WHERE id = $2', [from, IDS.plan]);
     await service.cancelPlan({ actor: STUDENT, plan_id: IDS.plan, expected_version: 1, operation_id: crypto.randomUUID() });
     const snapshot = await state();
@@ -194,6 +194,14 @@ describe('Issue #80 PostgreSQL workflow guarantees (required test database)', ()
     const before = await state();
     const response = await command('cancel', 'student', 2);
     expect(response.statusCode).toBe(422);
+    expect(await state()).toEqual(before);
+  });
+
+  test('rejects cancellation of a returned submission without changing history', async () => {
+    await pool.query("UPDATE plans SET status='NEEDS_REVISION' WHERE id=$1", [IDS.plan]);
+    const before = await state();
+    await expect(service.cancelPlan({actor:STUDENT,plan_id:IDS.plan,expected_version:1,operation_id:crypto.randomUUID()}))
+      .rejects.toMatchObject({statusCode:422});
     expect(await state()).toEqual(before);
   });
 

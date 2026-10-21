@@ -352,7 +352,7 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
   });
 
   describe('2. PATCH /api/v3/students/me — Editable Field Allowlist & Normalization', () => {
-    test('updates preferred_name, trims surrounding whitespace, and returns updated self-profile', async () => {
+    test('rejects the legacy preferred-name write path instead of bypassing audited contact commands', async () => {
       const { handler, mockUpdateOwnPreferredName } = createAuthDependencies({
         'sub-student-a': STUDENT_A_IDENTITY
       });
@@ -367,7 +367,7 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
         keyPair.privateKey
       );
 
-      expect(STUDENT_SELF_EDITABLE_FIELDS).toEqual(['preferred_name','contact_address','contact_phone']);
+      expect(STUDENT_SELF_EDITABLE_FIELDS).toEqual(['contact_address','contact_phone']);
 
       const response = await handler(
         buildEvent('/api/v3/students/me', token, {
@@ -379,22 +379,11 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
         })
       );
 
-      expect(response.statusCode).toBe(200);
-      const payload = JSON.parse(response.body);
-      expect(payload.data.preferred_name).toBe('Somchai S.');
-      expect(payload.data.version).toBe(4);
-      expect(Object.keys(payload.data)).toEqual(STUDENT_SELF_PROFILE_FIELDS);
-
-      expect(mockUpdateOwnPreferredName).toHaveBeenCalledTimes(1);
-      expect(mockUpdateOwnPreferredName).toHaveBeenCalledWith({
-        userId: STUDENT_A_ROW.user_id,
-        studentId: STUDENT_A_ROW.id,
-        preferredName: 'Somchai S.',
-        expectedVersion: 3
-      });
+      expect(response.statusCode).toBe(400);
+      expect(mockUpdateOwnPreferredName).not.toHaveBeenCalled();
     });
 
-    test('normalizes empty or whitespace-only preferred_name to null, and accepts null directly', async () => {
+    test('does not clear historical preferred_name using unversioned PATCH or PUT', async () => {
       const { handler, mockUpdateOwnPreferredName } = createAuthDependencies({
         'sub-student-a': STUDENT_A_IDENTITY
       });
@@ -415,14 +404,8 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
           body: { preferred_name: '   ' }
         })
       );
-      expect(whitespaceResponse.statusCode).toBe(200);
-      expect(JSON.parse(whitespaceResponse.body).data.preferred_name).toBeNull();
-      expect(mockUpdateOwnPreferredName).toHaveBeenLastCalledWith({
-        userId: STUDENT_A_ROW.user_id,
-        studentId: STUDENT_A_ROW.id,
-        preferredName: null,
-        expectedVersion: null
-      });
+      expect(whitespaceResponse.statusCode).toBe(400);
+      expect(mockUpdateOwnPreferredName).not.toHaveBeenCalled();
 
       const nullResponse = await handler(
         buildEvent('/api/v3/students/me', token, {
@@ -430,11 +413,10 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
           body: { preferred_name: null }
         })
       );
-      expect(nullResponse.statusCode).toBe(200);
-      expect(JSON.parse(nullResponse.body).data.preferred_name).toBeNull();
+      expect(nullResponse.statusCode).toBe(400);
     });
 
-    test('returns 409 STALE_RECORD_CONFLICT when expected version does not match current version', async () => {
+    test('does not treat a version on a legacy nickname payload as permission to write it', async () => {
       const { handler } = createAuthDependencies({
         'sub-student-a': STUDENT_A_IDENTITY
       });
@@ -459,13 +441,9 @@ describe('Issue #65: Student self-profile read/update API (/api/v3/students/me)'
         })
       );
 
-      expect(response.statusCode).toBe(409);
+      expect(response.statusCode).toBe(400);
       const body = JSON.parse(response.body);
-      expect(body.error.code).toBe('STALE_RECORD_CONFLICT');
-      expect(body.error.details).toEqual({
-        expectedVersion: 1,
-        currentVersion: 3
-      });
+      expect(body.error.code).toBe('VALIDATION_ERROR');
     });
   });
 

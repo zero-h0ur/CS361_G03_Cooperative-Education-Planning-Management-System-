@@ -3,10 +3,19 @@ const {renderPlanWorkflow,renderContactPanel,renderStaffWorkflow}=require('../tm
 const {createWorkflowClient}=require('../tmp/frontend-test-modules/workflow/workflow-client.cjs');
 const {enhanceWorkflowPreview}=require('../tmp/frontend-test-modules/workflow-preview-fixtures.cjs');
 const {createPreviewClients}=require('../tmp/frontend-test-modules/preview-fixtures.cjs');
+const {renderAdminOperations}=require('../tmp/frontend-test-modules/workflow/admin-operations-view.cjs');
 const flush=()=>new Promise(resolve=>setTimeout(resolve,20));
 const planId='50000000-0000-4000-8000-000000000101';
 const state=(status='DRAFT')=>({plan_id:planId,status,version:2,project_title:'Synthetic portal',student_number:'6609612345',references:[],submissions:[],advisor:null,placement:null,policy:{id:'30000000-0000-4000-8000-000000000101',version:1,requirements:[]}});
 beforeEach(()=>document.body.replaceChildren());
+test('Admin operation view does not expose Student or Staff workflow forms',async()=>{
+  const request=jest.fn(async()=>({accounts:[{id:'test-user',role:'ADMIN',account_status:'ACTIVE',version:1}],pagination:{page:1,total:1,totalPages:1},migrations:['008_returned_plan_cancellation.sql'],catalogue:{companies:103,positions:56}}));
+  const root=renderAdminOperations({client:{request}});document.body.append(root);await flush();
+  expect(request).toHaveBeenCalledWith('/api/v3/admin/operations?page=1',expect.anything());
+  expect(root.textContent).toContain('103 บริษัท / 56 ตำแหน่ง');
+  expect(root.querySelector('form,input,textarea,select')).toBeNull();
+  expect(root.textContent).toContain('ไม่มีสิทธิ์อนุมัติ');
+});
 test('integration client uses bearer auth, no-store and no role/body authentication shortcuts',async()=>{
   const fetchImpl=jest.fn(async()=>({ok:true,status:200,json:async()=>({data:state()})}));
   const client=createWorkflowClient({apiBaseUrl:'https://api.example.invalid',getAccessToken:async()=>'synthetic-token',fetchImpl});
@@ -39,6 +48,12 @@ test.each(['SUBMITTED','UNDER_REVIEW','REJECTED','CANCELLED'])('Student cannot m
   const root=renderPlanWorkflow({client:{request:async()=>state(status)},planId,role:'STUDENT'});document.body.append(root);await flush();
   expect(root.querySelector('form,input,textarea,select')).toBeNull();
 });
+test('returned submissions remain editable but have no cancellation control',async()=>{
+  const root=renderPlanWorkflow({client:{request:async()=>state('NEEDS_REVISION')},planId,role:'STUDENT'});
+  document.body.append(root);await flush();
+  expect(root.querySelector('form')).not.toBeNull();
+  expect(root.textContent).not.toContain('ยกเลิกฉบับร่าง');
+});
 test('a revoked Advisor response clears old details and informs the shell',async()=>{
   const denied=jest.fn();
   const root=renderPlanWorkflow({client:{request:async()=>{throw Object.assign(new Error('No assignment'),{status:403});}},planId,role:'ADVISOR',onAccessDenied:denied});document.body.append(root);await flush();
@@ -69,4 +84,9 @@ test('enhanced Staff Preview exposes requirements/roster and simulated review, n
   const root=renderStaffWorkflow({client:clients.workflowClient});document.body.append(root);await flush();
   expect(root.textContent).toContain('5 / 5 คน');
   expect((await clients.staffReviewClient.getPlanWithHistory(planId)).plan.status).toBe('APPROVED');
+});
+test('Admin Preview uses synthetic operation metadata without calling AWS',async()=>{
+  const clients=enhanceWorkflowPreview(createPreviewClients({scenario:'draft',role:'ADMIN',delayMs:0}),{scenario:'draft',role:'ADMIN'});
+  const root=renderAdminOperations({client:clients.workflowClient});document.body.append(root);await flush();
+  expect(root.textContent).toContain('103 บริษัท');expect(root.querySelector('form')).toBeNull();
 });

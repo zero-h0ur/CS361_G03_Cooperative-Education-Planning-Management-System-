@@ -49,7 +49,7 @@ const CHECKSUM_002 = sha256(MIGRATION_002_SQL);
 const MIGRATION_003_SQL = fs.readFileSync(path.join(MIGRATIONS_DIR, '003_partner_directory.sql'), 'utf8');
 const CHECKSUM_003 = sha256(MIGRATION_003_SQL);
 const WORKFLOW_MIGRATIONS = ['004_three_role_workflow.sql','005_submission_snapshots.sql',
-  '006_advisor_display_name.sql','007_submission_policy_integrity.sql']
+  '006_advisor_display_name.sql','007_submission_policy_integrity.sql','008_returned_plan_cancellation.sql']
   .map(version=>({version,checksum:sha256(fs.readFileSync(path.join(MIGRATIONS_DIR,version),'utf8'))}));
 
 const SENSITIVE_FIELD_PATTERN =
@@ -305,7 +305,7 @@ describe('Issue #78 [V3-T01]: Verify V3 migrations, constraints and safe fixture
       expect(sqls).not.toContain(MIGRATION_001_SQL.trim());
       expect(sqls).not.toContain(MIGRATION_002_SQL.trim());
       expect(sqls).not.toContain(MIGRATION_003_SQL.trim());
-      expect(harness.getCommittedMigrations()).toHaveLength(7);
+      expect(harness.getCommittedMigrations()).toHaveLength(8);
       for(const migration of WORKFLOW_MIGRATIONS) {
         expect(sqls).not.toContain(fs.readFileSync(path.join(MIGRATIONS_DIR,migration.version),'utf8').trim());
       }
