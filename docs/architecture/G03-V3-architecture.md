@@ -22,6 +22,14 @@ Decision Issue ต้นทางก่อน ไม่สร้าง policy �
 
 ## Component and data flow
 
+![Four-role workflow and operational boundaries](G03-V3-workflow.png)
+
+[Editable diagram source](G03-V3-workflow.svg)
+
+ภาพนี้แสดง implementation ล่าสุด ไม่ใช่หลักฐานว่า workflow ใหม่ขึ้น production แล้ว
+ต้องผ่าน migration 004–008, runtime ACL, backend/frontend rollout และ live smoke ก่อน
+role ที่ 4 คือ Admin สำหรับงาน Operations ไม่ใช่ Staff อีกบัญชีหนึ่ง
+
 ```mermaid
 flowchart LR
     Browser["Browser / Amplify SPA<br/>Untrusted client"]
@@ -47,7 +55,8 @@ flowchart LR
 ### Request paths
 
 **Public path:** Browser → API Gateway → Lambda → RDS public-field query. อนุญาต
-เฉพาะ Company/Position read operations ผ่าน response allowlist ไม่มี Student,
+เฉพาะชื่อ ที่ตั้งและโลโก้บริษัทผ่าน Directory response allowlist รายละเอียดตำแหน่งจริงต้อง Login
+ส่วน legacy public Position API คืนเฉพาะข้อมูลจำลอง ไม่มี Student,
 Plan, identity, assignment หรือ private audit data
 
 **Protected path:** Browser ส่ง Cognito Access Token → API Gateway JWT Authorizer
@@ -72,6 +81,23 @@ trusted identity และต้องไม่ถูกใช้ตัดสิ
 | Response/log boundary | Authorized result หลัง allowlist/redaction | ห้าม raw token, credential, identity key และ private fields เกินจำเป็น |
 
 UI route guard และการซ่อนปุ่มช่วยด้าน UX เท่านั้น ไม่ใช่ security boundary
+
+## Four-role workflow
+
+- Student อ่านข้อมูลทางการจากทะเบียน แก้ได้เฉพาะที่อยู่/เบอร์โทร และจัดการแผนของตัวเอง
+  ยกเลิกได้เฉพาะ DRAFT; NEEDS_REVISION แก้แล้วส่งใหม่ได้แต่ยกเลิกไม่ได้
+- Staff ตรวจแผนในขอบเขต อนุมัติ ปฏิเสธสิ้นสุด หรือส่งกลับแก้ไขโดยระบุเหตุผล
+  คิวเรียงตามเวลาส่งล่าสุดแบบ FIFO ไม่เลื่อนคิวเพราะเริ่มตรวจหรือเปลี่ยน updated_at
+- Advisor อ่านเฉพาะนักศึกษาที่ได้รับมอบหมาย ปัจจุบันไม่เกิน 5 คนรวมทุกปี/เทอม
+  การมอบหมายต้องมีแผน APPROVED และใช้ transaction/row lock/DB trigger ป้องกันคำขอพร้อมกัน
+- Admin อ่าน metadata บัญชีและระบบผ่าน `/api/v3/admin/operations` การเปลี่ยน role/สถานะใช้
+  Admin session ร่วมกับ owner-only Ops script มี version, operation receipt และ audit
+  ไม่ให้ runtime แก้ role โดยตรง และ Admin ไม่มีสิทธิ์ approve/reject/assign แทน Staff
+
+แผนใช้ `DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED | REJECTED | NEEDS_REVISION`
+เมื่อผ่านเกณฑ์แล้วจึงบันทึกข้อมูลตอบรับบริษัทใน placement ที่แยกจากแผน Staff บันทึกการส่งฟอร์ม
+และผลจากบริษัท ระบบเทียบรหัสนักศึกษากับชื่อบริษัทแบบไม่สนช่องว่าง/ตัวพิมพ์ แต่ไม่จับคู่ชื่อคล้ายกัน
+CV/Resume การสัมภาษณ์ การส่งฟอร์ม และไฟล์จริงยังอยู่นอกระบบ ใช้เลขอ้างอิง/ลิงก์เป็นหลักฐานเท่านั้น
 
 ## Authorization baseline
 

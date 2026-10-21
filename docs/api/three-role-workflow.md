@@ -1,4 +1,4 @@
-# Student / Staff / Advisor workflow
+# Student / Staff / Advisor workflow and Admin operations
 
 This extends the [V3 contract](v3-shared-contract.md). Cognito authentication and
 database-backed role/ownership/scope checks remain mandatory. `ADMIN` receives no
@@ -11,7 +11,8 @@ Eligibility uses `DRAFT -> SUBMITTED -> UNDER_REVIEW` and then `APPROVED`,
 `NEEDS_REVISION`, or `REJECTED`. A returned plan may be edited and resubmitted.
 `REJECTED` prohibits editing, resubmitting, cancelling or creating another active
 plan in that cycle; another application cycle requires a new eligibility review.
-Student cancellation is soft cancellation from `DRAFT`/`NEEDS_REVISION` only.
+Student cancellation is soft cancellation from `DRAFT` only. Returned submissions
+remain editable/resubmittable but cannot be cancelled, so their review history stays linked.
 
 `APPROVED` means eligible for cooperative education, **not company acceptance**.
 Students may specify an interested company/position/project before company acceptance.
@@ -33,11 +34,12 @@ no-store` and the standard `{ data: ... }` envelope.
 | Method | Path | Authorized actor / behavior |
 | --- | --- | --- |
 | GET | `/students/me` | Own Student; now includes `contact_address`, `contact_phone` |
+| GET | `/admin/operations` | Active Admin only: account role/status/version, migration names, catalogue counts; no Student/Plan business data |
 | PATCH | `/students/me` | Own contact fields, `version`, `operation_id`; TU fields rejected |
 | GET | `/plans/:id/workflow` | Owner / scoped Staff / currently assigned Advisor |
 | PATCH | `/plans/:id/workflow` | Student owner, editable plan only; project and reference metadata |
 | POST | `/plans/:id/submit` | Existing Student submission, now atomically snapshots policy/references |
-| POST | `/plans/:id/cancel` | Student owner, editable states only; audit history retained |
+| POST | `/plans/:id/cancel` | Student owner, DRAFT only; audit history retained |
 | POST | `/plans/:id/reject` | Scoped Staff, OPEN cycle, UNDER_REVIEW; required `review_notes` |
 | GET | `/staff/workflow` | Scoped Staff: own scopes, cycles, Advisor occupancy, policy versions and recent assignment history |
 | GET | `/staff/advisors` | Scoped Staff; active Advisor IDs/names and global current counts, no out-of-scope Student names |
@@ -54,8 +56,19 @@ no-store` and the standard `{ data: ... }` envelope.
 | POST | `/plans/:id/placement/confirm` | Scoped Staff; compare company/Student and retain external evidence reference |
 
 Existing start-review, return-for-revision, approve, history and Advisor read endpoints
-remain canonical. Existing preferred-name data/API compatibility is retained; no
-preferred-name editor is restored in the UI.
+remain canonical. Historical preferred-name data remains readable, but the legacy
+unaudited nickname mutation is retired. Profile writes use contact commands only.
+
+Staff review queue defaults to the latest submission timestamp ascending (FIFO).
+Starting a review does not move an earlier submission behind later ones; a resubmission
+receives a new queue position. Legacy rows without a submission audit use updated_at.
+
+Admin account maintenance uses `scripts/operations/admin-account.py`, an active Admin
+Access Token and the migration-owner Ops channel. It checks the Admin again in RDS,
+locks accounts, requires version/operation/reason and appends a receipt/event atomically.
+The runtime DB role cannot change account roles, official Student fields or Staff scope.
+Synthetic account provisioning and reviewed partner import are separate operator scripts;
+they are not browser endpoints or permission to approve/reject/assign as Staff.
 
 ## Write contracts
 
@@ -78,8 +91,9 @@ Contact PATCH retains the existing profile field name `version` instead of
 | Confirm placement | `company_name`, `student_number`, `reference` and/or `url` |
 
 Placement commands use the placement version, not the eligibility-plan version.
-Confirmation names compare trimmed NFC-normalized text exactly against the submitted
-placement, not the originally interested company. Student number comes from the
+Confirmation names compare NFC-normalized text ignoring whitespace and letter case
+against the submitted placement, not the originally interested company. Punctuation
+and company-name words are retained; no fuzzy brand matching is used. Student number comes from the
 official database record, not editable Student input.
 
 Requirements are at most 30 entries, each with unique simple `id`, `title`, boolean

@@ -43,6 +43,7 @@ test('import verifies all seven reviewed migration checksums but executes only d
     '003_partner_directory.sql', '004_three_role_workflow.sql',
     '005_submission_snapshots.sql', '006_advisor_display_name.sql',
     '007_submission_policy_integrity.sql',
+    '008_returned_plan_cancellation.sql',
   ];
   for (const name of names) {
     const source = fs.readFileSync(new URL('../src/db/migrations/' + name, import.meta.url), 'utf8');

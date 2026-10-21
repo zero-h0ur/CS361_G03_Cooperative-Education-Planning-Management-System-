@@ -195,11 +195,8 @@ const TRANSITION_RULES = Object.freeze({
   }),
 
   [ACTIONS.PLAN_CANCEL]: Object.freeze({
-    // Submitted plans are locked until Staff returns them for revision.
-    allowedFrom: Object.freeze([
-      PLAN_STATES.DRAFT,
-      PLAN_STATES.NEEDS_REVISION
-    ]),
+    // Returned submissions retain their review trail and may only be revised/resubmitted.
+    allowedFrom: Object.freeze([PLAN_STATES.DRAFT]),
     targetState: PLAN_STATES.CANCELLED,
     allowedRoles: Object.freeze(['STUDENT']),
     isReviewAction: false,

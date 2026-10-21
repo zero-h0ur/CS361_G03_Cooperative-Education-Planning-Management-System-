@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1060" viewBox="0 0 1600 1060" role="img" aria-labelledby="title desc">
+  <title id="title">CO-ED V3: four roles, trusted backend and workflow transactions</title>
+  <desc id="desc">Student, Staff, Advisor and Admin use Amplify and Cognito. API Gateway verifies JWTs. Lambda resolves database identities and enforces role, scope, ownership and workflow. PostgreSQL protects capacity, versions and immutable audit. Admin operations use a separate owner-authorized VPC CloudShell channel.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#455468"/></marker>
+    <style>
+      text{font-family:Arial,Helvetica,sans-serif;fill:#172033} .title{font-size:32px;font-weight:700} .heading{font-size:21px;font-weight:700}
+      .label{font-size:17px} .small{font-size:15px;fill:#526176} .box{fill:#fff;stroke:#c8d1de;stroke-width:1.5;rx:14}
+      .edge{fill:none;stroke:#455468;stroke-width:2;marker-end:url(#arrow)} .ops{stroke-dasharray:7 5}
+      .accent{fill:#b5092b} .tag{font-size:14px;font-weight:700;letter-spacing:1px;fill:#b5092b}
+    </style>
+  </defs>
+  <rect width="1600" height="1060" fill="#fff"/>
+  <text x="40" y="48" class="title">CO-ED V3 · workflow and trust boundaries</text>
+  <text x="40" y="79" class="small">G03 · Source implementation · Production workflow rollout requires migrations 004–008, ACL verification and live acceptance</text>
+
+  <rect x="40" y="123" width="205" height="105" class="box"/>
+  <text x="60" y="155" class="heading">Student</text><text x="60" y="181" class="small">Own plan + contact</text><text x="60" y="205" class="small">Official TU fields locked</text>
+  <rect x="40" y="248" width="205" height="105" class="box"/>
+  <text x="60" y="280" class="heading">Staff</text><text x="60" y="306" class="small">Scoped review + decisions</text><text x="60" y="330" class="small">Advisor assignment</text>
+  <rect x="40" y="373" width="205" height="105" class="box"/>
+  <text x="60" y="405" class="heading">Advisor</text><text x="60" y="431" class="small">Assigned Students only</text><text x="60" y="455" class="small">Read-only; capacity ≤ 5</text>
+  <rect x="40" y="498" width="205" height="105" class="box"/>
+  <text x="60" y="530" class="heading">Admin</text><text x="60" y="556" class="small">Account / system metadata</text><text x="60" y="580" class="small">No Staff decisions</text>
+
+  <rect x="300" y="277" width="235" height="165" class="box"/>
+  <text x="320" y="314" class="heading">Web browser</text><text x="320" y="345" class="label">Untrusted client</text><text x="320" y="375" class="small">Public Directory / SPA</text><text x="320" y="403" class="small">No DB credential or role trust</text>
+  <path d="M245 174H270V550H245 M245 300H270 M245 426H270" fill="none" stroke="#455468" stroke-width="2"/>
+  <path d="M270 360H300" class="edge"/>
+
+  <rect x="620" y="123" width="245" height="110" class="box"/>
+  <text x="640" y="159" class="heading">Amplify Hosting</text><text x="640" y="189" class="small">HTML / JS / CSS / logos</text><text x="640" y="213" class="small">Reviewed main → build / deploy</text>
+  <path d="M417 277V178H620" class="edge"/><text x="440" y="165" class="small">HTTPS assets</text>
+
+  <rect x="620" y="277" width="245" height="135" class="box"/>
+  <text x="640" y="313" class="heading">Amazon Cognito</text><text x="640" y="343" class="small">Managed Login</text><text x="640" y="368" class="small">Authorization Code + PKCE</text><text x="640" y="391" class="small">Access Token · not app role</text>
+  <path d="M535 324H620" class="edge"/><text x="550" y="307" class="small">OAuth</text>
+
+  <rect x="620" y="470" width="245" height="145" class="box"/>
+  <text x="640" y="507" class="heading">API Gateway</text><text x="640" y="537" class="small">Public GET: field allowlists</text><text x="640" y="562" class="small">/api/v3: JWT authorizer</text><text x="640" y="587" class="small">Issuer / client / coed-api/access</text>
+  <path d="M460 442V542H620" class="edge"/><text x="480" y="499" class="small">HTTPS</text><text x="480" y="523" class="small">Access Token</text>
+
+  <rect x="935" y="435" width="635" height="385" fill="#f8fafc" stroke="#8463be" stroke-width="1.5" stroke-dasharray="6 4" rx="16"/>
+  <text x="955" y="461" class="tag">PRIVATE VPC · us-east-1</text>
+  <rect x="965" y="485" width="260" height="160" class="box"/>
+  <text x="985" y="522" class="heading">Lambda · coed-api</text><text x="985" y="552" class="small">Node.js 22 · runtime coed_app</text><text x="985" y="577" class="small">(iss, sub) → internal identity</text><text x="985" y="602" class="small">Role / owner / scope / state</text><text x="985" y="627" class="small">Version + operation + transaction</text>
+  <path d="M865 552H965" class="edge"/><text x="879" y="533" class="small">JWT claims</text>
+
+  <rect x="1305" y="485" width="240" height="160" class="box"/>
+  <text x="1325" y="522" class="heading">RDS PostgreSQL</text><text x="1325" y="552" class="small">Private · database coed</text><text x="1325" y="577" class="small">Identity / Plan / assignment</text><text x="1325" y="602" class="small">Policy / placement / receipts</text><text x="1325" y="627" class="small">Locks / constraints / audit</text>
+  <path d="M1225 567H1305" class="edge"/><text x="1234" y="546" class="small">TLS 5432</text>
+
+  <rect x="1305" y="277" width="240" height="118" class="box"/>
+  <text x="1325" y="313" class="heading">CloudWatch Logs</text><text x="1325" y="344" class="small">Sanitized application events</text><text x="1325" y="370" class="small">30-day retention · no tokens</text>
+  <path d="M1145 485V378H1305" class="edge"/>
+
+  <rect x="965" y="695" width="260" height="95" class="box"/>
+  <text x="985" y="730" class="heading">VPC interface endpoint</text><text x="985" y="760" class="small">Secrets Manager · HTTPS 443</text>
+  <path d="M1095 645V695" class="edge"/>
+  <rect x="620" y="695" width="245" height="95" class="box"/>
+  <text x="640" y="730" class="heading">Secrets Manager</text><text x="640" y="760" class="small">Runtime DB secret only</text>
+  <path d="M965 741H865" class="edge"/>
+
+  <rect x="40" y="660" width="495" height="130" class="box"/>
+  <text x="60" y="695" class="heading">Admin / authorized operator</text><text x="60" y="725" class="small">Reviewed import + synthetic seed through VPC CloudShell</text><text x="60" y="750" class="small">Account changes: active ADMIN session + owner credential</text><text x="60" y="774" class="small">No browser DB access · no approve / reject / assign shortcut</text>
+  <path d="M535 776V837H1430V645" class="edge ops"/><text x="955" y="856" class="small">Owner-only Ops channel · hash-pinned artifacts · no runtime privilege escalation</text>
+
+  <line x1="40" x2="1560" y1="890" y2="890" stroke="#d7dfe8"/>
+  <text x="40" y="924" class="heading">Eligibility workflow</text>
+  <text x="310" y="924" class="label">DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED | REJECTED | NEEDS_REVISION</text>
+  <text x="310" y="951" class="small">NEEDS_REVISION → edit + resubmit; cancel only DRAFT. REJECTED is terminal in the same application cycle.</text>
+  <text x="40" y="991" class="heading">Company confirmation</text>
+  <text x="310" y="991" class="label">APPROVED plan → placement form → Staff dispatch record → company/student match → CONFIRMED</text>
+  <text x="310" y="1018" class="small">Eligibility approval ≠ company acceptance. CV, interviews, company replies and actual documents stay external.</text>
+</svg>

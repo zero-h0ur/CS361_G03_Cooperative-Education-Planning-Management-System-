@@ -37,12 +37,12 @@ describe('V3 runtime ACL policy on isolated PostgreSQL', () => {
     expect((await pool.query('SELECT count(*)::int AS n FROM audit_events')).rows).toEqual(before.rows);
   });
 
-  test('allows preferred-name updates including the trigger users FOR UPDATE lock', async () => {
+  test('allows audited contact-command columns including the trigger users FOR UPDATE lock', async () => {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       await client.query('SET LOCAL ROLE coed_app');
-      const result = await client.query(`UPDATE students SET preferred_name='ACL regression',
+      const result = await client.query(`UPDATE students SET contact_address='ACL regression',
         version=version+1,updated_at=CURRENT_TIMESTAMP WHERE id=(
           SELECT id FROM students WHERE user_id IS NOT NULL LIMIT 1) RETURNING id`);
       expect(result.rowCount).toBe(1);

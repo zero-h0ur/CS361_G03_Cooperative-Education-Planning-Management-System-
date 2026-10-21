@@ -107,6 +107,7 @@ function registerProtectedRoute(router, config = {}) {
  * @param {object} [options.authOptions] Auth/authz dependency overrides (tests)
  */
 function registerV3Routes(router, options = {}) {
+  require('./admin-operations-routes').registerAdminOperationsRoutes(router, registerProtectedRoute, options);
   require('./three-role-routes').registerThreeRoleRoutes(router, registerProtectedRoute, options);
   registerDirectoryRoutes(router, registerProtectedRoute, options);
   // Issue #64: Authenticated /me and session context endpoint

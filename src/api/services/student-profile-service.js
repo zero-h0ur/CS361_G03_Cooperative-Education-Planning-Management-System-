@@ -64,7 +64,7 @@ const STUDENT_SELF_MASKED_FIELDS = Object.freeze([
 /**
  * Explicit allowlist of fields editable by the Student (#51 & #65).
  */
-const STUDENT_SELF_EDITABLE_FIELDS = Object.freeze(['preferred_name','contact_address','contact_phone']);
+const STUDENT_SELF_EDITABLE_FIELDS = Object.freeze(['contact_address','contact_phone']);
 
 /**
  * Explicit allowlist of fields accepted in Student self-profile update payloads (#51 & #65).
@@ -274,39 +274,9 @@ class StudentProfileService {
       { studentId: requestedStudentId }
     );
 
-    if (payload && typeof payload === 'object' && !Array.isArray(payload) && ('contact_address' in payload || 'contact_phone' in payload)) {
-      return (this.contactService || new (require('./three-role-service').ThreeRoleService)({pool:this.pool})).saveContact(authContext,payload);
-    }
-
-    const { preferredName, expectedVersion } =
-      validateAndNormalizeStudentProfileUpdate(payload);
-
-    const updated = await this.repository.updateOwnPreferredName({
-      studentId: authContext.studentId,
-      userId: authContext.userId,
-      preferredName,
-      expectedVersion
-    });
-
-    if (!updated) {
-      const existing = await this.repository.findOwnStudentProfile({
-        studentId: authContext.studentId,
-        userId: authContext.userId
-      });
-      if (existing && expectedVersion !== null && existing.version !== expectedVersion) {
-        throw new ConflictError(
-          'Student profile has been updated by another request. Please reload and retry.',
-          'STALE_RECORD_CONFLICT',
-          {
-            expectedVersion,
-            currentVersion: existing.version
-          }
-        );
-      }
-      throw new NotFoundError('Student profile not found.', 'RECORD_NOT_FOUND');
-    }
-
-    return toStudentSelfProfile(updated);
+    // Keep historical preferred_name readable, but no unversioned/unaudited legacy
+    // write path. The contact command enforces its allowlist before opening a DB client.
+    return (this.contactService || new (require('./three-role-service').ThreeRoleService)({pool:this.pool})).saveContact(authContext,payload);
   }
 }
 

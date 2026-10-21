@@ -63,6 +63,7 @@ test('import accepts the complete reviewed migration history 001 through 007', a
     '003_partner_directory.sql', '004_three_role_workflow.sql',
     '005_submission_snapshots.sql', '006_advisor_display_name.sql',
     '007_submission_policy_integrity.sql',
+    '008_returned_plan_cancellation.sql',
   ]);
   await runImport(payload);
 });

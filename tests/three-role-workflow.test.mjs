@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import { spawnSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
 const { Pool } = require('pg');
 const { ThreeRoleService } = require('../src/api/services/three-role-service');
@@ -11,12 +12,24 @@ const { WorkflowRepository } = require('../src/db/repositories/workflow-reposito
 const { AuthorizationService } = require('../src/api/services/authorization-service');
 const v = require('../src/api/services/workflow-input');
 const command = version => ({expected_version:version,operation_id:randomUUID()});
+function operatorFunction(name, expression, payload) {
+  const source=`import importlib.util,json,sys\ns=importlib.util.spec_from_file_location("ops", "scripts/operations/${name}.py")\nm=importlib.util.module_from_spec(s);s.loader.exec_module(m)\nv=json.load(sys.stdin)\nprint(${expression})`;
+  const result=spawnSync('python3',['-c',source],{input:JSON.stringify(payload),encoding:'utf8'});
+  assert.equal(result.status,0,result.stderr);
+  return result.stdout.trim();
+}
 
 test('external references reject unsafe URLs, duplicate types and executable policy expressions', () => {
   for (const url of ['javascript:alert(1)','http://example.invalid','https://user:pass@example.invalid']) assert.throws(() => v.https(url));
   assert.equal(v.https('https://example.invalid/document'), 'https://example.invalid/document');
   assert.throws(() => v.references([{requirement_id:'x',filename:'a.pdf',format:'pdf',reference:'x'},{requirement_id:'x',filename:'a.pdf',format:'pdf',reference:'y'}]));
   assert.throws(() => v.requirements([{id:'x',title:'x',required:true,regex:'(a+)+'}]));
+});
+
+test('company matching ignores case and whitespace without merging distinct company names', () => {
+  assert.equal(v.companyNameKey('  Actual   COMPANY  '),v.companyNameKey('actualcompany'));
+  assert.equal(v.companyNameKey('บริษัท\u00a0ตัวอย่าง จำกัด'),v.companyNameKey('บริษัทตัวอย่างจำกัด'));
+  assert.notEqual(v.companyNameKey('Example Bank'),v.companyNameKey('Example Bank Technology'));
 });
 
 test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_ED_WORKFLOW_TEST_DATABASE_URL}, async t => {
@@ -30,10 +43,13 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
     const c=await admin.connect();
     try {
       await c.query(`SET search_path TO "${schema}"`);
+      await c.query('CREATE TABLE schema_migrations(version TEXT PRIMARY KEY,checksum CHAR(64))');
       const files=(await readdir(new URL('../src/db/migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();
       for (const [i,file] of files.entries()) {
         if (i===1) await c.query(`SET search_path TO "${schema}",public`);
-        await c.query(await readFile(new URL(`../src/db/migrations/${file}`,import.meta.url),'utf8'));
+        const sql=await readFile(new URL(`../src/db/migrations/${file}`,import.meta.url),'utf8');
+        await c.query(sql);
+        await c.query('INSERT INTO schema_migrations VALUES($1,$2)',[file,createHash('sha256').update(sql).digest('hex')]);
         if(i===0) {
           await c.query(`INSERT INTO students(id,anonymous_ref,source,visibility,data_status) VALUES($1,'LEGACY-PRESERVE','test','private','mock')`,[legacyStudent]);
           await c.query(`INSERT INTO plans(id,student_id,source,visibility,data_status) VALUES($1,$2,'test','private','mock')`,[legacyPlan,legacyStudent]);
@@ -53,6 +69,22 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
     const service=new ThreeRoleService({pool});
     const workflow=new WorkflowService({repository:new WorkflowRepository({pool}),authorizationService:new AuthorizationService({pool})});
     const people=[];
+    const adminId=randomUUID();
+    await q("INSERT INTO users(id,role) VALUES($1,'ADMIN')",[adminId]);
+    const adminActor={...staff,userId:adminId,role:'ADMIN'};
+    await t.test('Admin reads account/master-data metadata but cannot act as Student or Staff',async()=>{
+      const {AdminOperationsService}=require('../src/api/services/admin-operations-service');
+      const adminService=new AdminOperationsService({pool});
+      const result=await adminService.read(adminActor);
+      assert.ok(result.accounts.some(row=>row.role==='ADMIN'));
+      assert.equal(result.student_workflow_access,false);
+      assert.equal(result.migrations.length,8);
+      assert.ok(result.accounts.every(row=>Object.keys(row).sort().join(',')==='account_status,id,role,version'));
+      for(const actor of [staff,advisor])await assert.rejects(adminService.read(actor),e=>e.statusCode===403);
+      await assert.rejects(service.dashboard(adminActor),e=>e.statusCode===403);
+      await assert.rejects(service.publish(adminActor,{}),e=>e.statusCode===403);
+      await assert.rejects(service.assign(adminActor,{}),e=>e.statusCode===403);
+    });
     await t.test('forward-only migrations retain legacy rows without inventing official data or project titles',async()=>{
       const row=(await q('SELECT legacy_compatibility,status,project_title FROM plans WHERE id=$1',[legacyPlan])).rows[0];
       assert.deepEqual(row,{legacy_compatibility:true,status:'DRAFT',project_title:null});
@@ -76,6 +108,9 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
       const a=people[0].actor;
       const updated=await service.saveContact(a,{contact_address:'123 Synthetic Road',contact_phone:'+66 81 000 0000',version:1,operation_id:randomUUID()});
       assert.equal(updated.contact_phone,'+66 81 000 0000');
+      await assert.rejects(service.saveContact(a,{contact_address:'Stale value',version:1,operation_id:randomUUID()}),e=>e.statusCode===409);
+      await assert.rejects(service.saveContact(a,{contact_address:'No operation ID',version:2}),e=>e.statusCode===400);
+      await assert.rejects(service.saveContact(a,{contact_address:'No version',operation_id:randomUUID()}),e=>e.statusCode===400);
       await assert.rejects(service.saveContact(a,{full_name:'Spoof',version:2,operation_id:randomUUID()}),e=>e.statusCode===400);
       await assert.rejects(service.getWorkflow(people[1].actor,people[0].plan),e=>e.statusCode===403);
     });
@@ -97,13 +132,28 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
     });
     await t.test('revision and terminal rejection are distinct; final rejection cannot be cancelled or bypassed',async()=>{
       const p=people[7]; await workflow.startReview({actor:staff,plan_id:p.plan,...command(3)});
+      await assert.rejects(workflow.approvePlan({actor:adminActor,plan_id:p.plan,...command(4)}),e=>e.statusCode===403);
+      await assert.rejects(workflow.rejectPlan({actor:staff,plan_id:p.plan,...command(4),review_notes:' '}),e=>e.statusCode===400);
       await workflow.returnForRevision({actor:staff,plan_id:p.plan,...command(4),review_notes:'Correct external document'});
       assert.equal((await service.getWorkflow(p.actor,p.plan)).status,'NEEDS_REVISION');
+      await assert.rejects(workflow.cancelPlan({actor:p.actor,plan_id:p.plan,...command(5)}),e=>e.statusCode===422);
+      await assert.rejects(q("UPDATE plans SET status='CANCELLED' WHERE id=$1",[p.plan]),e=>e.constraint==='returned_plan_cannot_cancel');
       await workflow.submitPlan({actor:p.actor,plan_id:p.plan,...command(5)});
       await workflow.startReview({actor:staff,plan_id:p.plan,...command(6)});
       await workflow.rejectPlan({actor:staff,plan_id:p.plan,...command(7),review_notes:'Eligibility not met'});
+      await assert.rejects(workflow.submitPlan({actor:p.actor,plan_id:p.plan,...command(8)}),e=>e.statusCode===422);
       await assert.rejects(workflow.cancelPlan({actor:p.actor,plan_id:p.plan,...command(8)}),e=>e.statusCode===422);
       await assert.rejects(q(`INSERT INTO plans(id,student_id,cycle_id,source,visibility,data_status) VALUES($1,$2,$3,'test','private','mock')`,[randomUUID(),p.student,cycle]),e=>e.code==='23505');
+    });
+    await t.test('FIFO uses latest submission time, not unrelated review/update timestamps',async()=>{
+      const {StaffReviewRepository}=require('../src/db/repositories/staff-review-repository');
+      const repository=new StaffReviewRepository({pool});
+      const filters={staffUserId:staffId,reviewQueue:true,sort:'submitted_at',order:'asc',page:1,pageSize:100};
+      const before=await repository.searchPlans(filters);
+      const first=before.rows[0].id;
+      await q("UPDATE plans SET updated_at=CURRENT_TIMESTAMP+interval '1 hour' WHERE id=$1",[first]);
+      const after=await repository.searchPlans(filters);
+      assert.equal(after.rows[0].id,first);
     });
     await t.test('approve eligibility without confirming company; Advisor cannot see unassigned student',async()=>{
       for(const p of people.slice(0,7)) {
@@ -137,7 +187,7 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
       await assert.rejects(service.placement(p.actor,p.plan,'save',{...command(2),company_name:'Changed',position_title:'x',project_title:'x',accepted:true}),e=>e.statusCode===422);
       await service.placement(staff,p.plan,'mark-sent',{...command(2),reference:'Sent form 42'});
       await assert.rejects(service.placement(staff,p.plan,'confirm',{...command(3),company_name:'Wrong Company',student_number:'6609000000',reference:'Return 42'}),e=>e.statusCode===400);
-      const result=await service.placement(staff,p.plan,'confirm',{...command(3),company_name:'Actual Company',student_number:'6609000000',reference:'Return 42'});
+      const result=await service.placement(staff,p.plan,'confirm',{...command(3),company_name:'  actual  COMPANY ',student_number:'6609000000',reference:'Return 42'});
       assert.equal(result.status,'CONFIRMED'); assert.equal(result.confirmed_by,staffId);
       assert.equal((await service.getWorkflow(p.actor,p.plan)).status,'APPROVED');
     });
@@ -229,6 +279,27 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
         await admin.query(`DROP OWNED BY ${runtimeRole}`);
         await admin.query(`DROP ROLE ${runtimeRole}`);
       }
+    });
+    await t.test('challenge provisioning is INSERT-only/idempotent; Admin Ops writes versioned audited account changes only',async()=>{
+      const manifest=JSON.parse(operatorFunction('live-challenge',
+        'json.dumps({"marker":m.MARKER,"issuer":m.ISSUER,"accounts":[dict(r,sub=str(__import__("uuid").uuid4())) for r in m.roster()]})',{}));
+      const rewrite=sql=>sql.replaceAll('public.',`${schema}.`).replaceAll('pg_catalog,public',`pg_catalog,${schema}`);
+      const execute=async sql=>{const c=await pool.connect();try{return await c.query(rewrite(sql));}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}};
+      const sql=operatorFunction('live-challenge','m.provisioning_sql(v)',manifest);
+      await execute(sql);await execute(sql);
+      assert.equal((await q("SELECT count(*)::int n FROM students WHERE source='CO-ED Live Challenge 135 synthetic'")).rows[0].n,3);
+      assert.equal((await q("SELECT count(*)::int n FROM plans p JOIN students s ON s.id=p.student_id WHERE s.source='CO-ED Live Challenge 135 synthetic'")).rows[0].n,0);
+      const owner=manifest.accounts.find(r=>r.role==='ADMIN').user_id;
+      const target=manifest.accounts.find(r=>r.key==='advisor2').user_id;
+      const body={user_id:target,role:'ADVISOR',account_status:'DISABLED',expected_version:1,operation_id:randomUUID(),reason:'Synthetic account maintenance'};
+      const change=(actor,request)=>execute(operatorFunction('admin-account','m.statement(v["actor"],v["body"])',{actor,body:request}));
+      await assert.rejects(change(staffId,body),e=>e.code==='42501');
+      await change(owner,body);await change(owner,body);
+      assert.deepEqual((await q('SELECT role,account_status,version FROM users WHERE id=$1',[target])).rows[0],{role:'ADVISOR',account_status:'DISABLED',version:2});
+      assert.equal((await q('SELECT count(*)::int n FROM workflow_events WHERE operation_id=$1',[body.operation_id])).rows[0].n,1);
+      await assert.rejects(change(owner,{...body,operation_id:randomUUID()}),e=>e.code==='40001');
+      await assert.rejects(change(owner,{...body,reason:'Changed payload'}),e=>e.code==='23505');
+      await assert.rejects(change(owner,{...body,user_id:owner,role:'ADMIN',operation_id:randomUUID()}),e=>e.code==='42501');
     });
   } finally {
     await pool?.end();

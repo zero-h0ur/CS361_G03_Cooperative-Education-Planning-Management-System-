@@ -1,5 +1,9 @@
 const { ValidationError } = require('../errors');
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// Compare names, not brands: preserve letters/punctuation but ignore whitespace/case.
+function companyNameKey(value) {
+  return text(value, 'company_name', 300).normalize('NFC').replace(/\s+/gu, '').toLowerCase();
+}
 function uuid(value, field = 'id') {
   if (typeof value !== 'string' || !UUID.test(value)) throw new ValidationError(`${field} must be a UUID.`);
   return value.toLowerCase();
@@ -13,7 +17,9 @@ function text(value, field, max = 300, required = true) {
 }
 function fields(body, allowed) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new ValidationError('JSON object required.');
-  for (const key of Object.keys(body)) if (!allowed.includes(key)) throw new ValidationError(`Unsupported field: ${key}.`);
+  const unsupported = Object.keys(body).filter(key => !allowed.includes(key));
+  if (unsupported.length) throw new ValidationError(`Unsupported field: ${unsupported[0]}.`,
+    unsupported.map(field => ({field,issue:'field is not writable'})));
 }
 function https(value) {
   if (value === null || value === undefined || value === '') return null;
@@ -67,4 +73,4 @@ function command(body) {
   uuid(body.operation_id, 'operation_id');
   if (!Number.isInteger(body.expected_version) || body.expected_version < 0) throw new ValidationError('expected_version must be a nonnegative integer.');
 }
-module.exports = { uuid, text, fields, https, references, requirements, validateReferences, command };
+module.exports = { uuid, text, fields, https, references, requirements, validateReferences, command, companyNameKey };
