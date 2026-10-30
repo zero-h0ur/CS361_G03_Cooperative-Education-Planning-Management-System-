@@ -139,10 +139,12 @@ export function renderPlanWorkflow(options) {
         const references=inputs.filter(x=>x.rule.required || x.reference.value.trim() || x.url.value.trim()).map(x=>({requirement_id:x.rule.id,filename:x.filename.value,format:x.format.value,reference:x.reference.value,url:x.url.value}));
         await send('/workflow','PATCH',op({project_title:project.value,references,policy_id:data.policy.id,expected_version:data.version}));
       },{onDirtyChange}); documents.append(form);
+      if (data.status === 'DRAFT') {
       const cancel=el('details','workflow-disclosure');cancel.append(el('summary',null,'ยกเลิกฉบับร่างนี้'));
       const cancelForm=el('form','workflow-form');note(cancelForm,'รายการจะถูกยกเลิก แต่ประวัติการทำรายการยังถูกเก็บไว้');
       field(cancelForm,'ยืนยันยกเลิกฉบับร่าง',false,{type:'checkbox'});
       controls(cancelForm,'ยืนยันยกเลิกฉบับร่าง',op=>send('/cancel','POST',op({expected_version:data.version})),{danger:true});cancel.append(cancelForm);documents.append(cancel);
+      }
     } else {note(documents,`Project: ${data.project_title || 'รายการเก่ายังไม่ระบุ'}`);refList(documents,data.references);}
     if(data.legacy_submission) note(documents,'รายการก่อนเริ่มระบบข้อกำหนดเอกสาร: ไม่มี snapshot ย้อนหลัง ไม่ใช่การยืนยันว่าไม่มีเอกสาร');
     if(data.submissions.length) {

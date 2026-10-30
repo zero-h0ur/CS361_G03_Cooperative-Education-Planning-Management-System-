@@ -1,6 +1,10 @@
 import { parseStaffRouteState } from './staff/staff-route-state.js';
 
 const ROUTE_DEFINITIONS = Object.freeze([
+  Object.freeze({hash:'#/admin/operations',role:'ADMIN',navLabel:'จัดการระบบ',
+    eyebrow:'SYSTEM OPERATIONS',title:'ข้อมูลระบบและบัญชีผู้ใช้',
+    description:'ตรวจสอบบัญชีและข้อมูลหลัก งานนำเข้าและเปลี่ยนสิทธิ์ทำผ่านช่องทาง Operations ที่ได้รับอนุญาต',
+    status:'ไม่รวมการตรวจแผนหรือมอบหมายอาจารย์แทน Staff'}),
   Object.freeze({
     hash: '#/student/profile',
     role: 'STUDENT',
@@ -98,12 +102,14 @@ const DETAIL_ROUTE_DEFINITIONS = Object.freeze([
 ]);
 
 const DEFAULT_ROUTE_BY_ROLE = Object.freeze({
+  ADMIN: '#/admin/operations',
   STUDENT: '#/student/profile',
   STAFF: '#/staff/review',
   ADVISOR: '#/advisor/students'
 });
 
 const ROLE_LABELS = Object.freeze({
+  ADMIN: 'ผู้ดูแลระบบ',
   STUDENT: 'นักศึกษา',
   STAFF: 'เจ้าหน้าที่',
   ADVISOR: 'อาจารย์ที่ปรึกษา'

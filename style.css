@@ -5297,6 +5297,12 @@ a {
   border: 1px solid #fef3c7;
 }
 
+.badge-admin {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
 .user-chevron {
   font-size: 11px;
   color: #64748b;

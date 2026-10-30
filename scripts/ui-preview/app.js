@@ -5,11 +5,12 @@ import { createPreviewClients, SCENARIOS, ADVISOR_SCENARIOS } from './fixtures.j
 import { enhanceWorkflowPreview } from './workflow-fixtures.js';
 
 const params = new URLSearchParams(location.search);
-const defaultRoutes = { STUDENT: '#/student/plan', STAFF: '#/staff/students', ADVISOR: '#/advisor/students' };
+const defaultRoutes = { STUDENT: '#/student/plan', STAFF: '#/staff/students', ADVISOR: '#/advisor/students', ADMIN:'#/admin/operations' };
 const roleLabel = document.createElement('label'); roleLabel.textContent = 'พื้นที่จำลอง ';
 const role = document.createElement('select'); role.setAttribute('aria-label', 'เลือกพื้นที่จำลอง');
 role.add(new Option('นักศึกษา', 'STUDENT')); role.add(new Option('เจ้าหน้าที่ (จำลอง Workflow)', 'STAFF'));
 role.add(new Option('อาจารย์ที่ปรึกษา (อ่านอย่างเดียว)', 'ADVISOR'));
+role.add(new Option('ผู้ดูแลระบบ (Operations)', 'ADMIN'));
 role.value = Object.hasOwn(defaultRoutes, params.get('role')) ? params.get('role') : 'STUDENT';
 const scenarios = role.value === 'ADVISOR' ? ADVISOR_SCENARIOS : SCENARIOS;
 const defaultScenario = role.value === 'ADVISOR' ? 'assigned' : 'draft';

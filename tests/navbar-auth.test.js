@@ -22,7 +22,8 @@ afterEach(() => { navbar?.destroy(); navbar = null; });
 test.each([
   ['STUDENT', 'นักศึกษา', '#/student/profile', '#/student/plan'],
   ['STAFF', 'เจ้าหน้าที่', '#/staff/students', '#/staff/plans'],
-  ['ADVISOR', 'อาจารย์ที่ปรึกษา', '#/advisor/students', null]
+  ['ADVISOR', 'อาจารย์ที่ปรึกษา', '#/advisor/students', null],
+  ['ADMIN', 'ผู้ดูแลระบบ', '#/admin/operations', null]
 ])('uses verified %s role and only the matching links', async (role, label, home, secondary) => {
   const { container } = setup(role); await navbar.start();
   expect(container.querySelector('.user-nav-badge').textContent).toBe(label);
@@ -30,7 +31,7 @@ test.each([
     .toEqual([`app.html${home}`, ...(secondary ? [`app.html${secondary}`] : [])]);
 });
 
-test.each(['ADMIN', 'unknown', 'student', undefined, 'toString'])('unknown role %s never falls back to STUDENT', async (role) => {
+test.each(['SYSTEM', 'unknown', 'student', undefined, 'toString'])('unknown role %s never falls back to STUDENT', async (role) => {
   const { container } = setup(role, {}, async () => ({ role })); await navbar.start();
   expect(container.querySelector('.btn-login')).not.toBeNull();
   expect(container.querySelector('.user-nav-dropdown-wrapper')).toBeNull();

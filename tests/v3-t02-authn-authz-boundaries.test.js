@@ -631,6 +631,7 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
     { method: 'GET', path: `/api/v3/directory/positions/${PLANS.planA_Draft.id}` },
     ...ADVISOR_READ_ENDPOINTS.map((path) => ({ method: 'GET', path })),
     { method: 'GET', path: '/api/v3/me' },
+    { method: 'GET', path: '/api/v3/admin/operations' },
     { method: 'GET', path: '/api/v3/students/me' },
     { method: 'PATCH', path: '/api/v3/students/me', body: { preferred_name: 'ชาย', version: 1 } },
     { method: 'PUT', path: '/api/v3/students/me', body: { preferred_name: 'ชาย', version: 1 } },
@@ -835,10 +836,10 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
   });
 
   describe('4. Role, Ownership, Staff Scope & Advisor Assignment Matrix', () => {
-    it('enforces Student ownership: Student A can read/update own profile and submit own Plan, but is denied (403) on Student B Plan and Staff commands', async () => {
+    it('enforces Student ownership and rejects the legacy nickname mutation, foreign Plans and Staff commands', async () => {
       const studentAToken = signJwt(makeClaims(ACTORS.studentA.sub));
 
-      // Allowed: own profile read & update
+      // Own profile read is allowed; nickname writes do not bypass contact-command safeguards.
       const getProfileRes = await fetch(`${baseUrl}/api/v3/students/me`, {
         headers: { Authorization: `Bearer ${studentAToken}` }
       });
@@ -852,7 +853,8 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
         },
         body: JSON.stringify({ preferred_name: 'สมชาย (ใหม่)', version: 1 })
       });
-      expect(patchProfileRes.status).toBe(200);
+      // Legacy nickname writes no longer bypass versioned/audited contact commands.
+      expect(patchProfileRes.status).toBe(400);
 
       // Allowed: submit own DRAFT plan
       const submitOwnRes = await fetch(

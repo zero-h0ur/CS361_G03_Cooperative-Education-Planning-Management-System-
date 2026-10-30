@@ -245,7 +245,7 @@ Error: ไม่มี/ผิด/หมดอายุ token → `401`, ไม�
 | Method | หน้าที่ |
 |---|---|
 | `GET` | อ่าน Profile ของตนเอง |
-| `PATCH`, `PUT` | คงการแก้ `preferred_name` เดิม หรือแก้ข้อมูลติดต่อด้วย `version`/`operation_id` ตามส่วนขยาย Workflow |
+| `PATCH`, `PUT` | แก้เฉพาะข้อมูลติดต่อด้วย `version`/`operation_id` ตามส่วนขยาย Workflow ข้อมูลชื่อเดิมยังอ่านได้แต่ไม่รับ legacy nickname mutation |
 
 Response (`GET` และผลของการ Update) ส่งเฉพาะ Field ใน Allowlist ตาม #50/#51:
 
@@ -272,11 +272,11 @@ Response (`GET` และผลของการ Update) ส่งเฉพา�
 Update payload:
 
 ```json
-{ "preferred_name": "Chai", "version": 3 }
+{ "contact_address": "Synthetic address", "contact_phone": "0810000000", "version": 3, "operation_id": "90000000-0000-4000-8000-000000000001" }
 ```
 
-- `preferred_name` จำเป็นต้องส่ง: เป็น String หรือ `null`, ระบบ Trim ให้, String ว่างจะถูกเก็บเป็น `null`, ยาวไม่เกิน 100 ตัวอักษร และห้ามมี Control character
-- `version` เป็น Optional แต่ **Frontend ควรส่งค่าที่อ่านมาล่าสุดเสมอ** ถ้าไม่ส่งจะเป็น Last-write-wins
+- ส่ง `contact_address` หรือ `contact_phone` อย่างน้อยหนึ่งช่อง ช่องที่ไม่ได้ส่งจะคงค่าเดิม ชื่อและข้อมูลทางการเป็นแบบอ่านอย่างเดียว
+- ต้องส่ง `version` ล่าสุดและ `operation_id` UUID การเปลี่ยนข้อมูล ผลลัพธ์สำหรับ retry และ audit อยู่ใน transaction เดียวกัน ไม่มี Last-write-wins fallback
 - ถ้ามี Field อื่นใน Payload (Field ทางการ, Immutable หรือไม่รู้จัก) ระบบจะปฏิเสธทั้ง Request โดยไม่แก้ข้อมูลบางส่วน
 - ไม่รับ Query parameter ใดๆ
 

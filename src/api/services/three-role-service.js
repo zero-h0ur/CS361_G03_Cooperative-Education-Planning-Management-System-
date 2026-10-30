@@ -218,7 +218,7 @@ class ThreeRoleService {
         } else if (action === 'confirm') {
           if (current.status !== 'AWAITING_COMPANY') throw new InvalidStateTransitionError();
           const company=v.text(body.company_name,'company_name',300), number=v.text(body.student_number,'student_number',100);
-          if (company.normalize('NFC') !== current.submitted_payload.company_name.normalize('NFC') || number !== p.student_number) throw new ValidationError('บริษัทหรือรหัสนักศึกษาในแบบฟอร์มตอบกลับไม่ตรงกับข้อมูลที่ส่ง');
+          if (v.companyNameKey(company) !== v.companyNameKey(current.submitted_payload.company_name) || number !== p.student_number) throw new ValidationError('บริษัทหรือรหัสนักศึกษาในแบบฟอร์มตอบกลับไม่ตรงกับข้อมูลที่ส่ง');
           const reference=v.text(body.reference,'reference',300,false), url=v.https(body.url);
           if (!reference && !url) throw new ValidationError('กรุณาระบุหลักฐานยืนยันจากบริษัท');
           next.status='CONFIRMED'; next.confirmed_by=actor.userId; next.confirmed_at=new Date().toISOString();

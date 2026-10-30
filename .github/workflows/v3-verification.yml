@@ -40,6 +40,8 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
+      - name: Check JavaScript syntax
+        run: npm run lint
       - name: Verify published documentation links without network access
         shell: bash
         run: |
@@ -57,6 +59,18 @@ jobs:
         run: |
           set -o pipefail
           npm test 2>&1 | tee v3-verification.log
+      - name: Verify isolated UI Preview
+        run: npm run test:ui-preview
+      - name: Build with strict production authentication configuration
+        env:
+          NODE_ENV: production
+          CO_ED_REQUIRE_AUTH_CONFIG: '1'
+          CO_ED_COGNITO_USER_POOL_ID: us-east-1_WzzG10dCP
+          CO_ED_COGNITO_CLIENT_ID: 3r7a2qjn98v31r1f6vee8ag8e5
+          CO_ED_COGNITO_DOMAIN: us-east-1wzzg10dcp.auth.us-east-1.amazoncognito.com
+          CO_ED_APP_ORIGIN: https://main.d1d9qrqnsi5nl6.amplifyapp.com
+          CO_ED_API_BASE_URL: https://qtqlsb1aec.execute-api.us-east-1.amazonaws.com
+        run: npm run build
       - name: Preserve verification evidence
         if: always()
         uses: actions/upload-artifact@v4

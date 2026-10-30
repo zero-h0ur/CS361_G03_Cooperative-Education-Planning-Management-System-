@@ -109,6 +109,7 @@ function createAdvisorPreviewClient({ scenario, delayMs }) {
 }
 
 export function createPreviewClients({ role = 'STUDENT', scenario = role === 'ADVISOR' ? 'assigned' : 'draft', delayMs = 250 } = {}) {
+  if (role === 'ADMIN') return {loadSession:async()=>({role:'ADMIN',canReviewPlan:false})};
   if (!['STUDENT', 'STAFF', 'ADVISOR'].includes(role)) throw new Error('Unsupported preview role');
   if (role === 'ADVISOR') {
     if (!Object.hasOwn(ADVISOR_SCENARIOS, scenario)) throw new Error('Unknown Advisor preview scenario');

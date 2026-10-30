@@ -10,6 +10,8 @@ REVOKE ALL PRIVILEGES ON TABLE
   public.placements, public.workflow_receipts, public.workflow_events FROM coed_app;
 REVOKE CREATE ON SCHEMA public FROM coed_app;
 GRANT USAGE ON SCHEMA public TO coed_app;
+-- Admin operational metadata, never a right to run migrations.
+GRANT SELECT ON public.schema_migrations TO coed_app;
 GRANT SELECT ON TABLE
   public.companies, public.positions, public.rounds, public.document_metadata,
   public.users, public.external_identity_links, public.students, public.plans,
@@ -17,7 +19,7 @@ GRANT SELECT ON TABLE
   public.audit_events, public.document_policies, public.plan_submissions,
   public.placements, public.workflow_receipts, public.workflow_events TO coed_app;
 GRANT INSERT, UPDATE ON public.plans TO coed_app;
-GRANT UPDATE (preferred_name, contact_address, contact_phone, version, updated_at) ON public.students TO coed_app;
+GRANT UPDATE (contact_address, contact_phone, version, updated_at) ON public.students TO coed_app;
 GRANT UPDATE (updated_at) ON public.staff_scopes TO coed_app;
 GRANT INSERT, UPDATE ON public.advisor_assignments, public.placements TO coed_app;
 GRANT INSERT ON public.document_policies, public.plan_submissions,

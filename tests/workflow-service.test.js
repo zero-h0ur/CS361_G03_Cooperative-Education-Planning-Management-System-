@@ -4,7 +4,7 @@
  *
  * Verifies:
  * 1. State machine rules and allowed transitions (#54, #63)
- *    - CANCEL allowed only from DRAFT and NEEDS_REVISION (not pending review)
+ *    - CANCEL allowed only from DRAFT; returned submissions retain their history
  * 2. Preconditions and editable constraints (#52 ข้อ 3, ข้อ 6)
  *    - Cycle, public company, and matching public position required for submit
  *    - Review notes optional for approve, mandatory for return_for_revision
@@ -420,11 +420,8 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
       expect(repoNoNotes.auditLogs[0].notes).toBeNull();
     });
 
-    it('allows cancellation only from editable DRAFT and NEEDS_REVISION states', async () => {
-      const allowedStates = [
-        PLAN_STATES.DRAFT,
-        PLAN_STATES.NEEDS_REVISION
-      ];
+    it('allows cancellation only from an unsubmitted DRAFT', async () => {
+      const allowedStates = [PLAN_STATES.DRAFT];
 
       for (const st of allowedStates) {
         const repo = createMockRepo(createMockPlanRow({ status: st, version: 1 }));
@@ -511,6 +508,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
         { status: PLAN_STATES.DRAFT, action: ACTIONS.PLAN_RETURN_FOR_REVISION, actor: makeStaffContext() },
         { status: PLAN_STATES.SUBMITTED, action: ACTIONS.PLAN_APPROVE, actor: makeStaffContext() },
         { status: PLAN_STATES.SUBMITTED, action: ACTIONS.PLAN_RETURN_FOR_REVISION, actor: makeStaffContext() },
+        { status: PLAN_STATES.NEEDS_REVISION, action: ACTIONS.PLAN_CANCEL, actor: makeStudentContext() },
         { status: PLAN_STATES.NEEDS_REVISION, action: ACTIONS.PLAN_START_REVIEW, actor: makeStaffContext() },
         { status: PLAN_STATES.NEEDS_REVISION, action: ACTIONS.PLAN_APPROVE, actor: makeStaffContext() }
       ];
@@ -526,7 +524,7 @@ describe('Issue #63: Transactional Workflow and Immutable Audit Service', () => 
             action,
             expected_version: 2,
             operation_id: makeOperationId(),
-            review_notes: 'illegal note'
+            ...(actor.role === 'STAFF' ? { review_notes: 'illegal note' } : {})
           })
         ).rejects.toThrow(InvalidStateTransitionError);
 

@@ -18,8 +18,8 @@ function response(status, payload) {
 }
 
 describe('authenticated V3 session client', () => {
-  it('accepts only the three V3 shell roles', () => {
-    expect(SUPPORTED_ROLES).toEqual(['STUDENT', 'STAFF', 'ADVISOR']);
+  it('accepts the four V3 shell roles, keeping Admin separate from Staff', () => {
+    expect(SUPPORTED_ROLES).toEqual(['STUDENT', 'STAFF', 'ADVISOR', 'ADMIN']);
   });
 
   it('calls /api/v3/me with an Access Token and returns only role and the review capability', async () => {
@@ -86,7 +86,7 @@ describe('authenticated V3 session client', () => {
     });
   });
 
-  it('treats a valid ADMIN session as access denied because the shell has no ADMIN area', async () => {
+  it('accepts an ADMIN session without granting Staff review controls', async () => {
     const client = createSessionClient({
       apiBaseUrl: 'https://api.example.com',
       currentOrigin: 'https://app.example.com',
@@ -94,9 +94,7 @@ describe('authenticated V3 session client', () => {
       fetchImpl: jest.fn().mockResolvedValue(response(200, { data: { role: 'ADMIN' } }))
     });
 
-    await expect(client.loadSession()).rejects.toMatchObject({
-      code: AUTH_ERROR_CODES.ACCESS_DENIED
-    });
+    await expect(client.loadSession()).resolves.toEqual({role:'ADMIN',canReviewPlan:false});
   });
 
   it.each([

@@ -16,6 +16,7 @@ const REVIEW_QUEUE_STATES = Object.freeze(['SUBMITTED', 'UNDER_REVIEW', 'NEEDS_R
 
 // Allowlisted ORDER BY fragments; callers pass keys, never raw SQL.
 const PLAN_SORT_COLUMNS = Object.freeze({
+  submitted_at: "COALESCE((SELECT MAX(a.created_at) FROM audit_events a WHERE a.plan_id=p.id AND a.action='PLAN_SUBMITTED'), p.updated_at)",
   updated_at: 'p.updated_at',
   created_at: 'p.created_at',
   student_number: 's.student_number'
