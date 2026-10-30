@@ -22,13 +22,16 @@ Decision Issue ต้นทางก่อน ไม่สร้าง policy �
 
 ## Component and data flow
 
-![Four-role workflow and operational boundaries](G03-V3-workflow.png)
+![CO-ED V3 architecture](G03-V3-architecture.png)
 
-[Editable diagram source](G03-V3-workflow.svg)
+ภาพวันที่ 19 ต.ค. 2569 แสดงสถาปัตยกรรมพื้นฐานและ request flow ของ Student/Staff
+ส่วน Assignment, Placement และ Admin ที่เพิ่มภายหลังดู [workflow diagram](G03-V3-workflow.png)
+และ [editable source](G03-V3-workflow.svg)
 
-ภาพนี้แสดง implementation ล่าสุด ไม่ใช่หลักฐานว่า workflow ใหม่ขึ้น production แล้ว
-ต้องผ่าน migration 004–008, runtime ACL, backend/frontend rollout และ live smoke ก่อน
-role ที่ 4 คือ Admin สำหรับงาน Operations ไม่ใช่ Staff อีกบัญชีหนึ่ง
+ภาพประกอบไม่ใช่หลักฐานว่า workflow ใหม่ขึ้น production แล้ว การเก็บ source release
+ไม่เปลี่ยนสถานะ deployment ใน Learner Lab ซึ่งปิด main auto-build ณ 31 ต.ค. 2569
+ก่อนเปิดใช้ส่วนขยายต้องผ่าน migration 004–008, runtime ACL, backend/frontend rollout
+และ live smoke ก่อน Role ที่ 4 คือ Admin สำหรับงาน Operations ไม่ใช่ Staff อีกบัญชีหนึ่ง
 
 ```mermaid
 flowchart LR
@@ -133,8 +136,8 @@ CV/Resume การสัมภาษณ์ การส่งฟอร์ม �
 
 ## Plan workflow and audit path
 
-สถานะ V3 ได้แก่ `DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `NEEDS_REVISION`,
-`APPROVED` และ `CANCELLED`
+สถานะใน source V3 ได้แก่ `DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `NEEDS_REVISION`,
+`APPROVED`, `REJECTED` และ `CANCELLED`
 
 - Student แก้ Plan content ได้เฉพาะ `DRAFT` และ `NEEDS_REVISION`
 - Staff ทำ review mutation ได้เฉพาะ allowed transition และภายใน Staff scope
@@ -142,7 +145,8 @@ CV/Resume การสัมภาษณ์ การส่งฟอร์ม �
 - ทุก mutation ต้องตรวจ current state และ optimistic concurrency `version`
 - Retry ใช้ operation/idempotency record เพื่อไม่สร้าง transition หรือ audit ซ้ำ
 - Plan ห้าม hard delete; ใช้ `CANCELLED` เพื่อรักษาประวัติ
-- `CANCELLED` เป็น state/service contract; ไม่มี HTTP `/cancel` route หรือ Cancel Plan UI ที่อ้างว่าส่งมอบใน V3
+- Source มี HTTP `/cancel` และ UI สำหรับยกเลิกเฉพาะ `DRAFT`; แผน `NEEDS_REVISION`
+  แก้และส่งใหม่ได้แต่ยกเลิกไม่ได้ ส่วน `REJECTED` เป็นสถานะสิ้นสุดในรอบเดิม
 
 ```text
 Trusted actor context
@@ -171,6 +175,9 @@ append-only ใน application path
 - Server-side role, ownership, Advisor assignment และ Staff scope authorization
 - Student Profile และ own Plan workflow
 - Staff review workflow; Advisor assigned-scope read-only
+- ส่วนขยายใน source: document policies/snapshots, Staff assignment ที่จำกัดการดูแล
+  พร้อมกันไม่เกิน 5 คน และ Placement confirmation แยกจากผลตรวจคุณสมบัติ
+- Admin อ่าน metadata ระบบ/บัญชี ส่วนการเปลี่ยนบัญชีใช้ owner-only Ops
 - Forward-only schema, optimistic concurrency, idempotency และ immutable audit
 - Public V2 Company Directory compatibility
 - Privacy controls, synthetic fixtures, secret references และ deployment evidence
@@ -180,7 +187,7 @@ append-only ใน application path
 - Deadline/calendar, near-due/overdue และ full multi-round tracking
 - Long-term placement progression, dashboard, analytics และ executive reporting
 - Company coordinator portal และ Company/Position administration UI
-- In-app Admin UI, file upload, notifications และ external integrations
+- การเปลี่ยนบัญชีผ่าน Admin UI, file upload, notifications และ external integrations
 - Full Infrastructure as Code, performance/cost optimization และ architecture redesign
 - Production Student data ที่ยังไม่มี permission, minimization และ retention approval
 
