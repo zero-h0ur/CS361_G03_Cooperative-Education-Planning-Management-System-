@@ -6,6 +6,7 @@ const {renderApplicationEditor}=require('../tmp/frontend-test-modules/student/ap
 const {renderApplicationWorkspace}=require('../tmp/frontend-test-modules/student/application-view.cjs');
 const {createApplicationPreview,APPLICATION_PREVIEW_ID:ID}=require('../tmp/frontend-test-modules/application-preview-fixtures.cjs');
 const {getRoute,canRoleAccessRoute}=require('../tmp/frontend-test-modules/routes.cjs');
+const {createShellApp}=require('../tmp/frontend-test-modules/shell-app.cjs');
 const flush=()=>new Promise(r=>setTimeout(r,0));
 const response=(data,status=200)=>({ok:status<300,status,json:async()=>status<300?{data}:{error:data}});
 const button=(root,label)=>Array.from(root.querySelectorAll('button')).find(b=>b.textContent===label);
@@ -67,6 +68,37 @@ test('upload version refresh keeps other unsaved field values and selected-file 
   expect(root.querySelector('#application-contact_address').value).toBe('ข้อมูลระหว่างอัปโหลด');
   expect((await client.get(ID)).documents.find(d=>d.kind==='resume').filename).toBe('resume-new.pdf');
   expect(button(root,'ตรวจความพร้อม').disabled).toBe(true);
+});
+test('returning the alternative course to blank still permits an incomplete Draft save',async()=>{
+  const {root,client}=await editor('application-ready'),choice=root.querySelector('#application-selected_courses');
+  choice.value='';choice.dispatchEvent(new Event('change'));
+  button(root,'บันทึกฉบับร่าง').click();await flush();await flush();
+  expect((await client.get(ID)).payload.selected_courses.alternative).toBe('');
+  button(root,'ตรวจความพร้อม').click();await flush();await flush();expect(button(root,'ส่งใบสมัคร').disabled).toBe(true);
+});
+test('closed round Draft is visible without masquerading as submitted or offering write controls',async()=>{
+  const client=createApplicationPreview(),application=await client.get(ID);application.availability={can_edit:false};
+  const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);
+  expect(root.textContent).toContain('ใบสมัครนี้ยังไม่ได้ส่ง');expect(root.querySelector('#application-contact_phone').readOnly).toBe(true);
+  expect(root.querySelector('input[type=file]')).toBeNull();expect(button(root,'บันทึกฉบับร่าง')).toBeUndefined();
+});
+test('in-page links respect reduced motion without animations blocking focus',async()=>{
+  window.matchMedia=jest.fn(()=>({matches:true}));const {root}=await editor();
+  const section=root.querySelector('#application-documents');section.scrollIntoView=jest.fn();
+  root.querySelector('a[href="#application-documents"]').click();
+  expect(section.scrollIntoView).toHaveBeenCalledWith({behavior:'auto',block:'start'});expect(document.activeElement).toBe(section);
+});
+test('shell hash navigation cannot silently discard dirty input; session expiry still removes protected content',async()=>{
+  const root=document.createElement('div');document.body.append(root);
+  const location={hash:'#/student/application/'+ID},eventTarget=new EventTarget();
+  const app=createShellApp({root,location,eventTarget,applicationClient:createApplicationPreview(),
+    loadSession:async()=>({role:'STUDENT'}),startLogin:async()=>{},restartLogin:async()=>{},logout:async()=>{}});
+  try{await app.start();await flush();await flush();
+    const input=root.querySelector('#application-contact_address');input.value='ไม่ทิ้งเงียบ ๆ';input.dispatchEvent(new Event('input'));
+    location.hash='#/student/profile';eventTarget.dispatchEvent(new Event('hashchange'));
+    expect(location.hash).toBe('#/student/application/'+ID);expect(root.querySelector('#application-contact_address').value).toBe('ไม่ทิ้งเงียบ ๆ');
+    app.expireSession();expect(root.querySelector('#application-contact_address')).toBeNull();expect(root.textContent).not.toContain('ไม่ทิ้งเงียบ ๆ');
+  }finally{app.destroy();}
 });
 test('list binds each existing application to its own route and filters already-used cycles',async()=>{
   const client=createApplicationPreview(),navigate=jest.fn(),root=renderApplicationWorkspace({client,signal:controller.signal,onNavigate:navigate});

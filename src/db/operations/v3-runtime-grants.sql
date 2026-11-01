@@ -61,6 +61,13 @@ BEGIN
      OR has_table_privilege('coed_app','public.phase1_academic_profiles','INSERT,UPDATE,DELETE')
      OR has_table_privilege('coed_app','public.phase1_documents','UPDATE,DELETE')
      OR has_table_privilege('coed_app','public.phase1_submissions','UPDATE,DELETE')
+     OR has_any_column_privilege('coed_app','public.phase1_policies','INSERT,UPDATE')
+     OR has_any_column_privilege('coed_app','public.phase1_academic_profiles','INSERT,UPDATE')
+     OR has_any_column_privilege('coed_app','public.phase1_cycle_windows','INSERT,UPDATE')
+     OR has_any_column_privilege('coed_app','public.phase1_documents','UPDATE')
+     OR has_any_column_privilege('coed_app','public.phase1_submissions','UPDATE')
+     OR has_table_privilege('coed_app','public.phase1_documents','TRUNCATE')
+     OR has_table_privilege('coed_app','public.phase1_submissions','TRUNCATE')
      OR has_schema_privilege('coed_app','public','CREATE') THEN
     RAISE EXCEPTION 'Excess effective privileges remain; all ACL changes rolled back. Review PUBLIC or other grantors, do not use CASCADE.';
   END IF;

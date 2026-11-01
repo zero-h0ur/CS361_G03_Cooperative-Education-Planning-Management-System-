@@ -8,7 +8,7 @@ function button(label,fn,secondary=true){const b=node('button',`shell-button${se
 export function renderApplicationEditor({client,application,signal,onSessionExpired,onBack,setLeaveGuard}={}) {
   const root=node('div','application-editor');let app=application,draft=copy(app.payload),dirty=false,busy=false,result=null;
   const selectedFiles=new Map(),attempts=new Map();let message='',errors=[],confirming=false,hasError=false;
-  const readOnly=()=>app.status!=='DRAFT';
+  const readOnly=()=>app.status!=='DRAFT' || app.availability?.can_edit===false;
   const canLeave=()=>!(dirty || busy || selectedFiles.size) || window.confirm(busy?'กำลังทำรายการ ผลอาจถูกบันทึกแล้ว ต้องการออกจากหน้านี้หรือไม่?':'ยังมีข้อมูลหรือไฟล์ที่ไม่ได้บันทึก ต้องการออกจากหน้านี้และทิ้งข้อมูลที่กรอกหรือไม่?');
   setLeaveGuard?.(canLeave);
   const beforeUnload=e=>{if(dirty || busy || selectedFiles.size){e.preventDefault();e.returnValue='';}};
@@ -48,11 +48,11 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
   function selectField(parent,key,label,options,value,onChange){const wrap=node('div','application-field'),l=node('label','',label),s=node('select','application-input');
     s.id='application-'+key.replaceAll('.','-');s.dataset.field=key;l.htmlFor=s.id;for(const [v,text] of options)s.append(new Option(text,v));s.value=value || '';
     s.disabled=readOnly() || busy;s.addEventListener('change',()=>{onChange(s.value);changed();render();});wrap.append(l,s);markError(wrap,s,key);parent.append(wrap);return s;}
-  function header(){const top=card('application-summary','ใบสมัครเข้าแผนสหกิจศึกษา',`รหัสใบสมัคร ${app.id} · เวอร์ชัน ${app.version}`);
-    const state=node('p','application-badge',readOnly()?'ส่งแล้ว · รอผู้ประสานงานตรวจสอบ':'ฉบับร่าง · ยังไม่ได้ส่ง');
+  function header(){const top=card('application-summary',app.cycle_name || 'ใบสมัครเข้าแผนสหกิจศึกษา',`รหัสใบสมัคร ${app.id} · เวอร์ชัน ${app.version}`);
+    const state=node('p','application-badge',app.status==='SUBMITTED'?'ส่งแล้ว · รอผู้ประสานงานตรวจสอบ':readOnly()?'รอบปิด / หมดเวลา · อ่านอย่างเดียว':'ฉบับร่าง · ยังไม่ได้ส่ง');
     const saved=node('p','application-help',dirty?'มีข้อมูลที่ยังไม่ได้บันทึก':'ข้อมูลตรงกับฉบับที่บันทึกแล้ว');saved.dataset.saveState='';
     top.append(state,saved);
-    if(readOnly())top.append(node('p','application-notice','ข้อมูลและเอกสารถูกล็อกไว้ตามฉบับที่ส่ง การส่งใบสมัครยังไม่ใช่การได้รับคัดเลือกเข้าแผน'));
+    if(readOnly())top.append(node('p','application-notice',app.status==='SUBMITTED'?'ข้อมูลและเอกสารถูกล็อกไว้ตามฉบับที่ส่ง การส่งใบสมัครยังไม่ใช่การได้รับคัดเลือกเข้าแผน':'ใบสมัครนี้ยังไม่ได้ส่ง แต่รอบไม่เปิดให้แก้ไขแล้ว ข้อมูลที่บันทึกยังดูและดาวน์โหลดได้'));
     const nav=node('nav','application-steps');nav.setAttribute('aria-label','ส่วนของใบสมัคร');
     for(const [id,label] of [['identity','1 ข้อมูล'],['academic','2 ผลการเรียน'],['documents','3 เอกสาร'],['consent','4 ตรวจและส่ง']]){
       const a=node('a','',label);a.href='#application-'+id;a.addEventListener('click',e=>{e.preventDefault();const target=root.querySelector(a.getAttribute('href'));target?.scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});target?.focus({preventScroll:true});});nav.append(a);}
@@ -97,8 +97,14 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
         i.type='number';i.min='0';i.max='4';i.step='0.0001';i.value=record.points ?? '';i.readOnly=readOnly();i.disabled=busy;
         i.addEventListener('input',()=>{draft.course_attempts ||= [];let r=draft.course_attempts.find(x=>x.code===code && x.attempt===record.attempt);
           if(!r){r={...record};draft.course_attempts.push(r);}r.points=i.value===''?null:i.value;changed();});row.append(label,i);grades.append(row);}
-      if(!readOnly())grades.append(button(`เพิ่มครั้งที่เรียน ${code}`,()=>{draft.course_attempts ||= [];if(!attemptsForCode.length)draft.course_attempts.push({...records[0]});
-        draft.course_attempts.push({code,attempt:Math.max(...records.map(x=>x.attempt))+1,points:null});changed();render();}));
+      if(!readOnly()){
+        for(const record of records.filter(x=>x.attempt>1))grades.append(button(`ลบรายการ ${code} ครั้งที่ ${record.attempt}`,()=>{
+          draft.course_attempts=(draft.course_attempts || []).filter(x=>x.code!==code || x.attempt!==record.attempt);changed();render();
+        }));
+        const add=button(`เพิ่มครั้งที่เรียน ${code}`,()=>{draft.course_attempts ||= [];if(!attemptsForCode.length)draft.course_attempts.push({...records[0]});
+          draft.course_attempts.push({code,attempt:Math.max(...records.map(x=>x.attempt))+1,points:null});changed();render();});
+        add.disabled=busy || Math.max(...records.map(x=>x.attempt))>=20 || (draft.course_attempts || []).length>=100;grades.append(add);
+      }
     }
     s.append(grades);const extra=node('div','application-grid');extra.id='application-additional-studies';extra.dataset.field='additional_studies';extra.tabIndex=-1;
     extra.append(node('p','application-help',curriculum==='61'?'ต้องกำลังศึกษา/เคยศึกษา CS384 และอย่างน้อยหนึ่งวิชา CS266 / CS322 / CS348':'ต้องกำลังศึกษา/เคยศึกษา CS180 และอย่างน้อยหนึ่งวิชา CS262 / CS331 / CS240'));
@@ -126,8 +132,9 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
           const file=selectedFiles.get(kind);if(!file)return;
           const op=operation('file-'+kind,{expected_version:app.version,filename:file.name,size:file.size,modified:file.lastModified});
           const complete=operation('complete-'+kind,{upload_operation:op.operation_id});
-          const updated=await client.upload(app.id,kind,file,{version:app.version,operationId:op.operation_id,completeOperationId:complete.operation_id,signal,
-            onPhase:phase=>{const status=root.querySelector('[data-upload-status]');if(status)status.textContent=phase;}});
+          let updated;try{updated=await client.upload(app.id,kind,file,{version:app.version,operationId:op.operation_id,completeOperationId:complete.operation_id,signal,
+            onPhase:phase=>{const status=root.querySelector('[data-upload-status]');if(status)status.textContent=phase;}});}
+          catch(e){if(e.code==='UPLOAD_EXPIRED'){attempts.delete('file-'+kind);attempts.delete('complete-'+kind);}throw e;}
           if(signal?.aborted)return;app=updated;selectedFiles.delete(kind);attempts.delete('file-'+kind);attempts.delete('complete-'+kind);result=null;message=`บันทึก ${label} สำเร็จ ข้อมูลที่กรอกในส่วนอื่นยังอยู่`;
         }));upload.disabled=busy || !selected;c.append(upload);
       }grid.append(c);
@@ -145,7 +152,7 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
       readiness.append(node('h3','',result.can_submit?'ข้อมูลพร้อมสำหรับส่งตรวจ':'ยังมีรายการที่ต้องตรวจสอบ'),
         node('p','',result.group_gpa?`ค่าเฉลี่ยกลุ่มวิชา ${result.group_gpa} (ถ่วงน้ำหนัก)`:'ยังยืนยันค่าเฉลี่ยกลุ่มวิชาไม่ได้'));
       s.append(readiness);}
-    if(readOnly()){s.append(node('p','application-help',`ส่งเมื่อ ${new Date(app.submitted_at).toLocaleString('th-TH')} · ล็อกเอกสาร ${app.documents.length} รายการ`));return s;}
+    if(readOnly()){s.append(node('p','application-help',app.status==='SUBMITTED'?`ส่งเมื่อ ${new Date(app.submitted_at).toLocaleString('th-TH')} · ล็อกเอกสาร ${app.documents.length} รายการ`:'รอบปิดรับ ใบสมัครฉบับร่างยังไม่ได้ส่ง'));return s;}
     const actions=node('div','application-actions');
     actions.append(button('บันทึกฉบับร่าง',()=>run(async()=>{
       const body=operation('save',{expected_version:app.version,expected_policy_id:app.policy?.id || null,payload:copy(draft)});

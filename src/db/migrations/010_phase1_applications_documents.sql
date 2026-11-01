@@ -107,6 +107,12 @@ CREATE TABLE phase1_events (
 );
 CREATE FUNCTION guard_phase1_application() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
+  IF TG_OP='INSERT' THEN
+    IF NEW.status<>'DRAFT' OR NEW.version<>1 OR NEW.submitted_at IS NOT NULL THEN
+      RAISE EXCEPTION 'Applications must start as version-one Drafts' USING ERRCODE='23514';
+    END IF;
+    RETURN NEW;
+  END IF;
   IF TG_OP='DELETE' THEN RAISE EXCEPTION 'Applications are retained' USING ERRCODE='55000'; END IF;
   IF OLD.status='SUBMITTED' OR NEW.id<>OLD.id OR NEW.student_id<>OLD.student_id OR NEW.cycle_id<>OLD.cycle_id THEN
     RAISE EXCEPTION 'Application identity and submitted content are immutable' USING ERRCODE='55000';
@@ -118,7 +124,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END $$;
-CREATE TRIGGER phase1_application_guard BEFORE UPDATE OR DELETE ON phase1_applications
+CREATE TRIGGER phase1_application_guard BEFORE INSERT OR UPDATE OR DELETE ON phase1_applications
   FOR EACH ROW EXECUTE FUNCTION guard_phase1_application();
 CREATE FUNCTION guard_phase1_attachment() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE app UUID;

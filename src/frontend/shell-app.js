@@ -487,6 +487,7 @@ export function createShellApp({
   }
 
   async function handleLogout() {
+    if(routeLeaveGuard && !routeLeaveGuard())return;
     activeController?.abort();
     abortRouteWork();
     currentRole = null;

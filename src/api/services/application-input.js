@@ -1,7 +1,7 @@
 const { ValidationError } = require('../errors');
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const FILES = Object.freeze({resume:10485760,transcript:10485760,conduct:10485760,photo:5242880});
-function fail(field, message='ข้อมูลไม่ถูกต้อง') { throw new ValidationError(message,[{field,issue:message}]); }
+function fail(field, message='ข้อมูลไม่ถูกต้อง') { throw new ValidationError(message,[{field,message}]); }
 function fields(value, allowed) {
   if (!value || typeof value!=='object' || Array.isArray(value) || Object.getPrototypeOf(value)!==Object.prototype) fail('body');
   for (const key of Object.keys(value)) if (!allowed.includes(key)) fail(key,'ไม่อนุญาตให้แก้ไขข้อมูลนี้');
@@ -48,7 +48,7 @@ function payload(value) {
   }
   if (value.selected_courses!==undefined) {
     fields(value.selected_courses,['alternative']);
-    if (value.selected_courses.alternative!==undefined && !/^CS\d{3}$/.test(value.selected_courses.alternative)) fail('selected_courses');
+    if (value.selected_courses.alternative!==undefined && value.selected_courses.alternative!=='' && !/^CS\d{3}$/.test(value.selected_courses.alternative)) fail('selected_courses');
     out.selected_courses={...value.selected_courses};
   }
   if (value.additional_studies!==undefined) {

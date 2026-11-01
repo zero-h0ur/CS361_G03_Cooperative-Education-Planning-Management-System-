@@ -32,11 +32,17 @@ class ApplicationService {
     return this.repository.profile(db,{studentId:app.student_id,userId:user.user_id},lock);
   }
   async detail(db,actor,app) {
-    const official=await this.official(db,actor,app), policy=await this.repository.policy(db,app,official);
-    const documents=await this.repository.documents(db,app.id);
     const submission=(await db.query('SELECT id,policy_id,snapshot,checksum,submitted_at FROM phase1_submissions WHERE application_id=$1',[app.id])).rows[0] || null;
+    const official=submission?.snapshot.official || await this.official(db,actor,app);
+    const policy=submission?.snapshot.policy || await this.repository.policy(db,app,official);
+    const documents=submission?.snapshot.documents || await this.repository.documents(db,app.id);
+    const cycle=(await db.query(`SELECT r.name,r.status,w.opens_at,w.closes_at,
+      (w.cycle_id IS NULL OR (clock_timestamp()>=w.opens_at AND clock_timestamp()<w.closes_at)) AS window_open
+      FROM rounds r LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id WHERE r.id=$1`,[app.cycle_id])).rows[0];
     return {id:app.id,student_id:app.student_id,cycle_id:app.cycle_id,status:app.status,version:app.version,
       payload:app.payload,official:submission?.snapshot.official || official,policy:submission?.snapshot.policy || safePolicy(policy),documents,
+      cycle_name:submission?.snapshot.cycle?.name || cycle.name,availability:{can_edit:app.status==='DRAFT' && cycle.status==='OPEN' && cycle.window_open,
+        opens_at:cycle.opens_at,closes_at:cycle.closes_at},
       submitted_at:app.submitted_at,submission};
   }
   async options(actor) {
@@ -61,7 +67,7 @@ class ApplicationService {
   async check(db,actor,app) {
     const official=await this.official(db,actor,app),policy=await this.repository.policy(db,app,official);
     const cycle=await this.repository.cycle(db,app.cycle_id,official,true);
-    return {policy,result:readiness({app,official,policy,documents:await this.repository.documents(db,app.id),window:cycle.window,roundOpen:cycle.status==='OPEN',allowSynthetic:this.allowSynthetic})};
+    return {policy,cycle,result:readiness({app,official,policy,documents:await this.repository.documents(db,app.id),window:cycle.window,roundOpen:cycle.status==='OPEN',allowSynthetic:this.allowSynthetic})};
   }
   async readiness(actor,id) {
     guard(actor,true);v.uuid(id);const db=await this.repository.pool.connect();
@@ -125,11 +131,14 @@ class ApplicationService {
     v.command(input,['expected_policy_id']);if(input.expected_policy_id!==null)v.uuid(input.expected_policy_id,'expected_policy_id');
     return this.mutate(actor,id,input,'APPLICATION_SUBMITTED',async(db,app,official)=>{
       await this.repository.editable(db,app,official);
-      const {policy,result}=await this.check(db,actor,app);
+      const {policy,cycle,result}=await this.check(db,actor,app);
       if((policy?.id || null)!==input.expected_policy_id)throw new ConflictError('เกณฑ์เปลี่ยน กรุณาตรวจสอบใหม่','POLICY_CHANGED');
       if(!result.can_submit)throw new ValidationError('ใบสมัครยังไม่พร้อมส่ง',result.blockers,'APPLICATION_NOT_READY');
       const documents=await this.repository.documents(db,id);
-      const snapshot={official,payload:app.payload,policy:safePolicy(policy),documents,acknowledgements:{actor_id:actor.userId,policy_id:policy.id,accepted_at:new Date().toISOString()}};
+      const snapshot={official,payload:app.payload,policy:safePolicy(policy),documents,
+        cycle:{id:cycle.id,name:cycle.name,academic_year:cycle.academic_year,semester:cycle.semester,
+          opens_at:cycle.window.opens_at,closes_at:cycle.window.closes_at,window_version:cycle.window.version},
+        acknowledgements:{actor_id:actor.userId,policy_id:policy.id,accepted_at:new Date().toISOString()}};
       await db.query(`INSERT INTO phase1_submissions(id,application_id,application_version,policy_id,snapshot,checksum,submitted_by)
         VALUES($1,$2,$3,$4,$5,$6,$7)`,[randomUUID(),id,app.version+1,policy.id,JSON.stringify(snapshot),hash(snapshot),actor.userId]);
       const updated=(await db.query(`UPDATE phase1_applications SET status='SUBMITTED',submitted_at=clock_timestamp(),version=version+1,updated_at=clock_timestamp() WHERE id=$1 RETURNING *`,[id])).rows[0];

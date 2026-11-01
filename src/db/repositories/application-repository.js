@@ -10,7 +10,7 @@ class ApplicationRepository {
       WHERE s.id=$1 AND s.user_id=$2 AND u.role='STUDENT' AND u.account_status='ACTIVE'
       ${lock?'FOR SHARE OF u,s':''}`,[actor.studentId,actor.userId])).rows[0];
     if(!row)throw new ForbiddenError();
-    const verified=(await db.query(`SELECT curriculum,entry_year,institution,source,verified_at
+    const verified=(await db.query(`SELECT curriculum,entry_year,institution,source,verified_by,verified_at
       FROM phase1_academic_profiles WHERE student_id=$1`,[row.student_id])).rows[0];
     return {...row,...verified,academic_verified:Boolean(verified)};
   }

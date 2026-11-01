@@ -16,16 +16,17 @@ class S3DocumentStore {
     return {url:target.url,fields:target.fields,method:'POST',auth_required:false};
   }
   async readStaging(key,max) {
-    const result=await this.client.send(new this.commands.GetObjectCommand({Bucket:this.bucket,Key:this.key(key,'staging')}));
+    const result=await this.client.send(new this.commands.GetObjectCommand({Bucket:this.bucket,Key:this.key(key,'staging')}),{abortSignal:AbortSignal.timeout(15000)});
     if(result.ContentLength>max){result.Body?.destroy?.();throw new ValidationError('ไฟล์มีขนาดเกินข้อกำหนด');}
     const chunks=[];let size=0;
+    const timeout=setTimeout(()=>result.Body?.destroy?.(new ServiceUnavailableError('อ่านไฟล์เกินเวลาที่กำหนด')),15000);timeout.unref?.();
     try {for await(const chunk of result.Body){size+=chunk.length;if(size>max)throw new ValidationError('ไฟล์มีขนาดเกินข้อกำหนด');chunks.push(Buffer.from(chunk));}}
-    finally{result.Body?.destroy?.();}
+    finally{clearTimeout(timeout);result.Body?.destroy?.();}
     return Buffer.concat(chunks,size);
   }
   async writeFinal(key,bytes) {
     await this.client.send(new this.commands.PutObjectCommand({Bucket:this.bucket,Key:this.key(key,'final'),Body:bytes,
-      IfNoneMatch:'*',ContentType:'application/octet-stream',ServerSideEncryption:'AES256'}));
+      IfNoneMatch:'*',ContentType:'application/octet-stream',ServerSideEncryption:'AES256'}),{abortSignal:AbortSignal.timeout(15000)});
   }
   async downloadTarget({key}) {
     const command=new this.commands.GetObjectCommand({Bucket:this.bucket,Key:this.key(key,'final'),

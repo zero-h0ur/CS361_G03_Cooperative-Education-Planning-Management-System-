@@ -13,6 +13,7 @@ const input=require('../src/api/services/application-input');
 const {validateBytes,createDocumentStore}=require('../src/storage/application-document-store');
 const {LocalDocumentStore}=require('../src/storage/local-document-store');
 const {S3DocumentStore}=require('../src/storage/s3-document-store');
+const {createApiServer,attachRequestContext,UnauthorizedError}=require('../src/api/app');
 const {getPermissionScope,ACTIONS}=require('../src/api/services/authorization-service');
 const digest=b=>createHash('sha256').update(b).digest('hex');
 const pdf=Buffer.from('%PDF-1.4\n1 0 obj <<>> endobj\n%%EOF\n');
@@ -56,6 +57,13 @@ test('strict input whitelist, attachment signatures, checksum and production-loc
   assert.throws(()=>validateBytes(Buffer.from('<script>not a PDF</script>'),metadata('resume')));
   assert.throws(()=>validateBytes(pdf,{...metadata('resume'),checksum:'0'.repeat(64)}));
   assert.throws(()=>validateBytes(pdf,{...metadata('resume'),content_type:'image/jpeg',filename:'x.jpg'}));
+  const exact=Buffer.alloc(10485760,32);pdf.copy(exact);Buffer.from('%%EOF').copy(exact,exact.length-5);
+  assert.equal(validateBytes(exact,metadata('resume',exact)),'application/pdf');
+  assert.throws(()=>input.upload({...metadata('resume'),byte_size:10485761,operation_id:randomUUID(),expected_version:1}));
+  assert.throws(()=>input.upload({...metadata('photo',png),byte_size:5242881,operation_id:randomUUID(),expected_version:1}));
+  const jpeg=Buffer.from([255,216,255,224,0,16,74,70,73,70,0,1,255,217]);
+  assert.equal(validateBytes(jpeg,{...metadata('photo',jpeg),filename:'student.jpg',content_type:'image/jpeg'}),'image/jpeg');
+  assert.deepEqual(input.payload({selected_courses:{alternative:''}}),{selected_courses:{alternative:''}});
   assert.throws(()=>createDocumentStore({NODE_ENV:'production',CO_ED_APPLICATION_STORAGE:'local'}));
   assert.throws(()=>createDocumentStore({NODE_ENV:'test',CO_ED_APPLICATION_STORAGE:'local',AWS_LAMBDA_FUNCTION_NAME:'test'}));
   assert.throws(()=>createDocumentStore({}));
@@ -144,6 +152,26 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
       await assert.rejects(save(payload('66'),{expected_version:1}),e=>e.statusCode===409);
       assert.equal((await service.get(actor,app.id)).payload.contact_address,'Synthetic address');
     });
+    await t.test('completion DB failure cannot detach the old file; retry commits once without losing Draft fields',async()=>{
+      const before=await service.get(actor,app.id),old=before.documents.find(d=>d.kind==='resume');
+      const ticket=await service.beginUpload(actor,app.id,{...command(),...metadata('resume')});
+      await service.localContent(actor,app.id,ticket.ticket_id,pdf);const op=command();
+      const failingPool={query:(...args)=>pool.query(...args),connect:async()=>{
+        const c=await pool.connect();return {release:()=>c.release(),query:(sql,...args)=>{
+          if(sql.includes('INSERT INTO phase1_events'))throw new Error('Injected transaction failure');return c.query(sql,...args);
+        }};
+      }};
+      await assert.rejects(new ApplicationService({pool:failingPool,documentStore:store}).completeUpload(actor,app.id,ticket.ticket_id,op));
+      assert.equal((await service.get(actor,app.id)).documents.find(d=>d.kind==='resume').id,old.id);
+      assert.equal((await service.get(actor,app.id)).version,before.version);
+      assert.equal((await q('SELECT count(*)::int AS n FROM phase1_operations WHERE operation_id=$1',[op.operation_id])).rows[0].n,0);
+      app=await service.completeUpload(actor,app.id,ticket.ticket_id,op);
+      assert.equal((await service.completeUpload(actor,app.id,ticket.ticket_id,op)).idempotent_replay,true);
+      assert.deepEqual(app.payload,before.payload);
+      const otherApp=(await service.list(actor)).find(x=>x.cycle_id===cycle2);
+      await assert.rejects(service.download(actor,otherApp.id,app.documents[0].id),e=>e.statusCode===403);
+      await assert.rejects(service.completeUpload(actor,otherApp.id,ticket.ticket_id,{operation_id:randomUUID(),expected_version:otherApp.version}),e=>e.statusCode===409);
+    });
     await t.test('configured metadata, file completeness and weighted readiness gate the first submission',async()=>{
       for(const id of [sid])await q(`INSERT INTO phase1_academic_profiles(student_id,curriculum,entry_year,institution,source,verified_by)
         VALUES($1,'66',2566,'TU_CS','synthetic test only',$2)`,[id,coordinator]);
@@ -158,6 +186,60 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
       assert.equal(outcomes.filter(x=>x.status==='fulfilled').length,1);
       assert.equal(outcomes.find(x=>x.status==='rejected').reason.statusCode,409);
       app=await service.get(actor,app.id);assert.equal(app.version,before+1);
+    });
+    await t.test('closed deadlines reject writes and show retained Drafts as read-only; policy changes fail visibly',async()=>{
+      const before=app.version;
+      await q("UPDATE phase1_cycle_windows SET closes_at=now()-interval '1 second',opens_at=now()-interval '1 day' WHERE cycle_id=$1",[cycle]);
+      assert.equal((await service.get(actor,app.id)).availability.can_edit,false);
+      await assert.rejects(save(),e=>e.statusCode===422);
+      assert.equal((await service.get(actor,app.id)).version,before);
+      await q("UPDATE phase1_cycle_windows SET closes_at=now()+interval '1 day' WHERE cycle_id=$1",[cycle]);
+      const next={...pol,id:randomUUID(),version:2};
+      await q(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data)
+        VALUES($1,$2,'66',2,2568,'synthetic policy v2',true,true,$3)`,[next.id,cycle,JSON.stringify(next.data)]);
+      await assert.rejects(save(),e=>e.code==='POLICY_CHANGED');
+      assert.equal((await service.get(actor,app.id)).version,before);pol=next;app=await service.get(actor,app.id);
+    });
+    await t.test('injected submission failure rolls back state, snapshot, receipt and event together',async()=>{
+      const op={...command(),expected_policy_id:pol.id};
+      const failingPool={query:(...args)=>pool.query(...args),connect:async()=>{
+        const c=await pool.connect();return {release:()=>c.release(),query:(sql,...args)=>{
+          if(sql.includes('INSERT INTO phase1_events'))throw new Error('Injected submission failure');return c.query(sql,...args);
+        }};
+      }};
+      await assert.rejects(new ApplicationService({pool:failingPool,documentStore:store,allowSyntheticPolicy:true}).submit(actor,app.id,op));
+      assert.equal((await service.get(actor,app.id)).status,'DRAFT');
+      assert.equal((await q('SELECT count(*)::int AS n FROM phase1_submissions WHERE application_id=$1',[app.id])).rows[0].n,0);
+      assert.equal((await q('SELECT count(*)::int AS n FROM phase1_events WHERE operation_id=$1',[op.operation_id])).rows[0].n,0);
+    });
+    await t.test('expired/unfinished uploads do not attach; finalization racing submission cannot change its document snapshot',async()=>{
+      const original=app,newCycle=randomUUID(),racePolicy={...pol,id:randomUUID()};
+      await q("INSERT INTO rounds(id,name,academic_year,semester,status,source,visibility,data_status) VALUES($1,'Race test only',2569,1,'OPEN','synthetic test','public','mock')",[newCycle]);
+      await q("INSERT INTO phase1_cycle_windows(cycle_id,opens_at,closes_at) VALUES($1,now()-interval '1 day',now()+interval '1 day')",[newCycle]);
+      await q(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data)
+        VALUES($1,$2,'66',1,2568,'synthetic race test',true,true,$3)`,[racePolicy.id,newCycle,JSON.stringify(pol.data)]);
+      app=await service.create(actor,{operation_id:randomUUID(),cycle_id:newCycle});
+      app=await service.save(actor,app.id,{...command(),payload:payload('66'),expected_policy_id:racePolicy.id});
+      const empty=await service.beginUpload(actor,app.id,{...command(),...metadata('resume')});
+      await assert.rejects(service.completeUpload(actor,app.id,empty.ticket_id,command()));
+      assert.equal((await service.get(actor,app.id)).documents.length,0);
+      await q("UPDATE phase1_uploads SET expires_at=now()-interval '1 second' WHERE id=$1",[empty.ticket_id]);
+      await assert.rejects(service.localContent(actor,app.id,empty.ticket_id,pdf),e=>e.code==='UPLOAD_EXPIRED');
+      for(const kind of ['resume','transcript','conduct','photo'])await attach(kind);
+      const ticket=await service.beginUpload(actor,app.id,{...command(),...metadata('resume')});await service.localContent(actor,app.id,ticket.ticket_id,pdf);
+      const oldVersion=app.version,oldDocuments=copyDocuments(app.documents);
+      const outcomes=await Promise.allSettled([
+        service.completeUpload(actor,app.id,ticket.ticket_id,command()),
+        service.submit(actor,app.id,{...command(),expected_policy_id:racePolicy.id})
+      ]);
+      assert.equal(outcomes.filter(x=>x.status==='fulfilled').length,1);
+      assert.equal(outcomes.find(x=>x.status==='rejected').reason.statusCode,409);
+      app=await service.get(actor,app.id);assert.equal(app.version,oldVersion+1);
+      if(app.status==='SUBMITTED')assert.deepEqual(copyDocuments(app.submission.snapshot.documents),oldDocuments);
+      else app=await service.submit(actor,app.id,{...command(),expected_policy_id:racePolicy.id});
+      assert.deepEqual(copyDocuments(app.submission.snapshot.documents),copyDocuments(app.documents));
+      assert.equal((await q('SELECT count(*)::int AS n FROM phase1_submissions WHERE application_id=$1',[app.id])).rows[0].n,1);
+      app=original;
     });
     await t.test('first submission snapshots once, locks fields/files and is visible only to scoped Coordinator',async()=>{
       const pending=await service.beginUpload(actor,app.id,{...command(),...metadata('resume')});
@@ -175,6 +257,10 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
       await q("UPDATE users SET account_status='DISABLED' WHERE id=$1",[student]);
       await assert.rejects(service.submit(actor,app.id,op),e=>e.statusCode===403);
       await q("UPDATE users SET account_status='ACTIVE' WHERE id=$1",[student]);
+      const snapshot=app.submission.checksum;
+      await q(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data)
+        VALUES($1,$2,'66',3,2568,'synthetic future policy',false,true,'{}')`,[randomUUID(),cycle]);
+      const retained=await service.get(actor,app.id);assert.equal(retained.policy.id,pol.id);assert.equal(retained.submission.checksum,snapshot);
     });
     await t.test('production-equivalent least privileges can save and upload, but cannot forge verified metadata',async()=>{
       await admin.query(`CREATE ROLE "${role}" NOLOGIN`);
@@ -195,6 +281,30 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
       for(const sql of ["UPDATE phase1_policies SET verified=true WHERE false","UPDATE phase1_academic_profiles SET curriculum='61' WHERE false",
         'DELETE FROM phase1_documents WHERE false','DELETE FROM phase1_operations WHERE false'])await assert.rejects(runtime.query(sql),e=>e.code==='42501');
     });
+    await t.test('authenticated HTTP upload/download round-trips actual private bytes and denies anonymous access',async()=>{
+      const draft=(await service.list(actor)).find(x=>x.cycle_id===cycle2);
+      const server=createApiServer({applicationService:service,authOptions:{pool,authMiddleware:async(req)=>{
+        if(req.headers.authorization!=='Bearer synthetic-http-test')throw new UnauthorizedError();attachRequestContext(req,actor);
+      }}});
+      await new Promise(r=>server.listen(0,'127.0.0.1',r));const base=`http://127.0.0.1:${server.address().port}`;
+      const headers={Authorization:'Bearer synthetic-http-test','Content-Type':'application/json'};
+      try{
+        const anonymous=await fetch(`${base}/api/v4/applications/${draft.id}`);assert.equal(anonymous.status,401);
+        const ticketResponse=await fetch(`${base}/api/v4/applications/${draft.id}/uploads`,{method:'POST',headers,
+          body:JSON.stringify({operation_id:randomUUID(),expected_version:draft.version,...metadata('resume')})});
+        assert.equal(ticketResponse.status,200);const {data:ticket}=await ticketResponse.json();
+        const upload=await fetch(base+ticket.upload.url,{method:'PUT',headers:{Authorization:headers.Authorization},body:pdf});assert.equal(upload.status,200);
+        const complete=await fetch(`${base}/api/v4/applications/${draft.id}/uploads/${ticket.ticket_id}/complete`,{method:'POST',headers,
+          body:JSON.stringify({operation_id:randomUUID(),expected_version:draft.version})});assert.equal(complete.status,200);
+        const {data:updated}=await complete.json(),document=updated.documents.find(d=>d.kind==='resume');
+        const targetResponse=await fetch(`${base}/api/v4/applications/${draft.id}/documents/${document.id}/download`,{method:'POST',headers,body:'{}'});
+        assert.equal(targetResponse.status,200);const {data:target}=await targetResponse.json();
+        assert.equal((await fetch(base+target.download.url)).status,401);
+        const file=await fetch(base+target.download.url,{headers:{Authorization:headers.Authorization}});
+        assert.equal(file.status,200);assert.equal(file.headers.get('Cache-Control'),'no-store');assert.equal(file.headers.get('X-Content-Type-Options'),'nosniff');
+        assert.deepEqual(Buffer.from(await file.arrayBuffer()),pdf);
+      }finally{server.closeAllConnections();await new Promise(r=>server.close(r));}
+    });
   }finally{
     await runtime?.end();await pool?.end();
     // Only the randomly named schema and temporary directory created by this test.
@@ -203,3 +313,4 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
     await rm(directory,{recursive:true,force:true});
   }
 });
+function copyDocuments(documents){return documents.map(d=>({id:d.id,kind:d.kind,checksum:d.checksum})).sort((a,b)=>a.kind.localeCompare(b.kind));}

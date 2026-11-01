@@ -2,7 +2,7 @@ const {createHash}=require('node:crypto');
 const {ValidationError,ServiceUnavailableError}=require('../api/errors');
 const {FILES}=require('../api/services/application-input');
 function validateBytes(bytes,ticket) {
-  if(!Buffer.isBuffer(bytes) || bytes.length!==ticket.byte_size || bytes.length>FILES[ticket.kind]
+  if(!Object.hasOwn(FILES,ticket.kind) || !Buffer.isBuffer(bytes) || bytes.length!==ticket.byte_size || bytes.length>FILES[ticket.kind]
     || createHash('sha256').update(bytes).digest('hex')!==ticket.checksum)throw new ValidationError('ขนาดหรือ checksum ไฟล์ไม่ตรง');
   let type=null;
   if(bytes.length>=20 && /^%PDF-(1\.[0-7]|2\.0)/.test(bytes.subarray(0,9).toString('ascii')) && bytes.subarray(-2048).includes(Buffer.from('%%EOF')))type='application/pdf';

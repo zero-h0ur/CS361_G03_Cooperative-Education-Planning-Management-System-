@@ -30,7 +30,10 @@ export function renderApplicationWorkspace({client,applicationId,signal,onNaviga
       const create=node('section','application-card');create.append(node('h2','','สร้างใบสมัครในรอบใหม่'));
       const label=node('label','','รอบรับสมัคร'),select=node('select','application-input');select.id='application-cycle';label.htmlFor=select.id;
       select.append(new Option('เลือกรอบรับสมัคร',''));
-      for(const cycle of options.cycles.filter(c=>c.status==='OPEN' && !list.some(a=>a.cycle_id===c.id)))select.append(new Option(cycle.name,cycle.id));
+      for(const cycle of options.cycles.filter(c=>c.status==='OPEN' && !list.some(a=>a.cycle_id===c.id))){
+        const unavailable=cycle.opens_at && Date.now()<Date.parse(cycle.opens_at) || cycle.closes_at && Date.now()>=Date.parse(cycle.closes_at);
+        const option=new Option(cycle.name+(unavailable?' · ไม่อยู่ในช่วงรับสมัคร':''),cycle.id);option.disabled=Boolean(unavailable);select.append(option);
+      }
       const message=node('p','application-notice');message.setAttribute('role','status');
       const start=button('สร้างฉบับร่าง',async()=>{
         if(!select.value){message.textContent='กรุณาเลือกรอบรับสมัคร';select.focus();return;}

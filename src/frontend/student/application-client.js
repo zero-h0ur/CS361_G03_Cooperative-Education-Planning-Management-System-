@@ -76,7 +76,8 @@ export function createApplicationClient({apiBaseUrl,getAccessToken,fetchImpl=glo
         attempt.transferred=true;
       }
       onPhase('กำลังตรวจเนื้อหาและบันทึกไฟล์');
-      const result=await request(`${path(appId)}/uploads/${ticket.ticket_id}/complete`,'POST',{operation_id:completeOperationId,expected_version:version},signal);
+      let result;try{result=await request(`${path(appId)}/uploads/${ticket.ticket_id}/complete`,'POST',{operation_id:completeOperationId,expected_version:version},signal);}
+      catch(e){if(e.code==='UPLOAD_EXPIRED')uploads.delete(operationId);throw e;}
       uploads.delete(operationId);return result;
     },
     async download(appId,documentId,{signal}={}) {

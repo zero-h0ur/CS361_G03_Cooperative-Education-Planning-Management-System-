@@ -26,6 +26,7 @@ function readiness({app,official,policy,documents=[],window,roundOpen,allowSynth
   if (p.curriculum && official?.curriculum && p.curriculum!==official.curriculum) add('curriculum','CURRICULUM_MISMATCH','หลักสูตรที่เลือกไม่ตรงข้อมูลที่ยืนยัน');
   if (official?.academic_verified && official.entry_year>2567) add('curriculum','ENTRY_YEAR','รอบ 1/69 รับนักศึกษารหัส 67 ลงไป');
   for (const field of ['contact_address','contact_phone','major_group','guardian_name','guardian_relationship','guardian_address','guardian_phone']) if (!p[field]?.trim()) add(field,'REQUIRED','กรุณากรอกข้อมูลนี้');
+  for (const field of ['contact_phone','guardian_phone']) if (p[field]?.trim() && !/^\+?\d{7,15}$/.test(p[field].replace(/[ ()-]/g,''))) add(field,'PHONE_FORMAT','กรุณาระบุเบอร์โทร 7–15 หลัก ใช้ + สำหรับรหัสประเทศได้');
   const email=official?.institutional_email || p.institutional_email;
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) add('institutional_email','REQUIRED','กรุณาระบุอีเมลมหาวิทยาลัย');
   if (!p.interested_positions?.length) add('interested_positions','REQUIRED','กรุณาระบุตำแหน่งที่สนใจอย่างน้อยหนึ่งตำแหน่ง');
