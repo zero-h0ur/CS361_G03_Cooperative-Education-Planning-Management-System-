@@ -177,6 +177,11 @@ automatic response email or live intake configuration is introduced.
 
 ## Rollout and recovery
 
+For Windows-compatible, local-only paired ZIP preparation with exact reviewed
+migration bytes and an honest dirty-source manifest, use the
+[local candidate guide](v4-local-release-candidate.md). It does not deploy or
+authorize a database change.
+
 This branch does not deploy. Apply Migration 010 and reviewed runtime grants only
 with operational approval, after backup and pinning matching frontend/backend
 artifacts. Migrations 001–009 and applied checksums must remain unchanged. The
