@@ -4,7 +4,7 @@
   "description": "CO-ED V2 Data Access Layer",
   "main": "index.js",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "scripts": {
     "lint": "node scripts/lint.mjs",
@@ -51,7 +51,14 @@
     "test:workflow-ui": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/three-role-ui.test.js",
     "test:selection": "node --test tests/selection-workflow.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/selection-api.test.js tests/selection-ui.test.js",
     "build:v4": "node scripts/build-v4.mjs",
-    "test:v4-build": "node --test tests/v4-build.test.mjs"
+    "test:v4-build": "node --test tests/v4-build.test.mjs",
+    "dev:db": "docker compose -f compose.dev.yml up -d --wait",
+    "dev:db:stop": "docker compose -f compose.dev.yml stop",
+    "dev:setup": "node scripts/local-dev/setup.mjs --reset",
+    "dev:api": "node scripts/local-dev/api.mjs",
+    "dev:token": "node scripts/local-dev/token.mjs",
+    "test:local": "node scripts/local-dev/test.mjs",
+    "test:local-dev": "node --test tests/local-dev.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "3.1152.0",

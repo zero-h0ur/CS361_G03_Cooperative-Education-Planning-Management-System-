@@ -75,7 +75,10 @@ Lambda อ่านรหัสผ่านฐานข้อมูลจาก 
 
 ## เริ่มพัฒนา
 
-ใช้ Node.js 20+ และ npm:
+ทีม V4 เริ่มจาก [คู่มือ Dev/Test](docs/operations/team-dev-test.md) มีคำสั่งเตรียม PostgreSQL, fixtures, local API และ Tests
+ทุกคนทำได้ครบส่วนของงานที่รับ ส่วน [สิทธิ์ทีมและบัญชีเว็บ](docs/operations/team-access.md) จัดแยกจากบทบาทในโปรแกรม
+
+ใช้ Node.js 22 ตาม `.nvmrc` และ npm:
 
 ```bash
 npm ci

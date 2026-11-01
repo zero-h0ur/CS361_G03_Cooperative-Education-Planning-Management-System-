@@ -109,10 +109,15 @@ async function seed(options = {}) {
       ALTER TABLE workflow_receipts DISABLE TRIGGER workflow_receipts_immutable;
       ALTER TABLE plan_submissions DISABLE TRIGGER plan_submissions_immutable;
       ALTER TABLE document_policies DISABLE TRIGGER document_policies_immutable;
+      ALTER TABLE selection_receipts DISABLE TRIGGER selection_receipts_immutable;
+      ALTER TABLE selection_opinions DISABLE TRIGGER selection_opinions_immutable;
     `);
 
     // 1. Reset tables in reverse order of foreign key dependencies
     console.log('Resetting tables...');
+    await client.query('DELETE FROM selection_opinions');
+    await client.query('DELETE FROM selection_receipts');
+    await client.query('DELETE FROM selection_cohorts');
     await client.query('DELETE FROM workflow_events');
     await client.query('DELETE FROM workflow_receipts');
     await client.query('DELETE FROM placements');
@@ -209,6 +214,8 @@ async function seed(options = {}) {
       ALTER TABLE workflow_receipts ENABLE TRIGGER workflow_receipts_immutable;
       ALTER TABLE plan_submissions ENABLE TRIGGER plan_submissions_immutable;
       ALTER TABLE document_policies ENABLE TRIGGER document_policies_immutable;
+      ALTER TABLE selection_receipts ENABLE TRIGGER selection_receipts_immutable;
+      ALTER TABLE selection_opinions ENABLE TRIGGER selection_opinions_immutable;
     `);
 
     let totalV3Records = 0;

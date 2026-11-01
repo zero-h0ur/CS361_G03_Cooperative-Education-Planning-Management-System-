@@ -27,6 +27,7 @@ test('Lambda release is self-contained and preserves reviewed migrations without
     assert.ok(entries.every((entry) => !/(^|\/)(\.env[^/]*|\.aws|node_modules|data)(\/|$)/.test(entry)));
     assert.equal(createHash('sha256').update(await readFile(manifest.artifact)).digest('hex'), manifest.sha256);
     execFileSync('unzip', ['-q', manifest.artifact, '-d', extracted]);
+    assert.doesNotMatch(await readFile(join(extracted, 'src/lambda.js'), 'utf8'), /coed-local\.example\.invalid|LOCAL140/);
     assert.deepEqual(await readFile(join(extracted, 'global-bundle.pem')), await readFile(caFile));
     for (const name of ['001_initial_schema.sql', '002_v3_identity_student_plan_assignment_audit.sql',
       '009_coordinator_committee_selection.sql']) {

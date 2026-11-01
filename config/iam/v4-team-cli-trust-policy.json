@@ -1,0 +1,13 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowExistingProjectTeamSessions",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::130165494095:role/managed/AccountFullAccessRole"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
