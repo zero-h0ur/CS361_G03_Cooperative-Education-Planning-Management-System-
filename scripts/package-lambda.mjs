@@ -21,7 +21,7 @@ if (!certificates?.length || caBundle.replace(/-----BEGIN CERTIFICATE-----[\s\S]
 for (const pem of certificates) {
   if (!new X509Certificate(pem).ca) throw new Error('RDS bundle contains a non-CA certificate.');
 }
-const release = await mkdtemp(join(tmpdir(), 'coed-v3-release-'));
+const release = await mkdtemp(join(tmpdir(), 'coed-v4-release-'));
 const staging = join(release, 'package');
 await mkdir(staging);
 await cp(resolve(caFile), join(staging, 'global-bundle.pem'));
@@ -47,7 +47,7 @@ for (const directory of ['migrations', 'verification']) {
   });
 }
 
-const artifact = join(release, 'coed-v3-lambda.zip');
+const artifact = join(release, 'coed-v4-lambda.zip');
 execFileSync('zip', ['-q', '-r', artifact, 'src', 'global-bundle.pem'], { cwd: staging });
 const contents = await readFile(artifact);
 console.log(JSON.stringify({

@@ -63,7 +63,7 @@ test('supports empty options and rejects unsupported queries and writes', async 
   expect((await request(ACTOR, '', 'POST')).status).toBe(405);
 });
 
-test('repository scopes public cycles to an active Student and uses stable ordering', async () => {
+test('repository scopes public and assigned private cycles to an active Student and uses stable ordering', async () => {
   const pool = { query: jest.fn(async () => ({ rows: [CYCLE] })) };
   const repository = new StudentPlanRepository({ pool });
   await repository.listCycleOptions({ userId: ACTOR.userId, studentId: ACTOR.studentId });

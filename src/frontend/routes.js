@@ -1,6 +1,14 @@
 import { parseStaffRouteState } from './staff/staff-route-state.js';
 
 const ROUTE_DEFINITIONS = Object.freeze([
+  Object.freeze({hash:'#/coordinator/applications',role:'COORDINATOR',navLabel:'รับแผนสหกิจ',
+    eyebrow:'COORDINATOR',title:'รับแผนสหกิจศึกษา',
+    description:'รับเรื่องเฉพาะรอบและหลักสูตรที่ได้รับมอบหมาย แล้วส่งต่อกรรมการสามคน ไม่ใช่การอนุมัติผล',
+    status:'ขอบเขตรายรอบจากฐานข้อมูล'}),
+  Object.freeze({hash:'#/committee/applications',role:'COMMITTEE',navLabel:'ให้ความเห็นผู้สมัคร',
+    eyebrow:'COMMITTEE',title:'ความเห็นกรรมการ',
+    description:'บันทึกความเห็นของคุณแยกจากกรรมการอีกสองคน เฉพาะรอบที่ได้รับมอบหมาย',
+    status:'ครบสามความเห็นยังไม่ใช่ผลผ่านหรือไม่ผ่าน'}),
   Object.freeze({hash:'#/admin/operations',role:'ADMIN',navLabel:'จัดการระบบ',
     eyebrow:'SYSTEM OPERATIONS',title:'ข้อมูลระบบและบัญชีผู้ใช้',
     description:'ตรวจสอบบัญชีและข้อมูลหลัก งานนำเข้าและเปลี่ยนสิทธิ์ทำผ่านช่องทาง Operations ที่ได้รับอนุญาต',
@@ -23,6 +31,9 @@ const ROUTE_DEFINITIONS = Object.freeze([
     description: 'ตรวจสอบข้อมูลและสถานะแผนก่อนส่งให้เจ้าหน้าที่',
     status: 'การจัดการ Plan จริงจะเชื่อมต่อใน Issue #66'
   }),
+  Object.freeze({hash:'#/student/selection',role:'STUDENT',navLabel:'สถานะการคัดเลือก',
+    eyebrow:'APPLICATION STATUS',title:'สถานะการคัดเลือก',description:'ตรวจสถานะการรับเรื่องและจำนวนความเห็นกรรมการของแผนคุณ',
+    status:'ผลการคัดเลือกยังรอประกาศ ไม่แสดงความเห็นรายบุคคล'}),
   Object.freeze({
     hash: '#/staff/students',
     staffMode: 'students',
@@ -102,6 +113,8 @@ const DETAIL_ROUTE_DEFINITIONS = Object.freeze([
 ]);
 
 const DEFAULT_ROUTE_BY_ROLE = Object.freeze({
+  COORDINATOR: '#/coordinator/applications',
+  COMMITTEE: '#/committee/applications',
   ADMIN: '#/admin/operations',
   STUDENT: '#/student/profile',
   STAFF: '#/staff/review',
@@ -109,6 +122,8 @@ const DEFAULT_ROUTE_BY_ROLE = Object.freeze({
 });
 
 const ROLE_LABELS = Object.freeze({
+  COORDINATOR: 'ผู้ประสานงานสหกิจศึกษา',
+  COMMITTEE: 'กรรมการสหกิจศึกษา',
   ADMIN: 'ผู้ดูแลระบบ',
   STUDENT: 'นักศึกษา',
   STAFF: 'เจ้าหน้าที่',

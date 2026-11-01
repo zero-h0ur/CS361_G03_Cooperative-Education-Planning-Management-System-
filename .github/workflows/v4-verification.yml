@@ -1,4 +1,4 @@
-name: V3 verification
+name: V4 verification
 
 on:
   pull_request:
@@ -33,6 +33,7 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/coed_unused
       TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/coed_v3_test
       CO_ED_WORKFLOW_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/coed_v3_test
+      CO_ED_SELECTION_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/coed_selection_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -40,6 +41,18 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
+      - name: Prepare isolated selection test database
+        run: |
+          node - <<'JS'
+          const { Client } = require('pg');
+          (async () => {
+            const client = new Client({ connectionString: process.env.TEST_DATABASE_URL });
+            try {
+              await client.connect();
+              await client.query('CREATE DATABASE coed_selection_test');
+            } finally { await client.end(); }
+          })().catch(error => { console.error(error.message); process.exitCode = 1; });
+          JS
       - name: Check JavaScript syntax
         run: npm run lint
       - name: Verify published documentation links without network access
@@ -58,26 +71,18 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          npm test 2>&1 | tee v3-verification.log
+          npm test 2>&1 | tee v4-verification.log
       - name: Verify isolated UI Preview
         run: npm run test:ui-preview
-      - name: Build with strict production authentication configuration
-        env:
-          NODE_ENV: production
-          CO_ED_REQUIRE_AUTH_CONFIG: '1'
-          CO_ED_COGNITO_USER_POOL_ID: us-east-1_WzzG10dCP
-          CO_ED_COGNITO_CLIENT_ID: 3r7a2qjn98v31r1f6vee8ag8e5
-          CO_ED_COGNITO_DOMAIN: us-east-1wzzg10dcp.auth.us-east-1.amazoncognito.com
-          CO_ED_APP_ORIGIN: https://main.d1d9qrqnsi5nl6.amplifyapp.com
-          CO_ED_API_BASE_URL: https://qtqlsb1aec.execute-api.us-east-1.amazonaws.com
-        run: npm run build
+      - name: Build for the new AWS account with strict production authentication
+        run: npm run build:v4
       - name: Preserve verification evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: v3-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          name: v4-verification-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            v3-verification.log
+            v4-verification.log
             smoke-operator-verification.log
             docs-verification.log
           if-no-files-found: warn

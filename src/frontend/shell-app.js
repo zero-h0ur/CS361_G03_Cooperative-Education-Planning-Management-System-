@@ -20,6 +20,7 @@ import { renderStaffStudentManagementView } from './staff/staff-student-manageme
 import { createWorkspaceIcon } from './ui/workspace-presentation.js';
 import { renderContactPanel, renderStaffWorkflow } from './workflow/workflow-views.js';
 import { renderAdminOperations } from './workflow/admin-operations-view.js';
+import { renderSelectionWorkspace, renderStudentSelectionStatus } from './selection/selection-view.js';
 
 const RETURN_ROUTE_KEY = 'co-ed:return-route';
 const SENSITIVE_QUERY_PARAMS = Object.freeze([
@@ -205,7 +206,7 @@ function createNavigation(role, activeRoute) {
   for (const route of getRoutesForRole(role)) {
     const link = element('a', 'shell-nav__link', route.navLabel);
     link.href = route.hash;
-    if (['STUDENT', 'STAFF', 'ADVISOR', 'ADMIN'].includes(role)) {
+    if (['STUDENT', 'STAFF', 'ADVISOR', 'ADMIN', 'COORDINATOR', 'COMMITTEE'].includes(role)) {
       link.prepend(createWorkspaceIcon(route.hash.includes('students') || route.hash.endsWith('/profile')
         ? 'user' : route.hash.includes('review') ? 'clipboard' : 'file'));
     }
@@ -238,7 +239,7 @@ function createDefaultPlaceholder(route) {
 function createProtectedLayout({ role, route, onLogout, bodyNode }) {
   const layout = element('div', 'protected-shell');
   if (role === 'STUDENT') layout.classList.add('protected-shell--student');
-  const campusTheme = ['STUDENT', 'STAFF', 'ADVISOR', 'ADMIN'].includes(role);
+  const campusTheme = ['STUDENT', 'STAFF', 'ADVISOR', 'ADMIN', 'COORDINATOR', 'COMMITTEE'].includes(role);
   if (campusTheme) layout.classList.add('protected-shell--campus');
   if (role === 'STAFF') layout.classList.add('protected-shell--staff');
   if (role === 'ADVISOR') layout.classList.add('protected-shell--advisor');
@@ -529,6 +530,15 @@ export function createShellApp({
         onAccessDenied: (message) => renderForbidden(message),
         onNavigate: navigateToAllowlistedRoute
       });
+    }
+
+    if (['COORDINATOR','COMMITTEE'].includes(role) && workflowClient) {
+      return renderSelectionWorkspace({client:workflowClient,role,signal,onSessionExpired:handleSessionExpired,
+        onAccessDenied:message=>renderForbidden(message)});
+    }
+    if (role==='STUDENT' && route.hash==='#/student/selection' && workflowClient) {
+      return renderStudentSelectionStatus({client:workflowClient,signal,onSessionExpired:handleSessionExpired,
+        onAccessDenied:message=>renderForbidden(message)});
     }
 
     if (role === 'STUDENT' && route.hash === '#/student/profile' && studentProfileClient) {

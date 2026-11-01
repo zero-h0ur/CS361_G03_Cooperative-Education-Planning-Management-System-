@@ -1,27 +1,30 @@
-# CO-ED V3 — ระบบข้อมูลและวางแผนสหกิจศึกษา
+# CO-ED V4 — Planning, Tracking & Reliability
 
-ระบบสำหรับนักศึกษาเตรียมแผนสหกิจ เจ้าหน้าที่ตรวจคุณสมบัติและมอบหมายอาจารย์ที่ปรึกษา และอาจารย์เปิดอ่านข้อมูลนักศึกษาที่อยู่ในการดูแล พัฒนาต่อจากเว็บไซต์ข้อมูลสาธารณะและ Company Directory ของ V1/V2
+ระบบข้อมูลและวางแผนสหกิจศึกษา ย้ายจาก AWS Learner Lab มายังบัญชีใหม่เป็นฐานพัฒนา V4 โดยเก็บ workflow เดิมและเพิ่ม Coordinator/Committee แยกบทบาท กติกาธุรกิจและรายละเอียดหน้าจอยังต้องให้เจ้าของโครงการกับทีมยืนยันร่วมกัน
 
-V3 เก็บ source code และข้อจำกัดของระบบไว้เป็นฐานสำหรับพัฒนารุ่นถัดไป การออก tag `v3.0.0` ไม่ได้เป็นการ deploy และไม่ได้หมายความว่า workflow ทุกส่วนผ่านการตรวจรับบน AWS แล้ว สถานะการออกรุ่นติดตามใน [Issue #86](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/86)
+งานรุ่นนี้ติดตามใน [Milestone V4](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/milestone/4) และงานจัดฐานโค้ดใน [Issue #139](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/139) การย้ายระบบและการทดสอบเส้นทางจำลองยังไม่ใช่การตรวจรับฟีเจอร์ V4 ทั้งหมด ประวัติ source V3 อยู่ที่ [Issue #86](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/86)
 
 ## เว็บไซต์และสถานะการใช้งาน
 
-- [เว็บไซต์](https://main.d1d9qrqnsi5nl6.amplifyapp.com/)
-- [ค้นหาสถานประกอบการ](https://main.d1d9qrqnsi5nl6.amplifyapp.com/company-directory.html)
-- [พื้นที่ผู้ใช้งาน](https://main.d1d9qrqnsi5nl6.amplifyapp.com/app.html) — ต้องเข้าสู่ระบบ
+- [เว็บไซต์](https://main.d1bpmj87vmjb96.amplifyapp.com/)
+- [ค้นหาสถานประกอบการ](https://main.d1bpmj87vmjb96.amplifyapp.com/company-directory.html)
+- [พื้นที่ผู้ใช้งาน](https://main.d1bpmj87vmjb96.amplifyapp.com/app.html) — ต้องเข้าสู่ระบบ
 
-เว็บไซต์ใน Learner Lab กับ source รุ่นนี้เป็นคนละสถานะกัน:
+ฐานระบบใหม่ ณ 1 พ.ย. 2569:
 
 | ส่วน | สถานะ |
 | --- | --- |
-| Source code | มี workflow ตรวจคุณสมบัติ ข้อกำหนดเอกสาร Assignment, Placement และพื้นที่ Admin ตามขอบเขตด้านล่าง |
-| Frontend ใน Learner Lab | ณ 31 ต.ค. 2569 ใช้ Amplify job `63` ที่สำเร็จจาก commit `e0630172b7aecacd986ada0ae71d3d7f16cf2d17`; ปิด auto-build ของ `main` แล้ว การ merge ต่อจากนี้ไม่อัปเดตเว็บโดยอัตโนมัติ |
-| Backend และฐานข้อมูล | การ rollout workflow ใหม่ยังไม่ครบ ต้องตรวจและ apply migration `004–008`, runtime grants, API routes และ Backend ที่เข้ากันได้ก่อนทดสอบครบทุกขั้น |
-| ผลตรวจรับเดิม | [Issue #84](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/84#issuecomment-6293912895) บันทึกผลวันที่ 20 ต.ค. 2569 ตามขอบเขตและ commit ที่ระบุไว้ ไม่ครอบคลุม workflow ที่เพิ่มภายหลัง |
+| บัญชี / Region | `130165494095 / ap-southeast-2` (Sydney), ย้ายจาก Lab `676101350279 / us-east-1` |
+| Frontend | Amplify job `3` สำเร็จ, Manual Deploy และ Auto-build ปิดอยู่; Merge ไม่เผยแพร่เว็บโดยอัตโนมัติ |
+| Backend / DB | Lambda `coed-api`, API Gateway JWT และ Cognito ใหม่; RDS PostgreSQL `16.15`, migrations `001–009` และ runtime grants นำขึ้นแล้ว |
+| ข้อมูลและการทดสอบ | Restore ข้อมูลเดิมและเชื่อมตัวตนใหม่; ผู้ใช้ยืนยัน Login ครบห้าบัญชีและ flow จำลองถึงกรรมการครบ `3/3` โดยยังรอประกาศผล |
+| ระบบ Lab เดิม | ยังไม่ปิดทั้งหมด ติดตามการเลิกใช้ใน [#148](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/148) |
+
+รายละเอียดทรัพยากร ขอบเขตการย้าย วิธี Build/Deploy และเงื่อนไขก่อน Merge อยู่ใน [ฐาน V4](docs/operations/v4-baseline.md) และ [หลักฐานการย้าย/ทดสอบ](docs/evidence/v4-migration-baseline.md) เอกสาร V3 เก็บเป็นประวัติและอาจมี URL/คำสั่ง Lab เดิม ไม่ใช่คู่มือ Deploy บัญชีใหม่
 
 ข้อมูลนักศึกษาและบัญชีสาธิตเป็นข้อมูลจำลอง ส่วนข้อมูลสถานประกอบการนำเข้าจากชุดข้อมูลที่ตรวจทานแล้ว โดยไม่เผยแพร่ชื่อผู้ติดต่อ อีเมล และเบอร์โทรของตัวแทนบริษัท ระบบยังไม่พร้อมรับข้อมูลนักศึกษาจริง
 
-## ขอบเขตของ source V3
+## ขอบเขตของ source ปัจจุบัน
 
 | ผู้ใช้ | การใช้งาน |
 | --- | --- |
@@ -30,6 +33,8 @@ V3 เก็บ source code และข้อจำกัดของระบ�
 | Staff | ค้นหาและตรวจแผนในขอบเขตภาควิชา/หลักสูตร/ปีการศึกษาที่รับผิดชอบ กำหนดเอกสาร ส่งกลับแก้ไข อนุมัติหรือปฏิเสธ มอบหมาย Advisor และบันทึกผลยืนยันจากบริษัท |
 | Advisor | อ่านข้อมูลนักศึกษาและแผนเฉพาะรายที่ได้รับมอบหมาย ไม่มีสิทธิ์แก้ไข ส่งแผน หรือตรวจอนุมัติ ทั้งหน้าเว็บและ API |
 | Admin | ดู metadata บัญชี สถานะ migration และจำนวนข้อมูลหลัก การเปลี่ยน role/สถานะบัญชีใช้ช่องทาง Ops แยก ไม่อนุมัติ ปฏิเสธ หรือมอบหมาย Advisor แทน Staff |
+| Coordinator | รับเรื่องเฉพาะรอบ/หลักสูตรที่ได้รับมอบหมาย และส่งต่อกรรมการ โดยไม่อนุมัติผลแทนกรรมการ |
+| Committee | บันทึกความเห็นแยกกันสามคนต่อผู้สมัคร เห็นเฉพาะความเห็นของตน ครบสามคนแล้วยังรอประกาศผล |
 
 ทุกบัญชีต้องเชื่อม Cognito identity กับผู้ใช้ภายใน RDS บัญชีที่ Login ผ่านแต่ยังไม่ได้เชื่อมสิทธิ์จะใช้พื้นที่ดังกล่าวไม่ได้ Role จากหน้าเว็บไม่ใช่แหล่งตัดสินสิทธิ์
 
@@ -88,14 +93,17 @@ npm run test:ui-preview
 npm run test:docs
 ```
 
-Full regression ใช้ `npm test` หลังตั้งค่าฐานข้อมูลทดสอบที่สร้างทิ้งได้โดยเฉพาะ บาง suite ล้าง fixtures และต้องเปิด reset guard ตามคู่มือ ส่วน integration บางชุดจะรายงาน skipped หากไม่ได้ตั้งฐานข้อมูล การผ่านเฉพาะ unit tests ไม่ได้แทนผล integration
+Full regression ใช้ `npm test` หลังตั้งค่าฐานข้อมูลทดสอบที่สร้างทิ้งได้โดยเฉพาะ บาง suite ล้าง fixtures และต้องเปิด reset guard ตามคู่มือ ส่วน integration บางชุดจะรายงาน skipped หากไม่ได้ตั้งฐานข้อมูล รวม selection ที่ต้องตั้ง `CO_ED_SELECTION_TEST_DATABASE_URL` ไปยัง `coed_selection_test` ในเครื่อง การผ่านเฉพาะ unit tests ไม่ได้แทนผล integration
 
 `npm start` เปิด local API แต่ไม่ได้จำลอง trusted claims ของ API Gateway ส่วน frontend ที่ build แล้วอยู่ใน `dist/` การ build ต้องรับค่า `CO_ED_*` ที่เป็น public configuration เท่านั้น ไม่ส่งรหัสผ่านหรือ AWS credentials ไปยัง Browser
 
+ใช้ `npm run build:v4` เพื่อ Build สำหรับบัญชีใหม่ตาม [public configuration](config/v4-public.json) โดยไม่ต้อง Login AWS คำสั่งนี้เตรียมไฟล์อย่างเดียว ไม่ Deploy และไม่เพิ่มบริการ Cloud
+
 ## ข้อจำกัดและงานต่อ V4
 
-- Workflow ใหม่ยังไม่ผ่าน deployed acceptance ครบทุก role ก่อนเปิดใช้ต้องตรวจ migration, grants, routes และ Backend/Frontend ที่เข้ากันได้ การ build สำเร็จไม่ยืนยันความพร้อมของฐานข้อมูล
-- ข้อมูลทะเบียนเป็นข้อมูลจำลอง ยังไม่ได้เชื่อม TU API และไม่มีระบบประเมิน GPA อัตโนมัติ ไม่มีขั้นตอน Advisor Endorsed หรือบทบาท Coordinator/Committee แยกต่างหาก
+- ผลผู้ใช้ทดสอบครอบคลุม Student → Coordinator → Committee สามคน → Student เห็นสถานะรอประกาศผล ยังไม่ครอบคลุมทุกเส้นทางเดิม ทุก role หรือการประกาศผลจริง
+- มีบทบาท Coordinator/Committee แยกจาก Staff/Advisor: Coordinator รับแผนในรอบและหลักสูตรที่กำหนด และกรรมการ 3 คนบันทึกความเห็นแยกกันต่อผู้สมัคร เมื่อครบจะรอประกาศผล ไม่อนุมัติอัตโนมัติ ดู [ขอบเขตการคัดเลือก](docs/operations/selection-workflow.md)
+- ข้อมูลทะเบียนเป็นข้อมูลจำลอง ยังไม่ได้เชื่อม TU API ไม่มีระบบประเมิน GPA/จัดอันดับอัตโนมัติหรือขั้นตอน Advisor Endorsed
 - เอกสารเป็นลิงก์หรือเลขอ้างอิงภายนอก ระบบตรวจข้อมูลที่ผู้ใช้ระบุ ไม่ได้อัปโหลด อ่านเนื้อหาไฟล์ หรือจัดการสิทธิ์ของไฟล์จริง
 - Logout ล้าง session ข้ามแท็บและเรียกเพิกถอน refresh token แต่ยังไม่รับประกันการปฏิเสธ Access Token เดิมทันทีที่ API; token ที่ตรวจด้วยลายเซ็นอาจใช้ได้จนหมดอายุ
 - Admin ยังไม่มีหน้าจัดการบริษัทหรือเปลี่ยนบัญชีผ่านเว็บโดยตรง ไม่มีระบบส่งอีเมล แจ้งเตือน หรือเชื่อมต่อระบบภายนอกอัตโนมัติ

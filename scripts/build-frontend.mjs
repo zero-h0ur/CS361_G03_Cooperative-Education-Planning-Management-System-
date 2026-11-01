@@ -1,4 +1,4 @@
-import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { build } from 'esbuild';
 
@@ -15,8 +15,11 @@ const staticFiles = [
   'app.html'
 ];
 
-const DEFAULT_API_BASE_URL = 'https://qtqlsb1aec.execute-api.us-east-1.amazonaws.com';
+const { apiBaseUrl: DEFAULT_API_BASE_URL } = JSON.parse(
+  await readFile(new URL('../config/v4-public.json', import.meta.url), 'utf8')
+);
 const REQUIRED_AUTH_KEYS = [
+  'CO_ED_API_BASE_URL',
   'CO_ED_COGNITO_USER_POOL_ID',
   'CO_ED_COGNITO_CLIENT_ID',
   'CO_ED_COGNITO_DOMAIN',
@@ -83,6 +86,8 @@ function renderRuntimeConfig(config) {
   return `(function configureCoEd(root) {\n  root.CO_ED_CONFIG = Object.freeze(${serializeForInlineScript(config)});\n})(window);\n`;
 }
 
+// Validate before removing the previous build, so an invalid target cannot erase it.
+const runtimeConfig = createRuntimeConfig();
 await rm(outputDirectory, { recursive: true, force: true });
 await mkdir(resolve(outputDirectory, 'assets'), { recursive: true });
 
@@ -93,7 +98,7 @@ await Promise.all([
   }),
   writeFile(
     resolve(outputDirectory, 'runtime-config.js'),
-    renderRuntimeConfig(createRuntimeConfig()),
+    renderRuntimeConfig(runtimeConfig),
     'utf8'
   )
 ]);

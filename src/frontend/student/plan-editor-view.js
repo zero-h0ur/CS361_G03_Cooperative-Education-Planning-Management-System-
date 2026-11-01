@@ -110,7 +110,15 @@ export function renderPlanEditor({
   directory.append(node('legend', 'student-form__label', 'สถานประกอบการและตำแหน่งงาน'));
   const searchField = field('search', 'ค้นหาสถานประกอบการหรือตำแหน่งงาน', 'input');
   fields.search.type = 'search';
-  fields.search.placeholder = 'ค้นหาจาก Public Directory';
+  fields.search.placeholder = 'ค้นหาชื่อบริษัทหรือตำแหน่งงาน';
+  const recruitingLabel = node('label', 'student-form__label plan-editor__recruiting-filter');
+  const recruitingOnly = node('input');
+  recruitingOnly.type = 'checkbox';
+  recruitingOnly.checked = true;
+  recruitingOnly.id = 'plan-recruiting-only';
+  recruitingLabel.append(recruitingOnly, document.createTextNode(' เฉพาะบริษัทที่มีตำแหน่งให้เลือก'));
+  const recruitingHint = node('p', 'student-form__hint',
+    'บริษัทในทะเบียนบางแห่งยังไม่มีตำแหน่งในระบบ ตัวกรองนี้ช่วยเลือกบริษัทที่มีตำแหน่งสำหรับส่งแผนได้ การมีข้อมูลไม่ยืนยันว่าบริษัทยังเปิดรับในปัจจุบัน');
   const directoryStatus = node('p', 'student-form__hint');
   directoryStatus.setAttribute('role', 'status');
   directoryStatus.id = 'plan-directory-status';
@@ -140,7 +148,7 @@ export function renderPlanEditor({
   positionField.append(positionStatus, positionRetry);
   const selections = node('div', 'plan-editor__selections');
   selections.append(companyField, positionField);
-  directory.append(searchField, directoryStatus, directoryRetry, selections, more);
+  directory.append(searchField, recruitingLabel, recruitingHint, directoryStatus, directoryRetry, selections, more);
 
   const notesField = field('notes', 'บันทึกเพิ่มเติม (ไม่บังคับ)', 'textarea');
   fields.notes.rows = 4;
@@ -179,6 +187,7 @@ export function renderPlanEditor({
     fields.company_id.disabled = locked;
     fields.position_id.disabled = locked || !values.company_id || !positionsReady;
     fields.search.disabled = locked;
+    recruitingOnly.disabled = locked;
     fields.notes.disabled = saving;
     fields.notes.readOnly = locked;
     save.disabled = saving || conflict || !cycleReady || !positionsReady;
@@ -239,6 +248,10 @@ export function renderPlanEditor({
     more.hidden = true;
     timer = setTimeout(() => searchCompanies(fields.search.value, 1), 300);
   });
+  recruitingOnly.addEventListener('change', () => {
+    clearTimeout(timer);
+    void searchCompanies(fields.search.value, 1);
+  });
 
   async function loadCycles() {
     cycleRetry.hidden = true;
@@ -277,7 +290,7 @@ export function renderPlanEditor({
     more.disabled = true;
     directory.setAttribute('aria-busy', 'true');
     try {
-      const result = await planClient.searchCompanies({ q, page, signal: controller.signal });
+      const result = await planClient.searchCompanies({ q, page, recruitingOnly: recruitingOnly.checked, signal: controller.signal });
       if (!alive() || sequence !== searchSequence) return;
       if (page === 1) {
         fields.company_id.replaceChildren();
@@ -295,9 +308,10 @@ export function renderPlanEditor({
       more.hidden = page >= result.pagination.totalPages;
       directoryStatus.textContent = result.items.length
         ? `แสดงผลการค้นหาถึงหน้า ${page} จาก ${result.pagination.totalPages}`
-        : 'ไม่พบสถานประกอบการ ลองเปลี่ยนคำค้นหา';
+        : recruitingOnly.checked ? 'ไม่พบบริษัทที่มีตำแหน่งในคำค้นหานี้ ลองเปลี่ยนคำค้นหาหรือยกเลิกตัวกรองเพื่อดูทะเบียนทั้งหมด'
+          : 'ไม่พบสถานประกอบการ ลองเปลี่ยนคำค้นหา';
     } catch (error) {
-      if (!alive() || sequence !== searchSequence || error?.name === 'AbortError') return;
+      if (!alive() || sequence !== searchSequence || error?.name === 'AbortError' || authFailure(error)) return;
       directoryStatus.textContent = 'ค้นหาสถานประกอบการไม่สำเร็จ ข้อมูลที่กรอกไว้ยังอยู่';
       directoryRetry.hidden = false;
     } finally {
@@ -332,7 +346,7 @@ export function renderPlanEditor({
       fields.position_id.value = positions.some((item) => item.id === values.position_id) ? values.position_id : '';
       if (values.position_id && !fields.position_id.value) {
         positionStatus.textContent = 'ตำแหน่งเดิมไม่พร้อมใช้งาน กรุณาเลือกตำแหน่งใหม่';
-      } else if (!positions.length) positionStatus.textContent = 'สถานประกอบการนี้ยังไม่มีตำแหน่งงานที่เปิดเผย';
+      } else if (!positions.length) positionStatus.textContent = 'สถานประกอบการนี้ยังไม่มีตำแหน่งงานที่เปิดเผย กรุณาเลือกบริษัทอื่นโดยใช้ตัวกรองเฉพาะบริษัทที่มีตำแหน่งให้เลือกก่อนส่งแผน';
       positionsReady = true;
     } catch (error) {
       if (!alive() || sequence !== positionSequence || error?.name === 'AbortError') return;

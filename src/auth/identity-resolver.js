@@ -8,7 +8,7 @@ const { ForbiddenError, ServiceUnavailableError } = require('../api/errors');
 const { getPool } = require('../db/connection');
 
 // SYSTEM is a non-interactive actor (e.g. audit/seed) and must never authenticate via token (#49).
-const ALLOWED_ROLES = new Set(['STUDENT', 'ADVISOR', 'STAFF', 'ADMIN']);
+const ALLOWED_ROLES = new Set(['STUDENT', 'ADVISOR', 'STAFF', 'ADMIN', 'COORDINATOR', 'COMMITTEE']);
 
 const UNAVAILABLE_DB_ERROR_CODES = new Set(['ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', '42P01']);
 

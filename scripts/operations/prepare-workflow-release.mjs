@@ -4,13 +4,14 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 const root=fileURLToPath(new URL('../../',import.meta.url));
+const target=JSON.parse(readFileSync(join(root,'config/v4-public.json'),'utf8'));
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const quote=value=>"'"+value.replaceAll("'","''")+"'";
 
 export function workflowMigrationSQL() {
-  const migrations=readdirSync(join(root,'src/db/migrations')).filter(name=>/^00[1-8]_[a-z0-9_]+\.sql$/.test(name)).sort()
+  const migrations=readdirSync(join(root,'src/db/migrations')).filter(name=>/^00[1-9]_[a-z0-9_]+\.sql$/.test(name)).sort()
     .map(name=>({name,sql:readFileSync(join(root,'src/db/migrations',name),'utf8')}));
-  if(migrations.length!==8)throw new Error('Expected exactly eight reviewed migrations.');
+  if(migrations.length!==9)throw new Error('Expected exactly nine reviewed migrations.');
   const expected=migrations.map(row=>`(${quote(row.name)},${quote(hash(row.sql))})`).join(',');
   const tables=['users','external_identity_links','students','plans','advisor_assignments','staff_scopes','rounds','companies','positions','audit_events','plan_operations'];
   const key=table=>({audit_events:'event_id',plan_operations:'operation_id'})[table]||'id';
@@ -53,9 +54,9 @@ ${grants}
 DO $preserve$
 BEGIN
  ${preserve}
- IF (SELECT count(*) FROM public.schema_migrations)<>8 THEN RAISE EXCEPTION 'Incomplete schema'; END IF;
+ IF (SELECT count(*) FROM public.schema_migrations)<>9 THEN RAISE EXCEPTION 'Incomplete schema'; END IF;
 END $preserve$;
-SELECT json_build_object('Migrations',8,'ExistingRowsPreserved',true,'RuntimeRoleMutation',has_column_privilege('coed_app','public.users','role','UPDATE'));
+SELECT json_build_object('Migrations',9,'ExistingRowsPreserved',true,'RuntimeRoleMutation',has_column_privilege('coed_app','public.users','role','UPDATE'));
 \\if :apply
 COMMIT;
 \\else
@@ -76,11 +77,8 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   const sql=workflowMigrationSQL();
   writeFileSync(join(output,'workflow-migrate.sql'),sql,{flag:'wx',mode:0o600});
   const files={'workflow-lambda.zip':hash(zip),'workflow-migrate.sql':hash(sql)};
-  for(const file of ['live-challenge.py','admin-account.py']) {
-    const contents=readFileSync(join(root,'scripts/operations',file));
-    writeFileSync(join(output,file),contents,{flag:'wx',mode:0o600});files[file]=hash(contents);
-  }
-  const manifest={sourceCommit:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),account:'676101350279',region:'us-east-1',function:'coed-api',files};
+  // Lab-specific provisioning/account tools are intentionally not V4 release assets.
+  const manifest={sourceCommit:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),account:target.accountId,region:target.region,function:'coed-api',files};
   writeFileSync(join(output,'release-manifest.json'),JSON.stringify(manifest,null,2)+'\n',{flag:'wx',mode:0o600});
   console.log(JSON.stringify({output,sourceCommit:manifest.sourceCommit,files},null,2));
 }

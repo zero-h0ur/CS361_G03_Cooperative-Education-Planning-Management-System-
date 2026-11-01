@@ -1,0 +1,13 @@
+{
+  "accountId": "130165494095",
+  "region": "ap-southeast-2",
+  "apiBaseUrl": "https://yhfevhqtoa.execute-api.ap-southeast-2.amazonaws.com",
+  "appOrigin": "https://main.d1bpmj87vmjb96.amplifyapp.com",
+  "amplifyAppId": "d1bpmj87vmjb96",
+  "amplifyBranch": "main",
+  "cognito": {
+    "userPoolId": "ap-southeast-2_Um6nksXa1",
+    "userPoolClientId": "65b8bifg3860706esa1uns6cd8",
+    "domain": "coed-v4-130165494095.auth.ap-southeast-2.amazoncognito.com"
+  }
+}

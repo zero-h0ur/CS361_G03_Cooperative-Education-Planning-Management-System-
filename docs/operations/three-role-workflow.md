@@ -1,5 +1,8 @@
 # Workflow verification and rollout
 
+> Historical V3 guide. For the new account, start with the [V4 baseline](v4-baseline.md).
+> Lab-specific provisioning/account scripts below are not V4 deployment tools.
+
 The [API contract](../api/three-role-workflow.md) covers Student, Staff and Advisor.
 This change contains source and forward migrations only. It does not deploy the
 gateway/Lambda/frontend, run production migrations, provision storage, change Cognito
@@ -202,19 +205,20 @@ RDS CA, then prepare the separate operator artifacts:
 
 ```bash
 node scripts/operations/prepare-workflow-release.mjs \
-  /absolute/path/coed-v3-lambda.zip /absolute/private/workflow-release
+  /absolute/path/coed-v4-lambda.zip /absolute/private/workflow-release
 ```
 
 The output includes the source SHA, file hashes, Lambda ZIP, guarded migration SQL
-and the two operator scripts. SQL validates the complete migration history, uses
+targeting the V4 account. Lab-specific operator scripts are no longer copied.
+SQL validates reviewed migrations 001–009, uses
 the migration-runner lock, preserves existing column values across additive schema
 changes, and defaults to `ROLLBACK`. Apply only after a fresh available RDS snapshot
 and Lambda/frontend recovery points have been recorded. Check both dry run and apply
 output; `RuntimeRoleMutation` must be false. Do not change a recorded checksum to
 make a mismatch disappear.
 
-After DB and backend verification, merge the frontend and wait for its existing
-Amplify job instead of starting a duplicate build. Verify all four roles, a full
+For V4, merging does not start deployment: auto-build is disabled. Follow the
+manual deployment and recovery checks in the V4 baseline. Verify all required roles, a full
 review/revision/approval cycle, assignment isolation, company mismatch and at least
 three permission denials on the deployed commit. A successful build or local Preview
 does not replace this acceptance gate.

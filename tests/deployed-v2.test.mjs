@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
 
-const DEFAULT_API_BASE_URL = 'https://qtqlsb1aec.execute-api.us-east-1.amazonaws.com';
-const DEFAULT_FRONTEND_BASE_URL = 'https://main.d1d9qrqnsi5nl6.amplifyapp.com';
+const target = JSON.parse(await readFile(new URL('../config/v4-public.json', import.meta.url), 'utf8'));
+const DEFAULT_API_BASE_URL = target.apiBaseUrl;
+const DEFAULT_FRONTEND_BASE_URL = target.appOrigin;
 
 const apiBaseUrl = normalizeBaseUrl(process.env.V2_API_BASE_URL || DEFAULT_API_BASE_URL);
 const frontendBaseUrl = normalizeBaseUrl(
@@ -61,7 +63,11 @@ function parsePositiveInteger(value, name) {
   return parsed;
 }
 
+let lastRequestStarted = 0;
 async function request(url, init = {}) {
+  // The shared V4 API is capped at 2 requests/second. Keep smoke traffic below it.
+  await delay(Math.max(0, 600 - (Date.now() - lastRequestStarted)));
+  lastRequestStarted = Date.now();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
 
@@ -128,7 +134,10 @@ function assertPublicCompany(company, context) {
     assert.equal(typeof company[field], 'string', `${context}.${field} must be a string.`);
     assert.notEqual(company[field].trim(), '', `${context}.${field} must not be empty.`);
   }
-  assert.equal(company.data_status, 'mock', `${context} must be marked as mock data.`);
+  // Company names/locations may come from the imported catalogue. Recruitment
+  // details remain private; assertPublicPosition still permits mock records only.
+  assert.ok(['mock', 'to_validate', 'verified'].includes(company.data_status),
+    `${context} must retain a supported provenance status.`);
   assert.equal(Number.isNaN(Date.parse(company.updated_at)), false, `${context}.updated_at is invalid.`);
 
   if (company.positions !== undefined) {
@@ -177,7 +186,7 @@ async function listCompanies(parameters = {}) {
   return requestApi(`/api/companies?${searchParams}`);
 }
 
-test('Issue #36 deployed V2 verification', { timeout: 120000 }, async (t) => {
+test('deployed public directory verification (V2-compatible routes)', { timeout: 120000 }, async (t) => {
   let canonicalCompanies = [];
   let sampleCompanyWithPosition;
   let samplePosition;
@@ -189,7 +198,7 @@ test('Issue #36 deployed V2 verification', { timeout: 120000 }, async (t) => {
     assert.deepEqual(body, { data: { status: 'ok', service: 'co-ed-v2-api' } });
   });
 
-  await t.test('V2-T02 lists public mock companies and position details', async () => {
+  await t.test('V2-T02 lists public companies and mock-only position details', async () => {
     const { response, body } = await listCompanies();
 
     assertStatus(response, 200, 'company list');

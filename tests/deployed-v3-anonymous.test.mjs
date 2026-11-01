@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
+import { setTimeout as delay } from 'node:timers/promises';
 
 // Explicit live-only command; not included in npm test / offline CI. No real
 // token, password or user resource ID is read. Mutation-denial probes use invalid
 // JSON and a reserved synthetic ID, so no valid application write is requested.
-const API = new URL(process.env.V3_API_BASE_URL || 'https://qtqlsb1aec.execute-api.us-east-1.amazonaws.com');
-const WEB = new URL(process.env.V3_FRONTEND_BASE_URL || 'https://main.d1d9qrqnsi5nl6.amplifyapp.com');
+const target = JSON.parse(await readFile(new URL('../config/v4-public.json', import.meta.url), 'utf8'));
+const API = new URL(process.env.V3_API_BASE_URL || target.apiBaseUrl);
+const WEB = new URL(process.env.V3_FRONTEND_BASE_URL || target.appOrigin);
 for (const value of [API, WEB]) {
   assert.equal(value.protocol, 'https:', 'Live smoke requires HTTPS.');
   assert.equal(Boolean(value.username || value.password || value.search || value.hash), false,
@@ -17,7 +20,10 @@ const INVALID_TOKEN = 'coed-smoke83-invalid-token-canary';
 const timeout = Number(process.env.V3_REQUEST_TIMEOUT_MS || 15000);
 assert.equal(Number.isInteger(timeout) && timeout > 0 && timeout <= 60000, true, 'Invalid request timeout.');
 
+let lastRequestStarted = 0;
 async function request(path, { method = 'GET', headers = {}, body } = {}) {
+  await delay(Math.max(0, 600 - (Date.now() - lastRequestStarted)));
+  lastRequestStarted = Date.now();
   const response = await fetch(new URL(path, API), {
     method, headers: { Accept: 'application/json', ...headers }, body,
     redirect: 'error', signal: AbortSignal.timeout(timeout)
@@ -45,12 +51,16 @@ test('V3-T05 deployed anonymous/authentication boundary', { timeout: 180000 }, a
   t.diagnostic('These probes do NOT establish live ownership, Staff scope, Advisor read-only, session expiry or CloudWatch log acceptance.');
 
   const reads = [
+    '/api/v3/directory/companies', `/api/v3/directory/companies/${ID}`,
+    `/api/v3/directory/companies/${ID}/positions`, `/api/v3/directory/positions/${ID}`,
     '/api/v3/me', '/api/v3/students/me', '/api/v3/plans',
     `/api/v3/plans/${ID}`, `/api/v3/plans/${ID}/history`, '/api/v3/plan-options/cycles',
     '/api/v3/staff/students', '/api/v3/staff/plans', '/api/v3/staff/review-queue',
     `/api/v3/staff/plans/${ID}`, `/api/v3/staff/plans/${ID}/history`,
     '/api/v3/advisor/students', `/api/v3/advisor/students/${ID}`,
-    `/api/v3/advisor/students/${ID}/plans`, `/api/v3/advisor/plans/${ID}`
+    `/api/v3/advisor/students/${ID}/plans`, `/api/v3/advisor/plans/${ID}`,
+    '/api/v3/coordinator/applications', '/api/v3/committee/applications',
+    '/api/v3/student/selection', `/api/v3/plans/${ID}/selection`
   ];
   for (const path of reads) {
     await t.test(`anonymous GET ${path} → 401`, async () => {
@@ -63,7 +73,9 @@ test('V3-T05 deployed anonymous/authentication boundary', { timeout: 180000 }, a
   const writes = [
     ['POST', '/api/v3/plans'], ['PATCH', '/api/v3/students/me'], ['PUT', '/api/v3/students/me'],
     ['PATCH', `/api/v3/plans/${ID}`], ['DELETE', `/api/v3/plans/${ID}`],
-    ...['submit', 'start-review', 'return', 'approve'].map(command => ['POST', `/api/v3/plans/${ID}/${command}`])
+    ...['submit', 'start-review', 'return', 'approve'].map(command => ['POST', `/api/v3/plans/${ID}/${command}`]),
+    ['POST', `/api/v3/coordinator/plans/${ID}/acknowledge`],
+    ['POST', `/api/v3/committee/plans/${ID}/opinion`]
   ];
   for (const [method, path] of writes) {
     await t.test(`anonymous ${method} ${path} → 401 before JSON parsing`, async () => {

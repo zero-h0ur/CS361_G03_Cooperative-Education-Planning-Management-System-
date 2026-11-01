@@ -4,7 +4,7 @@
   const origin = root.location && root.location.origin ? root.location.origin : '';
 
   root.CO_ED_CONFIG = Object.freeze({
-    apiBaseUrl: 'https://qtqlsb1aec.execute-api.us-east-1.amazonaws.com',
+    apiBaseUrl: 'https://yhfevhqtoa.execute-api.ap-southeast-2.amazonaws.com',
     ...existingConfig,
     auth: Object.freeze({
       userPoolId: '',

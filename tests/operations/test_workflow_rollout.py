@@ -39,7 +39,7 @@ class WorkflowRolloutTests(unittest.TestCase):
             applied = psql(sql, True); self.assertEqual(applied.returncode, 0, applied.stderr)
             self.assertIn('"ExistingRowsPreserved" : true', applied.stdout)
             self.assertIn('"RuntimeRoleMutation" : false', applied.stdout)
-            self.assertEqual(psql('SELECT count(*) FROM schema_migrations;').stdout.strip(), '8')
+            self.assertEqual(psql('SELECT count(*) FROM schema_migrations;').stdout.strip(), '9')
             repeat = psql(sql, True); self.assertEqual(repeat.returncode, 0, repeat.stderr)
             self.assertEqual(psql('SELECT role,version FROM users;').stdout.strip(), 'ADMIN|1')
             self.assertEqual(psql("INSERT INTO schema_migrations(version,checksum) VALUES('999_unknown.sql',repeat('a',64));").returncode, 0)
