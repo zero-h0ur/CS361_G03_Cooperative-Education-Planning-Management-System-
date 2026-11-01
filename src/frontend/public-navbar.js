@@ -2,7 +2,7 @@ import { subscribeToLogout } from './auth/auth-storage.js';
 
 const MENU = Object.freeze({
   STUDENT: { label: 'นักศึกษา', badge: 'badge-student', dashboard: '#/student/profile',
-    secondary: { label: 'แผนสหกิจของฉัน', hash: '#/student/plan', icon: 'fa-clipboard-list' } },
+    secondary: { label: 'สมัครเข้าแผนสหกิจ', hash: '#/student/application', icon: 'fa-clipboard-list' } },
   STAFF: { label: 'เจ้าหน้าที่', badge: 'badge-staff', dashboard: '#/staff/students',
     secondary: { label: 'ค้นหาแผนสหกิจ', hash: '#/staff/plans', icon: 'fa-list-check' } },
   ADVISOR: { label: 'อาจารย์ที่ปรึกษา', badge: 'badge-advisor', dashboard: '#/advisor/students' },
