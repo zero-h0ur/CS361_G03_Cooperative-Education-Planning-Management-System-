@@ -5,7 +5,7 @@ import {readFile,readdir} from 'node:fs/promises';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 const {Pool}=require('pg');
-const {SelectionService,stateFor,command}=require('../src/api/services/selection-service');
+const {SelectionService,stateFor,command,returnCommand}=require('../src/api/services/selection-service');
 const {ACTIONS,getPermissionScope,getRoleCapabilities}=require('../src/api/services/authorization-service');
 const {IdentityResolver}=require('../src/auth/identity-resolver');
 const {StudentPlanRepository}=require('../src/db/repositories/student-plan-repository');
@@ -30,6 +30,7 @@ test('new roles are distinct policies, never Staff or Advisor aliases',()=>{
 
 test('three opinions mean pending announcement, never automatic approval or unanimity',()=>{
   assert.equal(stateFor(null,0),'AWAITING_COORDINATOR');
+  assert.equal(stateFor(null,0,'NEEDS_REVISION'),'NEEDS_REVISION');
   for(const n of [0,1,2])assert.equal(stateFor('receipt',n),'UNDER_COMMITTEE_REVIEW');
   assert.equal(stateFor('receipt',3),'SELECTION_COMPLETE_PENDING_ANNOUNCEMENT');
   assert.throws(()=>command({...change(),selected:'true',comment:'x'},true),e=>e.statusCode===400);
@@ -38,6 +39,83 @@ test('three opinions mean pending announcement, never automatic approval or unan
   assert.throws(()=>command({...change(),selected:true,comment:'x'.repeat(2001)},true),e=>e.statusCode===400);
   assert.equal(command({...change(),selected:true,comment:'Line one\r\nLine two'},true).comment,'Line one\nLine two');
   assert.throws(()=>command({...change(),selected:true,comment:'x\u0000y'},true),e=>e.statusCode===400);
+});
+
+test('returnCommand validates checklist and reason and formats review_notes safely',()=>{
+  const valid=returnCommand({...change(),checklist:['ขาดลายเซ็นอาจารย์ที่ปรึกษา','ไฟล์ไม่ชัดเจน'],reason:'กรุณาแนบไฟล์ใหม่\r\nหน้า 2'});
+  assert.deepEqual(valid.checklist,['ขาดลายเซ็นอาจารย์ที่ปรึกษา','ไฟล์ไม่ชัดเจน']);
+  assert.equal(valid.reason,'กรุณาแนบไฟล์ใหม่\nหน้า 2');
+  assert.ok(valid.review_notes.includes('[จุดที่ต้องแก้ไข: ขาดลายเซ็นอาจารย์ที่ปรึกษา, ไฟล์ไม่ชัดเจน]'));
+  assert.ok(valid.review_notes.includes('กรุณาแนบไฟล์ใหม่\nหน้า 2'));
+
+  assert.throws(()=>returnCommand({...change(),reason:' '}),e=>e.statusCode===400);
+  assert.throws(()=>returnCommand({...change(),reason:'x'.repeat(2001)}),e=>e.statusCode===400);
+  assert.throws(()=>returnCommand({...change(),reason:'bad\u0000char'}),e=>e.statusCode===400);
+  assert.throws(()=>returnCommand({...change(),reason:'ok',checklist:'not-array'}),e=>e.statusCode===400);
+  assert.throws(()=>returnCommand({...change(),reason:'ok',extra:'forbidden'}),e=>e.statusCode===400);
+});
+
+test('SelectionService.returnForRevision enforces Coordinator role, state, version, idempotency and audit trail',async()=>{
+  const coordinatorId=randomUUID(),planId=randomUUID(),cohortId=randomUUID(),opId=randomUUID();
+  let planStatus='SUBMITTED',planVersion=1,receiptRow=null,acknowledged=null;
+  const audits=[];
+  const client={
+    query:async(sql,params=[])=>{
+      if(sql==='BEGIN'||sql==='COMMIT'||sql==='ROLLBACK'||sql.startsWith('SET LOCAL')||sql.startsWith('SELECT pg_advisory_xact_lock'))return {rows:[]};
+      if(sql.includes('FROM users WHERE id=$1'))return {rows:[{role:'COORDINATOR',account_status:'ACTIVE'}]};
+      if(sql.includes('FROM workflow_receipts'))return {rows:receiptRow&&params[0]===receiptRow.operation_id?[receiptRow]:[]};
+      if(sql.includes('FROM plans p'))return {rows:[{
+        id:planId,status:planStatus,version:planVersion,cycle_status:'OPEN',cohort_id:cohortId,
+        receipt_id:acknowledged
+      }]};
+      if(sql.includes("UPDATE plans SET status='NEEDS_REVISION'")){
+        planStatus='NEEDS_REVISION';planVersion+=1;return {rows:[{version:planVersion}]};
+      }
+      if(sql.includes('INSERT INTO workflow_receipts')){
+        receiptRow={operation_id:params[0],request_hash:params[4],result:JSON.parse(params[5])};
+        return {rows:[]};
+      }
+      if(sql.includes('INSERT INTO audit_events')){
+        audits.push({plan_id:params[1],actor_id:params[2],notes:params[3]});
+        return {rows:[]};
+      }
+      return {rows:[]};
+    },
+    release:()=>{}
+  };
+  const service=new SelectionService({pool:{connect:async()=>client}});
+  const coord={isAuthenticated:true,userId:coordinatorId,role:'COORDINATOR',accountStatus:'ACTIVE'};
+  const payload={operation_id:opId,expected_version:1,checklist:['ขาดลายเซ็นอาจารย์ที่ปรึกษา'],reason:'กรุณาให้อาจารย์ที่ปรึกษาเซ็นรับรอง'};
+
+  // Non-coordinator roles are rejected
+  await assert.rejects(service.returnForRevision({...coord,role:'COMMITTEE'},planId,payload),e=>e.statusCode===403);
+  await assert.rejects(service.returnForRevision({...coord,role:'STAFF'},planId,payload),e=>e.statusCode===403);
+
+  // Version mismatch -> 409 Conflict
+  await assert.rejects(service.returnForRevision(coord,planId,{...payload,expected_version:9}),e=>e.statusCode===409);
+
+  // First return succeeds -> transitions to NEEDS_REVISION and records audit event
+  const res=await service.returnForRevision(coord,planId,payload);
+  assert.equal(res.state,'NEEDS_REVISION');
+  assert.equal(res.plan_version,2);
+  assert.equal(planStatus,'NEEDS_REVISION');
+  assert.equal(audits.length,1);
+  assert.ok(audits[0].notes.includes('ขาดลายเซ็นอาจารย์ที่ปรึกษา'));
+
+  // Idempotent replay with identical operation_id and payload
+  const replay=await service.returnForRevision(coord,planId,payload);
+  assert.equal(replay.replayed,true);
+  assert.equal(replay.state,'NEEDS_REVISION');
+
+  // Replay with different payload under same operation_id -> 409 Conflict
+  await assert.rejects(service.returnForRevision(coord,planId,{...payload,reason:'เปลี่ยนเหตุผลใหม่'}),e=>e.statusCode===409);
+
+  // New operation_id while already in NEEDS_REVISION -> 422 InvalidStateTransition
+  await assert.rejects(service.returnForRevision(coord,planId,{...payload,operation_id:randomUUID(),expected_version:2}),e=>e.statusCode===422);
+
+  // Student resubmits (planStatus becomes SUBMITTED, version=3), then Coordinator acknowledges -> cannot return after acknowledge
+  planStatus='SUBMITTED';planVersion=3;acknowledged=randomUUID();
+  await assert.rejects(service.returnForRevision(coord,planId,{...payload,operation_id:randomUUID(),expected_version:3}),e=>e.statusCode===409);
 });
 
 test('trusted identity resolution accepts the two new database roles without a Student profile',async()=>{

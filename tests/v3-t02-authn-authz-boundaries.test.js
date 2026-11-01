@@ -640,6 +640,7 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
     { method: 'GET', path: '/api/v3/coordinator/applications' },
     { method: 'GET', path: '/api/v3/committee/applications' },
     { method: 'POST', path: `/api/v3/coordinator/plans/${PLANS.planA_Draft.id}/acknowledge` },
+    { method: 'POST', path: `/api/v3/coordinator/plans/${PLANS.planA_Draft.id}/return` },
     { method: 'POST', path: `/api/v3/committee/plans/${PLANS.planA_Draft.id}/opinion` },
     { method: 'GET', path: `/api/v3/plans/${PLANS.planA_Draft.id}/selection` },
     { method: 'GET', path: '/api/v3/student/selection' },
