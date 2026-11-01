@@ -53,6 +53,11 @@ least 2.50, computed as sum(points * verified credits) / sum(verified credits).
 Compare before rounding for display. CS302/CS301 are future obligations to
 acknowledge, not courses that must already be passed at application time.
 
+The policy snapshot also pins `effective_criteria`: baseline identifier, source
+year, GPAX/group minimums, entry-year cutoff, required/alternative/additional
+groups and future-course obligation. It does not rely on future source-code
+constants to explain a previously submitted eligibility check.
+
 The team has not provided verified credits or repeat/alternative-course rules.
 Real applications can save Drafts and upload files but must show
 **รอยืนยันข้อมูลเกณฑ์** and cannot submit until verified policy and academic
