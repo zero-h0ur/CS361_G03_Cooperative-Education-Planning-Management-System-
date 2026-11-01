@@ -61,6 +61,10 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
     top.append(nav);return top;
   }
   function identity(){const s=card('application-identity','01 · ข้อมูลผู้สมัคร','ตรวจสอบชื่อ รหัสนักศึกษา และข้อมูลมหาวิทยาลัย หากไม่ถูกต้องให้ติดต่อผู้ประสานงาน');
+    if(app.official.institutional_email && draft.institutional_email && draft.institutional_email!==app.official.institutional_email && !readOnly()){
+      const notice=node('div','application-warning');notice.append(node('p','','อีเมลมหาวิทยาลัยที่ยืนยันแล้วต่างจากข้อมูลในฉบับร่าง กรุณาใช้ข้อมูลทางการก่อนบันทึก'),
+        button('ใช้อีเมลมหาวิทยาลัยที่ยืนยัน',()=>{draft.institutional_email=app.official.institutional_email;changed();render();}));s.append(notice);
+    }
     const official=node('dl','application-official application-grid');
     for(const [key,label] of [['full_name','ชื่อ-นามสกุลทางการ'],['student_number','รหัสนักศึกษา'],['department','ภาควิชา'],['program','หลักสูตร'],['entry_year','ปีที่เข้าศึกษา']]){
       const d=node('div');d.append(node('dt','',label),node('dd','',String(app.official[key] || 'รอยืนยันข้อมูล')));official.append(d);}
@@ -80,6 +84,10 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
   }
   function academic(){const s=card('application-academic','02 · ผลการเรียนและเกณฑ์เบื้องต้น','เกณฑ์ต้นทางปี 2568 ที่ทีมใช้เป็นฐานสำหรับ 1/69 ไม่ใช่ประกาศทางการปี 2569');
     s.append(node('p','application-help','ผลการเรียนในส่วนนี้เป็นข้อมูลที่คุณแจ้ง ผู้ประสานงานยังต้องตรวจเทียบกับ Transcript ไม่ใช่ผลการศึกษาที่ยืนยันจาก TU API'));
+    if(app.official.curriculum && draft.curriculum && draft.curriculum!==app.official.curriculum && !readOnly()){
+      const notice=node('div','application-warning');notice.append(node('p','',`หลักสูตรที่ยืนยันคือ ${app.official.curriculum} ต่างจากฉบับร่างเดิม ${draft.curriculum} กรุณาตรวจเกรดใหม่ ข้อมูลเกรดเดิมจะยังอยู่`),
+        button('ใช้หลักสูตรที่ยืนยัน',()=>{draft.curriculum=app.official.curriculum;draft.acknowledgements ||= {};draft.acknowledgements.preplacement=false;changed();render();}));s.append(notice);
+    }
     const policy=node('div',app.policy?.verified && !app.policy.synthetic?'application-notice':'application-warning');policy.id='application-policy';policy.tabIndex=-1;
     policy.append(node('strong','',!app.policy?.verified?'รอยืนยันข้อมูลเกณฑ์':app.policy.synthetic?'ข้อมูลสมมติสำหรับ Preview / Tests เท่านั้น':'ใช้เกณฑ์ที่ยืนยันแล้ว'),
       node('p','','GPAX ≥ 2.75 · ค่าเฉลี่ยกลุ่มวิชา ≥ 2.50 แบบถ่วงหน่วยกิต · รหัส 67 ลงไป'));

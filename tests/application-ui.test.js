@@ -83,6 +83,15 @@ test('closed round Draft is visible without masquerading as submitted or offerin
   expect(root.textContent).toContain('ใบสมัครนี้ยังไม่ได้ส่ง');expect(root.querySelector('#application-contact_phone').readOnly).toBe(true);
   expect(root.querySelector('input[type=file]')).toBeNull();expect(button(root,'บันทึกฉบับร่าง')).toBeUndefined();
 });
+test('newly verified curriculum/email can be adopted explicitly without hidden immutable-field conflicts',async()=>{
+  const client=createApplicationPreview(),application=await client.get(ID);application.payload.curriculum='61';application.payload.institutional_email='old@example.invalid';
+  const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);
+  expect(root.textContent).toContain('ต่างจากฉบับร่างเดิม');
+  button(root,'ใช้หลักสูตรที่ยืนยัน').click();button(root,'ใช้อีเมลมหาวิทยาลัยที่ยืนยัน').click();
+  button(root,'บันทึกฉบับร่าง').click();await flush();await flush();
+  const saved=await client.get(ID);expect(saved.payload.curriculum).toBe('66');expect(saved.payload.institutional_email).toBe(saved.official.institutional_email);
+  expect(saved.payload.acknowledgements.preplacement).toBe(false);expect(saved.payload.course_attempts.length).toBeGreaterThan(0);
+});
 test('in-page links respect reduced motion without animations blocking focus',async()=>{
   window.matchMedia=jest.fn(()=>({matches:true}));const {root}=await editor();
   const section=root.querySelector('#application-documents');section.scrollIntoView=jest.fn();
