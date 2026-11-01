@@ -32,6 +32,12 @@ const check=(p,pol=policy(p.curriculum),extra={})=>readiness({app:{status:'DRAFT
 
 test('curriculum-specific weighted grades, exact boundary and no invented production eligibility',()=>{
   for(const c of ['61','66'])assert.equal(check(payload(c)).can_submit,true);
+  const boundary=payload('66');boundary.gpax='2.7500';assert.equal(check(boundary).can_submit,true);
+  boundary.gpax='2.7499';assert.equal(check(boundary).can_submit,false);
+  const alternative=payload('61');alternative.course_attempts.push({code:'CS216',attempt:1,points:'0'});
+  assert.equal(check(alternative).group_gpa,'3.0000');alternative.selected_courses.alternative='CS216';assert.equal(check(alternative).group_gpa,'2.5000');
+  const unknown=policy('66');unknown.data.repeat_rule=null;assert.equal(check(payload('66'),unknown).eligibility,'UNKNOWN');
+  const unsupported=policy('66');unsupported.source_year=2569;assert.equal(check(payload('66'),unsupported).can_submit,false);
   assert.equal(GROUPS['61'].length,6);assert.equal(GROUPS['66'].length,7);
   const p=payload('61'),pol=policy('61');p.course_attempts.forEach(x=>x.points='2.50');
   assert.equal(check(p,pol).can_submit,true);
@@ -246,6 +252,10 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
       await service.localContent(actor,app.id,pending.ticket_id,pdf);
       const op={...command(),expected_policy_id:pol.id};app=await service.submit(actor,app.id,op);
       assert.equal(app.status,'SUBMITTED');assert.equal(app.submission.snapshot.documents.length,4);
+      assert.equal(app.submission.snapshot.policy.effective_criteria.gpax_min,'2.75');
+      assert.equal(app.submission.snapshot.policy.effective_criteria.required_groups.length,7);
+      assert.equal(app.submission.snapshot.policy.effective_criteria.entry_year_max,2567);
+      assert.ok(app.submission.snapshot.cycle.closes_at);
       assert.equal((await service.submit(actor,app.id,op)).idempotent_replay,true);
       assert.equal((await service.get(coord,app.id)).submission.checksum,app.submission.checksum);
       await assert.rejects(service.get({...coord,userId:outside},app.id),e=>e.statusCode===404);
@@ -256,6 +266,7 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
       await assert.rejects(q('UPDATE phase1_submissions SET snapshot=\'{}\' WHERE application_id=$1',[app.id]),e=>e.code==='55000');
       await q("UPDATE users SET account_status='DISABLED' WHERE id=$1",[student]);
       await assert.rejects(service.submit(actor,app.id,op),e=>e.statusCode===403);
+      assert.equal((await service.get(coord,app.id)).submission.checksum,app.submission.checksum);
       await q("UPDATE users SET account_status='ACTIVE' WHERE id=$1",[student]);
       const snapshot=app.submission.checksum;
       await q(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data)

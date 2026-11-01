@@ -52,6 +52,8 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
     const state=node('p','application-badge',app.status==='SUBMITTED'?'ส่งแล้ว · รอผู้ประสานงานตรวจสอบ':readOnly()?'รอบปิด / หมดเวลา · อ่านอย่างเดียว':'ฉบับร่าง · ยังไม่ได้ส่ง');
     const saved=node('p','application-help',dirty?'มีข้อมูลที่ยังไม่ได้บันทึก':'ข้อมูลตรงกับฉบับที่บันทึกแล้ว');saved.dataset.saveState='';
     top.append(state,saved);
+    if(app.availability?.closes_at){const format=value=>new Intl.DateTimeFormat('th-TH',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Bangkok'}).format(new Date(value));
+      top.append(node('p','application-help',`กำหนดรับสมัคร ${format(app.availability.opens_at)} – ${format(app.availability.closes_at)} (เวลาไทย)`));}
     if(readOnly())top.append(node('p','application-notice',app.status==='SUBMITTED'?'ข้อมูลและเอกสารถูกล็อกไว้ตามฉบับที่ส่ง การส่งใบสมัครยังไม่ใช่การได้รับคัดเลือกเข้าแผน':'ใบสมัครนี้ยังไม่ได้ส่ง แต่รอบไม่เปิดให้แก้ไขแล้ว ข้อมูลที่บันทึกยังดูและดาวน์โหลดได้'));
     const nav=node('nav','application-steps');nav.setAttribute('aria-label','ส่วนของใบสมัคร');
     for(const [id,label] of [['identity','1 ข้อมูล'],['academic','2 ผลการเรียน'],['documents','3 เอกสาร'],['consent','4 ตรวจและส่ง']]){
@@ -77,12 +79,15 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
     s.append(grid);return s;
   }
   function academic(){const s=card('application-academic','02 · ผลการเรียนและเกณฑ์เบื้องต้น','เกณฑ์ต้นทางปี 2568 ที่ทีมใช้เป็นฐานสำหรับ 1/69 ไม่ใช่ประกาศทางการปี 2569');
+    s.append(node('p','application-help','ผลการเรียนในส่วนนี้เป็นข้อมูลที่คุณแจ้ง ผู้ประสานงานยังต้องตรวจเทียบกับ Transcript ไม่ใช่ผลการศึกษาที่ยืนยันจาก TU API'));
     const policy=node('div',app.policy?.verified && !app.policy.synthetic?'application-notice':'application-warning');policy.id='application-policy';policy.tabIndex=-1;
     policy.append(node('strong','',!app.policy?.verified?'รอยืนยันข้อมูลเกณฑ์':app.policy.synthetic?'ข้อมูลสมมติสำหรับ Preview / Tests เท่านั้น':'ใช้เกณฑ์ที่ยืนยันแล้ว'),
       node('p','','GPAX ≥ 2.75 · ค่าเฉลี่ยกลุ่มวิชา ≥ 2.50 แบบถ่วงหน่วยกิต · รหัส 67 ลงไป'));
     policy.append(node('p','',app.policy?`ที่มา: ${app.policy.source} · ปีต้นทาง ${app.policy.source_year} · เกณฑ์ v${app.policy.version}`:'ยังไม่มีหน่วยกิตและกติกาเรียนซ้ำที่ทีมยืนยัน บันทึก Draft และอัปโหลดได้ แต่ยังส่งใบสมัครจริงไม่ได้'));
     s.append(policy);const grid=node('div','application-grid');
-    selectField(grid,'curriculum','หลักสูตร',[['','เลือกหลักสูตร'],['61','หลักสูตร 2561'],['66','หลักสูตร 2566']],current(),value=>draft.curriculum=value).disabled=Boolean(app.official.curriculum) || readOnly() || busy;
+    selectField(grid,'curriculum','หลักสูตร',[['','เลือกหลักสูตร'],['61','หลักสูตร 2561'],['66','หลักสูตร 2566']],current(),value=>{
+      draft.curriculum=value;if(draft.acknowledgements)draft.acknowledgements.preplacement=false;
+    }).disabled=Boolean(app.official.curriculum) || readOnly() || busy;
     field(grid,'gpax','GPAX ณ สิ้นภาคก่อนสมัคร',{type:'number'});s.append(grid);
     const curriculum=current(),groups=GROUPS[curriculum] || [];
     if(!groups.length){s.append(node('p','application-help','เลือกหลักสูตรเพื่อแสดงกลุ่มวิชา'));return s;}
@@ -164,6 +169,7 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
     if(dirty)s.append(node('p','application-help','บันทึกข้อมูลที่แก้ไขก่อนตรวจความพร้อมหรือส่งใบสมัคร'));
     if(confirming){const confirm=node('section','application-confirm');confirm.setAttribute('role','group');confirm.setAttribute('aria-label','ยืนยันส่งใบสมัคร');
       confirm.append(node('h3','','ยืนยันส่งใบสมัครฉบับนี้หรือไม่?'),node('p','','เมื่อส่งแล้ว ข้อมูลและชุดเอกสารจะถูกล็อกและส่งให้ผู้ประสานงานตรวจสอบ ไม่สามารถแก้ไขเองได้'),
+        node('p','',`ยืนยันใช้เกณฑ์หลักสูตร ${current()} ปีต้นทาง ${app.policy?.source_year || 'รอยืนยัน'} ฉบับ v${app.policy?.version || 'รอยืนยัน'} และรับทราบว่าต้องผ่าน ${current()==='61'?'คพ.302':'คพ.301'} ก่อนออกฝึก`),
         button('ยืนยันส่งและล็อกข้อมูล',()=>run(async()=>{const body=operation('submit',{expected_version:app.version,expected_policy_id:app.policy?.id || null});
           const sent=await client.submit(app.id,body,{signal});if(signal?.aborted)return;app=sent;draft=copy(sent.payload);dirty=false;errors=[];result=null;selectedFiles.clear();message='ส่งใบสมัครสำเร็จ รอผู้ประสานงานตรวจสอบ';}),false),
         button('ยกเลิกการส่ง',()=>{confirming=false;render();}));s.append(confirm);queueMicrotask(()=>confirm.querySelector('button')?.focus());}

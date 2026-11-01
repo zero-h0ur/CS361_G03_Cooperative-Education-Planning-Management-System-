@@ -7,6 +7,7 @@ const {renderApplicationWorkspace}=require('../tmp/frontend-test-modules/student
 const {createApplicationPreview,APPLICATION_PREVIEW_ID:ID}=require('../tmp/frontend-test-modules/application-preview-fixtures.cjs');
 const {getRoute,canRoleAccessRoute}=require('../tmp/frontend-test-modules/routes.cjs');
 const {createShellApp}=require('../tmp/frontend-test-modules/shell-app.cjs');
+const {createWorkspacePreviewClients}=require('../tmp/frontend-test-modules/workspace-preview-fixtures.cjs');
 const flush=()=>new Promise(r=>setTimeout(r,0));
 const response=(data,status=200)=>({ok:status<300,status,json:async()=>status<300?{data}:{error:data}});
 const button=(root,label)=>Array.from(root.querySelectorAll('button')).find(b=>b.textContent===label);
@@ -108,6 +109,15 @@ test('list binds each existing application to its own route and filters already-
   expect(getRoute('#/student/application/'+ID).params.applicationId).toBe(ID);
   for(const role of ['STAFF','ADVISOR','COORDINATOR','COMMITTEE','ADMIN'])expect(canRoleAccessRoute(role,'#/student/application/'+ID)).toBe(false);
   expect(getRoute('#/student/application/not-a-uuid')).toBeNull();
+});
+test.each(['application-pending','application-ready','application-failed','application-conflict','application-submitted'])('actual preview composition boots %s without sending it into the old Plan fixture model',async scenario=>{
+  const clients=createWorkspacePreviewClients({role:'STUDENT',scenario,delayMs:0});
+  expect(await clients.loadSession()).toMatchObject({role:'STUDENT'});
+  const root=document.createElement('div');document.body.append(root);
+  const app=createShellApp({...clients,root,location:{hash:'#/student/application/'+ID},eventTarget:new EventTarget(),
+    startLogin:async()=>{},restartLogin:async()=>{},logout:async()=>{}});
+  try{await app.start();await flush();await flush();expect(root.querySelector('.application-editor')).not.toBeNull();expect(root.textContent).toContain('Local Preview');}
+  finally{app.destroy();}
 });
 test('client uses protected API, no-store, no auth leakage to S3 and retries uncertain completion with same receipt',async()=>{
   const ticket='14100000-0000-4000-8000-000000000020',op='14100000-0000-4000-8000-000000000021',complete='14100000-0000-4000-8000-000000000022';

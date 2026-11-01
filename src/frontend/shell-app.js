@@ -690,10 +690,11 @@ export function createShellApp({
       bodyNode: customBody
     });
     const studentPages = ['#/student/profile', '#/student/plan', '#/student/application'];
+    const isStudentPage=hash=>studentPages.includes(getRoute(hash)?.navHash || hash);
     const existingLayout = root.querySelector('.protected-shell--student');
     const existingMain = existingLayout?.querySelector('.shell-content');
     const reuseStudentShell = currentRole === 'STUDENT' && existingMain &&
-      previousHash !== route.hash && studentPages.includes(previousHash) && studentPages.includes(route.hash);
+      previousHash !== route.hash && isStudentPage(previousHash) && isStudentPage(route.hash);
     const doc = root.ownerDocument;
     const reducedMotion = doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     let useViewTransition = reuseStudentShell && !reducedMotion && typeof doc.startViewTransition === 'function';
@@ -710,7 +711,7 @@ export function createShellApp({
         existingMain.dataset.routeMotion = useViewTransition ? 'view-transition' : 'css';
         existingMain.replaceChildren(...main.childNodes);
         for (const link of existingLayout.querySelectorAll('.shell-nav__link')) {
-          const active = link.getAttribute('href') === route.hash;
+          const active = link.getAttribute('href') === (route.navHash || route.hash);
           link.classList.toggle('shell-nav__link--active', active);
           if (active) link.setAttribute('aria-current', 'page');
           else link.removeAttribute('aria-current');

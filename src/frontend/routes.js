@@ -22,6 +22,9 @@ const ROUTE_DEFINITIONS = Object.freeze([
     description: 'ตรวจสอบข้อมูลทางการและเตรียมพร้อมสำหรับแผนสหกิจของคุณ',
     status: 'ข้อมูลทางการอ่านอย่างเดียว ผ่าน Student self-profile API'
   }),
+  Object.freeze({hash:'#/student/application',role:'STUDENT',navLabel:'สมัครเข้าแผนสหกิจ',
+    eyebrow:'PHASE 1 APPLICATION',title:'สมัครเข้าแผนสหกิจศึกษา',
+    description:'จัดทำใบสมัครและเอกสาร ตรวจความพร้อม และส่งให้ผู้ประสานงาน',status:'บันทึก Draft แยกตามรอบรับสมัคร'}),
   Object.freeze({
     hash: '#/student/plan',
     role: 'STUDENT',
@@ -29,12 +32,9 @@ const ROUTE_DEFINITIONS = Object.freeze([
     eyebrow: 'CO-OP PLAN',
     title: 'แผนสหกิจของฉัน',
     description: 'ตรวจสอบข้อมูลและสถานะแผนก่อนส่งให้เจ้าหน้าที่',
-    status: 'การจัดการ Plan จริงจะเชื่อมต่อใน Issue #66'
+    status: 'แผนระบบ V3 เดิม ไม่ใช่ใบสมัคร Phase 1'
   }),
-  Object.freeze({hash:'#/student/application',role:'STUDENT',navLabel:'สมัครเข้าแผนสหกิจ',
-    eyebrow:'PHASE 1 APPLICATION',title:'สมัครเข้าแผนสหกิจศึกษา',
-    description:'จัดทำใบสมัครและเอกสาร ตรวจความพร้อม และส่งให้ผู้ประสานงาน',status:'บันทึก Draft แยกตามรอบรับสมัคร'}),
-  Object.freeze({hash:'#/student/selection',role:'STUDENT',navLabel:'สถานะการคัดเลือก',
+  Object.freeze({hash:'#/student/selection',role:'STUDENT',navLabel:'สถานะระบบเดิม (V3)',
     eyebrow:'APPLICATION STATUS',title:'สถานะการคัดเลือก',description:'ตรวจสถานะการรับเรื่องและจำนวนความเห็นกรรมการของแผนคุณ',
     status:'ผลการคัดเลือกยังรอประกาศ ไม่แสดงความเห็นรายบุคคล'}),
   Object.freeze({

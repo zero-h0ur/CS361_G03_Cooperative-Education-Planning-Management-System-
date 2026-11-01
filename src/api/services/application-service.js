@@ -2,7 +2,7 @@ const {randomUUID,createHash}=require('node:crypto');
 const {ApplicationRepository}=require('../../db/repositories/application-repository');
 const {UnauthorizedError,ForbiddenError,ConflictError,InvalidStateTransitionError,ValidationError,ServiceUnavailableError}=require('../errors');
 const v=require('./application-input');
-const {templates,readiness}=require('./application-policy');
+const {templates,readiness,effectiveCriteria}=require('./application-policy');
 function canonical(value) {
   if(Array.isArray(value))return value.map(canonical);
   if(value && typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]));
@@ -14,7 +14,8 @@ function guard(actor,write=false) {
   v.uuid(actor.userId,'actor');
   if(actor.accountStatus!=='ACTIVE' || !(write?['STUDENT']:['STUDENT','COORDINATOR']).includes(actor.role))throw new ForbiddenError();
 }
-const safePolicy=p=>p?{id:p.id,version:p.version,curriculum:p.curriculum,source_year:p.source_year,source:p.source,verified:p.verified,synthetic:p.synthetic,data:p.data}:null;
+const safePolicy=p=>p?{id:p.id,version:p.version,curriculum:p.curriculum,source_year:p.source_year,source:p.source,verified:p.verified,synthetic:p.synthetic,data:p.data,
+  effective_criteria:p.effective_criteria || effectiveCriteria(p.curriculum)}:null;
 class ApplicationService {
   constructor(options={}) {
     this.repository=options.repository || new ApplicationRepository(options);

@@ -18,7 +18,7 @@ export function createApplicationClient({apiBaseUrl,getAccessToken,fetchImpl=glo
     const allowed=/^\/api\/v4\/(?:application-options|applications(?:\/[a-f0-9-]{36}(?:\/(?:readiness|submit|uploads(?:\/[a-f0-9-]{36}\/(?:complete|content))?|documents\/[a-f0-9-]{36}\/(?:download|content)))?)?)$/i;
     if(!apiBaseUrl || !allowed.test(suffix))throw new ApplicationError('CONFIGURATION','ตั้งค่า API ไม่ครบ');
     const base=new URL(apiBaseUrl,currentOrigin);
-    if(base.username || base.password || (base.protocol!=='https:' && !['localhost','127.0.0.1'].includes(base.hostname)))throw new ApplicationError('CONFIGURATION','API ต้องใช้ HTTPS');
+    if(base.username || base.password || !['https:','http:'].includes(base.protocol) || (base.protocol!=='https:' && !['localhost','127.0.0.1'].includes(base.hostname)))throw new ApplicationError('CONFIGURATION','API ต้องใช้ HTTPS');
     base.pathname=base.pathname.replace(/\/$/,'')+suffix;base.search='';base.hash='';return base.href;
   }
   async function auth() {

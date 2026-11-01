@@ -1,10 +1,10 @@
 import '../../src/frontend/authenticated-shell.css';
 import './preview.css';
 import { createShellApp } from '../../src/frontend/shell-app.js';
-import { createPreviewClients, SCENARIOS, ADVISOR_SCENARIOS } from './fixtures.js';
-import { enhanceWorkflowPreview } from './workflow-fixtures.js';
-import { selectionPreview, SELECTION_SCENARIOS } from './selection-fixtures.js';
-import {createApplicationPreview,APPLICATION_SCENARIOS} from './application-fixtures.js';
+import { SCENARIOS, ADVISOR_SCENARIOS } from './fixtures.js';
+import { SELECTION_SCENARIOS } from './selection-fixtures.js';
+import {APPLICATION_SCENARIOS} from './application-fixtures.js';
+import {createWorkspacePreviewClients} from './workspace-fixtures.js';
 
 const params = new URLSearchParams(location.search);
 const defaultRoutes = { STUDENT: '#/student/plan', STAFF: '#/staff/students', ADVISOR: '#/advisor/students', ADMIN:'#/admin/operations',
@@ -36,6 +36,7 @@ select.value = Object.hasOwn(scenarios, scenario) ? scenario : defaultScenario;
 select.addEventListener('change', () => {
   const url = new URL(location.href);
   url.search = new URLSearchParams({ scenario: select.value, role: role.value }).toString();
+  if(Object.hasOwn(APPLICATION_SCENARIOS,select.value))url.hash='#/student/application';
   location.assign(url);
 });
 label.append(select);
@@ -47,9 +48,7 @@ reset.addEventListener('click', () => location.reload());
 document.getElementById('previewControls').append(notice, roleLabel, label, reset);
 
 if (!location.hash) location.hash = defaultRoutes[role.value];
-const clients = ['COORDINATOR','COMMITTEE'].includes(role.value) ? selectionPreview(role.value,select.value) :
-  enhanceWorkflowPreview(createPreviewClients({ scenario: select.value, role: role.value }),{scenario:select.value,role:role.value});
-if(role.value==='STUDENT')clients.applicationClient=createApplicationPreview({scenario:Object.hasOwn(APPLICATION_SCENARIOS,select.value)?select.value:'application-pending'});
+const clients = createWorkspacePreviewClients({role:role.value,scenario:select.value});
 createShellApp({
   ...clients, root: document.getElementById('authenticatedApp'),
   location, eventTarget: window, storage: null,

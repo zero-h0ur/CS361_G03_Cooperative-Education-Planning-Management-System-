@@ -67,3 +67,5 @@ await build({
 
 await build({entryPoints:[resolve(workspace,'scripts/ui-preview/application-fixtures.js')],bundle:true,
   platform:'node',format:'cjs',target:['node18'],outfile:resolve(outputDirectory,'application-preview-fixtures.cjs'),logLevel:'silent'});
+await build({entryPoints:[resolve(workspace,'scripts/ui-preview/workspace-fixtures.js')],bundle:true,
+  platform:'node',format:'cjs',target:['node18'],outfile:resolve(outputDirectory,'workspace-preview-fixtures.cjs'),logLevel:'silent'});
