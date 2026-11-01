@@ -75,6 +75,7 @@ test('V3-T05 deployed anonymous/authentication boundary', { timeout: 180000 }, a
     ['PATCH', `/api/v3/plans/${ID}`], ['DELETE', `/api/v3/plans/${ID}`],
     ...['submit', 'start-review', 'return', 'approve'].map(command => ['POST', `/api/v3/plans/${ID}/${command}`]),
     ['POST', `/api/v3/coordinator/plans/${ID}/acknowledge`],
+    ['POST', `/api/v3/coordinator/plans/${ID}/return`],
     ['POST', `/api/v3/committee/plans/${ID}/opinion`]
   ];
   for (const [method, path] of writes) {
