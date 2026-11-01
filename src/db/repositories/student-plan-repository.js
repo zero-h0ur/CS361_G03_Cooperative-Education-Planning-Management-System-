@@ -23,12 +23,19 @@ class StudentPlanRepository extends WorkflowRepository {
     const result = await this.query(`
       SELECT r.id, r.name, r.academic_year, r.semester, r.status
       FROM rounds r
-      WHERE r.visibility = 'public'
-        AND EXISTS (
+      WHERE EXISTS (
           SELECT 1 FROM students s
           JOIN users u ON u.id = s.user_id
           WHERE s.id = $1 AND u.id = $2
             AND u.role = 'STUDENT' AND u.account_status = 'ACTIVE'
+            AND (
+              r.visibility = 'public'
+              OR EXISTS (
+                SELECT 1 FROM selection_cohorts c
+                WHERE c.cycle_id = r.id AND c.status = 'ACTIVE'
+                  AND c.department = s.department AND c.program = s.program
+              )
+            )
         )
       ORDER BY r.academic_year DESC, r.semester DESC NULLS LAST, r.name ASC, r.id ASC
     `, [studentId, userId]);

@@ -14,7 +14,7 @@
     "test:ui-preview": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/ui-preview.test.js && node --test tests/ui-preview-server.test.mjs",
     "package:lambda": "node scripts/package-lambda.mjs",
     "migrate": "node src/db/migrate.js",
-    "test": "npm run test:dataset && npm run test:fixtures && npm run test:api && npm run test:directory-db && npm run test:contract && npm run test:auth && npm run test:authz && npm run test:workflow && npm run test:session && npm run test:profile && npm run test:plan && npm run test:staff && npm run test:review && npm run test:staff-plan && npm run test:submit && npm run test:history && npm run test:advisor && npm run test:v3-t02 && npm run test:v3-t03 && npm run test:lambda && npm run test:runtime-grants && npm run test:frontend && npm run test:migration && npm run test:dal && npm run test:three-role && npm run test:workflow-ui",
+    "test": "npm run test:dataset && npm run test:fixtures && npm run test:api && npm run test:directory-db && npm run test:contract && npm run test:auth && npm run test:authz && npm run test:workflow && npm run test:session && npm run test:profile && npm run test:plan && npm run test:staff && npm run test:review && npm run test:staff-plan && npm run test:submit && npm run test:history && npm run test:advisor && npm run test:v3-t02 && npm run test:v3-t03 && npm run test:lambda && npm run test:runtime-grants && npm run test:frontend && npm run test:migration && npm run test:dal && npm run test:three-role && npm run test:workflow-ui && npm run test:selection && npm run test:v4-build",
     "test:api": "jest --runInBand tests/api.test.js tests/directory-api.test.js",
     "test:contract": "jest --runInBand tests/v3-api-contract.test.js",
     "test:auth": "jest --runInBand tests/auth-context.test.js",
@@ -42,13 +42,16 @@
     "test:migration": "jest --runInBand tests/v3-migration.test.js tests/v3-t01-migrations-constraints-fixtures.test.js",
     "test:deployment": "node --test tests/deployed-v2.test.mjs",
     "test:docs": "node --test tests/docs-links.test.mjs && node scripts/verify-doc-links.mjs",
-    "test:deployed-security": "node --test tests/deployed-v2.test.mjs tests/deployed-v3-anonymous.test.mjs",
+    "test:deployed-security": "node --test --test-concurrency=1 tests/deployed-v2.test.mjs tests/deployed-v3-anonymous.test.mjs",
     "seed": "node src/db/seed.js",
     "seed:v3": "node src/db/seed.js --v3",
     "seed:v2": "node src/db/seed.js --v2-only",
     "test:directory-db": "node --test tests/partner-import-postgres.test.mjs",
     "test:three-role": "node --test tests/three-role-workflow.test.mjs",
-    "test:workflow-ui": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/three-role-ui.test.js"
+    "test:workflow-ui": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/three-role-ui.test.js",
+    "test:selection": "node --test tests/selection-workflow.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/selection-api.test.js tests/selection-ui.test.js",
+    "build:v4": "node scripts/build-v4.mjs",
+    "test:v4-build": "node --test tests/v4-build.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "3.1152.0",

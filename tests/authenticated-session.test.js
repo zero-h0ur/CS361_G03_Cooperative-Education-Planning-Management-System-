@@ -18,8 +18,8 @@ function response(status, payload) {
 }
 
 describe('authenticated V3 session client', () => {
-  it('accepts the four V3 shell roles, keeping Admin separate from Staff', () => {
-    expect(SUPPORTED_ROLES).toEqual(['STUDENT', 'STAFF', 'ADVISOR', 'ADMIN']);
+  it('accepts separate legacy, Coordinator, Committee and Admin roles without aliases', () => {
+    expect(SUPPORTED_ROLES).toEqual(['STUDENT', 'STAFF', 'ADVISOR', 'ADMIN', 'COORDINATOR', 'COMMITTEE']);
   });
 
   it('calls /api/v3/me with an Access Token and returns only role and the review capability', async () => {
@@ -57,6 +57,8 @@ describe('authenticated V3 session client', () => {
     ['STAFF', undefined, false],
     // A capability on any other role is never trusted to render review controls (#77)
     ['ADVISOR', { canReviewPlan: true }, false],
+    ['COORDINATOR', { canReviewPlan: true }, false],
+    ['COMMITTEE', { canReviewPlan: true }, false],
     ['STUDENT', { canReviewPlan: true }, false]
   ])('keeps canReviewPlan only for %s with a boolean true capability (%#)', async (role, capabilities, expected) => {
     const client = createSessionClient({

@@ -6,6 +6,7 @@
  * - POST /api/v3/plans/:planId/submit     { expected_version, operation_id } (#69, section 3.9)
  * - GET  /api/companies/:id                     public company display name
  * - GET  /api/v3/directory/positions/:id         authenticated position display name
+ * - GET  /api/v3/directory/companies            authenticated company/position search
  */
 
 export const STUDENT_PLAN_ERROR_CODES = Object.freeze({
@@ -342,10 +343,10 @@ export function createStudentPlanClient({
         Object.freeze({ id, name, academic_year, semester, status }));
     },
 
-    async searchCompanies({ q = '', page = 1, signal } = {}) {
-      const query = new URLSearchParams({ q: q.trim(), page: String(page), pageSize: '10' });
-      const payload = await requestJson(buildApiUrl(apiBaseUrl, currentOrigin, '/api/directory/companies', query.toString()), {
-        signal, authenticated: false
+    async searchCompanies({ q = '', page = 1, recruitingOnly = true, signal } = {}) {
+      const query = new URLSearchParams({ q: q.trim(), page: String(page), pageSize: '10', recruitingOnly: String(recruitingOnly) });
+      const payload = await requestJson(buildApiUrl(apiBaseUrl, currentOrigin, '/api/v3/directory/companies', query.toString()), {
+        signal
       });
       if (!Array.isArray(payload?.data) || payload.data.some((row) => !row || typeof row.id !== 'string' || typeof row.name !== 'string') ||
           !Number.isInteger(payload?.pagination?.totalPages) || payload.pagination.totalPages < 0) {

@@ -1258,6 +1258,9 @@ html.student-route-transition::view-transition-new(student-route-content) {
   color: var(--shell-ink);
 }
 
+.plan-editor__recruiting-filter { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.plan-editor__recruiting-filter input { width: 22px; height: 22px; flex: 0 0 auto; accent-color: var(--shell-primary); }
+
 .student-form__input {
   min-width: 0;
   width: 100%;
@@ -2042,3 +2045,14 @@ html.student-route-transition::view-transition-new(student-route-content) {
     transition-duration: 0.01ms !important;
   }
 }
+/* Separate selection workspaces; never restyle legacy Staff/Advisor controls. */
+.selection-workspace, .selection-applications { display: grid; gap: 20px; min-width: 0; }
+.selection-workspace .workflow-card { min-width: 0; padding: clamp(18px, 3vw, 28px); border: 1px solid #e6dfe2; border-radius: 18px; background: #fff; overflow-wrap: anywhere; }
+.selection-workspace .workflow-card h2, .selection-workspace .workflow-card h3 { margin-top: 0; }
+.selection-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 16px; align-items: end; }
+.selection-workspace label { display: grid; gap: 8px; min-width: 0; font-weight: 600; }
+.selection-workspace select, .selection-workspace textarea { box-sizing: border-box; width: 100%; max-width: 100%; padding: 12px; border: 1px solid #c9bfc4; border-radius: 10px; background: #fff; color: #25212a; font: inherit; }
+.selection-workspace textarea { resize: vertical; min-height: 110px; }
+.selection-opinion-form { display: grid; gap: 16px; margin-top: 20px; }
+.selection-workspace button:focus-visible, .selection-workspace select:focus-visible, .selection-workspace textarea:focus-visible { outline: 3px solid #b62235; outline-offset: 3px; }
+@media (max-width: 700px) { .selection-filters { grid-template-columns: minmax(0, 1fr); } }

@@ -158,6 +158,21 @@ describe('Issue #73 Plan editor', () => {
     expect(root.querySelector(`#plan-company_id option[value="${COMPANY2}"]`)).not.toBeNull();
   });
 
+  test('filters companies with positions by default, preserves entered Plan data, and supports the full registry', async () => {
+    const { root, planClient } = await mount(basePlan);
+    const checkbox = root.querySelector('#plan-recruiting-only');
+    expect(checkbox.checked).toBe(true);
+    expect(planClient.searchCompanies).toHaveBeenLastCalledWith(expect.objectContaining({ recruitingOnly: true, page: 1 }));
+    change(root, 'notes', 'ยังไม่ได้บันทึก', 'input');
+    checkbox.checked = false;checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    await flush();
+    expect(planClient.searchCompanies).toHaveBeenLastCalledWith(expect.objectContaining({ recruitingOnly: false, page: 1 }));
+    expect(root.querySelector('#plan-notes').value).toBe('ยังไม่ได้บันทึก');
+    expect(root.querySelector('#plan-company_id').value).toBe(COMPANY);
+    expect(root.querySelector('#plan-position_id').value).toBe(POSITION);
+    expect(planClient.saveDraft).not.toHaveBeenCalled();
+  });
+
   test('stale save keeps entered notes visible and requires explicit reload before another save', async () => {
     const { root, planClient, hooks } = await mount(basePlan, {
       saveDraft: jest.fn(async () => { throw error('STALE_RECORD_CONFLICT'); })
@@ -290,12 +305,12 @@ describe('Issue #73 Plan editor', () => {
 
 describe('Issue #73 client wire contract', () => {
   const json = (status, payload) => ({ ok: status >= 200 && status < 300, status, json: async () => payload });
-  test('uses real reference URLs, sends no token to public API, and writes POST/PATCH allowlists', async () => {
+  test('uses protected recruiting filters and writes only POST/PATCH allowlists', async () => {
     const fetchImpl = jest.fn(async (url, init) => {
       const path = new URL(url).pathname;
       if (path.endsWith('/cycles')) return json(200, { data: cycles });
       if (path.endsWith('/positions')) return json(200, { data: [{ id: POSITION, company_id: COMPANY, title: 'Developer' }] });
-      if (path === '/api/directory/companies') return json(200, { data: [{ id: COMPANY, name: 'A' }], pagination: { totalPages: 1 } });
+      if (path === '/api/v3/directory/companies') return json(200, { data: [{ id: COMPANY, name: 'A' }], pagination: { totalPages: 1 } });
       return json(init.method === 'POST' ? 201 : 200, { data: basePlan });
     });
     const api = createStudentPlanClient({ apiBaseUrl: 'https://api.example.com', currentOrigin: 'https://app.example.com',
@@ -305,13 +320,24 @@ describe('Issue #73 client wire contract', () => {
     await api.saveDraft({ content, operationId: OP });
     await api.saveDraft({ planId: PLAN, content, operationId: OP, expectedVersion: 3 });
     expect(fetchImpl.mock.calls[0][1].headers.Authorization).toBe('Bearer TOKEN');
-    expect(fetchImpl.mock.calls[1][1].headers.Authorization).toBeUndefined();
+    expect(fetchImpl.mock.calls[1][1].headers.Authorization).toBe('Bearer TOKEN');
     expect(fetchImpl.mock.calls[2][1].headers.Authorization).toBe('Bearer TOKEN');
     expect(new URL(fetchImpl.mock.calls[1][0]).searchParams.get('page')).toBe('2');
+    expect(new URL(fetchImpl.mock.calls[1][0]).searchParams.get('recruitingOnly')).toBe('true');
     expect(fetchImpl.mock.calls[3][1].method).toBe('POST');
     expect(JSON.parse(fetchImpl.mock.calls[4][1].body)).toEqual({
       cycle_id: CYCLE, company_id: COMPANY, position_id: POSITION, notes: 'ข้อความ', operation_id: OP, expected_version: 3
     });
+  });
+
+  test('can explicitly include companies without positions without making a public data request', async () => {
+    const fetchImpl = jest.fn(async () => json(200, { data: [], pagination: { totalPages: 0 } }));
+    const api = createStudentPlanClient({ apiBaseUrl: 'https://api.example.com', getAccessToken: async () => 'TOKEN', fetchImpl });
+    await api.searchCompanies({ recruitingOnly: false });
+    const [url,init] = fetchImpl.mock.calls[0];
+    expect(new URL(url).pathname).toBe('/api/v3/directory/companies');
+    expect(new URL(url).searchParams.get('recruitingOnly')).toBe('false');
+    expect(init.headers.Authorization).toBe('Bearer TOKEN');
   });
 
   test('rejects mismatched public Position and distinguishes duplicate-Cycle conflict', async () => {

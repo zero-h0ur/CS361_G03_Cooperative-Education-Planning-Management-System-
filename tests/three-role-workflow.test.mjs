@@ -78,7 +78,7 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
       const result=await adminService.read(adminActor);
       assert.ok(result.accounts.some(row=>row.role==='ADMIN'));
       assert.equal(result.student_workflow_access,false);
-      assert.equal(result.migrations.length,8);
+      assert.equal(result.migrations.length,9);
       assert.ok(result.accounts.every(row=>Object.keys(row).sort().join(',')==='account_status,id,role,version'));
       for(const actor of [staff,advisor])await assert.rejects(adminService.read(actor),e=>e.statusCode===403);
       await assert.rejects(service.dashboard(adminActor),e=>e.statusCode===403);

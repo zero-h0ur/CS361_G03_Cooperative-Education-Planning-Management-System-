@@ -60,6 +60,7 @@ describe('Data Access Layer', () => {
         '006_advisor_display_name.sql',
         '007_submission_policy_integrity.sql',
         '008_returned_plan_cancellation.sql',
+        '009_coordinator_committee_selection.sql',
       ]);
       for (const migration of res.rows) {
         expect(migration.checksum).toMatch(/^[0-9a-f]{64}$/);

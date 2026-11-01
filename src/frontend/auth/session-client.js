@@ -1,6 +1,6 @@
 import { AUTH_ERROR_CODES, AuthShellError } from './auth-errors.js';
 
-export const SUPPORTED_ROLES = Object.freeze(['STUDENT', 'STAFF', 'ADVISOR', 'ADMIN']);
+export const SUPPORTED_ROLES = Object.freeze(['STUDENT', 'STAFF', 'ADVISOR', 'ADMIN', 'COORDINATOR', 'COMMITTEE']);
 const SUPPORTED_ROLE_SET = new Set(SUPPORTED_ROLES);
 
 function buildMeEndpoint(apiBaseUrl, currentOrigin) {

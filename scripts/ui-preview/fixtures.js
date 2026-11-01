@@ -197,9 +197,10 @@ export function createPreviewClients({ role = 'STUDENT', scenario = role === 'AD
         return [{ id: ids.cycle, name: 'รอบที่ 1 ปีการศึกษา 2569 (จำลอง)', academic_year: 2569, semester: 1, status: 'OPEN' },
           { id: ids.cycle2, name: 'รอบที่ 2 ปีการศึกษา 2569 (จำลอง)', academic_year: 2569, semester: 2, status: 'OPEN' }];
       },
-      async searchCompanies({ q = '', signal } = {}) {
+      async searchCompanies({ q = '', recruitingOnly = true, signal } = {}) {
         await wait({ signal });
-        return { items: copy(companies.filter((item) => item.name.includes(q.trim()))), pagination: { page: 1, totalPages: 1 } };
+        return { items: copy(companies.filter((item) => (!recruitingOnly || positions.some(p=>p.company_id===item.id)) &&
+          (item.name.includes(q.trim()) || positions.some(p=>p.company_id===item.id && p.title.includes(q.trim()))))), pagination: { page: 1, totalPages: 1 } };
       },
       async getCompanyPositions({ companyId, signal }) {
         await wait({ signal }); return copy(positions.filter((item) => item.company_id === companyId));

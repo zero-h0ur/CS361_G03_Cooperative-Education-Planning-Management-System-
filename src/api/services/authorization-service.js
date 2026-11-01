@@ -25,6 +25,8 @@ const ROLES = Object.freeze({
   STUDENT: 'STUDENT',
   ADVISOR: 'ADVISOR',
   STAFF: 'STAFF',
+  COORDINATOR: 'COORDINATOR',
+  COMMITTEE: 'COMMITTEE',
   ADMIN: 'ADMIN',
   SYSTEM: 'SYSTEM'
 });
@@ -42,6 +44,11 @@ const PERMISSION_SCOPES = Object.freeze({
 const ACTIONS = Object.freeze({
   // Session bootstrap (#64)
   SESSION_READ_ME: 'session:read_me',
+  COORDINATOR_SELECTION_READ: 'selection:coordinator_read',
+  COORDINATOR_ACKNOWLEDGE: 'selection:acknowledge',
+  COMMITTEE_SELECTION_READ: 'selection:committee_read',
+  COMMITTEE_OPINION_CREATE: 'selection:opinion_create',
+  STUDENT_SELECTION_READ: 'selection:student_read',
   ADMIN_READ_OPERATIONS: 'admin:read_operations',
 
   // Company & Position permissions (#49)
@@ -120,6 +127,8 @@ const ADVISOR_HISTORICAL_PLAN_READ_ACTIONS = new Set([
 ]);
 
 const MUTATION_ACTIONS = new Set([
+  ACTIONS.COORDINATOR_ACKNOWLEDGE,
+  ACTIONS.COMMITTEE_OPINION_CREATE,
   ACTIONS.PLAN_REJECT,
   ACTIONS.WORKFLOW_STAFF_WRITE,
   ACTIONS.COMPANY_CREATE,
@@ -152,6 +161,13 @@ const MUTATION_ACTIONS = new Set([
 const STUDENT_EDITABLE_PLAN_STATES = new Set(['DRAFT', 'NEEDS_REVISION']);
 
 const PERMISSION_MATRIX = Object.freeze({
+  // Role gates here; SelectionService independently rechecks cohort membership,
+  // application ownership and active database roles for every read and command.
+  [ACTIONS.COORDINATOR_SELECTION_READ]: Object.freeze({ [ROLES.COORDINATOR]: PERMISSION_SCOPES.AUTHENTICATED }),
+  [ACTIONS.COORDINATOR_ACKNOWLEDGE]: Object.freeze({ [ROLES.COORDINATOR]: PERMISSION_SCOPES.AUTHENTICATED }),
+  [ACTIONS.COMMITTEE_SELECTION_READ]: Object.freeze({ [ROLES.COMMITTEE]: PERMISSION_SCOPES.AUTHENTICATED }),
+  [ACTIONS.COMMITTEE_OPINION_CREATE]: Object.freeze({ [ROLES.COMMITTEE]: PERMISSION_SCOPES.AUTHENTICATED }),
+  [ACTIONS.STUDENT_SELECTION_READ]: Object.freeze({ [ROLES.STUDENT]: PERMISSION_SCOPES.AUTHENTICATED }),
   [ACTIONS.ADMIN_READ_OPERATIONS]: Object.freeze({ [ROLES.ADMIN]: PERMISSION_SCOPES.AUTHENTICATED }),
   [ACTIONS.PLAN_REJECT]: Object.freeze({ [ROLES.STAFF]: PERMISSION_SCOPES.SCOPED }),
   [ACTIONS.WORKFLOW_STAFF_WRITE]: Object.freeze({ [ROLES.STAFF]: PERMISSION_SCOPES.SCOPED }),
@@ -161,6 +177,8 @@ const PERMISSION_MATRIX = Object.freeze({
     [ROLES.ADVISOR]: PERMISSION_SCOPES.AUTHENTICATED,
     [ROLES.STAFF]: PERMISSION_SCOPES.AUTHENTICATED,
     [ROLES.ADMIN]: PERMISSION_SCOPES.AUTHENTICATED,
+    [ROLES.COORDINATOR]: PERMISSION_SCOPES.AUTHENTICATED,
+    [ROLES.COMMITTEE]: PERMISSION_SCOPES.AUTHENTICATED,
     [ROLES.SYSTEM]: PERMISSION_SCOPES.DENY
   }),
 
@@ -397,6 +415,8 @@ function getRoleCapabilities(role) {
     canAccessStaffStudentManagement: role === ROLES.STAFF,
     canAccessStaffReviewQueue: role === ROLES.STAFF
   };
+  if (role === ROLES.COORDINATOR) navigation.canAccessCoordinatorSelection = true;
+  if (role === ROLES.COMMITTEE) navigation.canAccessCommitteeSelection = true;
 
   return Object.freeze({
     role,
@@ -407,7 +427,9 @@ function getRoleCapabilities(role) {
           ? PERMISSION_SCOPES.ASSIGNED
           : role === ROLES.STAFF
             ? PERMISSION_SCOPES.SCOPED
-            : PERMISSION_SCOPES.DENY,
+            : [ROLES.COORDINATOR, ROLES.COMMITTEE].includes(role)
+              ? PERMISSION_SCOPES.AUTHENTICATED
+              : PERMISSION_SCOPES.DENY,
     canMutateStudentProfile: role === ROLES.STUDENT,
     canMutatePlanContent: role === ROLES.STUDENT,
     canSubmitPlan: role === ROLES.STUDENT,

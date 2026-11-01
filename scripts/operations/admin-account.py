@@ -53,7 +53,7 @@ def validate(value):
     for field in ('user_id', 'operation_id'):
         if str(uuid.UUID(value[field])) != value[field]:
             raise ValueError('INVALID_UUID')
-    if value['role'] not in {'STUDENT', 'STAFF', 'ADVISOR', 'ADMIN'} or value['account_status'] not in {'ACTIVE', 'DISABLED'}:
+    if value['role'] not in {'STUDENT', 'STAFF', 'ADVISOR', 'ADMIN', 'COORDINATOR', 'COMMITTEE'} or value['account_status'] not in {'ACTIVE', 'DISABLED'}:
         raise ValueError('INVALID_ROLE_OR_STATUS')
     if type(value['expected_version']) is not int or value['expected_version'] < 1:
         raise ValueError('INVALID_VERSION')
@@ -96,7 +96,9 @@ BEGIN
    RAISE EXCEPTION 'Cannot remove last active Admin' USING ERRCODE='42501'; END IF;
  IF target.role<>b->>'role' AND (
    EXISTS(SELECT 1 FROM public.staff_scopes WHERE staff_id=target.id AND status='ACTIVE') OR
-   EXISTS(SELECT 1 FROM public.advisor_assignments WHERE advisor_id=target.id AND status='ACTIVE' AND effective_to>CURRENT_TIMESTAMP)) THEN
+   EXISTS(SELECT 1 FROM public.advisor_assignments WHERE advisor_id=target.id AND status='ACTIVE' AND effective_to>CURRENT_TIMESTAMP) OR
+   EXISTS(SELECT 1 FROM public.selection_cohorts WHERE status='ACTIVE' AND target.id IN
+     (coordinator_id,committee_one,committee_two,committee_three))) THEN
    RAISE EXCEPTION 'Reconcile existing scopes/assignments first' USING ERRCODE='42501'; END IF;
  UPDATE public.users SET role=b->>'role',account_status=b->>'account_status',version=version+1,updated_at=CURRENT_TIMESTAMP
    WHERE id=target.id RETURNING jsonb_build_object('user_id',id,'role',role,'account_status',account_status,'version',version) INTO result;
