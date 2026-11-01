@@ -52,7 +52,7 @@
     "test:selection": "node --test tests/selection-workflow.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/selection-api.test.js tests/selection-ui.test.js",
     "build:v4": "node scripts/build-v4.mjs",
     "test:v4-build": "node --test tests/v4-build.test.mjs",
-    "test:application": "node --test tests/application.test.mjs"
+    "test:application": "node --test tests/application.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/application-ui.test.js tests/application-api.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1161.0",

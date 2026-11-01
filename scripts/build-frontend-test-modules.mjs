@@ -16,6 +16,9 @@ await build({
     resolve(workspace, 'src/frontend/public-navbar.js'),
     resolve(workspace, 'src/frontend/directory-client.js'),
     resolve(workspace, 'src/frontend/student/profile-client.js'),
+    resolve(workspace, 'src/frontend/student/application-client.js'),
+    resolve(workspace, 'src/frontend/student/application-view.js'),
+    resolve(workspace, 'src/frontend/student/application-editor-view.js'),
     resolve(workspace, 'src/frontend/student/student-dashboard-view.js'),
     resolve(workspace, 'src/frontend/student/plan-submission-client.js'),
     resolve(workspace, 'src/frontend/student/student-plan-view.js'),
@@ -61,3 +64,6 @@ await build({
   bundle: true, platform: 'node', format: 'cjs', target: ['node18'],
   outfile: resolve(outputDirectory, 'workflow-preview-fixtures.cjs'), logLevel: 'silent'
 });
+
+await build({entryPoints:[resolve(workspace,'scripts/ui-preview/application-fixtures.js')],bundle:true,
+  platform:'node',format:'cjs',target:['node18'],outfile:resolve(outputDirectory,'application-preview-fixtures.cjs'),logLevel:'silent'});

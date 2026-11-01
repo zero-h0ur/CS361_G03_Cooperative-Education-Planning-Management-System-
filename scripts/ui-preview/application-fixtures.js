@@ -1,0 +1,55 @@
+// This module is reachable only from Local UI Preview / tests, never production app.js.
+import policyModule from '../../src/api/services/application-policy.js';
+const {GROUPS,readiness}=policyModule;
+const copy=v=>JSON.parse(JSON.stringify(v));
+export const APPLICATION_SCENARIOS=Object.freeze({
+  'application-pending':'ใบสมัคร · รอยืนยันเกณฑ์',
+  'application-ready':'ใบสมัคร · พร้อมส่ง (เกณฑ์สมมติ)',
+  'application-failed':'ใบสมัคร · บันทึกล้มเหลว (เก็บที่กรอก)',
+  'application-conflict':'ใบสมัคร · ข้อมูลเปลี่ยนระหว่างใช้งาน',
+  'application-submitted':'ใบสมัคร · ส่งแล้ว (อ่านอย่างเดียว)'
+});
+export const APPLICATION_PREVIEW_ID='14100000-0000-4000-8000-000000000001';
+export function createApplicationPreview({scenario='application-pending'}={}) {
+  const cycle='14100000-0000-4000-8000-000000000002',otherCycle='14100000-0000-4000-8000-000000000003';
+  const verified=scenario!=='application-pending';
+  const official={student_id:'14100000-0000-4000-8000-000000000004',full_name:'ณัฐวดี ศิริกุล (ข้อมูลสมมติ)',student_number:'6609612345',institutional_email:'nattawadee.s@example.invalid',
+    department:'ภาควิชาวิทยาการคอมพิวเตอร์',program:'วิทยาศาสตรบัณฑิต',major:'วิทยาการคอมพิวเตอร์',curriculum:'66',entry_year:2566,academic_verified:true};
+  const policy={id:'14100000-0000-4000-8000-000000000005',version:1,curriculum:'66',source_year:2568,source:'เกณฑ์และหน่วยกิตสมมติสำหรับ Preview เท่านั้น',verified,synthetic:true,
+    data:{credits:verified?Object.fromEntries(GROUPS['66'].flat().map(c=>[c,'3'])):{},repeat_rule:verified?'LATEST':null,alternative_rule:'STUDENT_SELECTED'}};
+  const data={curriculum:'66',gpax:'3.24',major_group:'วิทยาการคอมพิวเตอร์',contact_address:'99/1 ถนนตัวอย่าง ตำบลคลองหนึ่ง อำเภอคลองหลวง ปทุมธานี 12120 (สมมติ)',contact_phone:'0000000000',
+    guardian_name:'วิภา ศิริกุล (สมมติ)',guardian_relationship:'มารดา',guardian_address:'99/1 ถนนตัวอย่าง ปทุมธานี (สมมติ)',guardian_phone:'0000000000',
+    interested_positions:['Software Developer','Frontend Developer'],skills:['JavaScript / TypeScript','ออกแบบส่วนติดต่อผู้ใช้','ทำงานเป็นทีม'],
+    course_attempts:GROUPS['66'].map(g=>({code:g[0],attempt:1,points:'3.00'})),selected_courses:{alternative:'CS213'},
+    additional_studies:{CS180:'STUDIED',CS262:'ENROLLED'},acknowledgements:{conduct:true,terms:true,preplacement:true}};
+  const docs=Object.entries({resume:'resume-example.pdf',transcript:'transcript-example.pdf',conduct:'conduct-example.pdf',photo:'student-example.png'}).map(([kind,filename],i)=>({
+    id:`14100000-0000-4000-8000-00000000001${i}`,kind,filename,byte_size:2048,content_type:kind==='photo'?'image/png':'application/pdf',checksum:'a'.repeat(64)}));
+  let apps=[{id:APPLICATION_PREVIEW_ID,cycle_id:cycle,student_id:official.student_id,status:scenario==='application-submitted'?'SUBMITTED':'DRAFT',version:1,payload:data,official,policy,
+    documents:scenario==='application-pending'?[]:docs,submitted_at:scenario==='application-submitted'?new Date().toISOString():null,preview:true}];
+  const cycles=[{id:cycle,name:'รอบ 1/2569 · ข้อมูลสมมติ',status:'OPEN',academic_year:2569,semester:1},
+    {id:otherCycle,name:'รอบ 2/2569 · ข้อมูลสมมติ',status:'OPEN',academic_year:2569,semester:2}];
+  const receipt=new Map();
+  function get(id){const app=apps.find(a=>a.id===id);if(!app)throw new Error('ไม่พบใบสมัครจำลอง');return app;}
+  function mutation(id,body,work){
+    if(scenario==='application-failed')throw new Error('จำลองการบันทึกล้มเหลว ข้อมูลที่กรอกยังอยู่');
+    if(scenario==='application-conflict')throw Object.assign(new Error('ข้อมูลเปลี่ยนจากอีกหน้าต่าง (จำลอง)'),{code:'STALE_RECORD_CONFLICT'});
+    if(receipt.has(body.operation_id))return copy(receipt.get(body.operation_id));
+    const app=get(id);if(app.status!=='DRAFT' || body.expected_version!==app.version)throw new Error('ไม่สามารถแก้ไขใบสมัครจำลองนี้');
+    work(app);app.version++;receipt.set(body.operation_id,copy(app));return copy(app);
+  }
+  const check=app=>readiness({app,official:app.official,policy:app.policy,documents:app.documents,window:{is_open:true},roundOpen:true,allowSynthetic:true});
+  return {
+    async options(){return copy({official,cycles,criteria:policyModule.templates(),storage_configured:false,preview:true});},
+    async list(){return copy(apps);},async get(id){return copy(get(id));},
+    async create(body){if(receipt.has(body.operation_id))return copy(receipt.get(body.operation_id));
+      if(apps.some(a=>a.cycle_id===body.cycle_id))throw new Error('มีใบสมัครในรอบนี้แล้ว');
+      const app={id:crypto.randomUUID(),cycle_id:body.cycle_id,student_id:official.student_id,status:'DRAFT',version:1,payload:{},official,policy,documents:[],preview:true};
+      apps.push(app);receipt.set(body.operation_id,copy(app));return copy(app);},
+    async save(id,body){return mutation(id,body,a=>{a.payload=copy(body.payload);});},
+    async readiness(id){return check(get(id));},
+    async submit(id,body){return mutation(id,body,a=>{if(!check(a).can_submit)throw new Error('ใบสมัครจำลองยังไม่พร้อม');a.status='SUBMITTED';a.submitted_at=new Date().toISOString();});},
+    async upload(id,kind,file,{version,operationId,onPhase=()=>{}}){onPhase('จำลองการอัปโหลด ไม่ส่งไฟล์ออกจากเครื่อง');return mutation(id,{expected_version:version,operation_id:operationId},a=>{
+      a.documents=[...a.documents.filter(d=>d.kind!==kind),{id:crypto.randomUUID(),kind,filename:file.name,byte_size:file.size}];});},
+    async download(){throw new Error('Preview มีเพียงข้อมูลเอกสารจำลอง ไม่ได้เก็บไฟล์จริง กรุณาทดสอบไฟล์จริงด้วยชุด integration');}
+  };
+}

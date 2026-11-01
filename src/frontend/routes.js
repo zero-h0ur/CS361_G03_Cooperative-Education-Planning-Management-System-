@@ -25,12 +25,15 @@ const ROUTE_DEFINITIONS = Object.freeze([
   Object.freeze({
     hash: '#/student/plan',
     role: 'STUDENT',
-    navLabel: 'แผนสหกิจ',
+    navLabel: 'แผนระบบเดิม (V3)',
     eyebrow: 'CO-OP PLAN',
     title: 'แผนสหกิจของฉัน',
     description: 'ตรวจสอบข้อมูลและสถานะแผนก่อนส่งให้เจ้าหน้าที่',
     status: 'การจัดการ Plan จริงจะเชื่อมต่อใน Issue #66'
   }),
+  Object.freeze({hash:'#/student/application',role:'STUDENT',navLabel:'สมัครเข้าแผนสหกิจ',
+    eyebrow:'PHASE 1 APPLICATION',title:'สมัครเข้าแผนสหกิจศึกษา',
+    description:'จัดทำใบสมัครและเอกสาร ตรวจความพร้อม และส่งให้ผู้ประสานงาน',status:'บันทึก Draft แยกตามรอบรับสมัคร'}),
   Object.freeze({hash:'#/student/selection',role:'STUDENT',navLabel:'สถานะการคัดเลือก',
     eyebrow:'APPLICATION STATUS',title:'สถานะการคัดเลือก',description:'ตรวจสถานะการรับเรื่องและจำนวนความเห็นกรรมการของแผนคุณ',
     status:'ผลการคัดเลือกยังรอประกาศ ไม่แสดงความเห็นรายบุคคล'}),
@@ -80,6 +83,8 @@ const ROUTE_DEFINITIONS = Object.freeze([
 // their parent. A hash with a malformed id is not allowlisted, so it never reaches the API.
 const UUID_SEGMENT = '([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})';
 const DETAIL_ROUTE_DEFINITIONS = Object.freeze([
+  Object.freeze({pattern:new RegExp(`^#/student/application/${UUID_SEGMENT}$`,'i'),param:'applicationId',navHash:'#/student/application',role:'STUDENT',
+    eyebrow:'PHASE 1 APPLICATION',title:'จัดทำใบสมัครเข้าแผนสหกิจศึกษา',description:'บันทึกฉบับร่าง ตรวจเกณฑ์และเอกสาร ก่อนยืนยันส่งครั้งแรก',status:'ข้อมูลทางการอ่านอย่างเดียว'}),
   Object.freeze({
     pattern: new RegExp(`^#/staff/plans/${UUID_SEGMENT}$`, 'i'),
     param: 'planId',

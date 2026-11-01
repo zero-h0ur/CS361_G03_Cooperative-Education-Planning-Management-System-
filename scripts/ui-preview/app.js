@@ -4,6 +4,7 @@ import { createShellApp } from '../../src/frontend/shell-app.js';
 import { createPreviewClients, SCENARIOS, ADVISOR_SCENARIOS } from './fixtures.js';
 import { enhanceWorkflowPreview } from './workflow-fixtures.js';
 import { selectionPreview, SELECTION_SCENARIOS } from './selection-fixtures.js';
+import {createApplicationPreview,APPLICATION_SCENARIOS} from './application-fixtures.js';
 
 const params = new URLSearchParams(location.search);
 const defaultRoutes = { STUDENT: '#/student/plan', STAFF: '#/staff/students', ADVISOR: '#/advisor/students', ADMIN:'#/admin/operations',
@@ -17,7 +18,7 @@ role.add(new Option('ผู้ประสานงาน (รับเรื่
 role.add(new Option('กรรมการ (ความเห็นรายบุคคล)', 'COMMITTEE'));
 role.value = Object.hasOwn(defaultRoutes, params.get('role')) ? params.get('role') : 'STUDENT';
 const selectionRole=['COORDINATOR','COMMITTEE'].includes(role.value);
-const scenarios = selectionRole?SELECTION_SCENARIOS:role.value === 'ADVISOR' ? ADVISOR_SCENARIOS : SCENARIOS;
+const scenarios = selectionRole?SELECTION_SCENARIOS:role.value === 'ADVISOR' ? ADVISOR_SCENARIOS : role.value==='STUDENT'?{...SCENARIOS,...APPLICATION_SCENARIOS}:SCENARIOS;
 const defaultScenario = selectionRole?'pending':role.value === 'ADVISOR' ? 'assigned' : 'draft';
 const scenario = params.get('scenario') || defaultScenario;
 roleLabel.append(role);
@@ -48,6 +49,7 @@ document.getElementById('previewControls').append(notice, roleLabel, label, rese
 if (!location.hash) location.hash = defaultRoutes[role.value];
 const clients = ['COORDINATOR','COMMITTEE'].includes(role.value) ? selectionPreview(role.value,select.value) :
   enhanceWorkflowPreview(createPreviewClients({ scenario: select.value, role: role.value }),{scenario:select.value,role:role.value});
+if(role.value==='STUDENT')clients.applicationClient=createApplicationPreview({scenario:Object.hasOwn(APPLICATION_SCENARIOS,select.value)?select.value:'application-pending'});
 createShellApp({
   ...clients, root: document.getElementById('authenticatedApp'),
   location, eventTarget: window, storage: null,

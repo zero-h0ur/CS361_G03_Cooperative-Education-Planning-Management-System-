@@ -266,7 +266,7 @@ describe('Issue #56 forward-only V3 migration', () => {
         migrate({ pool: isolated.pool, logger: SILENT_LOGGER }),
       ]);
       const result = await isolated.pool.query(`SELECT COUNT(*) FROM schema_migrations`);
-      expect(Number(result.rows[0].count)).toBe(9);
+      expect(Number(result.rows[0].count)).toBe(10);
     } finally {
       await dropIsolatedPool(isolated.schema, isolated.pool);
     }
