@@ -625,6 +625,18 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
   });
 
   const PROTECTED_ENDPOINTS = [
+    { method:'GET',path:'/api/v4/application-options' },
+    { method:'GET',path:'/api/v4/applications' },
+    { method:'POST',path:'/api/v4/applications' },
+    { method:'GET',path:`/api/v4/applications/${PLANS.planA_Draft.id}` },
+    { method:'PATCH',path:`/api/v4/applications/${PLANS.planA_Draft.id}` },
+    { method:'GET',path:`/api/v4/applications/${PLANS.planA_Draft.id}/readiness` },
+    { method:'POST',path:`/api/v4/applications/${PLANS.planA_Draft.id}/submit` },
+    { method:'POST',path:`/api/v4/applications/${PLANS.planA_Draft.id}/uploads` },
+    { method:'POST',path:`/api/v4/applications/${PLANS.planA_Draft.id}/uploads/${PLANS.planA_Draft.id}/complete` },
+    { method:'POST',path:`/api/v4/applications/${PLANS.planA_Draft.id}/documents/${PLANS.planA_Draft.id}/download` },
+    { method:'PUT',path:`/api/v4/applications/${PLANS.planA_Draft.id}/uploads/${PLANS.planA_Draft.id}/content` },
+    { method:'GET',path:`/api/v4/applications/${PLANS.planA_Draft.id}/documents/${PLANS.planA_Draft.id}/content` },
     { method: 'GET', path: '/api/v3/coordinator/applications' },
     { method: 'GET', path: '/api/v3/committee/applications' },
     { method: 'POST', path: `/api/v3/coordinator/plans/${PLANS.planA_Draft.id}/acknowledge` },

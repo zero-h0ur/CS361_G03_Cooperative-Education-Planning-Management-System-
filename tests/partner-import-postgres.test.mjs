@@ -65,6 +65,7 @@ test('import accepts the complete reviewed migration history 001 through 009', a
     '007_submission_policy_integrity.sql',
     '008_returned_plan_cancellation.sql',
     '009_coordinator_committee_selection.sql',
+    '010_phase1_applications_documents.sql',
   ]);
   await runImport(payload);
 });
