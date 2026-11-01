@@ -94,9 +94,11 @@ test('newly verified curriculum/email can be adopted explicitly without hidden i
 });
 test('in-page links respect reduced motion without animations blocking focus',async()=>{
   window.matchMedia=jest.fn(()=>({matches:true}));const {root}=await editor();
-  const section=root.querySelector('#application-documents');section.scrollIntoView=jest.fn();
-  root.querySelector('a[href="#application-documents"]').click();
-  expect(section.scrollIntoView).toHaveBeenCalledWith({behavior:'auto',block:'start'});expect(document.activeElement).toBe(section);
+  const scroll=jest.fn();Element.prototype.scrollIntoView=scroll;
+  root.querySelector('[aria-controls="application-documents"]').click();
+  const section=root.querySelector('#application-documents');
+  expect(section.hidden).toBe(false);expect(scroll).toHaveBeenCalledWith({behavior:'auto',block:'start'});expect(document.activeElement).toBe(section);
+  delete Element.prototype.scrollIntoView;
 });
 test('shell hash navigation cannot silently discard dirty input; session expiry still removes protected content',async()=>{
   const root=document.createElement('div');document.body.append(root);
@@ -119,7 +121,7 @@ test('list binds each existing application to its own route and filters already-
   for(const role of ['STAFF','ADVISOR','COORDINATOR','COMMITTEE','ADMIN'])expect(canRoleAccessRoute(role,'#/student/application/'+ID)).toBe(false);
   expect(getRoute('#/student/application/not-a-uuid')).toBeNull();
 });
-test.each(['application-pending','application-ready','application-failed','application-conflict','application-submitted'])('actual preview composition boots %s without sending it into the old Plan fixture model',async scenario=>{
+test.each(['application-pending','application-ready','application-61','application-failed','application-conflict','application-submitted'])('actual preview composition boots %s without sending it into the old Plan fixture model',async scenario=>{
   const clients=createWorkspacePreviewClients({role:'STUDENT',scenario,delayMs:0});
   expect(await clients.loadSession()).toMatchObject({role:'STUDENT'});
   const root=document.createElement('div');document.body.append(root);
@@ -127,6 +129,101 @@ test.each(['application-pending','application-ready','application-failed','appli
     startLogin:async()=>{},restartLogin:async()=>{},logout:async()=>{}});
   try{await app.start();await flush();await flush();expect(root.querySelector('.application-editor')).not.toBeNull();expect(root.textContent).toContain('Local Preview');}
   finally{app.destroy();}
+});
+
+test('six visible navigation stages preserve Draft fields and move focus without changing the route',async()=>{
+  const {root,client}=await editor('application-ready');
+  expect(root.querySelectorAll('.application-step-button')).toHaveLength(6);
+  expect(root.querySelectorAll('.application-step:not([hidden])')).toHaveLength(1);
+  const input=root.querySelector('#application-contact_email');input.value='different@example.invalid';input.dispatchEvent(new Event('input'));
+  button(root,'ถัดไป').click();expect(root.querySelector('#application-academic').hidden).toBe(false);
+  expect(document.activeElement.id).toBe('application-academic');button(root,'ย้อนกลับ').click();
+  expect(root.querySelector('#application-contact_email').value).toBe('different@example.invalid');
+  button(root,'บันทึกฉบับร่าง').click();await flush();await flush();
+  expect((await client.get(ID)).payload.contact_email).toBe('different@example.invalid');
+});
+
+test.each([['application-ready','CS261','CS301'],['application-61','CS264','CS302']])('curriculum-specific letter grades and declarations are shown: %s',async(scenario,last,future)=>{
+  const {root,client}=await editor(scenario);root.querySelector('[aria-controls="application-academic"]').click();
+  const grade=root.querySelector('#grade-'+last+'-1');expect(grade.tagName).toBe('SELECT');
+  expect(Array.from(grade.options).map(o=>o.textContent)).toContain('B+ (3.5)');
+  grade.value='3.5';grade.dispatchEvent(new Event('change'));
+  const choice=root.querySelector('#application-selected_courses');choice.value='CS216';choice.dispatchEvent(new Event('change'));
+  expect(root.textContent).toContain('ไม่คิดเป็น F');expect(root.querySelector('#grade-CS213-1')).toBeNull();
+  root.querySelector('[aria-controls="application-interests"]').click();
+  expect(root.querySelectorAll('[data-field^="acknowledgements."]')).toHaveLength(7);
+  expect(root.querySelector('#application-acknowledgements-preplacement').parentElement.textContent).toContain(future.replace('CS','คพ.'));
+  button(root,'บันทึกฉบับร่าง').click();await flush();await flush();
+  const p=(await client.get(ID)).payload;expect(p.course_attempts.find(r=>r.code===last).points).toBe('3.5');expect(p.course_attempts.some(r=>r.code==='CS213')).toBe(true);
+});
+
+test('multiple job choices, Other and long skills round-trip safely to review',async()=>{
+  const {root,client}=await editor('application-ready');root.querySelector('[aria-controls="application-interests"]').click();
+  const backend=root.querySelector('input[value="BACKEND"]');backend.checked=true;backend.dispatchEvent(new Event('change'));
+  const other=root.querySelector('#application-interested_position_other');other.value='Security engineer';other.dispatchEvent(new Event('input'));
+  const skills=root.querySelector('#application-skills_detail');skills.value='<img src=x onerror=alert(1)>\n'+('JavaScript testing '.repeat(100));skills.dispatchEvent(new Event('input'));
+  button(root,'บันทึกฉบับร่าง').click();await flush();await flush();root.querySelector('[aria-controls="application-review"]').click();
+  const p=(await client.get(ID)).payload;expect(p.interested_position_codes).toEqual(expect.arrayContaining(['FRONTEND','SOFTWARE','BACKEND','OTHER']));
+  expect(p.skills_detail.length).toBeGreaterThan(120);expect(root.querySelector('#application-review').textContent).toContain('Security engineer');expect(root.querySelector('#application-review img')).toBeNull();
+});
+
+test('readiness errors focus the summary then reveal and focus a field in another step',async()=>{
+  const client=createApplicationPreview({scenario:'application-ready'}),application=await client.get(ID);delete application.payload.guardian_phone;
+  client.readiness=async()=>({can_submit:false,blockers:[{field:'guardian_phone',message:'กรุณาระบุเบอร์ผู้ปกครอง'}]});
+  const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);
+  root.querySelector('[aria-controls="application-review"]').click();button(root,'ตรวจความพร้อม').click();await flush();await flush();
+  expect(document.activeElement).toBe(root.querySelector('[data-feedback]'));
+  root.querySelector('[data-feedback] a').click();expect(root.querySelector('#application-guardian').hidden).toBe(false);
+  const input=root.querySelector('#application-guardian_phone');expect(document.activeElement).toBe(input);expect(input.getAttribute('aria-invalid')).toBe('true');
+  expect(document.getElementById(input.getAttribute('aria-describedby')).textContent).toContain('เบอร์ผู้ปกครอง');
+});
+
+test('legacy Draft text is retained and new attestations are not automatically accepted',async()=>{
+  const client=createApplicationPreview(),application=await client.get(ID);application.payload.major_group='Legacy major';
+  application.payload.skills=['Legacy framework'];delete application.payload.skills_detail;application.payload.interested_positions=['Legacy position'];delete application.payload.interested_position_codes;
+  application.payload.acknowledgements={conduct:true,terms:true,preplacement:true};
+  const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);
+  expect(root.querySelector('#application-major_group').value).toBe('Legacy major');
+  root.querySelector('[aria-controls="application-interests"]').click();expect(root.textContent).toContain('Legacy position');expect(root.querySelector('#application-skills_detail').value).toBe('Legacy framework');
+  expect(root.querySelector('#application-acknowledgements-program').checked).toBe(false);
+  button(root,'บันทึกฉบับร่าง').click();await flush();await flush();
+  const p=(await client.get(ID)).payload;expect(p.interested_positions).toEqual(['Legacy position']);expect(p.acknowledgements.program).toBeUndefined();
+});
+
+test('guardian address copy is explicit and does not overwrite an existing address without confirmation',async()=>{
+  const {root}=await editor('application-ready');root.querySelector('[aria-controls="application-guardian"]').click();const original=root.querySelector('#application-guardian_address').value;
+  button(root,'ใช้ที่อยู่เดียวกับนักศึกษา').click();expect(root.querySelector('#application-guardian_address').value).toBe(original);
+  window.confirm.mockReturnValue(true);button(root,'ใช้ที่อยู่เดียวกับนักศึกษา').click();expect(root.querySelector('#application-guardian_address').value).toBe(root.querySelector('#application-contact_address').value);
+});
+
+test('blur validation keeps helper text and explicit saved values while marking invalid email',async()=>{
+  const {root}=await editor();const input=root.querySelector('#application-contact_email');input.value='bad';input.dispatchEvent(new Event('input'));input.dispatchEvent(new Event('blur'));
+  expect(input.getAttribute('aria-invalid')).toBe('true');expect(input.parentElement.textContent).toContain('กรุณาระบุอีเมล');
+  input.value='fixed@example.invalid';input.dispatchEvent(new Event('input'));input.dispatchEvent(new Event('blur'));expect(input.hasAttribute('aria-invalid')).toBe(false);
+});
+
+test('trusted language-specific names stay read-only; changing curriculum resets only affected declarations',async()=>{
+  const client=createApplicationPreview(),application=await client.get(ID);application.official.english_full_name='Verified Fictional Name';delete application.official.curriculum;
+  const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);
+  expect(root.querySelector('#application-english_full_name').readOnly).toBe(true);
+  root.querySelector('[aria-controls="application-academic"]').click();const choice=root.querySelector('#application-curriculum');choice.value='61';choice.dispatchEvent(new Event('change'));
+  expect(root.querySelector('#application-acknowledgements-required_courses').checked).toBe(false);expect(root.querySelector('#application-acknowledgements-additional_courses').checked).toBe(false);
+  expect(root.querySelector('#application-acknowledgements-preplacement').checked).toBe(false);expect(root.querySelector('#application-acknowledgements-conduct').checked).toBe(true);
+});
+
+test('old submitted form is readable without fabricating new declarations or edit actions',async()=>{
+  const client=createApplicationPreview({scenario:'application-submitted'}),application=await client.get(ID);application.form_version=1;
+  application.payload.acknowledgements={terms:true,conduct:true,preplacement:true};delete application.payload.contact_email;
+  const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);
+  expect(root.querySelector('#application-review').hidden).toBe(false);expect(root.textContent).toContain('จะไม่ถูกเติมย้อนหลัง');
+  expect(root.querySelector('#application-acknowledgements-program').checked).toBe(false);expect(button(root,'บันทึกฉบับร่าง')).toBeUndefined();
+});
+
+test('selected document survives Next/Back and reload requires consent before discarding it',async()=>{
+  const {root,guard}=await editor('application-ready');root.querySelector('[aria-controls="application-documents"]').click();
+  const input=root.querySelector('#file-conduct');Object.defineProperty(input,'files',{value:[new File(['%PDF test'],'conduct-new.pdf',{type:'application/pdf'})]});input.dispatchEvent(new Event('change'));
+  button(root,'ถัดไป').click();button(root,'ย้อนกลับ').click();expect(root.querySelector('#application-documents').textContent).toContain('conduct-new.pdf');
+  button(root,'โหลดข้อมูลล่าสุด').click();await flush();expect(root.querySelector('#application-documents').textContent).toContain('conduct-new.pdf');expect(guard()).toBe(false);
 });
 test('client uses protected API, no-store, no auth leakage to S3 and retries uncertain completion with same receipt',async()=>{
   const ticket='14100000-0000-4000-8000-000000000020',op='14100000-0000-4000-8000-000000000021',complete='14100000-0000-4000-8000-000000000022';

@@ -27,7 +27,7 @@ field, uploads announce actual phases rather than invented percentages, and
 hover/scroll/route motion respects Reduced motion. Visual approval is still
 pending the Browser checks below; jsdom does not establish visual quality.
 
-## Automated results
+## Initial implementation results (before reference-form alignment)
 
 | Command / boundary | Result |
 | --- | --- |
@@ -125,3 +125,60 @@ Migration 001–009 contents and stored checksums were not changed. New Migratio
 010 was iterated only during development; tests used fresh disposable schemas
 and a fresh legacy-regression database after edits, never checksum rewrites.
 No real student documents or personal data were used as fixtures or evidence.
+
+## Staff reference-form alignment
+
+The owner approved a six-stage Student form after explicitly retaining the
+conduct certificate as a fourth required document and clarifying that API work
+means the CO-ED backend, not changes to TU API. Source:
+[shared form contract](../../src/shared/application-form.js),
+[Student editor](../../src/frontend/student/application-editor-view.js),
+[input validation](../../src/api/services/application-input.js), and
+[version 2 API contract](../api/v4-application-preparation.md#staff-reference-form-version-2).
+
+Delivered: named contact/identity fields with provenance, curriculum-specific
+letter-grade controls, separate declared/computed GPA, CIS/ACS, multiple job
+interests/Other, multiline skills, seven separate declarations, four uploads,
+emergency guardian and review/edit links. Hidden steps are excluded from focus;
+error links reveal the appropriate step before focusing its field. Draft values
+and selected files survive step navigation. Reduced motion is supported. The
+two design skills informed the progress rail, stronger contrast, progressive
+disclosure and interaction-triggered motion within the existing CO-ED theme.
+
+New first-submission snapshots pin form version 2. An old submitted snapshot
+retains version 1, its original payload and its original declarations. Existing
+Draft text remains visible until explicitly converted. No schema migration,
+checksum modification, storage limit expansion, role expansion or production
+change was made.
+
+Updated verification on local disposable schemas in `coed_v4_application_test`:
+
+| Command | Result |
+| --- | --- |
+| `npm.cmd run test:application` | 18 Node tests including real PostgreSQL/HTTP/private file lifecycle + 48 UI/API tests passed; no integration skipped |
+| `npm.cmd run test:frontend` | 342 tests passed |
+| `npm.cmd run test:ui-preview` | 48 UI tests + 2 server/dependency isolation tests passed |
+| `npm.cmd run test:authz` | 30 tests passed |
+| `npm.cmd run test:v3-t02` | 98 auth-boundary tests passed |
+| `npm.cmd run build` | Passed |
+| `npm.cmd run lint`, `git diff --check` | Passed |
+| `npm.cmd run test:docs` | 8/9 passed; Windows denied the symlink fixture with `EPERM` |
+| `node scripts/verify-doc-links.mjs` | 35 documents / 142 local links; no failures or network requests |
+
+The test extension covers new field bounds, all seven independently missing
+declarations, legacy snapshot compatibility, new-field HTTP save/read round-trip,
+forged official payload rejection, complete snapshot evidence, both curricula,
+Other/long skills, literal-text rendering, hidden-step error focus, explicit
+guardian address copy, blur validation and selected-file preservation.
+
+On this Windows sandbox, esbuild could not read the parent path; the same
+unmodified checks passed with approved escalation. Tests used their own random
+schema/role and temporary file directory, not public application data or a live
+cloud database. No full `npm test` success is claimed in this alignment pass.
+
+Visual QA remains outstanding: browser inventory reported that its access host
+was unavailable, then Windows Computer Use stopped because it could not verify
+the current browser URL reliably enough to enforce policy. No further browser
+input was attempted. No Desktop/Mobile screenshot, real visual smoothness,
+screen-reader or keyboard Browser pass is claimed. The jsdom focus/reduced-motion
+checks are automated behavior tests, not a replacement for that manual review.

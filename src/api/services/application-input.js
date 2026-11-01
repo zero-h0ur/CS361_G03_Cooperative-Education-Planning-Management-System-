@@ -1,4 +1,5 @@
 const { ValidationError } = require('../errors');
+const {POSITIONS,ACKNOWLEDGEMENTS}=require('../../shared/application-form');
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const FILES = Object.freeze({resume:10485760,transcript:10485760,conduct:10485760,photo:5242880});
 function fail(field, message='ข้อมูลไม่ถูกต้อง') { throw new ValidationError(message,[{field,message}]); }
@@ -24,14 +25,21 @@ function command(input, extra=[], version=true) {
   if (version && (!Number.isSafeInteger(input.expected_version) || input.expected_version<1)) fail('expected_version');
   return input;
 }
-const STRINGS={contact_address:1000,contact_phone:40,institutional_email:254,major_group:100,
+const STRINGS={contact_address:1000,contact_phone:40,institutional_email:254,contact_email:254,major_group:100,
+  name_prefix:100,thai_full_name:200,english_full_name:200,gpax_reporting_term:100,skills_detail:5000,interested_position_other:500,
   guardian_name:200,guardian_relationship:100,guardian_address:1000,guardian_phone:40};
 function payload(value) {
-  fields(value,[...Object.keys(STRINGS),'curriculum','gpax','interested_positions','skills','course_attempts','selected_courses','additional_studies','acknowledgements']);
+  fields(value,[...Object.keys(STRINGS),'curriculum','gpax','declared_group_gpa','interested_position_codes','interested_positions','skills','course_attempts','selected_courses','additional_studies','acknowledgements']);
   const out={};
-  for (const [key,max] of Object.entries(STRINGS)) if (Object.hasOwn(value,key)) out[key]=text(value[key],key,max,key.endsWith('address'));
+  for (const [key,max] of Object.entries(STRINGS)) if (Object.hasOwn(value,key)) out[key]=text(value[key],key,max,key.endsWith('address') || key==='skills_detail');
   if (value.curriculum!==undefined) {if (!['','61','66'].includes(value.curriculum)) fail('curriculum');out.curriculum=value.curriculum;}
   if (value.gpax!==undefined) out.gpax=decimal(value.gpax,'gpax');
+  if (value.declared_group_gpa!==undefined) out.declared_group_gpa=decimal(value.declared_group_gpa,'declared_group_gpa');
+  if (value.interested_position_codes!==undefined) {
+    const allowed=new Set([...POSITIONS.map(([code])=>code),'OTHER']);
+    if (!Array.isArray(value.interested_position_codes) || value.interested_position_codes.length>allowed.size || value.interested_position_codes.some(code=>!allowed.has(code))) fail('interested_position_codes');
+    out.interested_position_codes=[...new Set(value.interested_position_codes)];
+  }
   for (const key of ['interested_positions','skills']) if (value[key]!==undefined) {
     if (!Array.isArray(value[key]) || value[key].length>30) fail(key);
     out[key]=[...new Set(value[key].map(x=>text(x,key,120)).filter(Boolean))];
@@ -57,7 +65,7 @@ function payload(value) {
     out.additional_studies={...value.additional_studies};
   }
   if (value.acknowledgements!==undefined) {
-    fields(value.acknowledgements,['terms','conduct','preplacement']);
+    fields(value.acknowledgements,ACKNOWLEDGEMENTS);
     for (const x of Object.values(value.acknowledgements)) if (typeof x!=='boolean') fail('acknowledgements');
     out.acknowledgements={...value.acknowledgements};
   }

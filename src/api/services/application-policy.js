@@ -1,9 +1,6 @@
 // Source: user-supplied 2568 criteria, adopted by the team for 1/69.
 // These templates intentionally contain NO invented credits or repeat rules.
-const GROUPS=Object.freeze({
-  '61':[['CS101'],['CS102'],['CS111'],['CS213','CS216'],['CS251'],['CS264']],
-  '66':[['CS100'],['CS101'],['CS102'],['CS111'],['CS213','CS216'],['CS251'],['CS261']]
-});
+const {GROUPS,MAJORS,POSITIONS,ACKNOWLEDGEMENTS,DECLARED_IDENTITY,EMAIL}=require('../../shared/application-form');
 const EXTRA={'61':[['CS384'],['CS266','CS322','CS348']],'66':[['CS180'],['CS262','CS331','CS240']]};
 const BASELINE=Object.freeze({id:'TU_CS_2568_TEAM_BASELINE_FOR_1_69',source_year:2568,gpax_min:'2.75',group_gpa_min:'2.50',entry_year_max:2567});
 function effectiveCriteria(curriculum){return {...BASELINE,required_groups:(GROUPS[curriculum] || []).map(g=>[...g]),
@@ -28,12 +25,23 @@ function readiness({app,official,policy,documents=[],window,roundOpen,allowSynth
   if (!official?.academic_verified) add('curriculum','IDENTITY_PENDING','รอยืนยันหลักสูตรและปีที่เข้าศึกษา');
   if (p.curriculum && official?.curriculum && p.curriculum!==official.curriculum) add('curriculum','CURRICULUM_MISMATCH','หลักสูตรที่เลือกไม่ตรงข้อมูลที่ยืนยัน');
   if (official?.academic_verified && official.entry_year>BASELINE.entry_year_max) add('curriculum','ENTRY_YEAR','รอบ 1/69 รับนักศึกษารหัส 67 ลงไป');
+  for (const field of DECLARED_IDENTITY) {
+    if (!(official?.[field] || p[field])?.trim()) add(field,'REQUIRED','กรุณาระบุข้อมูลนี้ หากยังไม่มีข้อมูลทางการแยกช่องให้กรอกตามเอกสาร');
+    if (official?.[field] && p[field] && p[field]!==official[field]) add(field,'OFFICIAL_MISMATCH','ข้อมูลฉบับร่างต่างจากข้อมูลทางการ กรุณาใช้ค่าที่ยืนยัน');
+  }
   for (const field of ['contact_address','contact_phone','major_group','guardian_name','guardian_relationship','guardian_address','guardian_phone']) if (!p[field]?.trim()) add(field,'REQUIRED','กรุณากรอกข้อมูลนี้');
+  if (p.major_group && !MAJORS.some(([code])=>code===p.major_group)) add('major_group','MAJOR_CHOICE','กรุณาเลือก CIS หรือ ACS โดยข้อมูลเดิมยังไม่ถูกลบ');
   for (const field of ['contact_phone','guardian_phone']) if (p[field]?.trim() && !/^\+?\d{7,15}$/.test(p[field].replace(/[ ()-]/g,''))) add(field,'PHONE_FORMAT','กรุณาระบุเบอร์โทร 7–15 หลัก ใช้ + สำหรับรหัสประเทศได้');
   const email=official?.institutional_email || p.institutional_email;
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) add('institutional_email','REQUIRED','กรุณาระบุอีเมลมหาวิทยาลัย');
-  if (!p.interested_positions?.length) add('interested_positions','REQUIRED','กรุณาระบุตำแหน่งที่สนใจอย่างน้อยหนึ่งตำแหน่ง');
-  if (!p.skills?.length) add('skills','REQUIRED','กรุณาระบุทักษะหรือความถนัด');
+  if (!email || !EMAIL.test(email)) add('institutional_email','REQUIRED','กรุณาระบุอีเมลมหาวิทยาลัย');
+  if (!p.contact_email || !EMAIL.test(p.contact_email)) add('contact_email','EMAIL_FORMAT','กรุณาระบุอีเมลที่ติดต่อได้ให้ครบถ้วน');
+  const codes=p.interested_position_codes || [];
+  if (!codes.length) add('interested_position_codes','REQUIRED','กรุณาเลือกตำแหน่งที่สนใจอย่างน้อยหนึ่งตำแหน่ง');
+  if (codes.some(code=>code!=='OTHER' && !POSITIONS.some(([key])=>key===code))) add('interested_position_codes','POSITION_CHOICE','กรุณาเลือกตำแหน่งจากรายการที่กำหนด');
+  if (codes.includes('OTHER') && !p.interested_position_other?.trim()) add('interested_position_other','REQUIRED','กรุณาระบุตำแหน่งอื่นที่สนใจ');
+  if (!(Object.hasOwn(p,'skills_detail') ? p.skills_detail?.trim() : p.skills?.length)) add('skills_detail','REQUIRED','กรุณาระบุทักษะหรือความถนัด');
+  if (!p.gpax_reporting_term?.trim()) add('gpax_reporting_term','REQUIRED','กรุณาระบุภาคการศึกษาที่ใช้รายงาน GPAX ตาม Transcript');
+  if (scaled(p.declared_group_gpa)===null) add('declared_group_gpa','REQUIRED','กรุณาระบุค่าเฉลี่ยกลุ่มวิชาที่คุณแจ้ง');
   const gpax=scaled(p.gpax);
   if (gpax===null) add('gpax','REQUIRED','กรุณาระบุ GPAX');
   else if (gpax<scaled(BASELINE.gpax_min)) add('gpax','GPAX_BELOW_MINIMUM','GPAX ต้องไม่ต่ำกว่า 2.75');
@@ -61,7 +69,7 @@ function readiness({app,official,policy,documents=[],window,roundOpen,allowSynth
   if (groupGpa!==null && numerator<scaled(BASELINE.group_gpa_min)*denominator) add('course_attempts','GROUP_GPA_BELOW_MINIMUM','เกรดเฉลี่ยกลุ่มวิชาต้องไม่ต่ำกว่า 2.50');
   for (const group of EXTRA[curr] || []) if (!group.some(code=>['ENROLLED','STUDIED'].includes(p.additional_studies?.[code]))) add('additional_studies','ADDITIONAL_REQUIRED',`ต้องกำลังศึกษาหรือเคยศึกษา ${group.join(' หรือ ')}`);
   for (const kind of ['resume','transcript','conduct','photo']) if (!documents.some(d=>d.kind===kind)) add(`documents.${kind}`,'DOCUMENT_REQUIRED','กรุณาแนบไฟล์ที่ผ่านการบันทึกแล้ว');
-  for (const name of ['terms','conduct','preplacement']) if (p.acknowledgements?.[name]!==true) add(`acknowledgements.${name}`,'ACK_REQUIRED','กรุณารับทราบและยอมรับเงื่อนไข');
+  for (const name of ACKNOWLEDGEMENTS) if (p.acknowledgements?.[name]!==true) add(`acknowledgements.${name}`,'ACK_REQUIRED','กรุณาตรวจสอบและรับรองเงื่อนไขข้อนี้ด้วยตนเอง');
   return {can_submit:app.status==='DRAFT' && blockers.length===0,eligibility:!configured || !official?.academic_verified || !valid?'UNKNOWN':blockers.length?'FAIL':'PASS',group_gpa:groupGpa,blockers,preliminary:true};
 }
 module.exports={GROUPS,EXTRA,BASELINE,effectiveCriteria,templates,scaled,readiness};

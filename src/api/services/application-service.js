@@ -3,6 +3,7 @@ const {ApplicationRepository}=require('../../db/repositories/application-reposit
 const {UnauthorizedError,ForbiddenError,ConflictError,InvalidStateTransitionError,ValidationError,ServiceUnavailableError}=require('../errors');
 const v=require('./application-input');
 const {templates,readiness,effectiveCriteria}=require('./application-policy');
+const {FORM_VERSION,DECLARED_IDENTITY}=require('../../shared/application-form');
 function canonical(value) {
   if(Array.isArray(value))return value.map(canonical);
   if(value && typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]));
@@ -41,7 +42,8 @@ class ApplicationService {
       (w.cycle_id IS NULL OR (clock_timestamp()>=w.opens_at AND clock_timestamp()<w.closes_at)) AS window_open
       FROM rounds r LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id WHERE r.id=$1`,[app.cycle_id])).rows[0];
     return {id:app.id,student_id:app.student_id,cycle_id:app.cycle_id,status:app.status,version:app.version,
-      payload:app.payload,official:submission?.snapshot.official || official,policy:submission?.snapshot.policy || safePolicy(policy),documents,
+      payload:submission?.snapshot.payload || app.payload,form_version:submission ? submission.snapshot.form_version || 1 : FORM_VERSION,
+      official:submission?.snapshot.official || official,policy:submission?.snapshot.policy || safePolicy(policy),documents,
       cycle_name:submission?.snapshot.cycle?.name || cycle.name,availability:{can_edit:app.status==='DRAFT' && cycle.status==='OPEN' && cycle.window_open,
         opens_at:cycle.opens_at,closes_at:cycle.closes_at},
       submitted_at:app.submitted_at,submission};
@@ -121,6 +123,8 @@ class ApplicationService {
     return this.mutate(actor,id,input,'APPLICATION_DRAFT_SAVED',async(db,app,official)=>{
       await this.repository.editable(db,app,official);
       if(data.institutional_email && official.institutional_email && data.institutional_email!==official.institutional_email)throw new ValidationError('อีเมลทางการแก้ไขไม่ได้');
+      for(const field of DECLARED_IDENTITY)if(data[field] && official[field] && data[field]!==official[field])
+        throw new ValidationError('ข้อมูลทางการแก้ไขไม่ได้',[{field,message:'กรุณาใช้ข้อมูลทางการที่ยืนยันแล้ว'}]);
       const merged={...app.payload,...data};
       const policy=await this.repository.policy(db,{...app,payload:merged},official);
       if((policy?.id || null)!==input.expected_policy_id)throw new ConflictError('เกณฑ์เปลี่ยน กรุณาโหลดเกณฑ์ล่าสุด โดยข้อมูลที่กรอกยังอยู่','POLICY_CHANGED');
@@ -136,7 +140,7 @@ class ApplicationService {
       if((policy?.id || null)!==input.expected_policy_id)throw new ConflictError('เกณฑ์เปลี่ยน กรุณาตรวจสอบใหม่','POLICY_CHANGED');
       if(!result.can_submit)throw new ValidationError('ใบสมัครยังไม่พร้อมส่ง',result.blockers,'APPLICATION_NOT_READY');
       const documents=await this.repository.documents(db,id);
-      const snapshot={official,payload:app.payload,policy:safePolicy(policy),documents,
+      const snapshot={form_version:FORM_VERSION,official,payload:app.payload,policy:safePolicy(policy),documents,
         cycle:{id:cycle.id,name:cycle.name,academic_year:cycle.academic_year,semester:cycle.semester,
           opens_at:cycle.window.opens_at,closes_at:cycle.window.closes_at,window_version:cycle.window.version},
         acknowledgements:{actor_id:actor.userId,policy_id:policy.id,accepted_at:new Date().toISOString()}};

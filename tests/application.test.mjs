@@ -8,8 +8,10 @@ import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 const {Pool}=require('pg');
 const {ApplicationService}=require('../src/api/services/application-service');
+const {ApplicationRepository}=require('../src/db/repositories/application-repository');
 const {readiness,GROUPS}=require('../src/api/services/application-policy');
 const input=require('../src/api/services/application-input');
+const {ACKNOWLEDGEMENTS}=require('../src/shared/application-form');
 const {validateBytes,createDocumentStore}=require('../src/storage/application-document-store');
 const {LocalDocumentStore}=require('../src/storage/local-document-store');
 const {S3DocumentStore}=require('../src/storage/s3-document-store');
@@ -19,12 +21,13 @@ const digest=b=>createHash('sha256').update(b).digest('hex');
 const pdf=Buffer.from('%PDF-1.4\n1 0 obj <<>> endobj\n%%EOF\n');
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64');
 const metadata=(kind,bytes=pdf)=>({kind,filename:kind==='photo'?'student.png':'document.pdf',content_type:kind==='photo'?'image/png':'application/pdf',byte_size:bytes.length,checksum:digest(bytes)});
-const payload=curriculum=>({curriculum,gpax:'3.20',contact_address:'Synthetic address',contact_phone:'0000000000',
-  institutional_email:'test@example.invalid',major_group:'CS',guardian_name:'Synthetic guardian',guardian_relationship:'Parent',
-  guardian_address:'Synthetic address',guardian_phone:'0000000000',interested_positions:['Developer'],skills:['JavaScript'],
+const payload=curriculum=>({curriculum,gpax:'3.20',declared_group_gpa:'3.00',gpax_reporting_term:'Synthetic term 3/2568',
+  name_prefix:'Mx',thai_full_name:'นักศึกษาสมมติ สำหรับทดสอบ',english_full_name:'Synthetic Test Student',contact_email:'contact@example.invalid',contact_address:'Synthetic address',contact_phone:'0000000000',
+  institutional_email:'test@example.invalid',major_group:'CIS',guardian_name:'Synthetic guardian',guardian_relationship:'Parent',
+  guardian_address:'Synthetic address',guardian_phone:'0000000000',interested_position_codes:['SOFTWARE'],skills_detail:'JavaScript\nTesting and teamwork',
   selected_courses:{alternative:'CS213'},course_attempts:GROUPS[curriculum].map(g=>({code:g[0],attempt:1,points:'3.00'})),
   additional_studies:curriculum==='61'?{CS384:'STUDIED',CS266:'ENROLLED'}:{CS180:'STUDIED',CS262:'ENROLLED'},
-  acknowledgements:{conduct:true,terms:true,preplacement:true}});
+  acknowledgements:Object.fromEntries(ACKNOWLEDGEMENTS.map(key=>[key,true]))});
 const policy=curriculum=>({id:randomUUID(),curriculum,version:1,source_year:2568,source:'synthetic test only',verified:true,synthetic:true,
   data:{credits:Object.fromEntries(GROUPS[curriculum].flat().map(code=>[code,'3'])),repeat_rule:'LATEST',alternative_rule:'STUDENT_SELECTED'}});
 const check=(p,pol=policy(p.curriculum),extra={})=>readiness({app:{status:'DRAFT',payload:p},official:{academic_verified:true,curriculum:p.curriculum,entry_year:2566},
@@ -76,6 +79,50 @@ test('strict input whitelist, attachment signatures, checksum and production-loc
   assert.equal(getPermissionScope('STUDENT',ACTIONS.APPLICATION_WRITE),'AUTHENTICATED');
   assert.equal(getPermissionScope('COORDINATOR',ACTIONS.APPLICATION_READ),'AUTHENTICATED');
   for(const role of ['COORDINATOR','COMMITTEE','STAFF','ADVISOR','ADMIN','PUBLIC'])assert.equal(getPermissionScope(role,ACTIONS.APPLICATION_WRITE),'DENY');
+});
+
+test('reference-form contract preserves partial Drafts, long skills and rejects forged or unbounded fields',()=>{
+  assert.deepEqual(input.payload({}),{});
+  const p=payload('61');p.skills_detail='ทักษะการทดสอบซอฟต์แวร์ '.repeat(150).trim();p.interested_position_codes=['BACKEND','OTHER'];p.interested_position_other='Security analyst';
+  assert.deepEqual(input.payload(p),p);
+  for(const bad of [{skills_detail:'x'.repeat(5001)},{name_prefix:'x'.repeat(101)},{english_full_name:'x'.repeat(201)},
+    {contact_email:'x'.repeat(255)},{interested_position_codes:['ADMIN']},{interested_position_codes:'BACKEND'},
+    {acknowledgements:{approve:true}},{declared_group_gpa:'4.01'},{gpax_reporting_term:'bad\nterm'},{form_version:2}])assert.throws(()=>input.payload(bad));
+  assert.equal(input.payload({skills_detail:'<script>not markup</script>'}).skills_detail,'<script>not markup</script>');
+});
+
+test('seven declarations are independently required, not inferred from the old three or computed grades',()=>{
+  const original=payload('66');for(const key of ACKNOWLEDGEMENTS){const p=structuredClone(original);delete p.acknowledgements[key];
+    assert.ok(check(p).blockers.some(b=>b.field==='acknowledgements.'+key));}
+  const old=structuredClone(original);old.acknowledgements={terms:true,conduct:true,preplacement:true};
+  assert.equal(check(old).blockers.filter(b=>b.code==='ACK_REQUIRED').length,4);
+  assert.deepEqual(Object.keys(old.acknowledgements),['terms','conduct','preplacement']);
+});
+
+test('new declared fields gate new submissions without replacing verified university data or eligibility calculations',()=>{
+  for(const field of ['name_prefix','thai_full_name','english_full_name','contact_email','gpax_reporting_term','declared_group_gpa']){
+    const p=payload('66');delete p[field];assert.ok(check(p).blockers.some(b=>b.field===field),field);
+  }
+  const p=payload('66');p.contact_email='incomplete';p.major_group='Legacy CS';p.interested_position_codes=['OTHER'];
+  assert.ok(check(p).blockers.some(b=>b.field==='contact_email'));
+  assert.ok(check(p).blockers.some(b=>b.field==='major_group'));
+  assert.ok(check(p).blockers.some(b=>b.field==='interested_position_other'));
+  p.interested_position_other='Security analyst';p.contact_email='valid@example.invalid';p.major_group='ACS';
+  p.declared_group_gpa='4';const pending=policy('66');pending.verified=false;assert.equal(check(p,pending).can_submit,false);
+  const failing=payload('61');failing.course_attempts.forEach(r=>r.points='1');failing.declared_group_gpa='4';
+  assert.ok(check(failing).blockers.some(b=>b.code==='GROUP_GPA_BELOW_MINIMUM'));
+  const legacy=payload('66');delete legacy.skills_detail;legacy.skills=['Legacy skill'];assert.equal(check(legacy).can_submit,true);
+  legacy.skills_detail='';assert.ok(check(legacy).blockers.some(b=>b.field==='skills_detail'));
+});
+
+test('old submitted snapshots keep their form version, payload and declarations without retroactive additions',async()=>{
+  const original={contact_address:'Old synthetic address',acknowledgements:{terms:true,conduct:true,preplacement:true}};
+  const snapshot={official:{full_name:'Pinned synthetic name'},payload:original,policy:policy('61'),documents:[],cycle:{name:'Old cycle'}};
+  const db={query:async sql=>({rows:sql.includes('phase1_submissions')?[{snapshot}]:[{name:'New cycle name',status:'CLOSED'}]})};
+  const service=new ApplicationService({repository:{}});
+  const result=await service.detail(db,{}, {id:randomUUID(),cycle_id:randomUUID(),status:'SUBMITTED',version:2,payload:{contact_address:'Changed source'}});
+  assert.equal(result.form_version,1);assert.deepEqual(result.payload,original);assert.equal(result.official.full_name,'Pinned synthetic name');assert.equal(result.cycle_name,'Old cycle');
+  assert.equal(result.payload.acknowledgements.program,undefined);assert.equal(result.payload.contact_email,undefined);
 });
 
 test('S3 adapter restricts upload policy and final keys; download never exposes upload credentials',async()=>{
@@ -142,6 +189,11 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
       app=await save({contact_address:'Unsaved elsewhere'});
       assert.equal((await service.get(actor,app2.id)).payload.contact_address,undefined);
       await assert.rejects(service.save(actor,app.id,{...command(),payload:{full_name:'tamper'},expected_policy_id:null}));
+      const repository=new ApplicationRepository({pool}),profile=repository.profile.bind(repository);
+      repository.profile=async(...args)=>({...await profile(...args),english_full_name:'Verified Fictional Name'});
+      const trustedService=new ApplicationService({repository});
+      await assert.rejects(trustedService.save(actor,app.id,{...command(),payload:{english_full_name:'Forged name'},expected_policy_id:null}),e=>e.statusCode===400);
+      assert.equal((await service.get(actor,app.id)).payload.english_full_name,undefined);
     });
     await t.test('real uploads work before criteria verification, replacement is atomic and stale writes fail',async()=>{
       app=await save();await attach('resume');const old=app.documents[0];
@@ -252,6 +304,11 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
       await service.localContent(actor,app.id,pending.ticket_id,pdf);
       const op={...command(),expected_policy_id:pol.id};app=await service.submit(actor,app.id,op);
       assert.equal(app.status,'SUBMITTED');assert.equal(app.submission.snapshot.documents.length,4);
+      assert.equal(app.form_version,2);assert.equal(app.submission.snapshot.form_version,2);
+      assert.equal(app.submission.snapshot.payload.contact_email,'contact@example.invalid');
+      assert.equal(app.submission.snapshot.payload.english_full_name,'Synthetic Test Student');
+      assert.equal(app.submission.snapshot.payload.declared_group_gpa,'3.00');
+      assert.deepEqual(app.submission.snapshot.payload.acknowledgements,Object.fromEntries(ACKNOWLEDGEMENTS.map(key=>[key,true])));
       assert.equal(app.submission.snapshot.policy.effective_criteria.gpax_min,'2.75');
       assert.equal(app.submission.snapshot.policy.effective_criteria.required_groups.length,7);
       assert.equal(app.submission.snapshot.policy.effective_criteria.entry_year_max,2567);
@@ -293,7 +350,7 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
         'DELETE FROM phase1_documents WHERE false','DELETE FROM phase1_operations WHERE false'])await assert.rejects(runtime.query(sql),e=>e.code==='42501');
     });
     await t.test('authenticated HTTP upload/download round-trips actual private bytes and denies anonymous access',async()=>{
-      const draft=(await service.list(actor)).find(x=>x.cycle_id===cycle2);
+      let draft=(await service.list(actor)).find(x=>x.cycle_id===cycle2);
       const server=createApiServer({applicationService:service,authOptions:{pool,authMiddleware:async(req)=>{
         if(req.headers.authorization!=='Bearer synthetic-http-test')throw new UnauthorizedError();attachRequestContext(req,actor);
       }}});
@@ -301,6 +358,15 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
       const headers={Authorization:'Bearer synthetic-http-test','Content-Type':'application/json'};
       try{
         const anonymous=await fetch(`${base}/api/v4/applications/${draft.id}`);assert.equal(anonymous.status,401);
+        const saveResponse=await fetch(`${base}/api/v4/applications/${draft.id}`,{method:'PATCH',headers,
+          body:JSON.stringify({operation_id:randomUUID(),expected_version:draft.version,expected_policy_id:null,payload:payload('66')})});
+        assert.equal(saveResponse.status,200);draft=(await saveResponse.json()).data;
+        const readResponse=await fetch(`${base}/api/v4/applications/${draft.id}`,{headers});assert.equal(readResponse.status,200);
+        assert.equal(readResponse.headers.get('Cache-Control'),'no-store');const read=(await readResponse.json()).data;
+        assert.deepEqual(read.payload,payload('66'));assert.equal(read.form_version,2);
+        const forged=await fetch(`${base}/api/v4/applications/${draft.id}`,{method:'PATCH',headers,
+          body:JSON.stringify({operation_id:randomUUID(),expected_version:draft.version,expected_policy_id:null,payload:{official:{full_name:'forged'}}})});
+        assert.equal(forged.status,400);
         const ticketResponse=await fetch(`${base}/api/v4/applications/${draft.id}/uploads`,{method:'POST',headers,
           body:JSON.stringify({operation_id:randomUUID(),expected_version:draft.version,...metadata('resume')})});
         assert.equal(ticketResponse.status,200);const {data:ticket}=await ticketResponse.json();

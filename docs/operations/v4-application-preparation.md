@@ -147,7 +147,33 @@ On a platform with `zip`, `unzip`, working `python3`, and symlink privileges, ru
 the unmodified full regression and documentation suite. No tests are bypassed to
 work around missing tools. Use [Local Preview](../frontend/local-ui-preview.md)
 for visual/keyboard checks at 375/768/1440 widths, both motion preferences and
-all five application scenarios. Preview does not perform real storage writes.
+all six application scenarios, including `application-61`. Preview does not
+perform real storage writes. Its ready/61 scenarios use clearly synthetic
+credits; they are not evidence of verified production eligibility.
+
+### Reference-form version 2 checks
+
+The six-step form extends the existing JSON payload and immutable snapshot;
+there is no additional schema migration or backfill. See the
+[version 2 field contract](../api/v4-application-preparation.md#staff-reference-form-version-2).
+Release matching frontend/backend artifacts together. An older backend rejects
+unknown fields instead of claiming a successful save; the editor must keep the
+typed data and show that failure. An older frontend cannot provide the four new
+declarations, so it must not be treated as compatible for new submissions.
+
+Verify both curricula, all seven explicit declarations, contact versus Dome
+email, names marked as declared versus official, CIS/ACS, job multi-select/Other,
+long skills text, guardian data and all four required uploads. Move between
+steps and follow readiness errors into another step. Confirm that an incomplete
+Draft saves, a failed upload preserves the old file, and old submitted forms
+remain read-only version 1 without invented new declarations. The current TU
+record has no separately verified prefix/English-name fields; don't label a
+student-entered fallback as university-verified.
+
+Do not copy real applicant/guardian data from reference screenshots into Preview,
+test fixtures or evidence. The private file limits remain one per category,
+10 MiB per PDF and 5 MiB per photo. No Google login, Google Forms sharing,
+automatic response email or live intake configuration is introduced.
 
 ## Rollout and recovery
 

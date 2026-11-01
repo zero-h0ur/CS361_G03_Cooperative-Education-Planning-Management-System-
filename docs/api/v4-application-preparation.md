@@ -33,7 +33,7 @@ data use `Cache-Control: no-store`. Unknown input fields are rejected.
 | POST | `/applications/:id/documents/:document/download` | Authorize a short-lived attachment download |
 | POST | `/applications/:id/submit` | Snapshot, lock and first submission |
 
-An application response includes `id`, `cycle_id`, `status`, `version`, declared
+An application response includes `id`, `cycle_id`, `status`, `version`, `form_version`, declared
 `payload`, server-owned `official`, policy metadata, current attachment metadata,
 and `submitted_at`. Object keys and long-lived storage access never appear in
 Student JSON. Document metadata includes its ID, category, name, size, content
@@ -43,6 +43,68 @@ The handoff to #142 is `application_id`, `cycle_id`, `student_id`, `version`,
 `status`, `submitted_at`, `submission_id`, `policy_id` and immutable document IDs.
 No legacy `plan_id` is fabricated. Application-scoped operation/events are stored
 atomically; history does not contain guardian values, document contents or signed URLs.
+
+## Staff reference form: version 2
+
+The Student editor follows six stages: identity/contact, academics,
+interests/seven declarations, documents, emergency guardian, and review/first
+submission. Next/Back and step links do not send or discard data. Save Draft is
+available throughout, including incomplete applications. Readiness and final
+confirmation remain separate, explicit actions.
+
+These are additions to the existing CO-ED backend API, **not** changes to TU API
+or a Google Forms integration. The current university record exposes canonical
+`official.full_name`, student number, institutional email and academic metadata;
+it does not yet expose a verified prefix or names split by language. Missing
+language-specific names/prefix are explicitly applicant-declared application
+values, never updates to the official identity. If trusted language-specific
+fields are provided later, the corresponding controls become read-only and the
+backend rejects a conflicting declared value. No translation is invented.
+
+New allowlisted `payload` fields:
+
+| Field | Contract |
+| --- | --- |
+| `name_prefix` | Declared prefix, up to 100 Unicode characters |
+| `thai_full_name`, `english_full_name` | Declared language-specific names, up to 200 characters each |
+| `contact_email` | Contact email distinct from university email, up to 254 characters; valid syntax required for submission |
+| `major_group` | CIS or ACS required for new submission; legacy free text can still be saved in Draft until explicitly converted |
+| `gpax_reporting_term` | Applicant-declared reporting term from Transcript, up to 100 characters; not a verified schedule |
+| `declared_group_gpa` | Applicant-declared decimal 0–4, at most four decimal places; separate from computed `group_gpa` |
+| `interested_position_codes` | Multiple codes: FRONTEND, BACKEND, IOS, ANDROID, FULLSTACK, SYSTEM, SOFTWARE, BA, UI_UX, DATA, OTHER |
+| `interested_position_other` | Up to 500 characters, required when OTHER is selected |
+| `skills_detail` | Plain multiline text, up to 5,000 characters |
+
+Existing `interested_positions` and `skills` arrays remain readable/saveable for
+Draft compatibility. Legacy interests are displayed, not automatically matched
+to new codes. The old skills array is the fallback only until `skills_detail`
+is explicitly edited; an explicitly empty new field does not silently reuse the
+old skills. New incomplete/invalid-format Drafts remain saved where structurally
+valid; readiness explains what prevents submission.
+
+`acknowledgements` now has seven independent boolean keys: `program`,
+`required_courses`, `additional_courses`, `preplacement`, `gpax`, `conduct`,
+`terms`. Every key must be true for a new submission. The four new confirmations
+are never inferred for old Drafts. Changing curriculum in the editor clears the
+three curriculum-dependent confirmations and keeps existing grade attempts.
+
+Letter-grade controls map A/B+/B/C+/C/D+/D/F to 4/3.5/3/2.5/2/1.5/1/0. Existing
+decimal grades remain visible without rounding or conversion. The unselected
+CS213/CS216 alternative is not a fabricated F; its existing attempts are retained
+but not used instead of the selected course. Curriculum 61 retains **CS264** as
+specified in the previously confirmed criteria and the reference's explanatory
+text, despite the inconsistent CS261 grid label in one screenshot.
+
+The selected intake supplies its heading/year; the screenshot's 2570 title and
+Summer 3/2568 reporting term do not create a verified intake or replace the
+existing criteria. Declared GPA/attestations never unblock an unverified policy.
+
+New submission snapshots pin `form_version: 2`, the full declared payload and
+the existing official/policy/document/acknowledgement evidence. Submitted views
+read the pinned payload. Old snapshots without a form version are returned as
+version 1 and receive no new fields, declarations or retroactive validation.
+The existing JSON payload/snapshot schema supports this extension; no new
+migration, old-migration edit, checksum rewrite or data backfill is required.
 
 ## Academic policy
 
@@ -73,6 +135,12 @@ invented; #144 can supply the separate versioned availability record.
 - One current file per category; old finalized versions remain available to an
   already-submitted snapshot. Replacing a Draft file does not detach the old file
   until the replacement upload, content checks and database update succeed.
+
+All four categories, including the conduct certificate, remain required as
+explicitly reconfirmed by the owner. The reference Google Form's 100 MB photo
+limit and multiple PDF uploads are **not** adopted. Filename suggestions use
+student number (Resume/CV: `CV-<student-number>.pdf`); they do not rename files
+on the student's computer or silently reject an otherwise valid upload by name.
 
 The server checks actual size/signature/checksum, ownership, editable state and
 application version. Content validation is not malware scanning, OCR, or proof
