@@ -13,6 +13,7 @@ npm.cmd run dev:ui
 
 - แผนสหกิจ: http://localhost:8081/app.html#/student/plan
 - ข้อมูลของฉัน: http://localhost:8081/app.html#/student/profile
+- ใบสมัคร Phase 1: http://localhost:8081/app.html?scenario=application-pending#/student/application
 - Staff: http://localhost:8081/app.html?role=STAFF#/staff/students
 - Advisor: http://localhost:8081/app.html?role=ADVISOR#/advisor/students
 
@@ -48,10 +49,10 @@ Loading scenario ค้างไว้ให้ตรวจหน้ารอโ
 แถบด้านบนระบุว่าเป็นข้อมูลจำลองเสมอ ข้อมูลเดียวกันอาจแสดงใน Staff Preview ด้วย
 
 - ปุ่มรีเฟรชใช้ GET client เดิม มีข้อความรอโหลด/สำเร็จ ป้องกันการกดซ้ำระหว่างรอ
-- คู่มือกดขยายได้ด้วย Keyboard อธิบาย Draft, ส่งตรวจ, ส่งกลับแก้ไข และ Staff มอบหมาย Advisor
+- คู่มือกดขยายได้ด้วย Keyboard; เมื่อมี Application client จะอธิบาย Phase 1 และปุ่มหลักเปิดใบสมัครใหม่ ส่วนหน้าระบบ V3 ยังแยกไว้
 - คู่มือไม่ใช่ Progress tracker ไม่ยืนยันว่าผู้ใช้ผ่านเกณฑ์หรือได้รับ Assignment แล้ว
 - การสมัครบริษัท การส่งเอกสาร และการยืนยันบริษัทเป็นคำแนะนำให้ดำเนินการผ่านช่องทางที่ Staff กำหนด ไม่ใช่ฟีเจอร์ใหม่ในหน้านี้
-- ที่อยู่/เบอร์โทรยังไม่มี API รองรับ จึงไม่มีฟอร์มที่บันทึกจริงไม่ได้
+- ข้อมูลทะเบียนใน Profile ยังอ่านอย่างเดียว; ข้อมูลติดต่อ/ผู้ปกครองในใบสมัครใหม่เก็บแยกรายรอบ ไม่แก้ข้อมูลทางการ
 - ข้อมูล `preferred_name` เดิมในฐานข้อมูลและ API เดิมไม่ได้ถูกลบหรือเปลี่ยน
 - Profile และ My Plan ใช้ขอบ/เงาการ์ดและข้อความรองที่เข้มขึ้น โดยไม่เปลี่ยนธีม Staff/Advisor
 - ทั้งสองหน้ามีจังหวะเปิดหน้าเมื่อข้อมูลพร้อมครั้งเดียว ไม่เล่นซ้ำเมื่อ Save/Refresh
@@ -101,6 +102,22 @@ crossfade/snapshot จริงใน Browser ที่รองรับก่�
 - ไม่ควร Deploy server/entry point นี้เป็นเว็บจริง
 
 ## Automated verification
+
+### ใบสมัคร Phase 1 (#141)
+
+เลือกสถานการณ์ `application-pending`, `application-ready`, `application-failed`,
+`application-conflict` หรือ `application-submitted` แล้วเปิดเมนู “สมัครเข้าแผนสหกิจ”
+หรือเปิด `#/student/application/14100000-0000-4000-8000-000000000001` โดยตรง
+ข้อมูลผู้สมัคร เกรด หน่วยกิต และเอกสารทั้งหมดเป็นข้อมูลสมมติที่ระบุชัดเจน
+
+`application-ready` ใช้เกณฑ์สมมติเท่านั้น เพื่อทดลองบันทึก ตรวจความพร้อม ยกเลิก/ยืนยันส่ง
+และดูแบบอ่านอย่างเดียว ส่วน `application-pending` ต้องไม่ยอมให้ส่ง
+การเลือกไฟล์/กดอัปโหลดใน Preview เปลี่ยนเพียง metadata ใน memory ไม่ส่งไฟล์ออกจากเครื่อง
+ไม่เก็บ bytes และไม่ให้ดาวน์โหลดไฟล์จำลองเสมือนไฟล์จริง
+
+ไฟล์จริง การล็อก transaction และสิทธิ์จริงฝั่ง service ต้องตรวจด้วย
+`npm run test:application` บนฐานข้อมูลทดสอบแยกตาม [คู่มือ](../operations/v4-application-preparation.md)
+ไม่ใช้ผล Preview แทน integration หรือ Browser QA
 
 ```powershell
 npm.cmd run test:ui-preview

@@ -29,7 +29,7 @@ test('Lambda release is self-contained and preserves reviewed migrations without
     execFileSync('unzip', ['-q', manifest.artifact, '-d', extracted]);
     assert.deepEqual(await readFile(join(extracted, 'global-bundle.pem')), await readFile(caFile));
     for (const name of ['001_initial_schema.sql', '002_v3_identity_student_plan_assignment_audit.sql',
-      '009_coordinator_committee_selection.sql']) {
+      '009_coordinator_committee_selection.sql','010_phase1_applications_documents.sql']) {
       assert.deepEqual(
         await readFile(join(extracted, 'src/db/migrations', name)),
         await readFile(join(workspace, 'src/db/migrations', name))

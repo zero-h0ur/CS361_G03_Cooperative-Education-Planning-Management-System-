@@ -9,6 +9,7 @@ import { createStaffReviewClient } from './staff/staff-review-client.js';
 import { createStudentPlanClient } from './student/plan-submission-client.js';
 import { createStudentProfileClient } from './student/profile-client.js';
 import { createWorkflowClient } from './workflow/workflow-client.js';
+import { createApplicationClient } from './student/application-client.js';
 
 const root = document.getElementById('authenticatedApp');
 
@@ -41,6 +42,7 @@ if (root) {
       getAccessToken: authClient.getAccessToken
     });
     const app = createShellApp({
+      applicationClient: createApplicationClient({apiBaseUrl:config.apiBaseUrl,getAccessToken:authClient.getAccessToken}),
       workflowClient: createWorkflowClient({apiBaseUrl:config.apiBaseUrl,getAccessToken:authClient.getAccessToken}),
       root,
       loadSession: sessionClient.loadSession,

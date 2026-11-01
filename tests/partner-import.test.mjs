@@ -36,7 +36,7 @@ test('contact columns never enter either JSON or SQL', () => {
   assert.ok(sql.includes('Private records changed'));
 });
 
-test('import verifies all nine reviewed migration checksums but executes only directory migration 003', () => {
+test('import verifies all ten reviewed migration checksums but executes only directory migration 003', () => {
   const sql = buildImportSql(buildCatalogue(raw, options));
   const names = [
     '001_initial_schema.sql', '002_v3_identity_student_plan_assignment_audit.sql',
@@ -45,6 +45,7 @@ test('import verifies all nine reviewed migration checksums but executes only di
     '007_submission_policy_integrity.sql',
     '008_returned_plan_cancellation.sql',
     '009_coordinator_committee_selection.sql',
+    '010_phase1_applications_documents.sql',
   ];
   for (const name of names) {
     const source = fs.readFileSync(new URL('../src/db/migrations/' + name, import.meta.url), 'utf8');

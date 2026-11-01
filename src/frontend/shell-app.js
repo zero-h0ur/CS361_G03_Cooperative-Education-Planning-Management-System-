@@ -21,6 +21,7 @@ import { createWorkspaceIcon } from './ui/workspace-presentation.js';
 import { renderContactPanel, renderStaffWorkflow } from './workflow/workflow-views.js';
 import { renderAdminOperations } from './workflow/admin-operations-view.js';
 import { renderSelectionWorkspace, renderStudentSelectionStatus } from './selection/selection-view.js';
+import { renderApplicationWorkspace } from './student/application-view.js';
 
 const RETURN_ROUTE_KEY = 'co-ed:return-route';
 const SENSITIVE_QUERY_PARAMS = Object.freeze([
@@ -333,6 +334,7 @@ export function createShellApp({
   history = globalThis.history,
   studentProfileClient = null,
   studentPlanClient = null,
+  applicationClient = null,
   staffClient = null,
   advisorClient = null,
   staffReviewClient = null,
@@ -360,6 +362,7 @@ export function createShellApp({
   let destroyed = false;
   let unsubscribeLogout = null;
   let studentRouteTransition = null;
+  let routeLeaveGuard = null;
 
   function cancelStudentRouteTransition() {
     const pending = studentRouteTransition;
@@ -369,6 +372,7 @@ export function createShellApp({
   }
 
   function abortRouteWork() {
+    routeLeaveGuard = null;
     cancelStudentRouteTransition();
     routeController?.abort();
     routeController = null;
@@ -483,6 +487,7 @@ export function createShellApp({
   }
 
   async function handleLogout() {
+    if(routeLeaveGuard && !routeLeaveGuard())return;
     activeController?.abort();
     abortRouteWork();
     currentRole = null;
@@ -532,6 +537,10 @@ export function createShellApp({
       });
     }
 
+    if(role==='STUDENT' && (route.hash==='#/student/application' || route.params?.applicationId) && applicationClient) {
+      return renderApplicationWorkspace({client:applicationClient,applicationId:route.params?.applicationId,signal,
+        onNavigate:navigateToAllowlistedRoute,onSessionExpired:handleSessionExpired,setLeaveGuard:guard=>{routeLeaveGuard=guard;}});
+    }
     if (['COORDINATOR','COMMITTEE'].includes(role) && workflowClient) {
       return renderSelectionWorkspace({client:workflowClient,role,signal,onSessionExpired:handleSessionExpired,
         onAccessDenied:message=>renderForbidden(message)});
@@ -544,6 +553,7 @@ export function createShellApp({
     if (role === 'STUDENT' && route.hash === '#/student/profile' && studentProfileClient) {
       const profile = renderStudentDashboardView({
         profileClient: studentProfileClient,
+        applicationHref: applicationClient ? '#/student/application' : null,
         signal,
         onSessionExpired: handleSessionExpired,
         onAccessDenied: (message) => renderForbidden(message),
@@ -653,6 +663,9 @@ export function createShellApp({
     }
 
     const previousHash = renderedHash;
+    if(previousHash && previousHash!==location.hash && routeLeaveGuard && !routeLeaveGuard()) {
+      location.hash=previousHash;return;
+    }
     abortRouteWork();
     renderedHash = location.hash;
     const route = getRoute(location.hash);
@@ -676,11 +689,12 @@ export function createShellApp({
       onLogout: handleLogout,
       bodyNode: customBody
     });
-    const studentPages = ['#/student/profile', '#/student/plan'];
+    const studentPages = ['#/student/profile', '#/student/plan', '#/student/application'];
+    const isStudentPage=hash=>studentPages.includes(getRoute(hash)?.navHash || hash);
     const existingLayout = root.querySelector('.protected-shell--student');
     const existingMain = existingLayout?.querySelector('.shell-content');
     const reuseStudentShell = currentRole === 'STUDENT' && existingMain &&
-      previousHash !== route.hash && studentPages.includes(previousHash) && studentPages.includes(route.hash);
+      previousHash !== route.hash && isStudentPage(previousHash) && isStudentPage(route.hash);
     const doc = root.ownerDocument;
     const reducedMotion = doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     let useViewTransition = reuseStudentShell && !reducedMotion && typeof doc.startViewTransition === 'function';
@@ -697,7 +711,7 @@ export function createShellApp({
         existingMain.dataset.routeMotion = useViewTransition ? 'view-transition' : 'css';
         existingMain.replaceChildren(...main.childNodes);
         for (const link of existingLayout.querySelectorAll('.shell-nav__link')) {
-          const active = link.getAttribute('href') === route.hash;
+          const active = link.getAttribute('href') === (route.navHash || route.hash);
           link.classList.toggle('shell-nav__link--active', active);
           if (active) link.setAttribute('aria-current', 'page');
           else link.removeAttribute('aria-current');

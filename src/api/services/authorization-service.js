@@ -42,6 +42,8 @@ const PERMISSION_SCOPES = Object.freeze({
 });
 
 const ACTIONS = Object.freeze({
+  APPLICATION_READ: 'application:read',
+  APPLICATION_WRITE: 'application:write',
   // Session bootstrap (#64)
   SESSION_READ_ME: 'session:read_me',
   COORDINATOR_SELECTION_READ: 'selection:coordinator_read',
@@ -127,6 +129,7 @@ const ADVISOR_HISTORICAL_PLAN_READ_ACTIONS = new Set([
 ]);
 
 const MUTATION_ACTIONS = new Set([
+  ACTIONS.APPLICATION_WRITE,
   ACTIONS.COORDINATOR_ACKNOWLEDGE,
   ACTIONS.COMMITTEE_OPINION_CREATE,
   ACTIONS.PLAN_REJECT,
@@ -161,6 +164,8 @@ const MUTATION_ACTIONS = new Set([
 const STUDENT_EDITABLE_PLAN_STATES = new Set(['DRAFT', 'NEEDS_REVISION']);
 
 const PERMISSION_MATRIX = Object.freeze({
+  [ACTIONS.APPLICATION_READ]: Object.freeze({[ROLES.STUDENT]:PERMISSION_SCOPES.AUTHENTICATED,[ROLES.COORDINATOR]:PERMISSION_SCOPES.AUTHENTICATED}),
+  [ACTIONS.APPLICATION_WRITE]: Object.freeze({[ROLES.STUDENT]:PERMISSION_SCOPES.AUTHENTICATED}),
   // Role gates here; SelectionService independently rechecks cohort membership,
   // application ownership and active database roles for every read and command.
   [ACTIONS.COORDINATOR_SELECTION_READ]: Object.freeze({ [ROLES.COORDINATOR]: PERMISSION_SCOPES.AUTHENTICATED }),

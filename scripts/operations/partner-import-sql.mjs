@@ -27,6 +27,7 @@ export function buildImportSql(payload) {
     '007_submission_policy_integrity.sql',
     '008_returned_plan_cancellation.sql',
     '009_coordinator_committee_selection.sql',
+    '010_phase1_applications_documents.sql',
   ]
     .map(name => ({ name, sql: fs.readFileSync(path.join(ROOT, 'src/db/migrations', name), 'utf8') }))
     .map(item => ({ ...item, hash: crypto.createHash('sha256').update(item.sql).digest('hex') }));
