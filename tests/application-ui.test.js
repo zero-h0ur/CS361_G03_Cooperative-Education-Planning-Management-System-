@@ -196,6 +196,65 @@ test('guardian address copy is explicit and does not overwrite an existing addre
   window.confirm.mockReturnValue(true);button(root,'ใช้ที่อยู่เดียวกับนักศึกษา').click();expect(root.querySelector('#application-guardian_address').value).toBe(root.querySelector('#application-contact_address').value);
 });
 
+test('name reuse is a compact field action, preserves focus/official values and saves only explicitly',async()=>{
+  const client=createApplicationPreview(),application=await client.get(ID);application.payload.thai_full_name='';
+  const official=JSON.stringify(application.official),save=jest.spyOn(client,'save');
+  const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);
+  const input=root.querySelector('#application-thai_full_name'),action=button(root,'ใช้ชื่อทางการ');
+  expect(action.parentElement.parentElement).toBe(input.parentElement);
+  expect(action.className).toBe('application-inline-action');expect(action.getAttribute('aria-controls')).toBe(input.id);
+  expect(action.querySelector('svg').getAttribute('aria-hidden')).toBe('true');
+  expect(root.querySelector('#application-identity .application-grid>button')).toBeNull();
+  action.focus();action.click();
+  expect(root.querySelector('#application-thai_full_name')).toBe(input);expect(document.activeElement).toBe(input);
+  expect(input.value).toBe(application.official.full_name);expect(JSON.stringify(application.official)).toBe(official);
+  expect(input.parentElement.querySelector('[role=status]').textContent).toBe('เติมข้อมูลแล้ว · ยังไม่ได้บันทึก');
+  expect([...root.querySelectorAll('[data-save-state]')].every(s=>s.textContent==='มีข้อมูลที่ยังไม่ได้บันทึก')).toBe(true);
+  expect(save).not.toHaveBeenCalled();
+  button(root,'บันทึกฉบับร่าง').click();await flush();await flush();
+  expect(save).toHaveBeenCalledTimes(1);expect((await client.get(ID)).payload.thai_full_name).toBe(application.official.full_name);
+});
+
+test('reuse never silently replaces newly typed data and contact email gets the same inline pattern',async()=>{
+  const client=createApplicationPreview(),application=await client.get(ID);application.payload.thai_full_name='';application.payload.contact_email='';
+  const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);
+  const input=root.querySelector('#application-thai_full_name');input.value='ชื่อที่กรอกเอง';input.dispatchEvent(new Event('input'));
+  button(root,'ใช้ชื่อทางการ').click();expect(window.confirm).toHaveBeenCalledTimes(1);expect(input.value).toBe('ชื่อที่กรอกเอง');
+  window.confirm.mockReturnValue(true);button(root,'ใช้ชื่อทางการ').click();expect(input.value).toBe(application.official.full_name);
+  const email=root.querySelector('#application-contact_email'),action=button(root,'ใช้อีเมลมหาวิทยาลัย');action.click();
+  expect(email.value).toBe(application.official.institutional_email);expect(document.activeElement).toBe(email);
+  expect(action.closest('.application-field')).toBe(email.parentElement);
+  email.value='new@example.invalid';email.dispatchEvent(new Event('input'));
+  expect(email.parentElement.querySelector('[role=status]').textContent).toBe('');
+});
+
+test.each(['submitted','closed'])('reuse actions are absent for %s applications',async mode=>{
+  const client=createApplicationPreview(),application=await client.get(ID);application.payload.thai_full_name='';application.payload.contact_email='';
+  if(mode==='submitted')application.status='SUBMITTED';else application.availability={can_edit:false};
+  const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);
+  expect(root.querySelector('.application-inline-action')).toBeNull();
+});
+
+test('empty source address explains the disabled action beside the guardian field',async()=>{
+  const client=createApplicationPreview(),application=await client.get(ID);application.payload.contact_address='';
+  const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);
+  root.querySelector('[aria-controls="application-guardian"]').click();
+  const action=button(root,'ใช้ที่อยู่เดียวกับนักศึกษา');expect(action.disabled).toBe(true);
+  expect(action.closest('.application-field').querySelector('textarea').id).toBe('application-guardian_address');
+  expect(action.parentElement.textContent).toContain('กรอกที่อยู่นักศึกษาในขั้นที่ 1 ก่อน');
+});
+
+test('field reuse is disabled throughout an in-flight save',async()=>{
+  const client=createApplicationPreview(),application=await client.get(ID);application.payload.thai_full_name='';
+  let finish;client.save=jest.fn(()=>new Promise(resolve=>{finish=resolve;}));
+  const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);
+  button(root,'บันทึกฉบับร่าง').click();
+  expect(root.getAttribute('aria-busy')).toBe('true');const action=button(root,'ใช้ชื่อทางการ');expect(action.disabled).toBe(true);
+  action.click();expect(root.querySelector('#application-thai_full_name').value).toBe('');
+  finish({...application,version:application.version+1});await flush();await flush();
+  expect(root.getAttribute('aria-busy')).toBe('false');
+});
+
 test('blur validation keeps helper text and explicit saved values while marking invalid email',async()=>{
   const {root}=await editor();const input=root.querySelector('#application-contact_email');input.value='bad';input.dispatchEvent(new Event('input'));input.dispatchEvent(new Event('blur'));
   expect(input.getAttribute('aria-invalid')).toBe('true');expect(input.parentElement.textContent).toContain('กรุณาระบุอีเมล');
