@@ -423,6 +423,27 @@ test('Coordinator Schedule & Deadline Management displays both windows, updates 
   expect(root.textContent).toContain('ยืนยันสิทธิ์แล้ว: 1 คน');
   expect(root.textContent).toContain('รอยืนยันสิทธิ์: 1 คน');
   expect(root.textContent).toContain('6609610011 · Student One');
+
+  // Verify Table & Filter Controls
+  const confTable = root.querySelector('.coordinator-confirmations-table');
+  expect(confTable).not.toBeNull();
+  const filterBtns = root.querySelectorAll('.coordinator-filter-btn');
+  expect(filterBtns.length).toBe(5);
+
+  // Filter: ยืนยันสิทธิ์แล้ว
+  filterBtns[1].click();
+  expect(root.textContent).toContain('6609610011 · Student One');
+  expect(root.textContent).not.toContain('6609610022 · Student Two');
+
+  // Filter: รอยืนยันสิทธิ์
+  filterBtns[2].click();
+  expect(root.textContent).not.toContain('6609610011 · Student One');
+  expect(root.textContent).toContain('6609610022 · Student Two');
+
+  // Filter: ทั้งหมด
+  filterBtns[0].click();
+  expect(root.textContent).toContain('6609610011 · Student One');
+  expect(root.textContent).toContain('6609610022 · Student Two');
 });
 
 test('Student views announcement, confirms participation within deadline, and receives MS Teams join link', async () => {

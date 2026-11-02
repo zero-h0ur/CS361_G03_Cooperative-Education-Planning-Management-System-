@@ -593,38 +593,184 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
     }
   }
 
+  let confirmationFilter = 'ALL';
+  let confirmationSearchQuery = '';
+
   function renderConfirmationsPanel(cycleId) {
     const panel = el('div', 'coordinator-confirmations-panel');
-    panel.append(el('h4', null, 'รายการติดตามสถานะการยืนยันสิทธิ์'));
+    panel.append(el('h4', 'coordinator-confirmations-title', 'รายการติดตามสถานะการยืนยันสิทธิ์'));
 
-    const summary = loadedConfirmations.summary || {};
+    const summary = loadedConfirmations?.summary || loadedConfirmations?.stats || {};
+    const total = summary.total_selected ?? summary.total ?? 0;
+    const confirmed = summary.confirmed ?? 0;
+    const pending = summary.pending ?? summary.pending_confirmation ?? 0;
+    const waived = summary.waived ?? 0;
+    const autoWaived = summary.auto_waived ?? 0;
+
+    // 1. Alert banner for near deadline / expired
+    const confWin = currentSchedule?.confirmation_window || {};
+    let bannerType = 'info';
+    let bannerMsg = '';
+
+    if (confWin.is_closed || (confWin.remaining_ms !== undefined && confWin.remaining_ms <= 0)) {
+      if (autoWaived > 0 || pending > 0) {
+        bannerType = 'danger';
+        bannerMsg = `⚠️ สิ้นสุดกำหนดยืนยันสิทธิ์แล้ว: มีนักศึกษาถูกสละสิทธิ์อัตโนมัติ ${autoWaived} คน${pending > 0 ? ` (ยังมีผู้ค้างสถานะ ${pending} คน สามารถกดปุ่ม "ประมวลผลสละสิทธิ์อัตโนมัติ (Sweep)" ด้านบนเพื่อตัดสิทธิ์)` : ''}`;
+      } else {
+        bannerType = 'info';
+        bannerMsg = 'ℹ️ กำหนดยืนยันสิทธิ์สิ้นสุดลงแล้ว การตอบรับสิทธิ์ของนักศึกษาเสร็จสิ้นครบถ้วน';
+      }
+    } else if (confWin.is_near_deadline) {
+      if (pending > 0) {
+        bannerType = 'urgent';
+        bannerMsg = `⏰ ใกล้ครบกำหนดยืนยันสิทธิ์ (เหลือน้อยกว่า ${currentSchedule?.near_deadline_hours || 48} ชั่วโมง): มีนักศึกษาที่ยังไม่ได้ยืนยันสิทธิ์อีก ${pending} คน กรุณาเร่งติดตาม`;
+      } else {
+        bannerType = 'success';
+        bannerMsg = '✅ นักศึกษาทุกคนได้ทำการยืนยันสิทธิ์หรือสละสิทธิ์เรียบร้อยแล้ว';
+      }
+    } else if (pending === 0 && total > 0) {
+      bannerType = 'success';
+      bannerMsg = '✅ นักศึกษาที่ผ่านการคัดเลือกทุกคนได้ดำเนินการยืนยันสิทธิ์หรือสละสิทธิ์เรียบร้อยแล้ว';
+    } else if (confWin.is_open) {
+      bannerType = 'info';
+      bannerMsg = `📢 กำลังเปิดให้นักศึกษายืนยันสิทธิ์: เหลือเวลายืนยันสิทธิ์อีก ${formatRemainingTime(confWin.remaining_ms)} (รอยืนยันสิทธิ์ ${pending} คน)`;
+    }
+
+    if (bannerMsg) {
+      const banner = el('div', `coordinator-confirmations-alert-banner coordinator-confirmations-alert-banner--${bannerType}`);
+      banner.append(el('p', null, bannerMsg));
+      panel.append(banner);
+    }
+
+    // 2. Summary stats pills
     const statsBar = el('div', 'coordinator-confirmation-stats');
     statsBar.append(
-      el('span', 'coordinator-stat-pill', `ทั้งหมด: ${summary.total || 0} คน`),
-      el('span', 'coordinator-stat-pill', `ยืนยันสิทธิ์แล้ว: ${summary.confirmed || 0} คน`),
-      el('span', 'coordinator-stat-pill', `รอยืนยันสิทธิ์: ${summary.pending_confirmation || 0} คน`),
-      el('span', 'coordinator-stat-pill', `สละสิทธิ์แล้ว: ${summary.waived || 0} คน`),
-      el('span', 'coordinator-stat-pill', `สละสิทธิ์อัตโนมัติ: ${summary.auto_waived || 0} คน`)
+      el('span', 'coordinator-stat-pill', `ทั้งหมด: ${total} คน`),
+      el('span', 'coordinator-stat-pill', `ยืนยันสิทธิ์แล้ว: ${confirmed} คน`),
+      el('span', 'coordinator-stat-pill', `รอยืนยันสิทธิ์: ${pending} คน`),
+      el('span', 'coordinator-stat-pill', `สละสิทธิ์แล้ว: ${waived} คน`),
+      el('span', 'coordinator-stat-pill', `สละสิทธิ์อัตโนมัติ: ${autoWaived} คน`)
     );
     panel.append(statsBar);
 
-    const results = loadedConfirmations.results || [];
-    if (!results.length) {
-      panel.append(el('p', 'shell-muted', 'ยังไม่มีข้อมูลนักศึกษาที่ผ่านการคัดเลือกในรอบนี้'));
-    } else {
-      const list = el('div', 'workflow-stack');
-      for (const item of results) {
-        const row = el('div', 'coordinator-queue-item');
-        row.append(
-          el('strong', null, `${item.student_number} · ${item.full_name}`),
-          el('span', 'shell-muted', `บริษัท: ${item.company_name || '-'} (${item.position_title || '-'})`),
-          el('span', 'coordinator-badge', CONFIRMATION_STATUS_LABELS[item.confirmation_status] || item.confirmation_status)
-        );
-        list.append(row);
-      }
-      panel.append(list);
+    // 3. Interactive Filter & Search Bar
+    const filterBar = el('div', 'coordinator-confirmations-filter-bar');
+    const filterOptions = [
+      { key: 'ALL', label: `ทั้งหมด (${total})` },
+      { key: 'CONFIRMED', label: `ยืนยันสิทธิ์แล้ว (${confirmed})` },
+      { key: 'PENDING_CONFIRMATION', label: `รอยืนยันสิทธิ์ (${pending})` },
+      { key: 'WAIVED', label: `สละสิทธิ์ (${waived})` },
+      { key: 'AUTO_WAIVED', label: `สละสิทธิ์อัตโนมัติ (${autoWaived})` }
+    ];
+
+    const filterBtnGroup = el('div', 'coordinator-confirmations-filter-group');
+    for (const opt of filterOptions) {
+      const btn = el(
+        'button',
+        `shell-button shell-button--secondary coordinator-filter-btn ${confirmationFilter === opt.key ? 'coordinator-filter-btn--active' : ''}`,
+        opt.label
+      );
+      btn.type = 'button';
+      btn.addEventListener('click', () => {
+        confirmationFilter = opt.key;
+        renderCoordinatorSchedule(cycleId);
+      });
+      filterBtnGroup.append(btn);
     }
 
+    const searchInput = el('input', 'coordinator-confirmations-search');
+    searchInput.type = 'search';
+    searchInput.placeholder = 'ค้นหารหัสนักศึกษา / ชื่อ / บริษัท';
+    searchInput.value = confirmationSearchQuery;
+    searchInput.addEventListener('input', (e) => {
+      confirmationSearchQuery = e.target.value.toLowerCase().trim();
+      updateTableRows();
+    });
+
+    filterBar.append(filterBtnGroup, searchInput);
+    panel.append(filterBar);
+
+    // 4. Data Table
+    const rawResults = loadedConfirmations?.confirmations || loadedConfirmations?.results || [];
+    const tableContainer = el('div', 'coordinator-table-container');
+    const table = el('table', 'coordinator-confirmations-table');
+
+    const thead = el('thead');
+    const trHead = el('tr');
+    trHead.append(
+      el('th', null, 'นักศึกษา (รหัส / ชื่อ-นามสกุล)'),
+      el('th', null, 'สถานประกอบการ'),
+      el('th', null, 'ตำแหน่ง'),
+      el('th', null, 'สถานะการยืนยันสิทธิ์'),
+      el('th', null, 'วันเวลาที่ทำรายการ')
+    );
+    thead.append(trHead);
+    table.append(thead);
+
+    const tbody = el('tbody');
+    table.append(tbody);
+    tableContainer.append(table);
+    panel.append(tableContainer);
+
+    function getFilteredRows() {
+      return rawResults.filter((item) => {
+        if (confirmationFilter !== 'ALL') {
+          if (confirmationFilter === 'PENDING_CONFIRMATION') {
+            if (item.confirmation_status !== 'PENDING_CONFIRMATION') return false;
+          } else if (item.confirmation_status !== confirmationFilter) {
+            return false;
+          }
+        }
+        if (confirmationSearchQuery) {
+          const text = `${item.student_number || ''} ${item.full_name || ''} ${item.company_name || ''} ${item.position_title || ''}`.toLowerCase();
+          if (!text.includes(confirmationSearchQuery)) return false;
+        }
+        return true;
+      });
+    }
+
+    function updateTableRows() {
+      tbody.replaceChildren();
+      const filtered = getFilteredRows();
+      if (!filtered.length) {
+        const emptyTr = el('tr');
+        const emptyTd = el('td', 'shell-muted', 'ไม่พบข้อมูลนักศึกษาในสถานะหรือเงื่อนไขที่เลือก');
+        emptyTd.colSpan = 5;
+        emptyTd.style.textAlign = 'center';
+        emptyTd.style.padding = '24px';
+        emptyTr.append(emptyTd);
+        tbody.append(emptyTr);
+        return;
+      }
+
+      for (const item of filtered) {
+        const tr = el('tr');
+        const statusKey = item.confirmation_status;
+        let badgeClass = 'coordinator-badge';
+        if (statusKey === 'CONFIRMED' || statusKey === 'TEAM_JOINED') badgeClass += ' coordinator-badge--complete';
+        else if (statusKey === 'PENDING_CONFIRMATION') badgeClass += ' coordinator-badge--pending';
+        else if (statusKey === 'AUTO_WAIVED') badgeClass += ' coordinator-badge--revision';
+        else if (statusKey === 'WAIVED') badgeClass += ' coordinator-badge--review';
+
+        const statusLabel = CONFIRMATION_STATUS_LABELS[statusKey] || statusKey;
+        const dateStr = item.responded_at || item.auto_waived_at || item.team_joined_at || null;
+        const formattedDate = dateStr ? formatThaiDateTime(dateStr) : '-';
+
+        const tdStudent = el('td');
+        tdStudent.append(el('strong', null, `${item.student_number} · ${item.full_name}`));
+
+        const tdCompany = el('td', null, item.company_name || '-');
+        const tdPosition = el('td', null, item.position_title || '-');
+        const tdStatus = el('td');
+        tdStatus.append(el('span', badgeClass, statusLabel));
+        const tdDate = el('td', 'shell-muted', formattedDate);
+
+        tr.append(tdStudent, tdCompany, tdPosition, tdStatus, tdDate);
+        tbody.append(tr);
+      }
+    }
+
+    updateTableRows();
     return panel;
   }
 
