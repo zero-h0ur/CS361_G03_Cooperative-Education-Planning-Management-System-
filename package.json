@@ -25,7 +25,7 @@
     "test:authz": "jest --runInBand tests/authorization.test.js",
     "test:workflow": "jest --runInBand tests/workflow-service.test.js",
     "test:session": "jest --runInBand tests/session-me.test.js",
-    "test:profile": "jest --runInBand tests/student-profile.test.js",
+    "test:profile": "jest --runInBand tests/student-profile.test.js tests/student-contact-email.test.js",
     "test:advisor": "jest --runInBand tests/advisor-read.test.js",
     "test:plan": "jest --runInBand tests/student-plan.test.js tests/plan-cycle-options.test.js",
     "test:staff": "jest --runInBand tests/staff-review-queue.test.js",

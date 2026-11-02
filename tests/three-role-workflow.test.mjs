@@ -78,7 +78,7 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
       const result=await adminService.read(adminActor);
       assert.ok(result.accounts.some(row=>row.role==='ADMIN'));
       assert.equal(result.student_workflow_access,false);
-      assert.equal(result.migrations.length,10);
+      assert.equal(result.migrations.length,11);
       assert.ok(result.accounts.every(row=>Object.keys(row).sort().join(',')==='account_status,id,role,version'));
       for(const actor of [staff,advisor])await assert.rejects(adminService.read(actor),e=>e.statusCode===403);
       await assert.rejects(service.dashboard(adminActor),e=>e.statusCode===403);
@@ -106,8 +106,13 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
     });
     await t.test('Student contact fields are mutable but TU identity and other Students remain protected',async()=>{
       const a=people[0].actor;
-      const updated=await service.saveContact(a,{contact_address:'123 Synthetic Road',contact_phone:'+66 81 000 0000',version:1,operation_id:randomUUID()});
+      const updated=await service.saveContact(a,{contact_address:'123 Synthetic Road',contact_phone:'+66 81 000 0000',contact_email:'contact@example.invalid',version:1,operation_id:randomUUID()});
       assert.equal(updated.contact_phone,'+66 81 000 0000');
+      assert.equal(updated.contact_email,'contact@example.invalid');
+      const emailOnly=await service.saveContact(a,{contact_email:'changed@example.invalid',version:2,operation_id:randomUUID()});
+      assert.equal(emailOnly.contact_address,updated.contact_address);
+      assert.equal(emailOnly.institutional_email,'test@example.invalid');
+      await assert.rejects(q('UPDATE students SET contact_email=$1 WHERE id=$2',['bad email',a.studentId]),e=>e.code==='23514');
       await assert.rejects(service.saveContact(a,{contact_address:'Stale value',version:1,operation_id:randomUUID()}),e=>e.statusCode===409);
       await assert.rejects(service.saveContact(a,{contact_address:'No operation ID',version:2}),e=>e.statusCode===400);
       await assert.rejects(service.saveContact(a,{contact_address:'No version',operation_id:randomUUID()}),e=>e.statusCode===400);

@@ -9,9 +9,9 @@ import { readReviewedMigrations, REVIEWED_MIGRATIONS, normalizeReviewedMigration
 import { workflowMigrationSQL, assertExternalReleaseDirectory } from '../scripts/operations/prepare-workflow-release.mjs';
 import { fileURLToPath } from 'node:url';
 
-test('reviewed migration hashes equal exact committed LF bytes, including 010', () => {
+test('reviewed migration hashes equal exact committed LF bytes, including 011', () => {
   const migrations = readReviewedMigrations();
-  assert.equal(migrations.length, 10);
+  assert.equal(migrations.length, 11);
   for (const row of migrations) {
     assert.equal(row.bytes.includes(13), false);
     const committed = execFileSync('git', ['show', `HEAD:src/db/migrations/${row.name}`]);
@@ -62,7 +62,7 @@ test('explicit EOL formatter restores only reviewed bytes and validates all file
     assert.throws(() => normalizeReviewedMigrationLineEndings(directory), /Refusing to format changed SQL/);
     assert.deepEqual(readFileSync(join(directory, rows[0].name)), firstBefore);
     writeFileSync(last, rows.at(-1).sql.replaceAll('\n', '\r\n'));
-    assert.equal(normalizeReviewedMigrationLineEndings(directory).length, 10);
+    assert.equal(normalizeReviewedMigrationLineEndings(directory).length, 11);
     assert.deepEqual(readReviewedMigrations(directory).map(row => row.checksum), rows.map(row => row.checksum));
     assert.deepEqual(normalizeReviewedMigrationLineEndings(directory), []);
   } finally { rmSync(directory, { recursive: true, force: true }); }
