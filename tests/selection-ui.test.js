@@ -184,8 +184,20 @@ test('Coordinator Automated Eligibility Check evaluates 7 criteria, supports Aut
   expect(root.textContent).toContain('2. ตรวจสอบผลการเรียนและรายวิชาตามหลักสูตร 66');
   expect(root.textContent).toContain('คพ.100');
   expect(root.textContent).toContain('คพ.180 (บังคับ)');
-  expect(root.textContent).toContain('คพ.262 (เลือก 1 ตัว)');
+  expect(root.textContent).toContain('คพ.262 (วิชาเลือก · ขั้นต่ำ 1 ตัว)');
   expect(root.textContent).toContain('คพ.301');
+
+  // Subsections 1.1 & 1.2 (Student vs Guardian) and Section 4 (Interests & Skills)
+  expect(root.textContent).toContain('1.1 ข้อมูลนักศึกษาและการติดต่อ');
+  expect(root.textContent).toContain('อีเมลมหาวิทยาลัย (Dome)');
+  expect(root.textContent).toContain('1.2 ข้อมูลการติดต่อผู้ปกครอง (ผู้ติดต่อกรณีฉุกเฉิน)');
+  expect(root.textContent).toContain('ชื่อ-นามสกุลผู้ปกครอง');
+  expect(root.textContent).toContain('ความสัมพันธ์กับนักศึกษา');
+  expect(root.textContent).toContain('เบอร์โทรศัพท์ที่ติดต่อได้ของผู้ปกครอง');
+  expect(root.textContent).toContain('ที่อยู่ที่ติดต่อได้ของผู้ปกครอง');
+  expect(root.textContent).toContain('4. ตำแหน่งงานที่สนใจ และทักษะของนักศึกษา');
+  expect(root.textContent).toContain('ตำแหน่งงานที่สนใจ (เลือกได้หลายตำแหน่ง)');
+  expect(root.querySelectorAll('.coordinator-doc-card__bottom')).toHaveLength(4);
 
   // Automated Eligibility Check 7 criteria section rendered
   const eligSection=root.querySelector('.coordinator-eligibility-section');
@@ -219,7 +231,7 @@ test('Coordinator Automated Eligibility Check evaluates 7 criteria, supports Aut
   expect(root.textContent).toContain('2. ตรวจสอบผลการเรียนและรายวิชาตามหลักสูตร 61');
   expect(root.textContent).toContain('คพ.264');
   expect(root.textContent).toContain('คพ.384 (บังคับ)');
-  expect(root.textContent).toContain('คพ.266 (เลือก 1 ตัว)');
+  expect(root.textContent).toContain('คพ.266 (วิชาเลือก · ขั้นต่ำ 1 ตัว)');
   expect(root.textContent).toContain('คพ.302');
 
   // Student 2 passes all 7 criteria

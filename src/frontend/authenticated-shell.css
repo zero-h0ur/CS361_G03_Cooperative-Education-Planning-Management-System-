@@ -2164,11 +2164,20 @@ html.student-route-transition::view-transition-new(student-route-content) {
 .coordinator-course-name { color: #475569; }
 .coordinator-course-grade { font-weight: 600; color: #0f172a; margin-top: 2px; }
 
-.coordinator-docs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 12px; }
-.coordinator-doc-card { display: grid; gap: 8px; padding: 14px 16px; border-radius: 12px; border: 1px solid #e2d9dc; background: #fff; }
-.coordinator-doc-card__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
-.coordinator-doc-filename { margin: 0; font-size: 0.84rem; font-weight: 600; color: #334155; }
-.coordinator-doc-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.coordinator-detail-item--full { grid-column: 1 / -1; }
+.coordinator-interest-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.coordinator-interest-pill { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 999px; background: #fdf2f4; border: 1px solid #f8c9d0; color: #991b1b; font-size: 0.86rem; font-weight: 600; line-height: 1.4; }
+.coordinator-skills-box { margin-top: 4px; padding: 12px 14px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 0.9rem; line-height: 1.6; color: #1e293b; white-space: pre-wrap; word-break: break-word; }
+
+.coordinator-docs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 14px; }
+.coordinator-doc-card { display: flex; flex-direction: column; min-height: 220px; gap: 10px; padding: 16px; border-radius: 12px; border: 1px solid #e2d9dc; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03); }
+.coordinator-doc-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.coordinator-doc-title { margin: 0; font-size: 0.94rem; font-weight: 700; line-height: 1.35; color: #0f172a; }
+.coordinator-doc-card__head .coordinator-badge { flex-shrink: 0; white-space: nowrap; }
+.coordinator-doc-desc { margin: 0; font-size: 0.85rem; color: #64748b; line-height: 1.45; }
+.coordinator-doc-card__bottom { margin-top: auto; display: grid; gap: 8px; padding-top: 10px; border-top: 1px dashed #f1e5e7; }
+.coordinator-doc-filename { margin: 0; font-size: 0.84rem; font-weight: 600; color: #334155; word-break: break-all; }
+.coordinator-doc-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .coordinator-doc-btn { min-height: 38px; padding: 6px 12px; font-size: 0.85rem; }
 
 .coordinator-action-panel { padding: 18px; border-radius: 14px; background: #fdf9fa; border: 1px solid #f2dce0; }

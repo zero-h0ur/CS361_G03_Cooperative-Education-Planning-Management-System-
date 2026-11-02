@@ -184,7 +184,7 @@ function evaluateEligibility(row) {
   }
   const rule3 = {
     id: 3,
-    title: `3. กำลังศึกษา หรือเคยศึกษาวิชาตามเงื่อนไข (${is61 ? 'คพ.384 บังคับ และวิชาเลือก 61' : 'คพ.180 บังคับ และวิชาเลือก 66'})`,
+    title: `3. กำลังศึกษา หรือเคยศึกษาวิชาตามเงื่อนไข (${is61 ? 'คพ.384 บังคับ และวิชาเลือกอย่างน้อย 1 รายวิชา' : 'คพ.180 บังคับ และวิชาเลือกอย่างน้อย 1 รายวิชา'})`,
     passed: rule3Passed,
     detail: rule3Detail,
     checklistKey: 'เกรดเฉลี่ยสะสม (GPAX) หรือเกรดวิชาหลัก 7 วิชาไม่ตรงกับใบแจ้งผลการศึกษา (Transcript)'
@@ -488,12 +488,14 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
     modalHost.append(backdrop);
   }
 
-  function detailItem(term, detailText) {
-    const box = el('div', 'coordinator-detail-item');
-    box.append(
-      el('span', 'coordinator-detail-term', term),
-      el('strong', 'coordinator-detail-value', detailText || 'ไม่ระบุ')
-    );
+  function detailItem(term, detailContent, extraClass = '') {
+    const box = el('div', `coordinator-detail-item${extraClass ? ` ${extraClass}` : ''}`);
+    box.append(el('span', 'coordinator-detail-term', term));
+    if (detailContent && typeof detailContent === 'object' && detailContent.nodeType) {
+      box.append(detailContent);
+    } else {
+      box.append(el('strong', 'coordinator-detail-value', detailContent || 'ไม่ระบุ'));
+    }
     return box;
   }
 
@@ -553,7 +555,8 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
         if (trk.includes('คอมพิวเตอร์เครือข่าย') && !trackText.includes('คอมพิวเตอร์เครือข่าย') && !trackText.includes('ความปลอดภัยทางไซเบอร์')) return false;
       }
       if (q) {
-        const hay = `${row.student_number || ''} ${row.full_name || ''} ${row.company_name || ''} ${row.position_title || ''}`.toLowerCase();
+        const positions = Array.isArray(row.interested_positions) ? row.interested_positions.join(' ') : (row.interested_positions || '');
+        const hay = `${row.student_number || ''} ${row.full_name || ''} ${row.company_name || ''} ${row.position_title || ''} ${positions}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -608,18 +611,41 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
     // Section 1: Personal, Contact & Guardian Info
     const secPersonal = el('section', 'coordinator-section');
     secPersonal.append(el('h4', 'coordinator-section__title', '1. ข้อมูลนักศึกษา การติดต่อ และผู้ปกครอง'));
-    const personalGrid = el('div', 'coordinator-detail-grid');
-    personalGrid.append(
+
+    // 1.1 Student Info & Contact
+    const subStudent = el('div', 'coordinator-subgroup');
+    subStudent.append(el('h5', 'coordinator-subgroup__title', '1.1 ข้อมูลนักศึกษาและการติดต่อ'));
+    const studentGrid = el('div', 'coordinator-detail-grid');
+    studentGrid.append(
       detailItem('รหัสนักศึกษา', row.student_number),
       detailItem('ชื่อ-นามสกุล', row.full_name),
-      detailItem('ภาควิชา / หลักสูตร', `${row.department} / ${row.program}`),
-      detailItem('สาขาวิชา / ปีการศึกษา', `${row.major || row.program} / ${row.academic_year || '2569'}`),
-      detailItem('อีเมลสถาบัน', row.institutional_email || 'ตรวจสอบในทะเบียนนักศึกษา'),
+      detailItem('ภาควิชา / หลักสูตร', `${row.department || '-'} / ${row.program || '-'}`),
+      detailItem('สาขาวิชา / ปีการศึกษา', `${row.major || row.program || '-'} / ${row.academic_year || '2569'}`),
+      detailItem('อีเมลมหาวิทยาลัย (Dome)', row.institutional_email || 'ตรวจสอบในทะเบียนนักศึกษา'),
+      detailItem('อีเมลที่ติดต่อได้', row.contact_email || row.institutional_email || 'ระบุในใบสมัคร'),
       detailItem('เบอร์โทรศัพท์ติดต่อ', row.contact_phone || 'ระบุในใบสมัคร'),
-      detailItem('ที่อยู่ปัจจุบัน', row.contact_address || 'ระบุในใบสมัคร'),
-      detailItem('ข้อมูลผู้ปกครอง / ผู้ติดต่อฉุกเฉิน', row.guardian_info || 'ระบุในใบสมัครสหกิจศึกษาและเอกสารรับรอง')
+      detailItem('ที่อยู่ที่ติดต่อได้ของนักศึกษา', row.contact_address || 'ระบุในใบสมัคร')
     );
-    secPersonal.append(personalGrid);
+    subStudent.append(studentGrid);
+    secPersonal.append(subStudent);
+
+    // 1.2 Guardian / Emergency Contact
+    const subGuardian = el('div', 'coordinator-subgroup');
+    subGuardian.append(el('h5', 'coordinator-subgroup__title', '1.2 ข้อมูลการติดต่อผู้ปกครอง (ผู้ติดต่อกรณีฉุกเฉิน)'));
+    const guardianGrid = el('div', 'coordinator-detail-grid');
+    const guardianName = row.guardian_name || (row.guardian_info ? row.guardian_info.split('(')[0].trim() : 'ระบุในใบสมัคร');
+    const guardianRel = row.guardian_relationship || (row.guardian_info?.match(/\(([^)]+)\)/)?.[1] || 'ระบุในใบสมัคร');
+    const guardianPhone = row.guardian_phone || (row.guardian_info?.match(/โทร[.:\s]*([0-9-]+)/)?.[1] || 'ระบุในใบสมัคร');
+    const guardianAddr = row.guardian_address || 'ระบุในใบสมัคร';
+    guardianGrid.append(
+      detailItem('ชื่อ-นามสกุลผู้ปกครอง', guardianName),
+      detailItem('ความสัมพันธ์กับนักศึกษา', guardianRel),
+      detailItem('เบอร์โทรศัพท์ที่ติดต่อได้ของผู้ปกครอง', guardianPhone),
+      detailItem('ที่อยู่ที่ติดต่อได้ของผู้ปกครอง', guardianAddr)
+    );
+    subGuardian.append(guardianGrid);
+    secPersonal.append(subGuardian);
+
     detailPane.append(secPersonal);
 
     // Section 2: Academic & Curriculum Courses Verification (3 Subgroups, Letter grades A-F or '-')
@@ -684,11 +710,11 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
     sub1.append(coreGrid);
     secAcademic.append(sub1);
 
-    // Subgroup 2: Prerequisite courses (Mandatory + Elective from 3 options)
+    // Subgroup 2: Prerequisite courses (Mandatory + Electives min 1)
     const sub2 = el('div', 'coordinator-subgroup');
     const prereqData = is61 ? PREREQ_COURSES_61 : PREREQ_COURSES_66;
     sub2.append(
-      el('h5', 'coordinator-subgroup__title', `กลุ่มที่ 2: วิชาที่กำลังศึกษา หรือเคยศึกษา (${prereqData.mandatory.code} บังคับ และเลือก 1 ใน 3 รายวิชา)`)
+      el('h5', 'coordinator-subgroup__title', `กลุ่มที่ 2: วิชาที่กำลังศึกษา หรือเคยศึกษา (${prereqData.mandatory.code} บังคับ และวิชาเลือกอย่างน้อย 1 รายวิชา)`)
     );
     const prereqGrid = el('div', 'coordinator-course-grid');
 
@@ -709,7 +735,7 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
       const elecGrade = electivesGradeMap[elec.code] || customCourses[elec.code] || '-';
       const elecItem = el('div', 'coordinator-course-item coordinator-course-item--elective');
       elecItem.append(
-        el('strong', 'coordinator-course-code', `${elec.code} (เลือก 1 ตัว)`),
+        el('strong', 'coordinator-course-code', `${elec.code} (วิชาเลือก · ขั้นต่ำ 1 ตัว)`),
         el('span', 'coordinator-course-name', elec.name),
         el('span', 'coordinator-course-grade', `เกรด: ${elecGrade}`)
       );
@@ -747,10 +773,12 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
       const docCard = el('div', 'coordinator-doc-card');
       const docHead = el('div', 'coordinator-doc-card__head');
       docHead.append(
-        el('strong', null, doc.title),
+        el('strong', 'coordinator-doc-title', doc.title),
         el('span', `coordinator-badge ${doc.attached ? 'coordinator-badge--complete' : 'coordinator-badge--pending'}`, doc.attached ? 'มีรายการอ้างอิง' : 'ตรวจสอบไฟล์แนบ')
       );
-      const docDesc = el('p', 'shell-muted', doc.description);
+      const docDesc = el('p', 'shell-muted coordinator-doc-desc', doc.description);
+
+      const docBottom = el('div', 'coordinator-doc-card__bottom');
       const docFile = el('p', 'coordinator-doc-filename', `ไฟล์: ${doc.fileName}`);
       const docActions = el('div', 'coordinator-doc-actions');
       const previewBtn = el('button', 'shell-button shell-button--secondary coordinator-doc-btn', 'ดูตัวอย่างไฟล์');
@@ -765,22 +793,40 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
         openLink.rel = 'noopener noreferrer';
         docActions.append(openLink);
       }
-      docCard.append(docHead, docDesc, docFile, docActions);
+      docBottom.append(docFile, docActions);
+
+      docCard.append(docHead, docDesc, docBottom);
       docsGrid.append(docCard);
     }
     secDocs.append(docsGrid);
     detailPane.append(secDocs);
 
-    // Section 4: Plan, Company, Position & Skills
+    // Section 4: Interested Positions & Student Skills (Phase 1 Application)
     const secPlan = el('section', 'coordinator-section');
-    secPlan.append(el('h4', 'coordinator-section__title', '4. แผนสหกิจศึกษา ตำแหน่งงาน และทักษะที่สนใจ'));
+    secPlan.append(el('h4', 'coordinator-section__title', '4. ตำแหน่งงานที่สนใจ และทักษะของนักศึกษา'));
     const planGrid = el('div', 'coordinator-detail-grid');
+
+    const positionsList = Array.isArray(row.interested_positions) && row.interested_positions.length
+      ? row.interested_positions
+      : (typeof row.position_title === 'string' && row.position_title.trim()
+        ? row.position_title.split(/[,/·]+/).map((s) => s.trim()).filter(Boolean)
+        : ['ระบุในใบสมัคร']);
+    const pillsWrap = el('div', 'coordinator-interest-pills');
+    for (const pos of positionsList) {
+      pillsWrap.append(el('span', 'coordinator-interest-pill', pos));
+    }
+    planGrid.append(detailItem('ตำแหน่งงานที่สนใจ (เลือกได้หลายตำแหน่ง)', pillsWrap, 'coordinator-detail-item--full'));
+
+    const skillsText =
+      row.skills_detail ||
+      (Array.isArray(row.skills) ? row.skills.join('\n') : row.skills) ||
+      row.plan_notes ||
+      'ระบุในเรซูเม่และใบสมัคร';
+    const skillsWrap = el('div', 'coordinator-skills-box', skillsText);
     planGrid.append(
-      detailItem('สถานประกอบการที่เลือก', row.company_name || 'ระบุในแผนสหกิจศึกษา'),
-      detailItem('ตำแหน่งงานที่สมัคร', row.position_title || 'ระบุในแผนสหกิจศึกษา'),
-      detailItem('หัวข้อโครงงาน / แผนงานเบื้องต้น', row.project_title || 'ระบุในแผนสหกิจศึกษา'),
-      detailItem('ทักษะการเขียนโปรแกรม / หมายเหตุแผน', row.plan_notes || 'ระบุในเรซูเม่และใบสมัคร')
+      detailItem('ระบุทักษะของนักศึกษา (เช่น ภาษาโปรแกรม, Frameworks, ทักษะเฉพาะด้าน เป็นต้น)', skillsWrap, 'coordinator-detail-item--full')
     );
+
     secPlan.append(planGrid);
     detailPane.append(secPlan);
 
@@ -1047,7 +1093,10 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
         el('span', `coordinator-badge ${BADGE_TONES[row.state] || ''}`, SHORT_LABELS[row.state] || LABELS[row.state] || row.state)
       );
       const nameLine = el('p', 'coordinator-queue-item__name', row.full_name);
-      const metaLine = el('p', 'coordinator-queue-item__meta', `${row.company_name || 'ยังไม่ระบุบริษัท'} · ${row.program}`);
+      const posSummary = (Array.isArray(row.interested_positions) && row.interested_positions.length)
+        ? row.interested_positions.join(', ')
+        : (row.position_title || 'ตำแหน่งที่สนใจ');
+      const metaLine = el('p', 'coordinator-queue-item__meta', `${posSummary} · ${row.program}`);
 
       body.append(topLine, nameLine, metaLine);
       itemBtn.append(avatar, body);
