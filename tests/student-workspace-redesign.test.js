@@ -82,11 +82,20 @@ test('bare live list summaries render once, with one prominent draft action and 
 
 test('additional drafts stay accessible and never get labelled read-only',async()=>{
   const second={...draft,id:'14100000-0000-4000-8000-000000000003',cycle_id:'cycle-c',updated_at:'2026-10-02T01:00:00Z'};
-  const {root}=await mount({hash:'#/student/application',applicationClient:{options:async()=>({cycles}),list:async()=>[draft,second,submitted]}});
+  const {root}=await mount({hash:'#/student/application',applicationClient:{options:async()=>({cycles:[...cycles,{id:'cycle-c',name:'รอบพิเศษ',status:'OPEN'}]}),list:async()=>[draft,second,submitted]}});
   await flush();await flush();
   expect(root.querySelector('.student-application-history h2').textContent).toBe('ใบสมัครอื่น · 2 รายการ');
   const rows=[...root.querySelectorAll('tbody tr')];
   expect(rows[0].textContent).toContain('กรอกต่อ');expect(rows[0].textContent).not.toContain('เปิดดูฉบับที่ส่ง');
+});
+
+test('closed drafts stay viewable, never promise editing, and do not displace an open draft',async()=>{
+  const closed={...draft,id:'14100000-0000-4000-8000-000000000004',cycle_id:'cycle-b',updated_at:'2026-11-03T01:00:00Z'};
+  const {root}=await mount({hash:'#/student/application',applicationClient:{options:async()=>({cycles}),list:async()=>[closed,draft]}});
+  await flush();await flush();
+  expect(root.querySelector('.student-feature-action').getAttribute('href')).toBe('#/student/application/'+draft.id);
+  expect(root.querySelector('tbody').textContent).toContain('ดูฉบับร่าง');
+  expect(root.querySelector('tbody').textContent).toContain('รอบปิด · อ่านอย่างเดียว');
 });
 
 test('cycle lookup failure does not hide existing applications; empty list has a clear starting action',async()=>{

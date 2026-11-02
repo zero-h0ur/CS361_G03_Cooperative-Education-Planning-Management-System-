@@ -1,6 +1,6 @@
 import {renderApplicationEditor} from './application-editor-view.js';
 import {studentElement as node,renderStudentPageHeader,formatStudentDate} from './workspace-components.js';
-import {applicationCycleLabel,latestApplication,renderApplicationFeature} from './application-presentation.js';
+import {applicationCycleLabel,applicationEditState,latestApplication,renderApplicationFeature} from './application-presentation.js';
 import {createWorkspaceIcon} from '../ui/workspace-presentation.js';
 export {node};
 export function button(text,action,secondary=false) {
@@ -50,14 +50,15 @@ export function renderApplicationWorkspace({client,applicationId,signal,onNaviga
     const body=node('tbody');
     for(const app of list) {
       const row=node('tr'),cycle=node('td'),status=node('td'),action=node('td'),draft=app.status==='DRAFT';
+      const editable=applicationEditState(app,cycles),label=draft?(editable===true?'กรอกต่อ':editable===false?'ดูฉบับร่าง':'เปิดใบสมัคร'):'ดูใบสมัคร';
       cycle.dataset.label='รอบสมัคร';status.dataset.label='สถานะ';action.dataset.label='ทำรายการ';
       cycle.append(node('h3','',applicationCycleLabel(app,cycles)));
       const date=formatStudentDate(draft?app.updated_at:app.submitted_at);
       if(date)cycle.append(node('p','student-record-description',`${draft?'แก้ไขล่าสุด':'ส่งเมื่อ'} ${date}`));
       status.append(node('span',`student-status-badge${draft?' student-status-badge--draft':''}`,draft?'ยังไม่ได้ส่ง':'ส่งแล้ว'),
-        node('p','student-record-description',draft?'แก้ไขข้อมูลและเอกสารได้':'เปิดดูฉบับที่ส่ง'));
-      const open=button(draft?'กรอกต่อ':'ดูใบสมัคร',()=>onNavigate?.(`#/student/application/${app.id}`),true);
-      open.setAttribute('aria-label',`${draft?'กรอกต่อ':'ดูใบสมัคร'} ${applicationCycleLabel(app,cycles)}`);
+        node('p','student-record-description',draft?(editable===true?'แก้ไขข้อมูลและเอกสารได้':editable===false?'รอบปิด · อ่านอย่างเดียว':'ตรวจสอบช่วงรับสมัครในใบสมัคร'):'เปิดดูฉบับที่ส่ง'));
+      const open=button(label,()=>onNavigate?.(`#/student/application/${app.id}`),true);
+      open.setAttribute('aria-label',`${label} ${applicationCycleLabel(app,cycles)}`);
       open.append(createWorkspaceIcon('arrow'));action.append(open);row.append(cycle,status,action);body.append(row);
     }
     table.append(body);section.append(table);return section;
@@ -85,7 +86,7 @@ export function renderApplicationWorkspace({client,applicationId,signal,onNaviga
         const empty=node('section','student-empty-state');empty.append(createWorkspaceIcon('document'),node('h3','','ยังไม่มีใบสมัคร'),
           node('p','','เริ่มจาก “เลือกรอบสมัครใหม่” ด้านบน แล้วบันทึกข้อมูลทีละส่วนได้'));content.append(empty);
       } else {
-        const latest=latestApplication(list);content.append(renderApplicationFeature(latest,{cycles:options?.cycles,onNavigate}));
+        const latest=latestApplication(list,options?.cycles);content.append(renderApplicationFeature(latest,{cycles:options?.cycles,onNavigate}));
         const others=list.filter(app=>app.id!==latest.id);if(others.length)content.append(applicationTable(others,options?.cycles));
         const note=node('p','student-list-note','ใบสมัครที่ส่งแล้วเปิดดูได้ แต่แก้ไขไม่ได้');note.prepend(createWorkspaceIcon('lock'));content.append(note);
       }

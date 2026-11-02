@@ -115,7 +115,7 @@ export function renderStudentProfile({profileClient,applicationClient,workflowCl
     } finally {contact.setAttribute('aria-busy','false');if(profile){official.hidden=false;contact.hidden=false;}}
   }
   async function loadApplications() {
-    latest.replaceChildren();loading(latest,'กำลังโหลดใบสมัครล่าสุด…');
+    latest.className='student-profile-latest';latest.replaceChildren();loading(latest,'กำลังโหลดใบสมัครล่าสุด…');
     const [optionResult,listResult]=await Promise.allSettled([applicationClient.options({signal}),applicationClient.list({signal})]);
     if(signal?.aborted)return;
     for(const result of [optionResult,listResult])if(result.status==='rejected'&&blocked(result.reason))return;
@@ -125,7 +125,7 @@ export function renderStudentProfile({profileClient,applicationClient,workflowCl
     if(listResult.status==='rejected') {
       latest.className='student-profile-latest student-record-card';latest.append(el('p','','โหลดใบสมัครล่าสุดไม่สำเร็จ'),action('ลองโหลดใบสมัครอีกครั้ง',loadApplications));return;
     }
-    const app=latestApplication(listResult.value);
+    const app=latestApplication(listResult.value,options?.cycles);
     if(app)latest.append(renderApplicationFeature(app,{cycles:options?.cycles,onNavigate,compact:true}));
     else {latest.className='student-profile-latest student-record-card';latest.append(el('h2','','เริ่มสมัครเข้าแผนสหกิจ'),el('p','student-record-description','ยังไม่มีใบสมัคร เลือกรอบแล้วทยอยกรอกข้อมูลได้'),studentLink('เลือกรอบสมัคร','#/student/application',{onNavigate,className:'shell-button'}));}
   }

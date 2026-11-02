@@ -311,3 +311,8 @@
 @media (prefers-reduced-motion: reduce) {
   .student-portal *, .student-portal *::before, .student-portal *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
 }
+@media (max-width: 420px) {
+  .student-portal .shell-nav { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+  .student-portal .shell-nav__link { flex-direction: column; gap: 2px; padding: 7px 0; font-size: .75rem; white-space: normal; text-align: center; }
+  .student-portal .shell-nav .workspace-icon { width: 17px; height: 17px; }
+}
