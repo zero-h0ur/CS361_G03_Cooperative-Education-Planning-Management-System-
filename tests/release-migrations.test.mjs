@@ -8,6 +8,12 @@ import { execFileSync } from 'node:child_process';
 import { readReviewedMigrations, REVIEWED_MIGRATIONS, normalizeReviewedMigrationLineEndings } from '../scripts/operations/reviewed-migrations.mjs';
 import { workflowMigrationSQL, assertExternalReleaseDirectory } from '../scripts/operations/prepare-workflow-release.mjs';
 import { fileURLToPath } from 'node:url';
+import migrationTestHelpers from './helpers/reviewed-migrations.js';
+
+test('CommonJS migration expectations include every checksum-verified name and exact checksum', () => {
+  assert.deepEqual(migrationTestHelpers.readReviewedMigrationRows(),
+    readReviewedMigrations().map(({ name, checksum }) => ({ version: name, checksum })));
+});
 
 test('reviewed migration hashes equal exact committed LF bytes, including 011', () => {
   const migrations = readReviewedMigrations();

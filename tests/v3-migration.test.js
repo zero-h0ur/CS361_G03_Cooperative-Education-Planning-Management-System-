@@ -6,10 +6,12 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const { migrate } = require('../src/db/migrate');
+const { readReviewedMigrationRows } = require('./helpers/reviewed-migrations');
 
 jest.setTimeout(30000);
 
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'src', 'db', 'migrations');
+const REVIEWED_MIGRATIONS = readReviewedMigrationRows();
 const INITIAL_SQL = fs.readFileSync(
   path.join(MIGRATIONS_DIR, '001_initial_schema.sql'),
   'utf8'
@@ -247,14 +249,7 @@ describe('Issue #56 forward-only V3 migration', () => {
       FROM schema_migrations
       ORDER BY version
     `);
-    expect(result.rows.map(row => row.version)).toEqual([
-      '001_initial_schema.sql', '002_v3_identity_student_plan_assignment_audit.sql', '003_partner_directory.sql',
-      '004_three_role_workflow.sql','005_submission_snapshots.sql','006_advisor_display_name.sql','007_submission_policy_integrity.sql',
-      '008_returned_plan_cancellation.sql','009_coordinator_committee_selection.sql','010_phase1_applications_documents.sql'
-    ]);
-    for (const row of result.rows) {
-      expect(row.checksum).toMatch(/^[0-9a-f]{64}$/);
-    }
+    expect(result.rows).toEqual(REVIEWED_MIGRATIONS);
   });
 
   test('serializes two concurrent migration runners', async () => {
@@ -265,8 +260,8 @@ describe('Issue #56 forward-only V3 migration', () => {
         migrate({ pool: isolated.pool, logger: SILENT_LOGGER }),
         migrate({ pool: isolated.pool, logger: SILENT_LOGGER }),
       ]);
-      const result = await isolated.pool.query(`SELECT COUNT(*) FROM schema_migrations`);
-      expect(Number(result.rows[0].count)).toBe(10);
+      const result = await isolated.pool.query(`SELECT version, checksum FROM schema_migrations ORDER BY version`);
+      expect(result.rows).toEqual(REVIEWED_MIGRATIONS);
     } finally {
       await dropIsolatedPool(isolated.schema, isolated.pool);
     }
