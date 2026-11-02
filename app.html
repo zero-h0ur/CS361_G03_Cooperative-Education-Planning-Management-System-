@@ -4,7 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex" />
-  <title>พื้นที่ผู้ใช้งาน | CO-ED</title>
+  <title>เข้าสู่ระบบ | CO-ED</title>
+  <script>
+    (function normalizeAppTrailingSlash() {
+      var path = window.location.pathname || '';
+      if (/\/app\/?$/i.test(path)) {
+        var base = path.replace(/\/app\/?$/i, '/app.html');
+        window.location.replace(base + (window.location.search || '') + (window.location.hash || ''));
+      }
+    })();
+  </script>
   <link rel="icon" href="resources/images/logomini.png" type="image/png" />
   <link rel="stylesheet" href="assets/authenticated-shell.css" />
   <script src="runtime-config.js" defer></script>
