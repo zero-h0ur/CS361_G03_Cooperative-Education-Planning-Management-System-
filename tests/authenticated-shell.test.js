@@ -467,13 +467,61 @@ describe('authenticated V3 shell and route guards', () => {
     expect(context.root.querySelector('a').getAttribute('href')).toBe('company-directory.html');
 
     const loginButton = [...context.root.querySelectorAll('button')]
-      .find((button) => button.textContent === 'เข้าสู่ระบบ');
+      .find((button) => button.dataset.authMode === 'cognito-test' || button.textContent === 'เข้าสู่ระบบ');
     loginButton.click();
     await Promise.resolve();
 
     expect(context.startLogin).toHaveBeenCalledTimes(1);
     expect(context.restartLogin).not.toHaveBeenCalled();
     expect(window.sessionStorage.getItem('co-ed:return-route')).toBe('#/student/plan');
+  });
+
+  it('renders TU Auth student ID verification form with validation and password toggle alongside Cognito test login', async () => {
+    const context = setup({
+      hash: '#/student/application',
+      error: { code: AUTH_ERROR_CODES.NOT_SIGNED_IN }
+    });
+
+    await context.app.start();
+
+    const form = context.root.querySelector('.tuauth-signin-card');
+    expect(form).not.toBeNull();
+    expect(form.textContent).toContain('TUAPI · TUAUTH');
+
+    const studentInput = form.querySelector('input[name="studentId"]');
+    const passwordInput = form.querySelector('input[name="password"]');
+    const toggleBtn = form.querySelector('.tuauth-signin-password-toggle');
+    const feedback = form.querySelector('.tuauth-signin-feedback');
+
+    // Invalid student ID (< 10 digits)
+    studentInput.value = '66096';
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(feedback.hidden).toBe(false);
+    expect(feedback.getAttribute('role')).toBe('alert');
+    expect(feedback.textContent).toContain('10 หลัก');
+
+    // Valid 10-digit student ID, empty password
+    studentInput.value = '6609610022';
+    passwordInput.value = '';
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(feedback.getAttribute('role')).toBe('alert');
+    expect(feedback.textContent).toContain('รหัสผ่าน');
+
+    // Toggle password visibility
+    expect(passwordInput.type).toBe('password');
+    toggleBtn.click();
+    expect(passwordInput.type).toBe('text');
+    toggleBtn.click();
+    expect(passwordInput.type).toBe('password');
+
+    // Valid submission shows pending gateway status while keeping Cognito test login separate
+    passwordInput.value = 'tu-secret-pass';
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await Promise.resolve();
+    expect(feedback.getAttribute('role')).toBe('status');
+    expect(feedback.textContent).toContain('TUAPI');
+    expect(context.startLogin).not.toHaveBeenCalled();
+    context.app.destroy();
   });
 
   it('offers logout on access-denied and unavailable states so users can switch accounts', async () => {

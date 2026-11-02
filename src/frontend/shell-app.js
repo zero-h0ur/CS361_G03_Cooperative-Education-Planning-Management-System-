@@ -87,9 +87,13 @@ function renderState(root, {
   tone = 'neutral',
   busy = false,
   alert = false,
+  bodyNode = null,
   actions = []
 }) {
   const main = element('main', `shell-state shell-state--${tone}`);
+  if (bodyNode) {
+    main.classList.add('shell-state--with-card');
+  }
   main.setAttribute('aria-busy', String(busy));
   if (alert) {
     main.setAttribute('role', 'alert');
@@ -105,6 +109,10 @@ function renderState(root, {
     element('p', 'shell-state__description', description)
   );
 
+  if (bodyNode) {
+    copy.append(bodyNode);
+  }
+
   if (actions.length > 0) {
     const actionGroup = element('div', 'shell-state__actions');
     actionGroup.append(...actions);
@@ -113,6 +121,115 @@ function renderState(root, {
 
   main.append(mark, copy);
   replaceRoot(root, main, busy);
+}
+
+function createTuAuthSignInSection({ onSubmit }) {
+  const section = element('section', 'tuauth-signin-section');
+  section.setAttribute('aria-label', 'ยืนยันตัวตนด้วย TUAPI');
+
+  const form = element('form', 'tuauth-signin-card');
+  form.noValidate = true;
+
+  const header = element('div', 'tuauth-signin-card__header');
+  header.append(
+    element('span', 'tuauth-signin-badge', 'TUAPI · TUAUTH'),
+    element('h2', 'tuauth-signin-card__title', 'ยืนยันตัวตนด้วยรหัสนักศึกษา (TU Auth)'),
+    element(
+      'p',
+      'tuauth-signin-card__subtitle',
+      'ใช้รหัสนักศึกษา 10 หลัก และรหัสผ่านทะเบียนนักศึกษา มหาวิทยาลัยธรรมศาสตร์'
+    )
+  );
+
+  const studentField = element('label', 'tuauth-signin-field');
+  const studentLabel = element('span', 'tuauth-signin-field__label', 'รหัสนักศึกษา (10 หลัก)');
+  const studentInput = element('input', 'tuauth-signin-input');
+  studentInput.type = 'text';
+  studentInput.name = 'studentId';
+  studentInput.inputMode = 'numeric';
+  studentInput.maxLength = 10;
+  studentInput.autocomplete = 'username';
+  studentInput.placeholder = 'เช่น 6609610022';
+  studentInput.required = true;
+  studentInput.addEventListener('input', () => {
+    const sanitized = studentInput.value.replace(/\D+/g, '').slice(0, 10);
+    if (studentInput.value !== sanitized) {
+      studentInput.value = sanitized;
+    }
+  });
+  studentField.append(studentLabel, studentInput);
+
+  const passwordField = element('label', 'tuauth-signin-field');
+  const passwordLabel = element('span', 'tuauth-signin-field__label', 'รหัสผ่าน (TU Auth / TU Reg)');
+  const passwordWrap = element('div', 'tuauth-signin-password-wrap');
+  const passwordInput = element('input', 'tuauth-signin-input');
+  passwordInput.type = 'password';
+  passwordInput.name = 'password';
+  passwordInput.autocomplete = 'current-password';
+  passwordInput.placeholder = 'กรอกรหัสผ่านบัญชีมหาวิทยาลัย';
+  passwordInput.required = true;
+
+  const toggleBtn = element('button', 'tuauth-signin-password-toggle', 'แสดง');
+  toggleBtn.type = 'button';
+  toggleBtn.setAttribute('aria-label', 'แสดงรหัสผ่าน');
+  toggleBtn.addEventListener('click', () => {
+    const showing = passwordInput.type === 'text';
+    passwordInput.type = showing ? 'password' : 'text';
+    toggleBtn.textContent = showing ? 'แสดง' : 'ซ่อน';
+    toggleBtn.setAttribute('aria-label', showing ? 'แสดงรหัสผ่าน' : 'ซ่อนรหัสผ่าน');
+  });
+  passwordWrap.append(passwordInput, toggleBtn);
+  passwordField.append(passwordLabel, passwordWrap);
+
+  const feedback = element('p', 'tuauth-signin-feedback');
+  feedback.hidden = true;
+
+  const submitBtn = element('button', 'shell-button tuauth-signin-submit', 'ยืนยันตัวตนด้วย TU Auth');
+  submitBtn.type = 'submit';
+
+  function showFeedback(message, isError = false) {
+    feedback.hidden = false;
+    feedback.textContent = message;
+    feedback.className = isError
+      ? 'tuauth-signin-feedback tuauth-signin-feedback--error'
+      : 'tuauth-signin-feedback tuauth-signin-feedback--info';
+    feedback.setAttribute('role', isError ? 'alert' : 'status');
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const studentId = studentInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!/^\d{10}$/.test(studentId)) {
+      showFeedback('กรุณากรอกรหัสนักศึกษาเป็นตัวเลข 10 หลักให้ครบถ้วน', true);
+      studentInput.focus();
+      return;
+    }
+
+    if (!password) {
+      showFeedback('กรุณากรอกรหัสผ่านบัญชีมหาวิทยาลัย (TU Auth)', true);
+      passwordInput.focus();
+      return;
+    }
+
+    submitBtn.disabled = true;
+    form.setAttribute('aria-busy', 'true');
+    try {
+      await onSubmit({ studentId, password, showFeedback });
+    } finally {
+      submitBtn.disabled = false;
+      form.removeAttribute('aria-busy');
+    }
+  });
+
+  form.append(header, studentField, passwordField, feedback, submitBtn);
+
+  const divider = element('div', 'tuauth-signin-divider');
+  divider.append(element('span', null, 'หรือเข้าสู่ระบบสำหรับทดสอบ / ผู้ประสานงาน / กรรมการ'));
+
+  section.append(form, divider);
+  return section;
 }
 
 function safelyReadReturnRoute(storage) {
@@ -327,6 +444,7 @@ export function createShellApp({
   startLogin,
   restartLogin,
   logout,
+  startTuAuthLogin = null,
   invalidateLocalSession = async () => {},
   location,
   eventTarget,
@@ -398,23 +516,51 @@ export function createShellApp({
     if (rememberRoute) safelyRememberReturnRoute(storage, location.hash);
     const publicDirectory = element('a', 'shell-button shell-button--secondary', 'ดูรายชื่อสถานประกอบการ');
     publicDirectory.href = 'company-directory.html';
+    const homeLink = element('a', 'shell-button shell-button--secondary', 'กลับหน้าแรก');
+    homeLink.href = 'index.html';
+
+    const cognitoButton = createActionButton('เข้าสู่ระบบด้วยบัญชีทดสอบ (Cognito)', async () => {
+      safelyRememberReturnRoute(storage, location.hash);
+      renderLoading('กำลังไปยังหน้าเข้าสู่ระบบ');
+      try {
+        await startLogin();
+      } catch {
+        renderUnavailable();
+      }
+    }, true);
+    cognitoButton.dataset.authMode = 'cognito-test';
+
+    const tuAuthSection = createTuAuthSignInSection({
+      onSubmit: async ({ studentId, password, showFeedback }) => {
+        safelyRememberReturnRoute(storage, location.hash);
+        if (typeof startTuAuthLogin === 'function') {
+          try {
+            await startTuAuthLogin({ studentId, password });
+          } catch (error) {
+            showFeedback(
+              error?.message || 'ไม่สามารถยืนยันตัวตนผ่าน TUAPI ได้ในขณะนี้ กรุณาตรวจสอบข้อมูลหรือลองใหม่อีกครั้ง',
+              true
+            );
+          }
+          return;
+        }
+        showFeedback(
+          'ตรวจสอบรหัสนักศึกษา 10 หลักเรียบร้อย ระบบเตรียมพร้อมเชื่อมต่อเกตเวย์ TUAPI (TUAUTH) — สำหรับการทดสอบในขณะนี้ กรุณากดปุ่ม "เข้าสู่ระบบด้วยบัญชีทดสอบ (Cognito)" ด้านล่าง',
+          false
+        );
+      }
+    });
 
     renderState(root, {
-      eyebrow: 'SIGN IN',
+      eyebrow: 'SIGN IN · TU AUTHENTICATION',
       title: 'กรุณาเข้าสู่ระบบ',
-      description: 'เข้าสู่ระบบด้วยบัญชีที่มหาวิทยาลัยจัดเตรียมให้ เพื่อเปิดพื้นที่ผู้ใช้งานของคุณ',
+      description: 'เข้าสู่ระบบด้วยรหัสนักศึกษาผ่านระบบยืนยันตัวตนมหาวิทยาลัยธรรมศาสตร์ (TUAPI / TUAUTH) หรือใช้บัญชีทดสอบสำหรับผู้ประสานงานและกรรมการ',
       tone: 'neutral',
+      bodyNode: tuAuthSection,
       actions: [
-        createActionButton('เข้าสู่ระบบ', async () => {
-          safelyRememberReturnRoute(storage, location.hash);
-          renderLoading('กำลังไปยังหน้าเข้าสู่ระบบ');
-          try {
-            await startLogin();
-          } catch {
-            renderUnavailable();
-          }
-        }),
-        publicDirectory
+        cognitoButton,
+        publicDirectory,
+        homeLink
       ]
     });
   }
