@@ -143,8 +143,9 @@ export function renderStudentDashboardView({
     title.id = 'student-dashboard-summary-title';
     const greeting = element('p', 'student-dashboard-summary__greeting', `สวัสดี ${formatOfficialValue('full_name', profile.full_name)}`);
     greeting.dataset.role = 'display-greeting';
+    const isActiveStatus = profile.enrollment_status === 'ACTIVE' || profile.enrollment_status === 'ปกติ';
     const badges = element('div', 'student-dashboard-summary__badges');
-    badges.append(element('span', `student-badge ${profile.enrollment_status === 'ACTIVE' ? 'student-badge--status' : 'student-badge--neutral'}`,
+    badges.append(element('span', `student-badge ${isActiveStatus ? 'student-badge--status' : 'student-badge--neutral'}`,
       formatOfficialValue('enrollment_status', profile.enrollment_status)),
     element('span', 'student-badge student-badge--neutral', `ปีการศึกษา ${formatOfficialValue('academic_year', profile.academic_year)}`));
     header.append(title, greeting, badges);
@@ -196,6 +197,39 @@ export function renderStudentDashboardView({
       detail.dataset.field = field.key;
       item.append(element('dt', 'student-profile-list__term', field.label), detail);
       list.append(item);
+    }
+    let storedTuResponse = null;
+    try {
+      const rawTu =
+        (typeof window !== 'undefined' &&
+          (window.sessionStorage?.getItem('co-ed:tu-response') ||
+            window.localStorage?.getItem('co-ed:tu-response'))) ||
+        null;
+      if (rawTu) storedTuResponse = JSON.parse(rawTu);
+    } catch {
+      storedTuResponse = null;
+    }
+    if (storedTuResponse && typeof storedTuResponse === 'object') {
+      const extraTuFields = [
+        { key: 'displayname_en', label: 'ชื่อ-นามสกุล (EN · TU API)', value: storedTuResponse.displayname_en || profile.preferred_name },
+        { key: 'faculty', label: 'คณะ (TU API faculty)', value: storedTuResponse.faculty },
+        {
+          key: 'tu_status',
+          label: 'สถานะบัญชี มธ. (tu_status / statusid)',
+          value: storedTuResponse.tu_status
+            ? `${storedTuResponse.tu_status}${storedTuResponse.statusid ? ` (รหัส ${storedTuResponse.statusid})` : ''}`
+            : null
+        },
+        { key: 'type', label: 'ประเภทผู้ใช้งาน (TU API type)', value: storedTuResponse.type }
+      ];
+      for (const extra of extraTuFields) {
+        if (!extra.value) continue;
+        const item = element('div', 'student-profile-list__item');
+        const detail = element('dd', 'student-profile-list__detail', formatOfficialValue(extra.key, extra.value));
+        detail.dataset.field = extra.key;
+        item.append(element('dt', 'student-profile-list__term', extra.label), detail);
+        list.append(item);
+      }
     }
     const metadata = element('p', 'student-profile-metadata', updatedLabel(profile.updated_at));
     const version = element('span', '', `ข้อมูลเวอร์ชัน v${profile.version}`);

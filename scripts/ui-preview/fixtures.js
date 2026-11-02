@@ -3,6 +3,7 @@ import { sanitizeStatusHistoryEntry } from '../../src/frontend/student/plan-subm
 import { sanitizeAdvisorStudent, sanitizeAdvisorPlanSummary, sanitizeAdvisorPlanDetail } from '../../src/frontend/advisor/advisor-client.js';
 
 export const SCENARIOS = Object.freeze({
+  signin: 'เข้าสู่ระบบ (TU Auth)',
   rejected:'ไม่ผ่านคุณสมบัติในรอบนี้',
   'company-confirmed':'ผ่านเกณฑ์และบริษัทยืนยันแล้ว',
   'company-pending':'รอแบบฟอร์มบริษัทตอบกลับ',
@@ -108,7 +109,101 @@ function createAdvisorPreviewClient({ scenario, delayMs }) {
   });
 }
 
+export function getStoredTuApiResponse() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw =
+      window.sessionStorage?.getItem('co-ed:tu-response') ||
+      window.localStorage?.getItem('co-ed:tu-response');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveTuApiResponseToStorage(tuResponse) {
+  if (typeof window === 'undefined' || !tuResponse || typeof tuResponse !== 'object') return null;
+  const cleanId = String(tuResponse.username || '').trim();
+  const yearPrefix = parseInt(cleanId.slice(0, 2), 10);
+  const academicYear = Number.isInteger(yearPrefix) && yearPrefix > 0 ? 2500 + yearPrefix : 2567;
+  const rawTuStatus = String(
+    tuResponse.tu_status ||
+      tuResponse.StatusEmp ||
+      (String(tuResponse.statusid) === '40' ? 'สำเร็จการศึกษา' : 'ปกติ')
+  ).trim();
+  const normalizedTu = {
+    status: tuResponse.status ?? true,
+    message: tuResponse.message || 'Success',
+    type: tuResponse.type || 'student',
+    username: cleanId || '5701010101',
+    tu_status: rawTuStatus,
+    statusid: String(tuResponse.statusid || tuResponse.StatusWork || '10'),
+    displayname_th: tuResponse.displayname_th || `นักศึกษา (${cleanId})`,
+    displayname_en: tuResponse.displayname_en || '',
+    email: tuResponse.email || `${cleanId}@dome.tu.ac.th`,
+    department: tuResponse.department || 'สาขาวิชาวิทยาการคอมพิวเตอร์',
+    faculty: tuResponse.faculty || tuResponse.organization || 'คณะวิทยาศาสตร์และเทคโนโลยี'
+  };
+  const enrollmentStatus = normalizedTu.tu_status;
+  const profile = {
+    id: '20000000-0000-4000-8000-000000000101',
+    student_number: normalizedTu.username,
+    full_name: normalizedTu.displayname_th,
+    preferred_name: normalizedTu.displayname_en || null,
+    institutional_email: normalizedTu.email,
+    department: normalizedTu.department,
+    faculty: normalizedTu.faculty,
+    program: normalizedTu.faculty,
+    major: normalizedTu.department,
+    tu_status: normalizedTu.tu_status,
+    statusid: normalizedTu.statusid,
+    academic_year: academicYear,
+    enrollment_status: enrollmentStatus,
+    version: 1,
+    created_at: stamp,
+    updated_at: new Date().toISOString()
+  };
+  const respJson = JSON.stringify(normalizedTu);
+  const profJson = JSON.stringify(profile);
+  window.sessionStorage?.setItem('co-ed:tu-response', respJson);
+  window.localStorage?.setItem('co-ed:tu-response', respJson);
+  window.sessionStorage?.setItem('co-ed:tu-profile', profJson);
+  window.localStorage?.setItem('co-ed:tu-profile', profJson);
+  return { tuResponse: normalizedTu, profile };
+}
+
+export function getStoredTuProfile() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const tuResp = getStoredTuApiResponse();
+    if (tuResp) {
+      return saveTuApiResponseToStorage(tuResp)?.profile || null;
+    }
+    const rawProf =
+      window.sessionStorage?.getItem('co-ed:tu-profile') ||
+      window.localStorage?.getItem('co-ed:tu-profile');
+    if (rawProf) {
+      const parsed = JSON.parse(rawProf);
+      if (parsed && typeof parsed === 'object' && parsed.student_number) return parsed;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export function createPreviewClients({ role = 'STUDENT', scenario = role === 'ADVISOR' ? 'assigned' : 'draft', delayMs = 250 } = {}) {
+  if (scenario === 'signin') {
+    return {
+      loadSession: async () => {
+        const error = new Error('NOT_SIGNED_IN');
+        error.code = 'NOT_SIGNED_IN';
+        throw error;
+      }
+    };
+  }
   if (role === 'ADMIN') return {loadSession:async()=>({role:'ADMIN',canReviewPlan:false})};
   if (!['STUDENT', 'STAFF', 'ADVISOR'].includes(role)) throw new Error('Unsupported preview role');
   if (role === 'ADVISOR') {
@@ -120,9 +215,8 @@ export function createPreviewClients({ role = 'STUDENT', scenario = role === 'AD
   const status = { revision: 'NEEDS_REVISION', submitted: 'SUBMITTED', review: 'UNDER_REVIEW',
     approved: 'APPROVED', cancelled: 'CANCELLED',rejected:'REJECTED',
     'company-confirmed':'APPROVED','company-pending':'APPROVED','capacity-full':'APPROVED' }[scenario] || 'DRAFT';
-  // Invented identity with a realistic display format, not a TU record. The reserved
-  // .invalid domain is deliberate: never use a real student's contact details.
-  const profile = {
+  const storedTuProfile = getStoredTuProfile();
+  const profile = storedTuProfile || {
     id: '20000000-0000-4000-8000-000000000101', student_number: '6609612345',
     full_name: 'ณัฐวดี ศิริกุล', preferred_name: null,
     institutional_email: 'nattawadee.s@example.invalid', department: 'ภาควิชาวิทยาการคอมพิวเตอร์',

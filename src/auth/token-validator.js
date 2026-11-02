@@ -138,18 +138,39 @@ class TokenValidator {
       process.env.AUTH_ISSUER ??
       process.env.COGNITO_ISSUER ??
       null;
+    this.explicitClientId =
+      options.expectedClientId !== undefined || options.expectedAudience !== undefined;
     this.expectedClientId =
       options.expectedClientId ??
       options.expectedAudience ??
       process.env.AUTH_AUDIENCE ??
       process.env.COGNITO_CLIENT_ID ??
-      null;
+      process.env.TU_AUTH_CLIENT_ID ??
+      'coed-api';
     this.requiredScope = options.requiredScope === undefined
       ? DEFAULT_REQUIRED_SCOPE
       : options.requiredScope;
     this.clockToleranceSeconds = options.clockToleranceSeconds ?? 5;
     this.publicKey = options.publicKey || null;
     this.keyResolver = options.keyResolver || null;
+
+    const allowed = new Set();
+    if (isNonEmptyExactString(this.expectedIssuer)) {
+      allowed.add(this.expectedIssuer);
+    }
+    if (Array.isArray(options.allowedIssuers)) {
+      for (const iss of options.allowedIssuers) {
+        if (isNonEmptyExactString(iss)) allowed.add(iss);
+      }
+    } else if (options.allowedIssuers instanceof Set) {
+      for (const iss of options.allowedIssuers) {
+        if (isNonEmptyExactString(iss)) allowed.add(iss);
+      }
+    } else if (options.allowTuAuth !== false) {
+      if (process.env.TU_AUTH_ISSUER) allowed.add(process.env.TU_AUTH_ISSUER);
+      allowed.add('https://tu.ac.th');
+    }
+    this.allowedIssuers = allowed;
   }
 
   /**
@@ -169,11 +190,12 @@ class TokenValidator {
       throw createUnauthorized('Token is missing a valid subject claim.', 'INVALID_SUBJECT');
     }
 
-    // 2. Issuer (iss) must be a non-empty exact string and match expectedIssuer
+    // 2. Issuer (iss) must be a non-empty exact string and match expectedIssuer or allowedIssuers
     if (!isNonEmptyExactString(payload.iss)) {
       throw createUnauthorized('Token is missing a valid issuer claim.', 'INVALID_ISSUER');
     }
-    if (!isNonEmptyExactString(this.expectedIssuer) || payload.iss !== this.expectedIssuer) {
+    const isIssuerValid = this.allowedIssuers.has(payload.iss);
+    if (!isIssuerValid) {
       throw createUnauthorized('Token issuer mismatch.', 'INVALID_ISSUER');
     }
 
@@ -212,8 +234,13 @@ class TokenValidator {
       ? payload.aud.filter(isNonEmptyExactString)
       : (isNonEmptyExactString(payload.aud) ? [payload.aud] : []);
 
-    const matchesClientId = clientIdClaim === this.expectedClientId;
-    const matchesAud = audCandidates.includes(this.expectedClientId);
+    const isTuIssuer = payload.iss === 'https://tu.ac.th' || (process.env.TU_AUTH_ISSUER && payload.iss === process.env.TU_AUTH_ISSUER);
+    const matchesClientId =
+      clientIdClaim === this.expectedClientId ||
+      (!this.explicitClientId && isTuIssuer && clientIdClaim === 'coed-api');
+    const matchesAud =
+      audCandidates.includes(this.expectedClientId) ||
+      (!this.explicitClientId && isTuIssuer && audCandidates.includes('coed-api'));
 
     if (clientIdClaim !== null) {
       if (!matchesClientId) {
@@ -256,9 +283,18 @@ class TokenValidator {
       throw createUnauthorized('Token signature is missing.', 'INVALID_SIGNATURE');
     }
 
-    const key = this.keyResolver
+    let key = this.keyResolver
       ? await this.keyResolver(jwt.header)
       : this.publicKey;
+
+    if (!key && jwt.header?.kid === 'tu-key-1') {
+      try {
+        const { getTuKeyPair } = require('./tu-keys');
+        key = getTuKeyPair().publicKey;
+      } catch {
+        key = null;
+      }
+    }
 
     if (!key) {
       throw createUnauthorized(

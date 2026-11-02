@@ -49,9 +49,24 @@ export function renderStudentProfile({profileClient,applicationClient,workflowCl
     identity.replaceChildren(person,rows([['รหัสนักศึกษา',profile.student_number],['หลักสูตร',options?.official?.curriculum?`หลักสูตร ${options.official.curriculum}`:profile.program],['กลุ่มวิชาเอก',profile.major]]));
   }
   function renderOfficial() {
+    const tuRaw = (() => {
+      try {
+        const s = typeof window !== 'undefined' && (window.sessionStorage?.getItem('co-ed:tu-response') || window.localStorage?.getItem('co-ed:tu-response'));
+        return s ? JSON.parse(s) : null;
+      } catch { return null; }
+    })();
+    const officialItems = [
+      ...(tuRaw?.displayname_en ? [['ชื่อ-นามสกุล (EN)', tuRaw.displayname_en]] : []),
+      ...(tuRaw?.faculty ? [['คณะ (Faculty)', tuRaw.faculty]] : []),
+      ['ภาควิชา', profile.department],
+      ['หลักสูตร / สาขา', profile.program],
+      ['ปีที่เข้าศึกษา', options?.official?.entry_year || profile.academic_year],
+      ...(tuRaw?.tu_status || profile.enrollment_status ? [['สถานภาพนักศึกษา', tuRaw?.tu_status || profile.enrollment_status]] : []),
+      ['อีเมลมหาวิทยาลัย', profile.institutional_email]
+    ];
     official.replaceChildren(renderStudentCard('ข้อมูลจากมหาวิทยาลัย',{icon:'lock'}).firstChild,
       el('p','student-record-description','อ่านอย่างเดียว · ใช้ตรวจสอบตัวตนและข้อมูลการศึกษา'),
-      rows([['ภาควิชา',profile.department],['หลักสูตร / สาขา',profile.program],['ปีที่เข้าศึกษา',options?.official?.entry_year],['อีเมลมหาวิทยาลัย',profile.institutional_email]]),
+      rows(officialItems),
       el('p','student-info-note','ข้อมูลไม่ถูกต้อง? ติดต่อผู้ประสานงานเพื่อตรวจสอบ'));
   }
   function renderContact({focus=false,message=''}={}) {

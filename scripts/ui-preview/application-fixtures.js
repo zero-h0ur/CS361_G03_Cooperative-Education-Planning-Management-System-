@@ -2,6 +2,7 @@
 import policyModule from '../../src/api/services/application-policy.js';
 import form from '../../src/shared/application-form.js';
 import inputModule from '../../src/api/services/application-input.js';
+import { getStoredTuProfile, getStoredTuApiResponse } from './fixtures.js';
 const {GROUPS,readiness}=policyModule;
 const copy=v=>JSON.parse(JSON.stringify(v));
 export const APPLICATION_SCENARIOS=Object.freeze({
@@ -24,12 +25,28 @@ export function createApplicationPreview({scenario='application-pending'}={}) {
   const cycle='14100000-0000-4000-8000-000000000002',otherCycle='14100000-0000-4000-8000-000000000003';
   const verified=scenario!=='application-pending';
   const curriculum=scenario==='application-61'?'61':'66';
-  const official={student_id:'14100000-0000-4000-8000-000000000004',full_name:'ณัฐวดี ศิริกุล (ข้อมูลสมมติ)',student_number:curriculum==='61'?'6409612345':'6609612345',institutional_email:'nattawadee.s@example.invalid',
+  const tuProf = getStoredTuProfile();
+  const tuRaw = getStoredTuApiResponse();
+  const official=tuProf ? {
+    student_id:'14100000-0000-4000-8000-000000000004',
+    full_name:tuProf.full_name,
+    student_number:tuProf.student_number,
+    institutional_email:tuProf.institutional_email,
+    department:tuProf.department,
+    program:tuProf.program,
+    major:tuProf.major,
+    curriculum,
+    entry_year:tuProf.academic_year || (curriculum==='61'?2564:2566),
+    academic_verified:true
+  } : {student_id:'14100000-0000-4000-8000-000000000004',full_name:'ณัฐวดี ศิริกุล (ข้อมูลสมมติ)',student_number:curriculum==='61'?'6409612345':'6609612345',institutional_email:'nattawadee.s@example.invalid',
     department:'ภาควิชาวิทยาการคอมพิวเตอร์',program:'วิทยาศาสตรบัณฑิต',major:'วิทยาการคอมพิวเตอร์',curriculum,entry_year:curriculum==='61'?2564:2566,academic_verified:true};
   const policy={id:'14100000-0000-4000-8000-000000000005',version:1,curriculum,source_year:2568,source:'เกณฑ์และหน่วยกิตสมมติสำหรับ Preview เท่านั้น',verified,synthetic:true,
     data:{credits:verified?Object.fromEntries(GROUPS[curriculum].flat().map(c=>[c,'3'])):{},repeat_rule:verified?'LATEST':null,alternative_rule:'STUDENT_SELECTED'}};
   const data={curriculum,gpax:'3.24',declared_group_gpa:'3.00',gpax_reporting_term:'ภาคฤดูร้อน 3/2568 (ข้อมูลสมมติ)',major_group:'ACS',
-    name_prefix:'นางสาว',thai_full_name:'ณัฐวดี ศิริกุล (ข้อมูลสมมติ)',english_full_name:'Nattawadee Sirikul (Fictional)',contact_email:'student-contact@example.invalid',
+    name_prefix:'นาย/นางสาว',
+    thai_full_name:tuProf ? tuProf.full_name : 'ณัฐวดี ศิริกุล (ข้อมูลสมมติ)',
+    english_full_name:tuRaw?.displayname_en || tuProf?.preferred_name || 'Nattawadee Sirikul (Fictional)',
+    contact_email:tuProf ? tuProf.institutional_email : 'student-contact@example.invalid',
     contact_address:'99/1 ถนนตัวอย่าง ตำบลคลองหนึ่ง อำเภอคลองหลวง ปทุมธานี 12120 (สมมติ)',contact_phone:'0000000000',
     guardian_name:'วิภา ศิริกุล (สมมติ)',guardian_relationship:'มารดา',guardian_address:'99/1 ถนนตัวอย่าง ปทุมธานี (สมมติ)',guardian_phone:'0000000000',
     interested_position_codes:['FRONTEND','SOFTWARE','OTHER'],interested_position_other:'Accessibility engineer (ตัวอย่างสมมติ)',

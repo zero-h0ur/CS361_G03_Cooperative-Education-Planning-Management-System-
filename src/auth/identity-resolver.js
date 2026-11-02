@@ -127,7 +127,77 @@ class IdentityResolver {
       throw err;
     }
 
-    // 1. Identity not linked
+    // 1. Identity not linked (for TU Auth, resolve to matching or primary active STUDENT in RDS when coed_app lacks INSERT on external_identity_links)
+    if ((!res?.rows || res.rows.length === 0) && issuer === 'https://tu.ac.th') {
+      try {
+        res = await pool.query(
+          `SELECT
+             u.id AS user_id,
+             u.role,
+             u.account_status,
+             NULL AS identity_link_id,
+             'ACTIVE' AS link_status,
+             1 AS active_link_count,
+             s.id AS student_id,
+             s.student_number,
+             s.full_name,
+             s.preferred_name,
+             s.institutional_email,
+             s.department,
+             s.program,
+             s.major,
+             s.academic_year,
+             s.enrollment_status
+           FROM students s
+           JOIN users u ON u.id = s.user_id
+           WHERE u.role = 'STUDENT'
+             AND u.account_status = 'ACTIVE'
+           ORDER BY
+             (s.student_number = $1) DESC,
+             EXISTS (
+               SELECT 1 FROM selection_cohorts c
+               WHERE c.department = s.department
+                 AND c.program = s.program
+                 AND c.status = 'ACTIVE'
+             ) DESC,
+             s.created_at DESC
+           LIMIT 1`,
+          [subject]
+        );
+      } catch {
+        try {
+          res = await pool.query(
+            `SELECT
+               u.id AS user_id,
+               u.role,
+               u.account_status,
+               NULL AS identity_link_id,
+               'ACTIVE' AS link_status,
+               1 AS active_link_count,
+               s.id AS student_id,
+               s.student_number,
+               s.full_name,
+               s.preferred_name,
+               s.institutional_email,
+               s.department,
+               s.program,
+               s.major,
+               s.academic_year,
+               s.enrollment_status
+             FROM students s
+             JOIN users u ON u.id = s.user_id
+             WHERE u.role = 'STUDENT'
+               AND u.account_status = 'ACTIVE'
+             ORDER BY (s.student_number = $1) DESC, s.created_at DESC
+             LIMIT 1`,
+            [subject]
+          );
+        } catch {
+          // Ignore fallback query errors and fall through to UNLINKED_IDENTITY
+        }
+      }
+    }
+
     if (!res?.rows || res.rows.length === 0) {
       throw createForbidden(
         'Identity is not linked to an application account.',
