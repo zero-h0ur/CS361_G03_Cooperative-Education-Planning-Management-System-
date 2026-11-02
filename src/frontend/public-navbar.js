@@ -1,10 +1,19 @@
 import { subscribeToLogout } from './auth/auth-storage.js';
 
 const MENU = Object.freeze({
-  STUDENT: { label: 'นักศึกษา', badge: 'badge-student', dashboard: '#/student/profile',
-    secondary: { label: 'สมัครเข้าแผนสหกิจ', hash: '#/student/application', icon: 'fa-clipboard-list' } },
-  STAFF: { label: 'เจ้าหน้าที่', badge: 'badge-staff', dashboard: '#/staff/students',
-    secondary: { label: 'ค้นหาแผนสหกิจ', hash: '#/staff/plans', icon: 'fa-list-check' } },
+  STUDENT: {
+    label: 'นักศึกษา', badge: 'badge-student', dashboard: '#/student/profile',
+    secondary: { label: 'สมัครเข้าแผนสหกิจ', hash: '#/student/application', icon: 'fa-file-signature' }
+  },
+  COORDINATOR: {
+    label: 'ผู้ประสานงานสหกิจศึกษา', badge: 'badge-coordinator', dashboard: '#/coordinator/applications'
+  },
+  STAFF: {
+    label: 'ผู้ประสานงานสหกิจศึกษา', badge: 'badge-coordinator', dashboard: '#/coordinator/applications'
+  },
+  COMMITTEE: {
+    label: 'กรรมการสหกิจศึกษา', badge: 'badge-committee', dashboard: '#/committee/applications'
+  },
   ADVISOR: { label: 'อาจารย์ที่ปรึกษา', badge: 'badge-advisor', dashboard: '#/advisor/students' },
   ADMIN: { label: 'ผู้ดูแลระบบ', badge: 'badge-admin', dashboard: '#/admin/operations' }
 });
@@ -85,7 +94,8 @@ export function createPublicNavbar({ container, authClient, sessionClient, event
     details.append(node('span', `user-nav-badge ${config.badge}`, config.label));
     header.append(node('div', 'dropdown-avatar-large', initial), details);
     const links = node('div', 'dropdown-links');
-    for (const entry of [{ label: 'ไปยังแดชบอร์ดหลัก', hash: config.dashboard, icon: 'fa-gauge-high' }, config.secondary].filter(Boolean)) {
+    const secondaries = Array.isArray(config.secondary) ? config.secondary : (config.secondary ? [config.secondary] : []);
+    for (const entry of [{ label: 'ไปยังแดชบอร์ดหลัก', hash: config.dashboard, icon: 'fa-gauge-high' }, ...secondaries]) {
       const link = node('a', 'dropdown-item'); link.href = `app.html${entry.hash}`;
       link.setAttribute('role', 'menuitem'); link.append(icon(entry.icon), node('span', '', entry.label)); links.append(link);
     }

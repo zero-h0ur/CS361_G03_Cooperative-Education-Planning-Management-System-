@@ -20,15 +20,17 @@ beforeEach(() => {
 afterEach(() => { navbar?.destroy(); navbar = null; });
 
 test.each([
-  ['STUDENT', 'นักศึกษา', '#/student/profile', '#/student/application'],
-  ['STAFF', 'เจ้าหน้าที่', '#/staff/students', '#/staff/plans'],
-  ['ADVISOR', 'อาจารย์ที่ปรึกษา', '#/advisor/students', null],
-  ['ADMIN', 'ผู้ดูแลระบบ', '#/admin/operations', null]
-])('uses verified %s role and only the matching links', async (role, label, home, secondary) => {
+  ['STUDENT', 'นักศึกษา', ['app.html#/student/profile', 'app.html#/student/application']],
+  ['COORDINATOR', 'ผู้ประสานงานสหกิจศึกษา', ['app.html#/coordinator/applications']],
+  ['STAFF', 'ผู้ประสานงานสหกิจศึกษา', ['app.html#/coordinator/applications']],
+  ['COMMITTEE', 'กรรมการสหกิจศึกษา', ['app.html#/committee/applications']],
+  ['ADVISOR', 'อาจารย์ที่ปรึกษา', ['app.html#/advisor/students']],
+  ['ADMIN', 'ผู้ดูแลระบบ', ['app.html#/admin/operations']]
+])('uses verified %s role and only the matching links', async (role, label, expectedHrefs) => {
   const { container } = setup(role); await navbar.start();
   expect(container.querySelector('.user-nav-badge').textContent).toBe(label);
   expect([...container.querySelectorAll('a')].map((link) => link.getAttribute('href')))
-    .toEqual([`app.html${home}`, ...(secondary ? [`app.html${secondary}`] : [])]);
+    .toEqual(expectedHrefs);
 });
 
 test.each(['SYSTEM', 'unknown', 'student', undefined, 'toString'])('unknown role %s never falls back to STUDENT', async (role) => {

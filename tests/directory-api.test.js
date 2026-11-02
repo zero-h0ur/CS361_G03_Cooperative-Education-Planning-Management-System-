@@ -27,7 +27,7 @@ test('public catalogue returns only public company fields, never positions or co
   expect(res.body.data[0]).toEqual({ id: ID, name: row.name, details_available: false });
   expect(JSON.stringify(res.body)).not.toContain('MUST_NOT_LEAK');
 });
-test.each(['STUDENT', 'STAFF', 'ADVISOR'])('%s reads approved detail fields without contact data', async role => {
+test.each(['STUDENT', 'STAFF', 'ADVISOR', 'COORDINATOR', 'COMMITTEE'])('%s reads approved detail fields without contact data', async role => {
   const { request } = setup();
   const res = await request('/api/v3/directory/companies/' + ID, role);
   expect(res.status).toBe(200);
