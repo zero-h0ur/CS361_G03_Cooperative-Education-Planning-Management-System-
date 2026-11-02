@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 test('reviewed migration hashes equal exact committed LF bytes, including 011', () => {
   const migrations = readReviewedMigrations();
-  assert.equal(migrations.length, 11);
+  assert.ok(migrations.some(row => row.name === '011_student_contact_email.sql'));
   for (const row of migrations) {
     assert.equal(row.bytes.includes(13), false);
     const committed = execFileSync('git', ['show', `HEAD:src/db/migrations/${row.name}`]);
@@ -23,6 +23,17 @@ test('reviewed migration hashes equal exact committed LF bytes, including 011', 
   assert.match(sql, /m\.checksum IS DISTINCT FROM e\.checksum/);
   assert.match(sql, /ROLLBACK;/);
   assert.doesNotMatch(sql, /UPDATE\s+(?:public\.)?schema_migrations\s+SET\s+checksum/i);
+});
+
+test('workflow SQL count guard and report match the checksum-verified migration set', () => {
+  const migrations = readReviewedMigrations();
+  const sql = workflowMigrationSQL();
+  const guard = sql.match(/IF \(SELECT count\(\*\) FROM public\.schema_migrations\)<>\s*(\d+) THEN RAISE EXCEPTION 'Incomplete schema'/);
+  const report = sql.match(/SELECT json_build_object\('Migrations',\s*(\d+),/);
+  assert.ok(guard, 'Keep the post-migration completeness guard.');
+  assert.ok(report, 'Keep the migration count in the operator result.');
+  assert.equal(Number(guard[1]), migrations.length, 'Schema guard must follow reviewed migrations.');
+  assert.equal(Number(report[1]), migrations.length, 'Operator report must follow reviewed migrations.');
 });
 
 for (const scenario of ['CRLF', 'mutated SQL', 'BOM', 'missing', 'unknown']) {
@@ -62,7 +73,7 @@ test('explicit EOL formatter restores only reviewed bytes and validates all file
     assert.throws(() => normalizeReviewedMigrationLineEndings(directory), /Refusing to format changed SQL/);
     assert.deepEqual(readFileSync(join(directory, rows[0].name)), firstBefore);
     writeFileSync(last, rows.at(-1).sql.replaceAll('\n', '\r\n'));
-    assert.equal(normalizeReviewedMigrationLineEndings(directory).length, 11);
+    assert.equal(normalizeReviewedMigrationLineEndings(directory).length, rows.length);
     assert.deepEqual(readReviewedMigrations(directory).map(row => row.checksum), rows.map(row => row.checksum));
     assert.deepEqual(normalizeReviewedMigrationLineEndings(directory), []);
   } finally { rmSync(directory, { recursive: true, force: true }); }

@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 from pathlib import Path
 import re
@@ -12,6 +13,12 @@ ROOT = Path(__file__).resolve().parents[2]
 @unittest.skipUnless(os.environ.get('CO_ED_TEST_DOCKER_PROVISION') == '1', 'Explicit disposable Docker integration required')
 class WorkflowRolloutTests(unittest.TestCase):
     def test_exact_operator_psql_dry_run_apply_reapply_and_history_guard(self):
+        release = json.loads(subprocess.check_output(['node', '--input-type=module', '-e',
+            "import {workflowMigrationSQL} from './scripts/operations/prepare-workflow-release.mjs'; "
+            "import {readReviewedMigrations} from './scripts/operations/reviewed-migrations.mjs'; "
+            "process.stdout.write(JSON.stringify({sql:workflowMigrationSQL(),migrationCount:readReviewedMigrations().length}));"],
+            cwd=ROOT, text=True, encoding='utf-8'))
+        sql, expected_count = release['sql'], release['migrationCount']
         container = subprocess.check_output(['docker', 'run', '--rm', '-d', '--tmpfs', '/var/lib/postgresql/data:rw',
                                              '--label', 'coed.workflow135.rollout-test=true', '-e', 'POSTGRES_DB=coed_v3_test',
                                              '-e', 'POSTGRES_PASSWORD=LOCAL_ONLY_ROLLOUT_135', 'postgres:16-alpine'], text=True).strip()
@@ -28,18 +35,18 @@ class WorkflowRolloutTests(unittest.TestCase):
                 time.sleep(0.2)
             setup = ['CREATE ROLE coed_app NOLOGIN;', 'CREATE TABLE schema_migrations(version TEXT PRIMARY KEY,checksum TEXT,applied_at timestamptz DEFAULT CURRENT_TIMESTAMP);']
             for file in sorted((ROOT / 'src/db/migrations').glob('00[1-3]_*.sql')):
-                sql = file.read_text()
-                setup.extend([sql, "INSERT INTO schema_migrations(version,checksum) VALUES ('" + file.name + "','" + hashlib.sha256(sql.encode()).hexdigest() + "');"])
+                baseline_sql = file.read_text(encoding='utf-8')
+                setup.extend([baseline_sql, "INSERT INTO schema_migrations(version,checksum) VALUES ('" + file.name + "','" + hashlib.sha256(baseline_sql.encode()).hexdigest() + "');"])
             setup.append("INSERT INTO users(id,role) VALUES('10000000-0000-4000-8000-000000000135','ADMIN');")
             initial = psql('\n'.join(setup)); self.assertEqual(initial.returncode, 0, initial.stderr)
-            sql = subprocess.check_output(['node', '--input-type=module', '-e',
-                "import {workflowMigrationSQL} from './scripts/operations/prepare-workflow-release.mjs'; process.stdout.write(workflowMigrationSQL());"], cwd=ROOT, text=True)
             dry = psql(sql); self.assertEqual(dry.returncode, 0, dry.stderr)
+            self.assertEqual(json.loads(dry.stdout.splitlines()[-1])['Migrations'], expected_count)
             self.assertEqual(psql('SELECT count(*) FROM schema_migrations;').stdout.strip(), '3')
             applied = psql(sql, True); self.assertEqual(applied.returncode, 0, applied.stderr)
             self.assertIn('"ExistingRowsPreserved" : true', applied.stdout)
             self.assertIn('"RuntimeRoleMutation" : false', applied.stdout)
-            self.assertEqual(psql('SELECT count(*) FROM schema_migrations;').stdout.strip(), '10')
+            self.assertEqual(json.loads(applied.stdout.splitlines()[-1])['Migrations'], expected_count)
+            self.assertEqual(psql('SELECT count(*) FROM schema_migrations;').stdout.strip(), str(expected_count))
             repeat = psql(sql, True); self.assertEqual(repeat.returncode, 0, repeat.stderr)
             self.assertEqual(psql('SELECT role,version FROM users;').stdout.strip(), 'ADMIN|1')
             self.assertEqual(psql("INSERT INTO schema_migrations(version,checksum) VALUES('999_unknown.sql',repeat('a',64));").returncode, 0)
