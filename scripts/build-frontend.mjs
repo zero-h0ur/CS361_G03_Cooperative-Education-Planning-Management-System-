@@ -90,6 +90,26 @@ function renderRuntimeConfig(config) {
 const runtimeConfig = createRuntimeConfig();
 await rm(outputDirectory, { recursive: true, force: true });
 await mkdir(resolve(outputDirectory, 'assets'), { recursive: true });
+await mkdir(resolve(outputDirectory, 'app'), { recursive: true });
+
+const appSlashRedirectHtml = `<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex" />
+  <title>กำลังเข้าสู่ระบบ | CO-ED</title>
+  <script>
+    (function redirectAppDirectory() {
+      var path = window.location.pathname || '';
+      var target = path.replace(/\\/app\\/?$/i, '/app.html') || '/app.html';
+      window.location.replace(target + (window.location.search || '') + (window.location.hash || ''));
+    })();
+  </script>
+  <meta http-equiv="refresh" content="0;url=/app.html" />
+</head>
+<body></body>
+</html>
+`;
 
 await Promise.all([
   ...staticFiles.map((file) => cp(resolve(workspace, file), resolve(outputDirectory, file))),
@@ -99,6 +119,11 @@ await Promise.all([
   writeFile(
     resolve(outputDirectory, 'runtime-config.js'),
     renderRuntimeConfig(runtimeConfig),
+    'utf8'
+  ),
+  writeFile(
+    resolve(outputDirectory, 'app/index.html'),
+    appSlashRedirectHtml,
     'utf8'
   )
 ]);

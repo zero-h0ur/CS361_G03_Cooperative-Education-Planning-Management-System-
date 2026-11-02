@@ -210,7 +210,7 @@ describe('authenticated V3 shell and route guards', () => {
     context.loadSession.mockRejectedValue({ code: AUTH_ERROR_CODES.NOT_SIGNED_IN });
     const show = new Event('pageshow'); Object.defineProperty(show, 'persisted', { value: true });
     context.eventTarget.dispatchEvent(show); await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(context.root.textContent).toContain('กรุณาเข้าสู่ระบบ');
+    expect(context.root.textContent).toContain('เข้าสู่ระบบสหกิจศึกษา');
     expect(context.loadSession).toHaveBeenCalledTimes(2); context.app.destroy();
   });
 
@@ -218,7 +218,7 @@ describe('authenticated V3 shell and route guards', () => {
     const context = setup({ session: { role: 'STAFF' } }); await context.app.start();
     context.eventTarget.dispatchEvent(new StorageEvent('storage', { key: 'co-ed:auth-logout', newValue: 'nonce' }));
     expect(context.root.querySelector('.protected-shell')).toBeNull();
-    expect(context.root.textContent).toContain('กรุณาเข้าสู่ระบบ');
+    expect(context.root.textContent).toContain('เข้าสู่ระบบสหกิจศึกษา');
     expect(context.root.querySelector('a[href*="student/profile"]')).toBeNull();
     expect(context.startLogin).not.toHaveBeenCalled(); context.app.destroy();
   });
@@ -230,7 +230,7 @@ describe('authenticated V3 shell and route guards', () => {
     context.eventTarget.dispatchEvent(new StorageEvent('storage', { key: 'co-ed:auth-logout', newValue: 'nonce' }));
     finish({ role: 'STAFF' }); await pending;
     expect(context.root.querySelector('.protected-shell')).toBeNull();
-    expect(context.root.textContent).toContain('กรุณาเข้าสู่ระบบ'); context.app.destroy();
+    expect(context.root.textContent).toContain('เข้าสู่ระบบสหกิจศึกษา'); context.app.destroy();
   });
 
   it('matches the public TU palette without importing its page-specific stylesheet', () => {
@@ -461,13 +461,18 @@ describe('authenticated V3 shell and route guards', () => {
 
     await context.app.start();
 
-    expect(context.root.textContent).toContain('กรุณาเข้าสู่ระบบ');
+    expect(context.root.textContent).toContain('เข้าสู่ระบบสหกิจศึกษา');
     expect(context.root.textContent).not.toContain('Session หมดอายุ');
     expect(context.startLogin).not.toHaveBeenCalled();
-    expect(context.root.querySelector('a').getAttribute('href')).toBe('company-directory.html');
+    const backLink = context.root.querySelector('.signin-back-link');
+    expect(backLink).not.toBeNull();
+    expect(backLink.getAttribute('href')).toBe('index.html');
+    expect(backLink.textContent).toContain('ย้อนกลับ');
+    expect(context.root.querySelector('a[href="company-directory.html"]')).toBeNull();
 
     const loginButton = [...context.root.querySelectorAll('button')]
-      .find((button) => button.dataset.authMode === 'cognito-test' || button.textContent === 'เข้าสู่ระบบ');
+      .find((button) => button.dataset.authMode === 'cognito-test');
+    expect(loginButton.textContent).toBe('เข้าสู่ระบบสำหรับอาจารย์และเจ้าหน้าที่');
     loginButton.click();
     await Promise.resolve();
 
@@ -476,7 +481,8 @@ describe('authenticated V3 shell and route guards', () => {
     expect(window.sessionStorage.getItem('co-ed:return-route')).toBe('#/student/plan');
   });
 
-  it('renders TU Auth student ID verification form with validation and password toggle alongside Cognito test login', async () => {
+  it('renders student ID verification form with password scrubbing, auto-hide toggle, and staff login inside the centered card', async () => {
+    jest.useFakeTimers();
     const context = setup({
       hash: '#/student/application',
       error: { code: AUTH_ERROR_CODES.NOT_SIGNED_IN }
@@ -486,7 +492,9 @@ describe('authenticated V3 shell and route guards', () => {
 
     const form = context.root.querySelector('.tuauth-signin-card');
     expect(form).not.toBeNull();
-    expect(form.textContent).toContain('TUAPI · TUAUTH');
+    expect(form.textContent).toContain('สำหรับนักศึกษามหาวิทยาลัยธรรมศาสตร์');
+    expect(form.textContent).not.toContain('TUAPI · TUAUTH');
+    expect(form.textContent).not.toContain('Cognito');
 
     const studentInput = form.querySelector('input[name="studentId"]');
     const passwordInput = form.querySelector('input[name="password"]');
@@ -507,21 +515,26 @@ describe('authenticated V3 shell and route guards', () => {
     expect(feedback.getAttribute('role')).toBe('alert');
     expect(feedback.textContent).toContain('รหัสผ่าน');
 
-    // Toggle password visibility
+    // Toggle password visibility and auto-hide after 10 seconds
     expect(passwordInput.type).toBe('password');
     toggleBtn.click();
     expect(passwordInput.type).toBe('text');
-    toggleBtn.click();
+    jest.advanceTimersByTime(10000);
     expect(passwordInput.type).toBe('password');
 
-    // Valid submission shows pending gateway status while keeping Cognito test login separate
+    // Valid submission immediately scrubs password from DOM input and shows user-friendly status
     passwordInput.value = 'tu-secret-pass';
+    toggleBtn.click();
+    expect(passwordInput.type).toBe('text');
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(passwordInput.value).toBe('');
+    expect(passwordInput.type).toBe('password');
     await Promise.resolve();
     expect(feedback.getAttribute('role')).toBe('status');
-    expect(feedback.textContent).toContain('TUAPI');
+    expect(feedback.textContent).toContain('ตรวจสอบรหัสนักศึกษา 10 หลักเรียบร้อย');
     expect(context.startLogin).not.toHaveBeenCalled();
     context.app.destroy();
+    jest.useRealTimers();
   });
 
   it('offers logout on access-denied and unavailable states so users can switch accounts', async () => {
