@@ -2457,3 +2457,186 @@ html.student-route-transition::view-transition-new(student-route-content) {
   .coordinator-filter-actions { flex-direction: column; width: 100%; }
   .coordinator-filter-actions .shell-button { width: 100%; }
 }
+
+/* Phase 1 Schedule & Confirmation Deadline Management (#143) */
+.coordinator-schedule-section {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #e6dfe2;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.coordinator-schedule-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.coordinator-schedule-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+.coordinator-schedule-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.coordinator-schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 14px;
+}
+.coordinator-schedule-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+.coordinator-schedule-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.coordinator-schedule-card__title {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.coordinator-schedule-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.coordinator-schedule-badge--open {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+.coordinator-schedule-badge--near-deadline {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.coordinator-schedule-badge--closed {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+.coordinator-schedule-badge--upcoming {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+.coordinator-schedule-badge--unscheduled {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+.coordinator-schedule-dates {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #334155;
+  line-height: 1.5;
+}
+.coordinator-schedule-countdown {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #64748b;
+}
+.coordinator-schedule-countdown--urgent {
+  color: #b45309;
+}
+.coordinator-schedule-notice {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+.coordinator-schedule-form,
+.coordinator-announce-form {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: #fdf2f4;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+}
+.coordinator-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.coordinator-confirmations-panel {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+.coordinator-confirmation-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.coordinator-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+.coordinator-stat-pill strong {
+  color: #0f172a;
+}
+.student-decision-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  margin-top: 12px;
+}
+.student-decision-card--selected {
+  border-left: 4px solid #16a34a;
+  background: #f0fdf4;
+}
+.student-decision-card--expired {
+  border-left: 4px solid #dc2626;
+  background: #fffafa;
+}
+.student-decision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+.student-teams-box {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}

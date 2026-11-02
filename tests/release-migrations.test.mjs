@@ -18,6 +18,7 @@ test('CommonJS migration expectations include every checksum-verified name and e
 test('reviewed migration hashes equal exact committed LF bytes, including 011', () => {
   const migrations = readReviewedMigrations();
   assert.ok(migrations.some(row => row.name === '011_student_contact_email.sql'));
+  assert.ok(migrations.some(row => row.name === '012_phase1_schedules_and_confirmations.sql'));
   for (const row of migrations) {
     assert.equal(row.bytes.includes(13), false);
     const committed = execFileSync('git', ['show', `HEAD:src/db/migrations/${row.name}`]);

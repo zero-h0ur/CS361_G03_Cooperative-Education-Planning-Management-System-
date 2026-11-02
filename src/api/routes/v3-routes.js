@@ -108,6 +108,7 @@ function registerProtectedRoute(router, config = {}) {
  */
 function registerV3Routes(router, options = {}) {
   require('./application-routes').registerApplicationRoutes(router, registerProtectedRoute, options);
+  require('./phase1-schedule-routes').registerPhase1ScheduleRoutes(router, registerProtectedRoute, options);
   require('./selection-routes').registerSelectionRoutes(router, registerProtectedRoute, options);
   require('./admin-operations-routes').registerAdminOperationsRoutes(router, registerProtectedRoute, options);
   require('./three-role-routes').registerThreeRoleRoutes(router, registerProtectedRoute, options);
