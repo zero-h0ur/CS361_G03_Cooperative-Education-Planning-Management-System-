@@ -3,10 +3,7 @@ import { subscribeToLogout } from './auth/auth-storage.js';
 const MENU = Object.freeze({
   STUDENT: {
     label: 'นักศึกษา', badge: 'badge-student', dashboard: '#/student/profile',
-    secondary: [
-      { label: 'สมัครเข้าแผนสหกิจ', hash: '#/student/application', icon: 'fa-file-signature' },
-      { label: 'แผนสหกิจของฉัน', hash: '#/student/plan', icon: 'fa-clipboard-list' }
-    ]
+    secondary: { label: 'สมัครเข้าแผนสหกิจ', hash: '#/student/application', icon: 'fa-file-signature' }
   },
   COORDINATOR: {
     label: 'ผู้ประสานงานสหกิจศึกษา', badge: 'badge-coordinator', dashboard: '#/coordinator/applications'

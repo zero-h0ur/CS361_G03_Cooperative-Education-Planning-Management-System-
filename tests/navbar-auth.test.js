@@ -20,7 +20,7 @@ beforeEach(() => {
 afterEach(() => { navbar?.destroy(); navbar = null; });
 
 test.each([
-  ['STUDENT', 'นักศึกษา', ['app.html#/student/profile', 'app.html#/student/application', 'app.html#/student/plan']],
+  ['STUDENT', 'นักศึกษา', ['app.html#/student/profile', 'app.html#/student/application']],
   ['COORDINATOR', 'ผู้ประสานงานสหกิจศึกษา', ['app.html#/coordinator/applications']],
   ['STAFF', 'ผู้ประสานงานสหกิจศึกษา', ['app.html#/coordinator/applications']],
   ['COMMITTEE', 'กรรมการสหกิจศึกษา', ['app.html#/committee/applications']],
