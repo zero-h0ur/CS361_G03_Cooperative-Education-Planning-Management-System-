@@ -8,6 +8,8 @@
 /dist/
 /tmp/release-candidates/
 /tmp/release-trust/
+/tmp/student-ui-browser/
+/tmp/student-workspace-pg-20261102/
 
 # macOS system files
 .DS_Store

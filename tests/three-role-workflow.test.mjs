@@ -14,7 +14,8 @@ const v = require('../src/api/services/workflow-input');
 const command = version => ({expected_version:version,operation_id:randomUUID()});
 function operatorFunction(name, expression, payload) {
   const source=`import importlib.util,json,sys\ns=importlib.util.spec_from_file_location("ops", "scripts/operations/${name}.py")\nm=importlib.util.module_from_spec(s);s.loader.exec_module(m)\nv=json.load(sys.stdin)\nprint(${expression})`;
-  const result=spawnSync('python3',['-c',source],{input:JSON.stringify(payload),encoding:'utf8'});
+  const python=process.env.PYTHON || (process.platform==='win32'?'python':'python3');
+  const result=spawnSync(python,['-c',source],{input:JSON.stringify(payload),encoding:'utf8'});
   assert.equal(result.status,0,result.stderr);
   return result.stdout.trim();
 }
@@ -269,8 +270,9 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
         assert.equal((await runtime.dashboard(staff)).advisors.length,2);
         assert.equal((await runtime.getWorkflow(people[0].actor,people[0].plan)).placement.status,'CONFIRMED');
         const profile=(await q('SELECT version FROM students WHERE id=$1',[people[0].student])).rows[0];
-        const contact=await runtime.saveContact(people[0].actor,{contact_address:'Updated synthetic address',contact_phone:'0810000000',version:profile.version,operation_id:randomUUID()});
+        const contact=await runtime.saveContact(people[0].actor,{contact_address:'Updated synthetic address',contact_phone:'0810000000',contact_email:'runtime@example.invalid',version:profile.version,operation_id:randomUUID()});
         assert.equal(contact.version,profile.version+1);
+        assert.equal(contact.contact_email,'runtime@example.invalid');
         const c=await repository.getClient();
         try {
           await assert.rejects(c.query(`UPDATE students SET full_name='Spoof' WHERE id=$1`,[people[0].student]),e=>e.code==='42501');
