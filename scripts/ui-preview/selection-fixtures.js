@@ -24,6 +24,7 @@ let syntheticSchedule = {
   announced_at: '2026-10-15T01:30:00.000Z'
 };
 
+import {committeePreview} from './committee-fixtures.js';
 // Synthetic presentation only. Never import into production or call an AWS API.
 export const SELECTION_SCENARIOS = Object.freeze({
   pending: 'รอรับเรื่อง / เริ่มให้ความเห็น',
@@ -241,11 +242,13 @@ function createSyntheticQueue(coordinator, scenario) {
 export function selectionPreview(role, scenario) {
   const coordinator = role === 'COORDINATOR';
   const rows = createSyntheticQueue(coordinator, scenario);
+  const committee=committeePreview(scenario);
 
   return {
     loadSession: async () => ({ role, canReviewPlan: false }),
     workflowClient: {
       request: async (path, options = {}) => {
+        if(path.includes('/committee/workspace'))return committee.request(path,options);
         if (scenario === 'loading') return new Promise(() => {});
         if (scenario === 'forbidden') throw Object.assign(new Error('Synthetic forbidden'), { status: 403 });
         if (scenario === 'expired') throw Object.assign(new Error('Synthetic expired'), { status: 401 });

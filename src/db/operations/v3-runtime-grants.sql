@@ -13,6 +13,8 @@ GRANT USAGE ON SCHEMA public TO coed_app;
 REVOKE ALL PRIVILEGES ON public.selection_cohorts, public.selection_receipts, public.selection_opinions FROM coed_app;
 GRANT SELECT ON public.selection_cohorts, public.selection_receipts, public.selection_opinions TO coed_app;
 GRANT INSERT ON public.selection_receipts, public.selection_opinions TO coed_app;
+GRANT SELECT, INSERT, UPDATE ON public.committee_workspaces TO coed_app;
+GRANT SELECT, INSERT ON public.committee_workspace_events TO coed_app;
 -- Admin operational metadata, never a right to run migrations.
 GRANT SELECT ON public.schema_migrations TO coed_app;
 GRANT SELECT ON TABLE

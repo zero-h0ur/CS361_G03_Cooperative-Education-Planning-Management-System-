@@ -4,6 +4,8 @@ const {parseJsonBody,assertAllowedQueryParameters}=require('../router');
 const {sendSuccess}=require('../response');
 const {ValidationError}=require('../errors');
 function registerSelectionRoutes(router,protect,options={}){
+  const {CommitteeWorkspaceService}=require('../services/committee-workspace');
+  const workspace=options.committeeWorkspaceService||new CommitteeWorkspaceService({...options.authOptions,...options});
   const service=options.selectionService||new SelectionService({...options.authOptions,...options});
   const add=(method,pattern,action,handler,queryKeys=[])=>protect(router,{method,pattern,action,authOptions:options.authOptions||{},
     handler:async(req,res,ctx)=>{
@@ -12,6 +14,9 @@ function registerSelectionRoutes(router,protect,options={}){
       const data=await handler(ctx.authContext,ctx.params?.[0],method==='GET'?null:await parseJsonBody(req),Object.fromEntries(ctx.url.searchParams));
       sendSuccess(res,data,200,null,{'Cache-Control':'no-store'});
     }});
+  add('GET',/^\/api\/v3\/committee\/documents\/([^/]+)\/download$/,ACTIONS.COMMITTEE_SELECTION_READ,(a,id)=>workspace.download(a,id));
+  add('GET','/api/v3/committee/workspace',ACTIONS.COMMITTEE_SELECTION_READ,(a,_id,_b,q)=>workspace.read(a,q.cohort_id),['cohort_id']);
+  add('POST',/^\/api\/v3\/committee\/workspaces\/([^/]+)$/,ACTIONS.COMMITTEE_OPINION_CREATE,(a,id,b)=>workspace.mutate(a,id,b));
   add('GET','/api/v3/coordinator/applications',ACTIONS.COORDINATOR_SELECTION_READ,(a,_id,_b,q)=>service.list(a,q),['department','program','state','search','page','pageSize']);
   add('GET','/api/v3/committee/applications',ACTIONS.COMMITTEE_SELECTION_READ,(a,_id,_b,q)=>service.list(a,q),['department','program','page','pageSize']);
   add('POST',/^\/api\/v3\/coordinator\/plans\/([^/]+)\/acknowledge$/,ACTIONS.COORDINATOR_ACKNOWLEDGE,(a,id,b)=>service.mutate(a,id,b));

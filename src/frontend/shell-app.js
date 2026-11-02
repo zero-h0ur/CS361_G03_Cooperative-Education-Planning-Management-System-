@@ -1,3 +1,4 @@
+import { renderCommitteeWorkspace } from './committee/workspace.js';
 import { AUTH_ERROR_CODES } from './auth/auth-errors.js';
 import { subscribeToLogout } from './auth/auth-storage.js';
 import {
@@ -471,7 +472,7 @@ function createDefaultPlaceholder(route) {
 }
 
 function createProtectedLayout({ role, route, onLogout, bodyNode }) {
-  if (role === 'STUDENT') return createStudentLayout({ route, onLogout, bodyNode });
+  if (['STUDENT','COMMITTEE'].includes(role)) return createStudentLayout({role, route, onLogout, bodyNode });
   const layout = element('div', 'protected-shell');
   if (role === 'STUDENT') layout.classList.add('protected-shell--student');
   const campusTheme = ['STUDENT', 'STAFF', 'ADVISOR', 'ADMIN', 'COORDINATOR', 'COMMITTEE'].includes(role);
@@ -541,7 +542,7 @@ function createProtectedLayout({ role, route, onLogout, bodyNode }) {
   return { layout, main };
 }
 
-function createStudentLayout({ route, onLogout, bodyNode }) {
+function createStudentLayout({ role='STUDENT', route, onLogout, bodyNode }) {
   const layout = element('div', 'protected-shell protected-shell--student student-portal');
   const main = element('main', 'shell-content');
   main.id = 'shell-main-content';
@@ -552,7 +553,7 @@ function createStudentLayout({ route, onLogout, bodyNode }) {
   const topbar = element('header', 'shell-topbar');
   const brand = createBrand();
   brand.querySelector('.shell-brand__subtitle').textContent = 'สหกิจศึกษา';
-  const navigation = createNavigation('STUDENT', route);
+  const navigation = createNavigation(role, route);
   const applications = navigation.querySelector('[href="#/student/application"]');
   if (applications) applications.lastChild.textContent = 'ใบสมัครสหกิจ';
   const directory = element('a', 'shell-nav__link', 'สถานประกอบการ');
@@ -561,10 +562,10 @@ function createStudentLayout({ route, onLogout, bodyNode }) {
   navigation.append(directory);
   const account = element('details', 'student-account');
   const summary = element('summary');
-  const avatar = element('span', 'student-account__avatar', 'นศ');
+  const avatar = element('span', 'student-account__avatar', role==='COMMITTEE'?'กก':'นศ');
   avatar.setAttribute('aria-hidden', 'true');
-  summary.append(avatar, element('span', 'student-account__label', 'บัญชีนักศึกษา'));
-  summary.setAttribute('aria-label', 'บัญชีนักศึกษาและออกจากระบบ');
+  summary.append(avatar, element('span', 'student-account__label', role==='COMMITTEE'?'บัญชีกรรมการ':'บัญชีนักศึกษา'));
+  summary.setAttribute('aria-label', role==='COMMITTEE'?'บัญชีกรรมการและออกจากระบบ':'บัญชีนักศึกษาและออกจากระบบ');
   const actions = element('div', 'student-account__actions');
   const logout = createActionButton('ออกจากระบบ', onLogout, true);
   logout.prepend(createWorkspaceIcon('logout'));
@@ -848,7 +849,8 @@ export function createShellApp({
       return renderApplicationWorkspace({client:applicationClient,applicationId:route.params?.applicationId,signal,
         onNavigate:navigateToAllowlistedRoute,onSessionExpired:handleSessionExpired,setLeaveGuard:guard=>{routeLeaveGuard=guard;}});
     }
-    if (['COORDINATOR','COMMITTEE'].includes(role) && workflowClient) {
+    if(role==='COMMITTEE' && workflowClient) return renderCommitteeWorkspace({client:workflowClient,signal,onSessionExpired:handleSessionExpired,onAccessDenied:message=>renderForbidden(message)});
+    if (role==='COORDINATOR' && workflowClient) {
       return renderSelectionWorkspace({client:workflowClient,role,signal,onSessionExpired:handleSessionExpired,
         onAccessDenied:message=>renderForbidden(message)});
     }

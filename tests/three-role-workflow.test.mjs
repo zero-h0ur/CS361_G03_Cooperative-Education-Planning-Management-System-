@@ -37,7 +37,7 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
   const url = new URL(process.env.CO_ED_WORKFLOW_TEST_DATABASE_URL);
   assert.ok(['127.0.0.1','localhost'].includes(url.hostname),'Use an explicitly disposable local test server.');
   const admin=new Pool({connectionString:url.href}), schema=`wf_${randomUUID().replaceAll('-','')}`;
-  let pool;
+  let pool, files = [];
   const legacyStudent=randomUUID(),legacyPlan=randomUUID();
   try {
     await admin.query(`CREATE SCHEMA "${schema}"`);
@@ -45,7 +45,7 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
     try {
       await c.query(`SET search_path TO "${schema}"`);
       await c.query('CREATE TABLE schema_migrations(version TEXT PRIMARY KEY,checksum CHAR(64))');
-      const files=(await readdir(new URL('../src/db/migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();
+      files=(await readdir(new URL('../src/db/migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();
       for (const [i,file] of files.entries()) {
         if (i===1) await c.query(`SET search_path TO "${schema}",public`);
         const sql=await readFile(new URL(`../src/db/migrations/${file}`,import.meta.url),'utf8');
@@ -79,7 +79,7 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
       const result=await adminService.read(adminActor);
       assert.ok(result.accounts.some(row=>row.role==='ADMIN'));
       assert.equal(result.student_workflow_access,false);
-      assert.equal(result.migrations.length,11);
+      assert.equal(result.migrations.length,files.length);
       assert.ok(result.accounts.every(row=>Object.keys(row).sort().join(',')==='account_status,id,role,version'));
       for(const actor of [staff,advisor])await assert.rejects(adminService.read(actor),e=>e.statusCode===403);
       await assert.rejects(service.dashboard(adminActor),e=>e.statusCode===403);

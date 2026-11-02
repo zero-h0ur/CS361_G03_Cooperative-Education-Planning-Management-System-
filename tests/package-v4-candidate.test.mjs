@@ -52,7 +52,7 @@ test('paired candidate pins V4 target, current form/API, exact migrations and ho
     assert.ok(lambda.includes('/api/v4/applications'));
     assert.ok(!lambda.includes(canary));
     assert.ok(!runtime.includes(canary));
-    assert.equal(manifest.migrations.length, 11);
+    assert.equal(manifest.migrations.length, 12);
     for (const row of manifest.migrations) {
       assert.equal(createHash('sha256').update(readZipEntry(backend, 'src/db/migrations/' + row.name)).digest('hex'), row.checksum);
     }
