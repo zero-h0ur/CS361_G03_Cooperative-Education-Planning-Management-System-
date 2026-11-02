@@ -10,7 +10,7 @@ const {createShellApp}=require('../tmp/frontend-test-modules/shell-app.cjs');
 const {createWorkspacePreviewClients}=require('../tmp/frontend-test-modules/workspace-preview-fixtures.cjs');
 const flush=()=>new Promise(r=>setTimeout(r,0));
 const response=(data,status=200)=>({ok:status<300,status,json:async()=>status<300?{data}:{error:data}});
-const button=(root,label)=>Array.from(root.querySelectorAll('button')).find(b=>b.textContent===label);
+const button=(root,label)=>Array.from(root.querySelectorAll('button')).find(b=>b.textContent===label || label==='ถัดไป'&&b.textContent.startsWith('ถัดไป:'));
 let controller;
 beforeEach(()=>{controller=new AbortController();document.body.replaceChildren();window.confirm=jest.fn(()=>false);window.matchMedia=jest.fn(()=>({matches:false}));});
 afterEach(()=>controller.abort());
@@ -133,6 +133,11 @@ test.each(['application-pending','application-ready','application-61','applicati
 
 test('six visible navigation stages preserve Draft fields and move focus without changing the route',async()=>{
   const {root,client}=await editor('application-ready');
+  expect(root.querySelectorAll('h1')).toHaveLength(1);
+  expect(root.querySelector('.student-editor-rail .application-steps')).not.toBeNull();
+  expect(root.querySelector('#application-summary')).toBeNull();
+  expect(button(root,'ถัดไป').textContent).toBe('ถัดไป: ผลการเรียน');
+  expect(root.querySelector('#application-student_number').readOnly).toBe(true);
   expect(root.querySelectorAll('.application-step-button')).toHaveLength(6);
   expect(root.querySelectorAll('.application-step:not([hidden])')).toHaveLength(1);
   const input=root.querySelector('#application-contact_email');input.value='different@example.invalid';input.dispatchEvent(new Event('input'));
@@ -141,6 +146,7 @@ test('six visible navigation stages preserve Draft fields and move focus without
   expect(root.querySelector('#application-contact_email').value).toBe('different@example.invalid');
   button(root,'บันทึกฉบับร่าง').click();await flush();await flush();
   expect((await client.get(ID)).payload.contact_email).toBe('different@example.invalid');
+  expect((await client.get(ID)).payload).not.toHaveProperty('student_number');
 });
 
 test.each([['application-ready','CS261','CS301'],['application-61','CS264','CS302']])('curriculum-specific letter grades and declarations are shown: %s',async(scenario,last,future)=>{
