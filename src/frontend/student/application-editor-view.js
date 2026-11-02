@@ -1,5 +1,6 @@
 import {FILE_KINDS,validateApplicationFile} from './application-client.js';
 import form from '../../shared/application-form.js';
+import {createWorkspaceIcon} from '../ui/workspace-presentation.js';
 const {GROUPS,EXTRAS,GRADES,MAJORS,POSITIONS,EMAIL}=form;
 const STEPS=[['identity','ข้อมูลผู้สมัคร'],['academic','ผลการเรียน'],['interests','ความสนใจและคำรับรอง'],['documents','เอกสารแนบ'],['guardian','ผู้ติดต่อฉุกเฉิน'],['review','ตรวจทานและส่ง']];
 const copy=v=>JSON.parse(JSON.stringify(v));
@@ -22,7 +23,7 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
   function setCurriculum(value){draft.curriculum=value;draft.acknowledgements ||= {};for(const key of ['required_courses','additional_courses','preplacement'])draft.acknowledgements[key]=false;}
   function changed(){
     dirty=true;result=null;confirming=false;
-    const status=root.querySelector('[data-save-state]');if(status)status.textContent='มีข้อมูลที่ยังไม่ได้บันทึก';
+    for(const status of root.querySelectorAll('[data-save-state]'))status.textContent='มีข้อมูลที่ยังไม่ได้บันทึก';
     for(const b of root.querySelectorAll('[data-requires-saved]'))b.disabled=true;
     root.querySelector('.application-confirm')?.remove();
   }
@@ -88,6 +89,26 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
     for(const [v,text] of options)select.append(new Option(text,v));select.value=value || '';select.setAttribute('aria-required',String(required));select.disabled=readOnly() || busy;
     select.addEventListener('change',()=>{onChange(select.value);changed();render();root.querySelector('#'+select.id)?.focus({preventScroll:true});});wrap.append(l,select);markError(wrap,select,key);parent.append(wrap);return select;
   }
+  function reuseField(input,label,value,{showEmpty=false}={}){
+    if(readOnly() || (!value && !showEmpty))return;
+    const row=node('div','application-field-action'),status=node('span','application-field-action__status');
+    const action=button(label,()=>{
+      if(busy || readOnly() || signal?.aborted || !value)return;
+      const key=input.dataset.field;
+      if(!input.readOnly && draft[key] && draft[key]!==value && !window.confirm('ต้องการแทนที่ข้อมูลที่กรอกในช่องนี้ด้วยข้อมูลต้นทางหรือไม่?'))return;
+      draft[key]=value;input.value=value;changed();
+      errors=errors.filter(e=>e.field!==key);input.parentElement.querySelector('.application-field-error')?.remove();input.removeAttribute('aria-invalid');
+      const described=(input.getAttribute('aria-describedby') || '').split(' ').filter(id=>id!==input.id+'-error');
+      if(described.length)input.setAttribute('aria-describedby',described.join(' '));else input.removeAttribute('aria-describedby');
+      status.textContent='เติมข้อมูลแล้ว · ยังไม่ได้บันทึก';input.focus({preventScroll:true});
+    });
+    action.className='application-inline-action';action.prepend(createWorkspaceIcon('copy'));
+    action.setAttribute('aria-controls',input.id);action.disabled=busy || !value;
+    status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.setAttribute('aria-atomic','true');
+    input.addEventListener('input',()=>{status.textContent='';});
+    if(!value && showEmpty)status.textContent='กรอกที่อยู่นักศึกษาในขั้นที่ 1 ก่อน';
+    row.append(action,status);input.parentElement.append(row);
+  }
   function header(){
     const top=card('application-summary',app.cycle_name || 'ใบสมัครเข้าแผนสหกิจศึกษา','เตรียมใบสมัครของคุณทีละส่วน แล้วตรวจทานก่อนส่งให้ผู้ประสานงาน');top.classList.add('application-intro');
     const state=node('p','application-badge',app.status==='SUBMITTED'?'ส่งแล้ว · รอผู้ประสานงานตรวจสอบ':readOnly()?'รอบปิด / หมดเวลา · อ่านอย่างเดียว':'ฉบับร่าง · ยังไม่ได้ส่ง');
@@ -104,12 +125,12 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
     for(const [key,label] of [['name_prefix','คำนำหน้าชื่อ'],['thai_full_name','ชื่อ-นามสกุล ภาษาไทย'],['english_full_name','ชื่อ-นามสกุล ภาษาอังกฤษ']]){
       const trusted=Boolean(app.official[key]),input=field(grid,key,label,{max:key==='name_prefix'?100:200,readonly:trusted,value:display(key)});hint(input,trusted?'ข้อมูลทางการ · อ่านอย่างเดียว':'ข้อมูลที่คุณแจ้งสำหรับใบสมัครนี้ · ไม่เปลี่ยนข้อมูลทางการ');
       if(key==='name_prefix' && !trusted){const options=node('datalist');options.id='application-prefix-options';for(const title of ['นาย','นาง','นางสาว'])options.append(new Option(title,title));input.setAttribute('list',options.id);grid.append(options);}
-      if(trusted && draft[key] && draft[key]!==app.official[key] && !readOnly())grid.append(button('ใช้ข้อมูลทางการ: '+label,()=>{draft[key]=app.official[key];changed();render();}));
+      if(trusted && draft[key] && draft[key]!==app.official[key])reuseField(input,'ใช้ข้อมูลทางการ',app.official[key]);
+      if(key==='thai_full_name' && !draft[key] && !trusted && /[\u0E00-\u0E7F]/.test(app.official.full_name || ''))reuseField(input,'ใช้ชื่อทางการ',app.official.full_name);
     }
-    if(!readOnly() && !draft.thai_full_name && !app.official.thai_full_name && /[\u0E00-\u0E7F]/.test(app.official.full_name || ''))grid.append(button('คัดลอกชื่อทางการไปช่องภาษาไทย',()=>{draft.thai_full_name=app.official.full_name;changed();render();}));
     const uni=field(grid,'institutional_email','อีเมลมหาวิทยาลัย (Dome)',{type:'email',max:254,readonly:Boolean(app.official.institutional_email),value:app.official.institutional_email || draft.institutional_email});hint(uni,app.official.institutional_email?'ข้อมูลทางการ · อ่านอย่างเดียว':'ระบุอีเมลมหาวิทยาลัยตามเอกสาร');
-    if(app.official.institutional_email && draft.institutional_email && draft.institutional_email!==app.official.institutional_email && !readOnly())grid.append(button('ใช้อีเมลมหาวิทยาลัยที่ยืนยัน',()=>{draft.institutional_email=app.official.institutional_email;changed();render();}));
-    field(grid,'contact_email','อีเมลที่ติดต่อได้',{type:'email',max:254,autocomplete:'email'});if(!readOnly() && !draft.contact_email && app.official.institutional_email)grid.append(button('ใช้อีเมลมหาวิทยาลัยเป็นอีเมลติดต่อ',()=>{draft.contact_email=app.official.institutional_email;changed();render();}));
+    if(app.official.institutional_email && draft.institutional_email && draft.institutional_email!==app.official.institutional_email)reuseField(uni,'ใช้อีเมลมหาวิทยาลัยที่ยืนยัน',app.official.institutional_email);
+    const contact=field(grid,'contact_email','อีเมลที่ติดต่อได้',{type:'email',max:254,autocomplete:'email'});if(!draft.contact_email)reuseField(contact,'ใช้อีเมลมหาวิทยาลัย',app.official.institutional_email);
     const major=draft.major_group || '',majorOptions=[['','เลือกกลุ่มวิชาเอก'],...MAJORS];if(major && !MAJORS.some(([code])=>code===major))majorOptions.push([major,'ข้อมูลเดิม: '+major+' (โปรดเลือก CIS / ACS)']);selectField(grid,'major_group','กลุ่มวิชาเอก',majorOptions,major,value=>{draft.major_group=value;});
     field(grid,'contact_phone','เบอร์โทรติดต่อ',{type:'tel',max:40,autocomplete:'tel'});field(grid,'contact_address','ที่อยู่ที่ติดต่อได้',{textarea:true,max:1000,autocomplete:'street-address'});s.append(grid);return s;
   }
@@ -171,8 +192,7 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
     }const status=node('p','application-upload-status',busy?'กำลังทำรายการ…':'');status.dataset.uploadStatus='';status.setAttribute('role','status');s.append(grid,status);return s;
   }
   function guardian(){
-    const s=card('application-guardian','ผู้ติดต่อกรณีฉุกเฉิน','กรอกข้อมูลผู้ปกครองที่เป็นปัจจุบันและติดต่อได้จริง'),grid=node('div','application-grid');field(grid,'guardian_name','ชื่อ-นามสกุลผู้ปกครอง');field(grid,'guardian_relationship','ความสัมพันธ์กับนักศึกษา',{max:100});field(grid,'guardian_phone','เบอร์โทรผู้ปกครอง',{type:'tel',max:40});field(grid,'guardian_address','ที่อยู่ผู้ปกครองที่ติดต่อได้',{textarea:true,max:1000});s.append(grid);
-    if(!readOnly()){const copyAddress=button('ใช้ที่อยู่เดียวกับนักศึกษา',()=>{if(draft.guardian_address && !window.confirm('ต้องการแทนที่ที่อยู่ผู้ปกครองที่กรอกไว้ด้วยที่อยู่ของนักศึกษาหรือไม่?'))return;draft.guardian_address=draft.contact_address;changed();render();root.querySelector('#application-guardian_address')?.focus();});copyAddress.disabled=busy || !draft.contact_address;s.append(copyAddress);}return s;
+    const s=card('application-guardian','ผู้ติดต่อกรณีฉุกเฉิน','กรอกข้อมูลผู้ปกครองที่เป็นปัจจุบันและติดต่อได้จริง'),grid=node('div','application-grid');field(grid,'guardian_name','ชื่อ-นามสกุลผู้ปกครอง');field(grid,'guardian_relationship','ความสัมพันธ์กับนักศึกษา',{max:100});field(grid,'guardian_phone','เบอร์โทรผู้ปกครอง',{type:'tel',max:40});const address=field(grid,'guardian_address','ที่อยู่ผู้ปกครองที่ติดต่อได้',{textarea:true,max:1000});reuseField(address,'ใช้ที่อยู่เดียวกับนักศึกษา',draft.contact_address,{showEmpty:true});s.append(grid);return s;
   }
   function reviewGroup(parent,index,rows){
     const group=node('section','application-review-group'),heading=node('div','application-review-heading'),edit=button(readOnly()?'ดูส่วนนี้':'แก้ไขส่วนนี้',()=>showStep(index));edit.setAttribute('aria-label',(readOnly()?'ดู':'แก้ไข')+STEPS[index][1]);heading.append(node('h3','',STEPS[index][1]),edit);group.append(heading);const dl=node('dl','application-review-values');for(const [label,value] of rows){const item=node('div');item.append(node('dt','',label),node('dd','',value || (readOnly()?'ไม่ได้เก็บข้อมูลนี้ในฉบับที่ส่ง':'ยังไม่ได้กรอก')));dl.append(item);}group.append(dl);parent.append(group);
@@ -191,7 +211,10 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
     if(confirming){const confirm=node('section','application-confirm');confirm.setAttribute('role','group');confirm.setAttribute('aria-label','ยืนยันส่งใบสมัคร');confirm.append(node('h3','','ยืนยันส่งใบสมัครฉบับนี้หรือไม่?'),node('p','','เมื่อส่งแล้ว ข้อมูลและชุดเอกสารจะถูกล็อกและส่งให้ผู้ประสานงานตรวจสอบ ไม่สามารถแก้ไขเองได้'),node('p','',`ยืนยันใช้เกณฑ์หลักสูตร ${current()} ปีต้นทาง ${app.policy?.source_year || 'รอยืนยัน'} ฉบับ v${app.policy?.version || 'รอยืนยัน'} และรับทราบว่าต้องผ่าน ${current()==='61'?'คพ.302':'คพ.301'} ก่อนออกฝึก`),button('ยืนยันส่งและล็อกข้อมูล',()=>run(async()=>{const body=operation('submit',{expected_version:app.version,expected_policy_id:app.policy?.id || null});const sent=await client.submit(app.id,body,{signal});if(signal?.aborted)return;app=sent;draft=copy(sent.payload);activeStep=5;dirty=false;errors=[];result=null;selectedFiles.clear();message='ส่งใบสมัครสำเร็จ รอผู้ประสานงานตรวจสอบ';}),false),button('ยกเลิกการส่ง',()=>{confirming=false;render();root.querySelector('[data-submit]')?.focus();}));s.append(confirm);queueMicrotask(()=>confirm.querySelector('button')?.focus());}return s;
   }
   function footer(){
-    const f=node('div','application-footer');if(!readOnly())f.append(button('บันทึกฉบับร่าง',()=>run(async()=>{const body=operation('save',{expected_version:app.version,expected_policy_id:app.policy?.id || null,payload:copy(draft)});const saved=await client.save(app.id,body,{signal});if(signal?.aborted)return;app=saved;draft=copy(saved.payload);dirty=false;result=null;attempts.delete('save');errors=[];message='บันทึกฉบับร่างสำเร็จ ยังไม่ได้ส่งใบสมัคร';}),false));
+    const f=node('div','application-footer');if(!readOnly()){
+      const controls=node('div','application-save-controls'),status=node('p','application-help',dirty?'มีข้อมูลที่ยังไม่ได้บันทึก':'ข้อมูลตรงกับฉบับที่บันทึกแล้ว');status.dataset.saveState='';
+      controls.append(button('บันทึกฉบับร่าง',()=>run(async()=>{const body=operation('save',{expected_version:app.version,expected_policy_id:app.policy?.id || null,payload:copy(draft)});const saved=await client.save(app.id,body,{signal});if(signal?.aborted)return;app=saved;draft=copy(saved.payload);dirty=false;result=null;attempts.delete('save');errors=[];message='บันทึกฉบับร่างสำเร็จ ยังไม่ได้ส่งใบสมัคร';}),false),status);f.append(controls);
+    }
     const nav=node('div','application-footer-navigation');if(activeStep>0)nav.append(button('ย้อนกลับ',()=>showStep(activeStep-1)));if(activeStep<5)nav.append(button(activeStep===4?'ไปตรวจทานใบสมัคร':'ถัดไป',()=>showStep(activeStep+1)));f.append(nav);return f;
   }
   function render(){

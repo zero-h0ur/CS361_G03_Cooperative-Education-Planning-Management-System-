@@ -4,6 +4,7 @@ const ICON_PATHS = Object.freeze({
   file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6', 'M8 13h8M8 17h6'],
   building: ['M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4', 'M9 9h.01M15 9h.01M9 13h.01M15 13h.01'],
   check: ['M20 6 9 17l-5-5'],
+  copy: ['M9 9h12v12H9z', 'M5 15H3V3h12v2'],
   clipboard: ['M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3', 'M9 2h6v4H9z', 'M8 14l3 3 5-6'],
   send: ['m22 2-7 20-4-9-9-4z', 'M22 2 11 13'],
   clock: ['M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0', 'M12 6v6l4 2'],

@@ -39,6 +39,13 @@ test.each(['SYSTEM', 'unknown', 'student', undefined, 'toString'])('unknown role
   expect(container.querySelector('.user-nav-dropdown-wrapper')).toBeNull();
 });
 
+test('Student public menu leads to Phase 1 without promoting legacy Plan or status routes', async () => {
+  const { container } = setup('STUDENT'); await navbar.start();
+  const entry = container.querySelector('a[href="app.html#/student/application"]');
+  expect(entry.textContent).toBe('สมัครเข้าแผนสหกิจ');
+  expect(container.querySelector('a[href="app.html#/student/plan"],a[href="app.html#/student/selection"]')).toBeNull();
+});
+
 test.each([401, 403, 503])('HTTP %s leaves Public readable and never displays stale mock identity', async (status) => {
   sessionStorage.setItem('co-ed:session', JSON.stringify({ role: 'STUDENT', name: 'fake' }));
   sessionStorage.setItem('CognitoIdentityServiceProvider.fake.idToken', 'fake');

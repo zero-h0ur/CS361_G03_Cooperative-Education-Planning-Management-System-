@@ -167,7 +167,7 @@ export function renderStudentDashboardView({
     directory.prepend(createWorkspaceIcon('building'));
     actions.append(plan, directory);
     cta.append(element('p', 'student-dashboard-summary__cta-copy',
-      'ตรวจข้อมูลทางการให้ถูกต้อง แล้วเปิดแผนสหกิจเพื่อเตรียมฉบับร่าง ส่งให้เจ้าหน้าที่ตรวจ และติดตามผลพิจารณา'), actions);
+      applicationHref?'ตรวจข้อมูลทางการให้ถูกต้อง แล้วเปิดใบสมัครเพื่อกรอกข้อมูล แนบเอกสาร และตรวจทานก่อนส่งให้ผู้ประสานงาน':'ตรวจข้อมูลทางการให้ถูกต้อง แล้วเปิดแผนสหกิจเพื่อเตรียมฉบับร่าง ส่งให้เจ้าหน้าที่ตรวจ และติดตามผลพิจารณา'), actions);
     summarySection.append(header, cta);
 
     const official = element('section', 'student-card student-profile-official');
