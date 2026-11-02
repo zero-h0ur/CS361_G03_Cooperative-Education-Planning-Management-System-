@@ -212,7 +212,10 @@ class TuAuthService {
         payload.type === 'employee');
 
     if (!isSuccess) {
-      let msg = payload?.message || payload?.description;
+      let msg =
+        payload?.Description ||
+        payload?.description ||
+        payload?.message;
       if (!msg) {
         if (response.status === 401 || response.status === 403) {
           msg = 'Application-Key ของ TU API ไม่ถูกต้องหรือไม่มีสิทธิ์เข้าถึง (401/403)';

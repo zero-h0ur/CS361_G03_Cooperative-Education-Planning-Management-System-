@@ -142,16 +142,27 @@ createShellApp({
   location,
   eventTarget: window,
   storage: null,
-  startTuAuthLogin: async ({ studentId }) => {
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    const existing = getStoredTuApiResponse() || DEFAULT_TU_API_RESPONSE;
-    saveTuApiResponseToStorage({
-      ...existing,
-      status: true,
-      message: 'Success',
-      type: 'student',
-      username: studentId
+  startTuAuthLogin: async ({ studentId, password }) => {
+    const res = await fetch('/api/v3/auth/tu-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId, password })
     });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(
+        body?.error?.message ||
+          body?.message ||
+          'ไม่สามารถยืนยันตัวตนกับ TU API ได้ กรุณาตรวจสอบรหัสนักศึกษาและรหัสผ่าน'
+      );
+    }
+    if (body?.data?.tuResponse) {
+      saveTuApiResponseToStorage(body.data.tuResponse);
+    }
+    if (body?.data?.accessToken) {
+      window.sessionStorage?.setItem('co-ed:access-token', body.data.accessToken);
+      window.localStorage?.setItem('co-ed:access-token', body.data.accessToken);
+    }
     const url = new URL(location.href);
     url.searchParams.set('scenario', 'draft');
     url.hash = '#/student/profile';
