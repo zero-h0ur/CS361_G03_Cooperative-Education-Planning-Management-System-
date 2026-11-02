@@ -116,7 +116,7 @@ test('list binds each existing application to its own route and filters already-
   const client=createApplicationPreview(),navigate=jest.fn(),root=renderApplicationWorkspace({client,signal:controller.signal,onNavigate:navigate});
   document.body.append(root);await flush();await flush();
   expect(root.querySelector('#application-cycle').options.length).toBe(2);
-  button(root,'เปิดฉบับร่าง').click();expect(navigate).toHaveBeenCalledWith('#/student/application/'+ID);
+  root.querySelector('.student-feature-action').click();expect(navigate).toHaveBeenCalledWith('#/student/application/'+ID);
   expect(getRoute('#/student/application/'+ID).params.applicationId).toBe(ID);
   for(const role of ['STAFF','ADVISOR','COORDINATOR','COMMITTEE','ADMIN'])expect(canRoleAccessRoute(role,'#/student/application/'+ID)).toBe(false);
   expect(getRoute('#/student/application/not-a-uuid')).toBeNull();
