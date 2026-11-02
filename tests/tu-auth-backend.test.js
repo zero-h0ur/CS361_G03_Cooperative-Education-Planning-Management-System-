@@ -184,7 +184,7 @@ describe('TU Authentication Service (Hybrid Mode)', () => {
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://restapi.tu.ac.th/api/v1/auth/index/verify',
+        'https://restapi.tu.ac.th/api/v1/auth/Ad/verify',
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({

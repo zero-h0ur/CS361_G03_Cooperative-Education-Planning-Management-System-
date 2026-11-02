@@ -14,7 +14,7 @@ const { getPool } = require('../db/connection');
 const { getTuKeyPair, signTuJwt } = require('./tu-keys');
 
 const STUDENT_ID_REGEX = /^\d{10}$/;
-const DEFAULT_TU_API_URL = 'https://restapi.tu.ac.th/api/v1/auth/index/verify';
+const DEFAULT_TU_API_URL = 'https://restapi.tu.ac.th/api/v1/auth/Ad/verify';
 const DEFAULT_TU_ISSUER = 'https://tu.ac.th';
 
 class TuAuthService {
