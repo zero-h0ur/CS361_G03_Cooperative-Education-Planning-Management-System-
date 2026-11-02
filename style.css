@@ -5291,6 +5291,18 @@ a {
   border: 1px solid #ddd6fe;
 }
 
+.badge-coordinator {
+  background: #fdf2f4;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.badge-committee {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
 .badge-advisor {
   background: #fffbeb;
   color: #b45309;

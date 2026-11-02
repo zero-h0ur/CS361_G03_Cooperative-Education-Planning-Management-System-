@@ -41,11 +41,21 @@ if (root) {
       apiBaseUrl: config.apiBaseUrl,
       getAccessToken: authClient.getAccessToken
     });
+    if (window.location.hash && window.location.hash.startsWith('#/staff')) {
+      window.location.hash = '#/coordinator/applications';
+    }
+    const loadSession = async (options) => {
+      const session = await sessionClient.loadSession(options);
+      if (session?.role === 'STAFF') {
+        return { ...session, role: 'COORDINATOR' };
+      }
+      return session;
+    };
     const app = createShellApp({
       applicationClient: createApplicationClient({apiBaseUrl:config.apiBaseUrl,getAccessToken:authClient.getAccessToken}),
       workflowClient: createWorkflowClient({apiBaseUrl:config.apiBaseUrl,getAccessToken:authClient.getAccessToken}),
       root,
-      loadSession: sessionClient.loadSession,
+      loadSession,
       startLogin: authClient.startLogin,
       restartLogin: authClient.restartLogin,
       logout: authClient.logout,
