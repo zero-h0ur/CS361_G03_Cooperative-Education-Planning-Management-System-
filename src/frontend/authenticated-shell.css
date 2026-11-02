@@ -254,6 +254,178 @@ a:focus-visible,
   box-shadow: none;
 }
 
+.shell-state--with-card {
+  grid-template-columns: auto minmax(0, 38rem);
+}
+
+.tuauth-signin-section {
+  display: grid;
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.tuauth-signin-card {
+  display: grid;
+  gap: 18px;
+  padding: 26px 28px;
+  border: 1px solid var(--shell-line);
+  border-top: 4px solid var(--shell-primary);
+  border-radius: 18px;
+  background: var(--shell-surface);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+}
+
+.tuauth-signin-card__header {
+  display: grid;
+  gap: 6px;
+}
+
+.tuauth-signin-badge {
+  justify-self: start;
+  padding: 4px 10px;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  background: var(--shell-soft);
+  color: var(--shell-primary-dark);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.tuauth-signin-card__title {
+  margin: 4px 0 0;
+  color: var(--shell-ink);
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.tuauth-signin-card__subtitle {
+  margin: 0;
+  color: var(--shell-muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.tuauth-signin-field {
+  display: grid;
+  gap: 6px;
+}
+
+.tuauth-signin-field__label {
+  color: var(--shell-ink);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.tuauth-signin-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--shell-ink);
+  font: inherit;
+  font-size: 0.98rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.tuauth-signin-input:focus {
+  outline: none;
+  border-color: var(--shell-primary);
+  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.14);
+}
+
+.tuauth-signin-password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tuauth-signin-password-wrap .tuauth-signin-input {
+  padding-right: 72px;
+}
+
+.tuauth-signin-password-toggle {
+  position: absolute;
+  right: 8px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--shell-line);
+  border-radius: 8px;
+  background: var(--shell-canvas);
+  color: var(--shell-muted);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.tuauth-signin-password-toggle:hover {
+  border-color: var(--shell-accent-line);
+  background: var(--shell-soft);
+  color: var(--shell-primary-dark);
+}
+
+.tuauth-signin-feedback {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.tuauth-signin-feedback--error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+.tuauth-signin-feedback--info {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.tuauth-signin-submit {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 12px;
+  font-size: 1rem;
+}
+
+.tuauth-signin-divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.tuauth-signin-divider::before {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto;
+  border-top: 1px solid var(--shell-line);
+}
+
+.tuauth-signin-divider span {
+  position: relative;
+  padding: 0 14px;
+  background: var(--shell-canvas);
+  color: var(--shell-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+@media (max-width: 600px) {
+  .tuauth-signin-card {
+    padding: 20px 18px;
+  }
+}
+
 .protected-shell {
   min-width: 0;
   min-height: 100vh;
