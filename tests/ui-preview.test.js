@@ -101,7 +101,8 @@ test('switches from Profile to the real Plan view without rebuilding Student chr
   expect(root.querySelector('.shell-topbar')).toBe(topbar);
   expect(root.querySelector('main')).toBe(main);
   expect(main.dataset.studentRouteChange).toBe('true');
-  expect(root.querySelector('[aria-current="page"]').getAttribute('href')).toBe('#/student/plan');
+  expect(root.querySelector('.shell-nav [href="#/student/plan"]')).toBeNull();
+  expect(root.querySelector('[aria-current="page"]')).toBeNull();
   expect(global.fetch).not.toHaveBeenCalled();
 });
 

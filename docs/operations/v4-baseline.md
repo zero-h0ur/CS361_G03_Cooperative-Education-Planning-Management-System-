@@ -87,7 +87,12 @@ aws sts get-caller-identity --profile coed-v4 --region ap-southeast-2 --query Ac
 
 1. เว็บ: `npm run build:v4` แล้ว zip เนื้อหา **ภายใน** `dist/` ไม่ให้มีชั้นโฟลเดอร์ `dist/` ครอบ นำขึ้น Amplify app `d1bpmj87vmjb96`, branch `main` ด้วย Manual Deploy ตรวจ job สำเร็จและไฟล์ที่เสิร์ฟจริง
 2. Backend: ใช้ `COED_RDS_CA_FILE` ชี้ public AWS RDS CA bundle ที่ตรวจแล้ว แล้ว `npm run package:lambda` ผลเป็น ZIP นอก checkout ไม่ใส่ `.env`, backup, credentials หรือ identity maps
-3. หากต้องใช้ migration package: หลัง commit และ working tree สะอาด รัน `node scripts/operations/prepare-workflow-release.mjs <lambda.zip> <private-output-directory>` จะได้ manifest ของบัญชีใหม่และ SQL สำหรับ `001–009` ค่าเริ่มต้นเป็น Rollback ต้องตรวจ checksum, snapshot และรายงานก่อน Apply ห้ามรัน migrations ซ้ำเพียงเพราะ Merge
+3. หากต้องใช้ migration package: หลัง commit และ working tree สะอาด รัน `node scripts/operations/prepare-workflow-release.mjs <lambda.zip> <private-output-directory>` จะได้ manifest ของบัญชีใหม่และ SQL สำหรับ `001–010` ค่าเริ่มต้นเป็น Rollback ต้องตรวจ checksum, snapshot และรายงานก่อน Apply ห้ามรัน migrations ซ้ำเพียงเพราะ Merge
+
+สำหรับการเตรียม ZIP คู่ Frontend/Backend ในเครื่องก่อนอนุมัติ Deploy ใช้
+[คู่มือ Local release candidate](v4-local-release-candidate.md) รองรับ Windows
+โดยไม่ต้องติดตั้ง zip/unzip และตรวจ Migration ด้วย bytes แบบ LF ที่ตรงกับ Git
+Candidate ยังไม่ใช่หลักฐานว่า Deploy หรือ Apply Migration แล้ว
 4. ตรวจ public API และ anonymous-denial บนบัญชีใหม่ด้วย `npm run test:deployed-security` หลัง Build ที่ตรง target คำสั่งยังใช้ชื่อไฟล์ V2/V3 ตาม contract เดิม แต่ default URLs อ่านจาก V4 public config ตัวเลือก `V2_*`/`V3_*` ยังมีไว้ใช้ระบุ target อื่นอย่างชัดเจน
 5. Login ทดสอบด้วยบัญชีจำลองแยกบทบาท ผล local/mock หรือ anonymous tests ไม่แทนการตรวจสิทธิ์จริงของผู้ใช้แต่ละคน
 

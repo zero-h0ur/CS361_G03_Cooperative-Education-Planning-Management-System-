@@ -109,15 +109,25 @@ async function seed(options = {}) {
       ALTER TABLE workflow_receipts DISABLE TRIGGER workflow_receipts_immutable;
       ALTER TABLE plan_submissions DISABLE TRIGGER plan_submissions_immutable;
       ALTER TABLE document_policies DISABLE TRIGGER document_policies_immutable;
+      ALTER TABLE phase1_applications DISABLE TRIGGER phase1_application_guard;
+      ALTER TABLE phase1_attachments DISABLE TRIGGER phase1_attachment_guard;
+      ALTER TABLE phase1_documents DISABLE TRIGGER phase1_document_immutable;
+      ALTER TABLE phase1_submissions DISABLE TRIGGER phase1_submission_immutable;
+      ALTER TABLE phase1_policies DISABLE TRIGGER phase1_policy_immutable;
+      ALTER TABLE phase1_operations DISABLE TRIGGER phase1_operation_immutable;
+      ALTER TABLE phase1_events DISABLE TRIGGER phase1_event_immutable;
       ALTER TABLE selection_receipts DISABLE TRIGGER selection_receipts_immutable;
       ALTER TABLE selection_opinions DISABLE TRIGGER selection_opinions_immutable;
     `);
 
     // 1. Reset tables in reverse order of foreign key dependencies
     console.log('Resetting tables...');
-    await client.query('DELETE FROM selection_opinions');
-    await client.query('DELETE FROM selection_receipts');
-    await client.query('DELETE FROM selection_cohorts');
+    // Fixed dependency order, only inside the guarded disposable reset above.
+    for (const table of ['phase1_events','phase1_operations','phase1_submissions','phase1_attachments',
+      'phase1_documents','phase1_uploads','phase1_applications','phase1_policies','phase1_cycle_windows',
+      'phase1_academic_profiles','selection_opinions','selection_receipts','selection_cohorts']) {
+      await client.query(`DELETE FROM ${table}`);
+    }
     await client.query('DELETE FROM workflow_events');
     await client.query('DELETE FROM workflow_receipts');
     await client.query('DELETE FROM placements');
@@ -214,6 +224,13 @@ async function seed(options = {}) {
       ALTER TABLE workflow_receipts ENABLE TRIGGER workflow_receipts_immutable;
       ALTER TABLE plan_submissions ENABLE TRIGGER plan_submissions_immutable;
       ALTER TABLE document_policies ENABLE TRIGGER document_policies_immutable;
+      ALTER TABLE phase1_applications ENABLE TRIGGER phase1_application_guard;
+      ALTER TABLE phase1_attachments ENABLE TRIGGER phase1_attachment_guard;
+      ALTER TABLE phase1_documents ENABLE TRIGGER phase1_document_immutable;
+      ALTER TABLE phase1_submissions ENABLE TRIGGER phase1_submission_immutable;
+      ALTER TABLE phase1_policies ENABLE TRIGGER phase1_policy_immutable;
+      ALTER TABLE phase1_operations ENABLE TRIGGER phase1_operation_immutable;
+      ALTER TABLE phase1_events ENABLE TRIGGER phase1_event_immutable;
       ALTER TABLE selection_receipts ENABLE TRIGGER selection_receipts_immutable;
       ALTER TABLE selection_opinions ENABLE TRIGGER selection_opinions_immutable;
     `);

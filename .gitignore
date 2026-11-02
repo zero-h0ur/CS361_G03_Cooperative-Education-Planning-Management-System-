@@ -5,7 +5,10 @@
 /tmp/frontend-test-modules/
 /tmp/three-role-pg/
 /tmp/local-dev/
+/tmp/application-documents/
 /dist/
+/tmp/release-candidates/
+/tmp/release-trust/
 
 # macOS system files
 .DS_Store

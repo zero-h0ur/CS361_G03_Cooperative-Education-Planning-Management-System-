@@ -32,6 +32,21 @@ GRANT INSERT ON public.document_policies, public.plan_submissions,
 GRANT UPDATE (updated_at) ON public.users TO coed_app;
 GRANT INSERT ON public.plan_operations, public.audit_events TO coed_app;
 
+REVOKE ALL PRIVILEGES ON public.phase1_academic_profiles, public.phase1_policies,
+  public.phase1_cycle_windows, public.phase1_applications, public.phase1_uploads,
+  public.phase1_documents, public.phase1_attachments, public.phase1_submissions,
+  public.phase1_operations, public.phase1_events FROM coed_app;
+GRANT SELECT ON public.phase1_academic_profiles, public.phase1_policies,
+  public.phase1_cycle_windows, public.phase1_applications, public.phase1_uploads,
+  public.phase1_documents, public.phase1_attachments, public.phase1_submissions,
+  public.phase1_operations, public.phase1_events TO coed_app;
+GRANT INSERT ON public.phase1_applications, public.phase1_uploads, public.phase1_documents,
+  public.phase1_attachments, public.phase1_submissions, public.phase1_operations,
+  public.phase1_events TO coed_app;
+GRANT UPDATE(payload,status,version,submitted_at,updated_at) ON public.phase1_applications TO coed_app;
+GRANT UPDATE(status) ON public.phase1_uploads TO coed_app;
+GRANT UPDATE(document_id) ON public.phase1_attachments TO coed_app;
+
 DO $acl$
 BEGIN
   IF has_table_privilege('coed_app','public.audit_events','DELETE')
@@ -42,6 +57,17 @@ BEGIN
      OR has_column_privilege('coed_app','public.users','role','UPDATE')
      OR has_column_privilege('coed_app','public.users','account_status','UPDATE')
      OR has_column_privilege('coed_app','public.students','full_name','UPDATE')
+     OR has_table_privilege('coed_app','public.phase1_policies','INSERT,UPDATE,DELETE')
+     OR has_table_privilege('coed_app','public.phase1_academic_profiles','INSERT,UPDATE,DELETE')
+     OR has_table_privilege('coed_app','public.phase1_documents','UPDATE,DELETE')
+     OR has_table_privilege('coed_app','public.phase1_submissions','UPDATE,DELETE')
+     OR has_any_column_privilege('coed_app','public.phase1_policies','INSERT,UPDATE')
+     OR has_any_column_privilege('coed_app','public.phase1_academic_profiles','INSERT,UPDATE')
+     OR has_any_column_privilege('coed_app','public.phase1_cycle_windows','INSERT,UPDATE')
+     OR has_any_column_privilege('coed_app','public.phase1_documents','UPDATE')
+     OR has_any_column_privilege('coed_app','public.phase1_submissions','UPDATE')
+     OR has_table_privilege('coed_app','public.phase1_documents','TRUNCATE')
+     OR has_table_privilege('coed_app','public.phase1_submissions','TRUNCATE')
      OR has_schema_privilege('coed_app','public','CREATE') THEN
     RAISE EXCEPTION 'Excess effective privileges remain; all ACL changes rolled back. Review PUBLIC or other grantors, do not use CASCADE.';
   END IF;

@@ -39,7 +39,7 @@ npm run dev:setup
 ```
 
 `dev:db` เปิด PostgreSQL 16 เฉพาะ `127.0.0.1:54329` พร้อม named volume `coed-local_local-postgres`
-`dev:setup` **ล้างเฉพาะ coed_dev ในชุด local นี้** แล้วลง migrations 001–009, V2/V3 fixtures และ V4 personas
+`dev:setup` **ล้างเฉพาะ coed_dev ในชุด local นี้** แล้วลง migrations 001–010, V2/V3 fixtures และ V4 personas
 ไม่รับ `DATABASE_URL` จากภายนอกให้เปลี่ยนไป RDS และไม่สร้าง/เปลี่ยนบัญชี Cognito
 รหัสใน Compose เป็นรหัสจำลองสำหรับเครื่องนี้เท่านั้น ห้ามนำไปใช้กับฐานข้อมูลที่เผยแพร่
 

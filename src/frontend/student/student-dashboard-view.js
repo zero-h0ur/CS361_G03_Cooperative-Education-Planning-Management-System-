@@ -36,6 +36,12 @@ const WORKFLOW_GUIDE = Object.freeze([
     text: 'หลังได้รับอนุมัติ เจ้าหน้าที่เป็นผู้มอบหมายอาจารย์ที่ปรึกษาโดยพิจารณาบริษัท ตำแหน่ง และหัวข้อโครงการที่เหมาะสม อาจารย์จะอ่านข้อมูลของคุณได้เมื่อได้รับมอบหมายแล้ว'
   }
 ]);
+const APPLICATION_GUIDE=Object.freeze([
+  {title:'เตรียมใบสมัครเข้าแผน (Phase 1)',text:'เลือกรอบรับสมัคร ตรวจข้อมูลมหาวิทยาลัย และกรอกข้อมูลติดต่อ ผู้ปกครอง ทักษะและผลการเรียน ขั้นนี้ยังไม่ต้องมีบริษัทตอบรับหรือ Project'},
+  {title:'บันทึก Draft และแนบเอกสาร',text:'แนบ Resume, Transcript, ใบรับรองความประพฤติ และรูปนักศึกษา บันทึกฉบับร่างได้แม้ข้อมูลยังไม่ครบ หรือเกณฑ์ยังรอทีมยืนยัน'},
+  {title:'ตรวจความพร้อมและยืนยันส่ง',text:'ระบบตรวจเกณฑ์และเอกสารเบื้องต้นก่อนส่ง เมื่อส่งสำเร็จ ข้อมูลและชุดเอกสารจะถูกล็อกไว้ การส่งใบสมัครไม่ใช่การได้รับคัดเลือก'},
+  {title:'รอผู้ประสานงานตรวจสอบ',text:'ผู้ประสานงานอ่านใบสมัครที่ส่งในขอบเขตที่รับผิดชอบ การตรวจรับ ส่งกลับแก้ไข และส่งใหม่เป็นขั้นถัดไป ไม่ใช่คำสั่งที่ทำได้จากหน้าจัดทำใบสมัคร'}
+]);
 
 function element(tagName, className, text) {
   const node = document.createElement(tagName);
@@ -60,7 +66,7 @@ function updatedLabel(value) {
 }
 
 export function renderStudentDashboardView({
-  profileClient, signal, onSessionExpired, onAccessDenied, onNavigate
+  profileClient, signal, onSessionExpired, onAccessDenied, onNavigate, applicationHref = null
 } = {}) {
   const container = element('div', 'student-workspace student-profile-workspace');
   if (!profileClient || typeof profileClient.getOwnProfile !== 'function') {
@@ -105,7 +111,7 @@ export function renderStudentDashboardView({
     section.append(title, element('p', 'student-card__description',
       'คู่มือขั้นตอนทั่วไป ไม่ใช่สถานะปัจจุบันของคุณ กดแต่ละหัวข้อเพื่ออ่านรายละเอียด'));
     const list = element('ol', 'student-profile-guide__steps');
-    WORKFLOW_GUIDE.forEach((step, index) => {
+    (applicationHref?APPLICATION_GUIDE:WORKFLOW_GUIDE).forEach((step, index) => {
       const item = element('li');
       const details = element('details', 'student-profile-guide__step');
       details.open = expandedSteps.has(index);
@@ -123,7 +129,8 @@ export function renderStudentDashboardView({
     const external = element('aside', 'student-profile-guide__external');
     external.append(element('h3', '', 'การสมัครบริษัทเป็นขั้นตอนแยกจากการอนุมัติแผน'),
       element('p', '', 'ส่ง CV / Resume และสมัครกับบริษัทด้วยตนเอง เมื่อบริษัทรับและคุณตอบตกลง ให้ส่งชื่อบริษัท ตำแหน่ง และหัวข้อโครงการผ่านแบบฟอร์มหรือช่องทางที่เจ้าหน้าที่กำหนด เจ้าหน้าที่จะประสานให้บริษัทยืนยันข้อมูลให้ตรงกัน หน้าโปรไฟล์นี้ไม่ได้รับเอกสารหรือยืนยันบริษัท'));
-    section.append(list, external);
+    section.append(list);
+    if(!applicationHref)section.append(external);
     return decorateStudentCard(section, 'clipboard');
   }
 
@@ -144,14 +151,14 @@ export function renderStudentDashboardView({
 
     const cta = element('div', 'student-dashboard-summary__cta');
     const actions = element('div', 'student-dashboard-summary__actions');
-    const plan = element('a', 'shell-button', 'เปิดแผนสหกิจของฉัน');
-    plan.href = '#/student/plan';
+    const plan = element('a', 'shell-button', applicationHref?'เปิดใบสมัครเข้าแผนสหกิจ':'เปิดแผนสหกิจของฉัน');
+    plan.href = applicationHref || '#/student/plan';
     plan.dataset.role = 'go-to-student-plan';
     plan.dataset.profileFocus = 'plan';
     plan.prepend(createWorkspaceIcon('file'));
     plan.addEventListener('click', (event) => {
       if (typeof onNavigate === 'function' && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0) {
-        event.preventDefault(); onNavigate('#/student/plan');
+        event.preventDefault(); onNavigate(applicationHref || '#/student/plan');
       }
     });
     const directory = element('a', 'shell-button shell-button--secondary', 'ดูรายชื่อสถานประกอบการ');
@@ -160,7 +167,7 @@ export function renderStudentDashboardView({
     directory.prepend(createWorkspaceIcon('building'));
     actions.append(plan, directory);
     cta.append(element('p', 'student-dashboard-summary__cta-copy',
-      'ตรวจข้อมูลทางการให้ถูกต้อง แล้วเปิดแผนสหกิจเพื่อเตรียมฉบับร่าง ส่งให้เจ้าหน้าที่ตรวจ และติดตามผลพิจารณา'), actions);
+      applicationHref?'ตรวจข้อมูลทางการให้ถูกต้อง แล้วเปิดใบสมัครเพื่อกรอกข้อมูล แนบเอกสาร และตรวจทานก่อนส่งให้ผู้ประสานงาน':'ตรวจข้อมูลทางการให้ถูกต้อง แล้วเปิดแผนสหกิจเพื่อเตรียมฉบับร่าง ส่งให้เจ้าหน้าที่ตรวจ และติดตามผลพิจารณา'), actions);
     summarySection.append(header, cta);
 
     const official = element('section', 'student-card student-profile-official');

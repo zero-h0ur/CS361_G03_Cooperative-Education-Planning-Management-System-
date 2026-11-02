@@ -1,23 +1,26 @@
 import '../../src/frontend/authenticated-shell.css';
 import './preview.css';
 import { createShellApp } from '../../src/frontend/shell-app.js';
-import { createPreviewClients, SCENARIOS, ADVISOR_SCENARIOS } from './fixtures.js';
-import { enhanceWorkflowPreview } from './workflow-fixtures.js';
-import { selectionPreview, SELECTION_SCENARIOS } from './selection-fixtures.js';
+import { SCENARIOS, ADVISOR_SCENARIOS } from './fixtures.js';
+import { SELECTION_SCENARIOS } from './selection-fixtures.js';
+import {APPLICATION_SCENARIOS} from './application-fixtures.js';
+import {createWorkspacePreviewClients} from './workspace-fixtures.js';
 
 const params = new URLSearchParams(location.search);
-const defaultRoutes = { STUDENT: '#/student/plan', STAFF: '#/staff/students', ADVISOR: '#/advisor/students', ADMIN:'#/admin/operations',
+const defaultRoutes = { STUDENT: '#/student/plan', STAFF: '#/coordinator/applications', ADVISOR: '#/advisor/students', ADMIN:'#/admin/operations',
   COORDINATOR:'#/coordinator/applications',COMMITTEE:'#/committee/applications' };
 const roleLabel = document.createElement('label'); roleLabel.textContent = 'พื้นที่จำลอง ';
 const role = document.createElement('select'); role.setAttribute('aria-label', 'เลือกพื้นที่จำลอง');
-role.add(new Option('นักศึกษา', 'STUDENT')); role.add(new Option('เจ้าหน้าที่ (จำลอง Workflow)', 'STAFF'));
-role.add(new Option('อาจารย์ที่ปรึกษา (อ่านอย่างเดียว)', 'ADVISOR'));
-role.add(new Option('ผู้ดูแลระบบ (Operations)', 'ADMIN'));
+role.add(new Option('นักศึกษา', 'STUDENT'));
 role.add(new Option('ผู้ประสานงาน (รับเรื่อง)', 'COORDINATOR'));
 role.add(new Option('กรรมการ (ความเห็นรายบุคคล)', 'COMMITTEE'));
-role.value = Object.hasOwn(defaultRoutes, params.get('role')) ? params.get('role') : 'STUDENT';
+role.add(new Option('อาจารย์ที่ปรึกษา (อ่านอย่างเดียว)', 'ADVISOR'));
+role.add(new Option('ผู้ดูแลระบบ (Operations)', 'ADMIN'));
+const rawRole = params.get('role');
+const mappedRole = rawRole === 'STAFF' ? 'COORDINATOR' : rawRole;
+role.value = Object.hasOwn(defaultRoutes, mappedRole) ? mappedRole : 'STUDENT';
 const selectionRole=['COORDINATOR','COMMITTEE'].includes(role.value);
-const scenarios = selectionRole?SELECTION_SCENARIOS:role.value === 'ADVISOR' ? ADVISOR_SCENARIOS : SCENARIOS;
+const scenarios = selectionRole?SELECTION_SCENARIOS:role.value === 'ADVISOR' ? ADVISOR_SCENARIOS : role.value==='STUDENT'?{...SCENARIOS,...APPLICATION_SCENARIOS}:SCENARIOS;
 const defaultScenario = selectionRole?'pending':role.value === 'ADVISOR' ? 'assigned' : 'draft';
 const scenario = params.get('scenario') || defaultScenario;
 roleLabel.append(role);
@@ -35,6 +38,7 @@ select.value = Object.hasOwn(scenarios, scenario) ? scenario : defaultScenario;
 select.addEventListener('change', () => {
   const url = new URL(location.href);
   url.search = new URLSearchParams({ scenario: select.value, role: role.value }).toString();
+  if(Object.hasOwn(APPLICATION_SCENARIOS,select.value))url.hash='#/student/application';
   location.assign(url);
 });
 label.append(select);
@@ -45,9 +49,8 @@ reset.type = 'button'; reset.textContent = 'รีเซ็ตข้อมูล
 reset.addEventListener('click', () => location.reload());
 document.getElementById('previewControls').append(notice, roleLabel, label, reset);
 
-if (!location.hash) location.hash = defaultRoutes[role.value];
-const clients = ['COORDINATOR','COMMITTEE'].includes(role.value) ? selectionPreview(role.value,select.value) :
-  enhanceWorkflowPreview(createPreviewClients({ scenario: select.value, role: role.value }),{scenario:select.value,role:role.value});
+if (!location.hash || location.hash.startsWith('#/staff')) location.hash = defaultRoutes[role.value];
+const clients = createWorkspacePreviewClients({role:role.value,scenario:select.value});
 createShellApp({
   ...clients, root: document.getElementById('authenticatedApp'),
   location, eventTarget: window, storage: null,

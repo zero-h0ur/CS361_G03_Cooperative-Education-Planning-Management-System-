@@ -1,18 +1,24 @@
-import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
-import { resolve, join, dirname } from 'node:path';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { resolve, join, relative, isAbsolute, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import { readReviewedMigrations } from './reviewed-migrations.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const target=JSON.parse(readFileSync(join(root,'config/v4-public.json'),'utf8'));
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const quote=value=>"'"+value.replaceAll("'","''")+"'";
 
+export function assertExternalReleaseDirectory(output) {
+  const rel=relative(root,resolve(output));
+  if(!rel||(!isAbsolute(rel)&&rel!=='..'&&!rel.startsWith('..'+sep))) {
+    throw new Error('Release artifacts must be outside the checkout.');
+  }
+}
+
 export function workflowMigrationSQL() {
-  const migrations=readdirSync(join(root,'src/db/migrations')).filter(name=>/^00[1-9]_[a-z0-9_]+\.sql$/.test(name)).sort()
-    .map(name=>({name,sql:readFileSync(join(root,'src/db/migrations',name),'utf8')}));
-  if(migrations.length!==9)throw new Error('Expected exactly nine reviewed migrations.');
-  const expected=migrations.map(row=>`(${quote(row.name)},${quote(hash(row.sql))})`).join(',');
+  const migrations=readReviewedMigrations();
+  const expected=migrations.map(row=>`(${quote(row.name)},${quote(row.checksum)})`).join(',');
   const tables=['users','external_identity_links','students','plans','advisor_assignments','staff_scopes','rounds','companies','positions','audit_events','plan_operations'];
   const key=table=>({audit_events:'event_id',plan_operations:'operation_id'})[table]||'id';
   const before=tables.map(table=>`SELECT '${table}' AS table_name,${key(table)}::text AS row_id,to_jsonb(t) AS original FROM public.${table} t`).join(' UNION ALL ');
@@ -23,7 +29,7 @@ export function workflowMigrationSQL() {
 \\if :applied_${index}
 \\else
 ${row.sql}
-INSERT INTO public.schema_migrations(version,checksum) VALUES(${quote(row.name)},${quote(hash(row.sql))});
+INSERT INTO public.schema_migrations(version,checksum) VALUES(${quote(row.name)},${quote(row.checksum)});
 \\endif`).join('\n');
   const grants=readFileSync(join(root,'src/db/operations/v3-runtime-grants.sql'),'utf8')
     .replace(/^\\set[^\n]*\n/gm,'').replace(/^BEGIN;\s*$/gm,'').replace(/^COMMIT;\s*$/gm,'');
@@ -54,9 +60,9 @@ ${grants}
 DO $preserve$
 BEGIN
  ${preserve}
- IF (SELECT count(*) FROM public.schema_migrations)<>9 THEN RAISE EXCEPTION 'Incomplete schema'; END IF;
+ IF (SELECT count(*) FROM public.schema_migrations)<>10 THEN RAISE EXCEPTION 'Incomplete schema'; END IF;
 END $preserve$;
-SELECT json_build_object('Migrations',9,'ExistingRowsPreserved',true,'RuntimeRoleMutation',has_column_privilege('coed_app','public.users','role','UPDATE'));
+SELECT json_build_object('Migrations',10,'ExistingRowsPreserved',true,'RuntimeRoleMutation',has_column_privilege('coed_app','public.users','role','UPDATE'));
 \\if :apply
 COMMIT;
 \\else
@@ -69,7 +75,7 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   const [zipArg,outputArg]=process.argv.slice(2);
   if(!zipArg||!outputArg)throw new Error('Usage: node scripts/operations/prepare-workflow-release.mjs <lambda.zip> <private-output-directory>');
   const output=resolve(outputArg);
-  if(output===root||output.startsWith(root+'/'))throw new Error('Release artifacts must be outside the checkout.');
+  assertExternalReleaseDirectory(output);
   if(execFileSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'}).trim())throw new Error('Commit reviewed source before preparing the release.');
   mkdirSync(output,{mode:0o700});
   const zip=readFileSync(resolve(zipArg));

@@ -7,6 +7,7 @@ function setup(role){
   const pool={query:jest.fn(async()=>({rows:[{user_id:userId,role,account_status:'ACTIVE',link_status:'ACTIVE',active_link_count:1,
     ...(role==='STUDENT'?{student_id:randomUUID()}:{student_id:null})}]}))};
   const selectionService={list:jest.fn(async()=>({cohorts:[],applications:[]})),mutate:jest.fn(async()=>({opinion_count:1})),
+    returnForRevision:jest.fn(async()=>({state:'NEEDS_REVISION',opinion_count:0,plan_version:2})),
     studentList:jest.fn(async()=>({applications:[]})),studentStatus:jest.fn(async()=>({opinion_count:0}))};
   const handler=createLambdaHandler({selectionService,authOptions:{pool,
     tokenValidator:new TokenValidator({expectedIssuer:issuer,expectedClientId:clientId}),identityResolver:new IdentityResolver({pool})}});
@@ -28,6 +29,34 @@ test.each(['STUDENT','STAFF','ADVISOR','ADMIN','COMMITTEE'])('%s cannot call Coo
   const {handler,event,selectionService}=setup(role);
   const response=await handler(event(`/api/v3/coordinator/plans/${randomUUID()}/acknowledge`,'POST'));
   expect(response.statusCode).toBe(403);expect(selectionService.mutate).not.toHaveBeenCalled();
+});
+test.each(['STUDENT','STAFF','ADVISOR','ADMIN','COMMITTEE'])('%s cannot call Coordinator returnForRevision command',async role=>{
+  const {handler,event,selectionService}=setup(role);
+  const response=await handler(event(`/api/v3/coordinator/plans/${randomUUID()}/return`,'POST'));
+  expect(response.statusCode).toBe(403);expect(selectionService.returnForRevision).not.toHaveBeenCalled();
+});
+test('COORDINATOR can call returnForRevision and pass state/search filters to list',async()=>{
+  const {handler,event,selectionService,userId}=setup('COORDINATOR');
+  const planId=randomUUID();
+  const postEvent=event(`/api/v3/coordinator/plans/${planId}/return`,'POST');
+  postEvent.body=JSON.stringify({operation_id:randomUUID(),expected_version:1,checklist:['ขาดลายเซ็น'],reason:'กรุณาแนบใหม่'});
+  const postRes=await handler(postEvent);
+  expect(postRes.statusCode).toBe(200);
+  expect(postRes.headers['Cache-Control']).toBe('no-store');
+  expect(selectionService.returnForRevision).toHaveBeenCalledWith(
+    expect.objectContaining({role:'COORDINATOR',userId}),
+    planId,
+    expect.objectContaining({expected_version:1,reason:'กรุณาแนบใหม่'})
+  );
+
+  const listEvent=event('/api/v3/coordinator/applications');
+  listEvent.rawQueryString='state=NEEDS_REVISION&search=DEMO361001';
+  const listRes=await handler(listEvent);
+  expect(listRes.statusCode).toBe(200);
+  expect(selectionService.list).toHaveBeenCalledWith(
+    expect.objectContaining({role:'COORDINATOR',userId}),
+    {state:'NEEDS_REVISION',search:'DEMO361001'}
+  );
 });
 test.each(['STUDENT','STAFF','ADVISOR','ADMIN','COORDINATOR'])('%s cannot submit a Committee opinion using role headers/groups',async role=>{
   const {handler,event,selectionService}=setup(role);

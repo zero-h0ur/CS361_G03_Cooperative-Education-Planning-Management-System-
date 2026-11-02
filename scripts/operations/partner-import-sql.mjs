@@ -1,9 +1,5 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import crypto from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { readReviewedMigrations } from './reviewed-migrations.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const CATALOG = 'partner-registry-2569';
 const quote = value => "'" + String(value).replace(/'/g, "''") + "'";
 const PRIVATE_TABLES = ['users', 'external_identity_links', 'students', 'plans',
@@ -17,19 +13,7 @@ export function buildImportSql(payload) {
   }
   // Explicitly reviewed history: unknown migrations must still fail closed.
   // Only migration 003 is executed by this importer; later entries verify history.
-  const migrations = [
-    '001_initial_schema.sql',
-    '002_v3_identity_student_plan_assignment_audit.sql',
-    '003_partner_directory.sql',
-    '004_three_role_workflow.sql',
-    '005_submission_snapshots.sql',
-    '006_advisor_display_name.sql',
-    '007_submission_policy_integrity.sql',
-    '008_returned_plan_cancellation.sql',
-    '009_coordinator_committee_selection.sql',
-  ]
-    .map(name => ({ name, sql: fs.readFileSync(path.join(ROOT, 'src/db/migrations', name), 'utf8') }))
-    .map(item => ({ ...item, hash: crypto.createHash('sha256').update(item.sql).digest('hex') }));
+  const migrations = readReviewedMigrations().map(item => ({ ...item, hash: item.checksum }));
   const expected = migrations.map(m => '(' + quote(m.name) + ',' + quote(m.hash) + ')').join(',');
   return `\\set ON_ERROR_STOP on
 -- Default is a dry run. Use psql -v apply=true only after reviewing the report.

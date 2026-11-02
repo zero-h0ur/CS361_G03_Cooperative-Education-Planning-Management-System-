@@ -5,7 +5,7 @@ import {
   getDefaultRoute,
   getRoleLabel,
   getRoute,
-  getRoutesForRole,
+  getNavigationRoutesForRole,
   isAllowlistedRoute
 } from './routes.js';
 import {
@@ -21,6 +21,7 @@ import { createWorkspaceIcon } from './ui/workspace-presentation.js';
 import { renderContactPanel, renderStaffWorkflow } from './workflow/workflow-views.js';
 import { renderAdminOperations } from './workflow/admin-operations-view.js';
 import { renderSelectionWorkspace, renderStudentSelectionStatus } from './selection/selection-view.js';
+import { renderApplicationWorkspace } from './student/application-view.js';
 
 const RETURN_ROUTE_KEY = 'co-ed:return-route';
 const SENSITIVE_QUERY_PARAMS = Object.freeze([
@@ -86,14 +87,28 @@ function renderState(root, {
   tone = 'neutral',
   busy = false,
   alert = false,
+  topNavNode = null,
+  bodyNode = null,
   actions = []
 }) {
   const main = element('main', `shell-state shell-state--${tone}`);
+  if (bodyNode) {
+    main.classList.add('shell-state--with-card');
+  }
+  if (topNavNode) {
+    main.classList.add('shell-state--with-topnav');
+  }
   main.setAttribute('aria-busy', String(busy));
   if (alert) {
     main.setAttribute('role', 'alert');
   } else if (busy) {
     main.setAttribute('role', 'status');
+  }
+
+  if (topNavNode) {
+    const topNavWrap = element('div', 'shell-state__topnav');
+    topNavWrap.append(topNavNode);
+    main.append(topNavWrap);
   }
 
   const mark = createBrandMark('shell-state__mark');
@@ -104,6 +119,10 @@ function renderState(root, {
     element('p', 'shell-state__description', description)
   );
 
+  if (bodyNode) {
+    copy.append(bodyNode);
+  }
+
   if (actions.length > 0) {
     const actionGroup = element('div', 'shell-state__actions');
     actionGroup.append(...actions);
@@ -112,6 +131,219 @@ function renderState(root, {
 
   main.append(mark, copy);
   replaceRoot(root, main, busy);
+}
+
+function createSignInBackLink({ location, history }) {
+  const backLink = element('a', 'signin-back-link');
+  backLink.href = 'index.html';
+  backLink.setAttribute('aria-label', 'ย้อนกลับ');
+
+  const arrow = element('span', 'signin-back-link__icon', '←');
+  arrow.setAttribute('aria-hidden', 'true');
+  const label = element('span', 'signin-back-link__label', 'ย้อนกลับ');
+  backLink.append(arrow, label);
+
+  backLink.addEventListener('click', (event) => {
+    try {
+      const referrer = typeof document !== 'undefined' ? document.referrer : '';
+      const currentOrigin = location?.origin || (typeof window !== 'undefined' ? window.location?.origin : '');
+      if (
+        referrer &&
+        currentOrigin &&
+        referrer.startsWith(currentOrigin) &&
+        !/\/app(?:\.html|\/)?(?:[?#]|$)/i.test(referrer) &&
+        history &&
+        typeof history.back === 'function'
+      ) {
+        event.preventDefault();
+        history.back();
+      }
+    } catch {
+      // Fall back to standard index.html navigation.
+    }
+  });
+
+  return backLink;
+}
+
+function createTuAuthSignInSection({ onSubmit, staffButton, eventTarget }) {
+  const section = element('section', 'tuauth-signin-section');
+  section.setAttribute('aria-label', 'ฟอร์มเข้าสู่ระบบนักศึกษาและบุคลากร');
+
+  const form = element('form', 'tuauth-signin-card');
+  form.method = 'post';
+  form.action = '#';
+  form.autocomplete = 'on';
+  form.noValidate = true;
+
+  const header = element('div', 'tuauth-signin-card__header');
+  header.append(
+    element('span', 'tuauth-signin-badge', 'สำหรับนักศึกษามหาวิทยาลัยธรรมศาสตร์'),
+    element('h2', 'tuauth-signin-card__title', 'ยืนยันตัวตนด้วยรหัสนักศึกษา'),
+    element(
+      'p',
+      'tuauth-signin-card__subtitle',
+      'กรอกรหัสนักศึกษา 10 หลัก และรหัสผ่านเดียวกับระบบทะเบียนนักศึกษา'
+    )
+  );
+
+  const studentField = element('label', 'tuauth-signin-field');
+  const studentLabel = element('span', 'tuauth-signin-field__label', 'รหัสนักศึกษา (10 หลัก)');
+  const studentInput = element('input', 'tuauth-signin-input');
+  studentInput.type = 'text';
+  studentInput.name = 'studentId';
+  studentInput.inputMode = 'numeric';
+  studentInput.maxLength = 10;
+  studentInput.autocomplete = 'username';
+  studentInput.spellcheck = false;
+  studentInput.setAttribute('autocapitalize', 'off');
+  studentInput.placeholder = 'เช่น 6609610022';
+  studentInput.required = true;
+  studentInput.addEventListener('input', () => {
+    const sanitized = studentInput.value.replace(/\D+/g, '').slice(0, 10);
+    if (studentInput.value !== sanitized) {
+      studentInput.value = sanitized;
+    }
+  });
+  studentField.append(studentLabel, studentInput);
+
+  const passwordField = element('label', 'tuauth-signin-field');
+  const passwordLabel = element('span', 'tuauth-signin-field__label', 'รหัสผ่านทะเบียนนักศึกษา');
+  const passwordWrap = element('div', 'tuauth-signin-password-wrap');
+  const passwordInput = element('input', 'tuauth-signin-input');
+  passwordInput.type = 'password';
+  passwordInput.name = 'password';
+  passwordInput.maxLength = 128;
+  passwordInput.autocomplete = 'current-password';
+  passwordInput.spellcheck = false;
+  passwordInput.setAttribute('autocapitalize', 'off');
+  passwordInput.setAttribute('autocorrect', 'off');
+  passwordInput.setAttribute('data-lpignore', 'false');
+  passwordInput.placeholder = 'กรอกรหัสผ่านบัญชีมหาวิทยาลัย';
+  passwordInput.required = true;
+
+  const toggleBtn = element('button', 'tuauth-signin-password-toggle', 'แสดง');
+  toggleBtn.type = 'button';
+  toggleBtn.setAttribute('aria-label', 'แสดงรหัสผ่าน');
+  toggleBtn.setAttribute('aria-pressed', 'false');
+
+  let autoHideTimer = null;
+  function hidePassword() {
+    if (autoHideTimer) {
+      clearTimeout(autoHideTimer);
+      autoHideTimer = null;
+    }
+    passwordInput.type = 'password';
+    toggleBtn.textContent = 'แสดง';
+    toggleBtn.setAttribute('aria-label', 'แสดงรหัสผ่าน');
+    toggleBtn.setAttribute('aria-pressed', 'false');
+  }
+
+  function scrubPasswordInput() {
+    hidePassword();
+    passwordInput.value = '';
+    passwordInput.defaultValue = '';
+    passwordInput.setAttribute('value', '');
+  }
+
+  toggleBtn.addEventListener('click', () => {
+    const showing = passwordInput.type === 'text';
+    if (showing) {
+      hidePassword();
+      return;
+    }
+    passwordInput.type = 'text';
+    toggleBtn.textContent = 'ซ่อน';
+    toggleBtn.setAttribute('aria-label', 'ซ่อนรหัสผ่าน');
+    toggleBtn.setAttribute('aria-pressed', 'true');
+    if (autoHideTimer) {
+      clearTimeout(autoHideTimer);
+    }
+    autoHideTimer = setTimeout(() => {
+      hidePassword();
+    }, 10000);
+  });
+
+  if (eventTarget && typeof eventTarget.addEventListener === 'function') {
+    eventTarget.addEventListener('pagehide', scrubPasswordInput, { once: true });
+  }
+  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        hidePassword();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange, { once: true });
+  }
+
+  passwordWrap.append(passwordInput, toggleBtn);
+  passwordField.append(passwordLabel, passwordWrap);
+
+  const securityHint = element(
+    'p',
+    'tuauth-signin-security-hint',
+    'ข้อมูลรหัสผ่านจะถูกเข้ารหัสและส่งตรวจสอบโดยตรง โดยไม่บันทึกลงในเบราว์เซอร์'
+  );
+
+  const feedback = element('p', 'tuauth-signin-feedback');
+  feedback.hidden = true;
+
+  const submitBtn = element('button', 'shell-button tuauth-signin-submit', 'เข้าสู่ระบบ');
+  submitBtn.type = 'submit';
+
+  function showFeedback(message, isError = false) {
+    feedback.hidden = false;
+    feedback.textContent = message;
+    feedback.className = isError
+      ? 'tuauth-signin-feedback tuauth-signin-feedback--error'
+      : 'tuauth-signin-feedback tuauth-signin-feedback--info';
+    feedback.setAttribute('role', isError ? 'alert' : 'status');
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const studentId = studentInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!/^\d{10}$/.test(studentId)) {
+      hidePassword();
+      showFeedback('กรุณากรอกรหัสนักศึกษาเป็นตัวเลข 10 หลักให้ครบถ้วน', true);
+      studentInput.focus();
+      return;
+    }
+
+    if (!password) {
+      hidePassword();
+      showFeedback('กรุณากรอกรหัสผ่านทะเบียนนักศึกษา', true);
+      passwordInput.focus();
+      return;
+    }
+
+    // Immediately scrub the password from the DOM input and hide visibility before any network work
+    scrubPasswordInput();
+
+    submitBtn.disabled = true;
+    form.setAttribute('aria-busy', 'true');
+    try {
+      await onSubmit({ studentId, password, showFeedback });
+    } finally {
+      submitBtn.disabled = false;
+      form.removeAttribute('aria-busy');
+    }
+  });
+
+  form.append(header, studentField, passwordField, securityHint, feedback, submitBtn);
+
+  if (staffButton) {
+    const divider = element('div', 'tuauth-signin-divider');
+    divider.append(element('span', null, 'สำหรับอาจารย์ ผู้ประสานงาน และกรรมการ'));
+    const staffActions = element('div', 'tuauth-signin-staff-actions');
+    staffActions.append(staffButton);
+    form.append(divider, staffActions);
+  }
+
+  section.append(form);
+  return section;
 }
 
 function safelyReadReturnRoute(storage) {
@@ -203,7 +435,7 @@ function createNavigation(role, activeRoute) {
   const navigation = element('nav', 'shell-nav');
   navigation.setAttribute('aria-label', 'เมนูพื้นที่ผู้ใช้งาน');
 
-  for (const route of getRoutesForRole(role)) {
+  for (const route of getNavigationRoutesForRole(role)) {
     const link = element('a', 'shell-nav__link', route.navLabel);
     link.href = route.hash;
     if (['STUDENT', 'STAFF', 'ADVISOR', 'ADMIN', 'COORDINATOR', 'COMMITTEE'].includes(role)) {
@@ -326,6 +558,7 @@ export function createShellApp({
   startLogin,
   restartLogin,
   logout,
+  startTuAuthLogin = null,
   invalidateLocalSession = async () => {},
   location,
   eventTarget,
@@ -333,6 +566,7 @@ export function createShellApp({
   history = globalThis.history,
   studentProfileClient = null,
   studentPlanClient = null,
+  applicationClient = null,
   staffClient = null,
   advisorClient = null,
   staffReviewClient = null,
@@ -360,6 +594,7 @@ export function createShellApp({
   let destroyed = false;
   let unsubscribeLogout = null;
   let studentRouteTransition = null;
+  let routeLeaveGuard = null;
 
   function cancelStudentRouteTransition() {
     const pending = studentRouteTransition;
@@ -369,6 +604,7 @@ export function createShellApp({
   }
 
   function abortRouteWork() {
+    routeLeaveGuard = null;
     cancelStudentRouteTransition();
     routeController?.abort();
     routeController = null;
@@ -392,26 +628,52 @@ export function createShellApp({
     currentRole = null;
     currentCanReviewPlan = false;
     if (rememberRoute) safelyRememberReturnRoute(storage, location.hash);
-    const publicDirectory = element('a', 'shell-button shell-button--secondary', 'ดูรายชื่อสถานประกอบการ');
-    publicDirectory.href = 'company-directory.html';
+
+    const backLink = createSignInBackLink({ location, history });
+
+    const staffButton = createActionButton('เข้าสู่ระบบสำหรับอาจารย์และเจ้าหน้าที่', async () => {
+      safelyRememberReturnRoute(storage, location.hash);
+      renderLoading('กำลังไปยังหน้าเข้าสู่ระบบ');
+      try {
+        await startLogin();
+      } catch {
+        renderUnavailable();
+      }
+    }, true);
+    staffButton.dataset.authMode = 'cognito-test';
+    staffButton.classList.add('tuauth-signin-staff-btn');
+
+    const tuAuthSection = createTuAuthSignInSection({
+      staffButton,
+      eventTarget,
+      onSubmit: async ({ studentId, password, showFeedback }) => {
+        safelyRememberReturnRoute(storage, location.hash);
+        if (typeof startTuAuthLogin === 'function') {
+          try {
+            await startTuAuthLogin({ studentId, password });
+          } catch (error) {
+            showFeedback(
+              error?.message || 'ไม่สามารถยืนยันตัวตนได้ในขณะนี้ กรุณาตรวจสอบรหัสนักศึกษาและรหัสผ่านอีกครั้ง',
+              true
+            );
+          }
+          return;
+        }
+        showFeedback(
+          'ตรวจสอบรหัสนักศึกษา 10 หลักเรียบร้อย ระบบกำลังเชื่อมต่อบริการยืนยันตัวตนของมหาวิทยาลัย หากต้องการเข้าใช้งานด้วยบัญชีบุคลากรหรือผู้ประสานงาน กรุณาเลือกปุ่มด้านล่าง',
+          false
+        );
+      }
+    });
 
     renderState(root, {
-      eyebrow: 'SIGN IN',
-      title: 'กรุณาเข้าสู่ระบบ',
-      description: 'เข้าสู่ระบบด้วยบัญชีที่มหาวิทยาลัยจัดเตรียมให้ เพื่อเปิดพื้นที่ผู้ใช้งานของคุณ',
+      eyebrow: 'CO-ED · มหาวิทยาลัยธรรมศาสตร์',
+      title: 'เข้าสู่ระบบสหกิจศึกษา',
+      description: 'ใช้รหัสนักศึกษาและรหัสผ่านทะเบียนนักศึกษา มหาวิทยาลัยธรรมศาสตร์ เพื่อเข้าสู่พื้นที่วางแผนและติดตามสหกิจศึกษา',
       tone: 'neutral',
-      actions: [
-        createActionButton('เข้าสู่ระบบ', async () => {
-          safelyRememberReturnRoute(storage, location.hash);
-          renderLoading('กำลังไปยังหน้าเข้าสู่ระบบ');
-          try {
-            await startLogin();
-          } catch {
-            renderUnavailable();
-          }
-        }),
-        publicDirectory
-      ]
+      topNavNode: backLink,
+      bodyNode: tuAuthSection,
+      actions: []
     });
   }
 
@@ -483,6 +745,7 @@ export function createShellApp({
   }
 
   async function handleLogout() {
+    if(routeLeaveGuard && !routeLeaveGuard())return;
     activeController?.abort();
     abortRouteWork();
     currentRole = null;
@@ -532,6 +795,10 @@ export function createShellApp({
       });
     }
 
+    if(role==='STUDENT' && (route.hash==='#/student/application' || route.params?.applicationId) && applicationClient) {
+      return renderApplicationWorkspace({client:applicationClient,applicationId:route.params?.applicationId,signal,
+        onNavigate:navigateToAllowlistedRoute,onSessionExpired:handleSessionExpired,setLeaveGuard:guard=>{routeLeaveGuard=guard;}});
+    }
     if (['COORDINATOR','COMMITTEE'].includes(role) && workflowClient) {
       return renderSelectionWorkspace({client:workflowClient,role,signal,onSessionExpired:handleSessionExpired,
         onAccessDenied:message=>renderForbidden(message)});
@@ -544,6 +811,7 @@ export function createShellApp({
     if (role === 'STUDENT' && route.hash === '#/student/profile' && studentProfileClient) {
       const profile = renderStudentDashboardView({
         profileClient: studentProfileClient,
+        applicationHref: applicationClient ? '#/student/application' : null,
         signal,
         onSessionExpired: handleSessionExpired,
         onAccessDenied: (message) => renderForbidden(message),
@@ -653,6 +921,9 @@ export function createShellApp({
     }
 
     const previousHash = renderedHash;
+    if(previousHash && previousHash!==location.hash && routeLeaveGuard && !routeLeaveGuard()) {
+      location.hash=previousHash;return;
+    }
     abortRouteWork();
     renderedHash = location.hash;
     const route = getRoute(location.hash);
@@ -676,11 +947,12 @@ export function createShellApp({
       onLogout: handleLogout,
       bodyNode: customBody
     });
-    const studentPages = ['#/student/profile', '#/student/plan'];
+    const studentPages = ['#/student/profile', '#/student/plan', '#/student/application'];
+    const isStudentPage=hash=>studentPages.includes(getRoute(hash)?.navHash || hash);
     const existingLayout = root.querySelector('.protected-shell--student');
     const existingMain = existingLayout?.querySelector('.shell-content');
     const reuseStudentShell = currentRole === 'STUDENT' && existingMain &&
-      previousHash !== route.hash && studentPages.includes(previousHash) && studentPages.includes(route.hash);
+      previousHash !== route.hash && isStudentPage(previousHash) && isStudentPage(route.hash);
     const doc = root.ownerDocument;
     const reducedMotion = doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     let useViewTransition = reuseStudentShell && !reducedMotion && typeof doc.startViewTransition === 'function';
@@ -697,7 +969,7 @@ export function createShellApp({
         existingMain.dataset.routeMotion = useViewTransition ? 'view-transition' : 'css';
         existingMain.replaceChildren(...main.childNodes);
         for (const link of existingLayout.querySelectorAll('.shell-nav__link')) {
-          const active = link.getAttribute('href') === route.hash;
+          const active = link.getAttribute('href') === (route.navHash || route.hash);
           link.classList.toggle('shell-nav__link--active', active);
           if (active) link.setAttribute('aria-current', 'page');
           else link.removeAttribute('aria-current');

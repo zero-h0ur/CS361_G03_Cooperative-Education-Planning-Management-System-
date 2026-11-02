@@ -62,3 +62,7 @@ Policies ของ Role ไม่ลดสิทธิ์ Team Admin ไม่�
 ยังไม่สร้าง Cognito users เพิ่มหรือเชื่อม Student records บน RDS ในรอบนี้
 ต้องจัดบัญชี/สิทธิ์ตาม [แผนสิทธิ์ทีม](../operations/team-access.md) และให้เพื่อนยืนยันว่าเริ่มงานตาม
 [คู่มือ Dev/Test](../operations/team-dev-test.md) และ Login เว็บจริงได้ จึงปิด #140
+
+## Integration with current main
+
+ผลแก้ conflict และการตรวจร่วมกับงานของทีมอยู่ใน [PR #151 merge verification](pr151-merge-verification.md)
