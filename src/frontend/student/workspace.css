@@ -1,0 +1,121 @@
+/* The approved Student pages share these tokens; other roles retain their shell. */
+.protected-shell.student-portal {
+  --shell-primary: #b61732;
+  --shell-primary-dark: #941329;
+  --shell-ink: #192230;
+  --shell-muted: #536174;
+  --shell-line: #dce2e9;
+  --shell-canvas: #f3f5f7;
+  --shell-soft: #fdf0f3;
+  --student-burgundy: #77192d;
+  --student-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--shell-canvas);
+  color: var(--shell-ink);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.student-portal *, .student-portal *::before, .student-portal *::after { box-sizing: border-box; }
+.student-portal [hidden] { display: none !important; }
+.student-portal .shell-topbar {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto minmax(150px, 1fr);
+  align-items: center;
+  gap: 24px;
+  min-height: 76px;
+  padding: 0 clamp(20px, 4vw, 64px);
+  border-bottom: 1px solid var(--shell-line);
+  background: #fff;
+  backdrop-filter: none;
+}
+.student-portal .shell-brand { gap: 12px; text-decoration: none; color: var(--shell-ink); }
+.student-portal .shell-brand__mark { border: 0; border-radius: 0; background: none; box-shadow: none; width: 44px; height: 44px; }
+.student-portal .shell-brand__logo { width: 44px; height: 44px; object-fit: contain; }
+.student-portal .shell-brand__name { font-size: 1.4rem; letter-spacing: -.035em; }
+.student-portal .shell-brand__subtitle { color: var(--shell-muted); font-size: .75rem; font-weight: 400; }
+.student-portal .shell-nav { display: flex; align-items: stretch; align-self: stretch; gap: 28px; }
+.student-portal .shell-nav__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 12px 4px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--shell-muted);
+  font-size: .95rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+.student-portal .shell-nav__link:hover { color: var(--shell-primary); background: none; }
+.student-portal .shell-nav__link--active { border-bottom-color: var(--shell-primary); color: var(--shell-primary); font-weight: 600; }
+.student-account { position: relative; justify-self: end; min-width: 0; max-width: 100%; }
+.student-account > summary { display: flex; align-items: center; gap: 10px; min-height: 48px; cursor: pointer; list-style: none; color: var(--shell-muted); font-size: .875rem; }
+.student-account > summary::-webkit-details-marker { display: none; }
+.student-account > summary::after { content: ''; width: 8px; height: 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); margin: -4px 4px 0; }
+.student-account__avatar, .student-identity__avatar { display: grid; place-items: center; flex-shrink: 0; border-radius: 50%; background: #e9edf2; color: var(--shell-ink); font-weight: 600; }
+.student-account__avatar { width: 40px; height: 40px; font-size: .875rem; }
+.student-account__actions { position: absolute; right: 0; top: calc(100% + 8px); display: grid; gap: 6px; min-width: 210px; padding: 12px; background: #fff; border: 1px solid var(--shell-line); border-radius: var(--student-radius); box-shadow: 0 8px 24px #19223012; }
+.student-account:not([open]) > .student-account__actions { display: none; }
+.student-portal .shell-content { width: 100%; max-width: none; padding: 0; margin: 0; min-width: 0; flex: 1; }
+.student-page-header {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-bottom: 1px solid var(--shell-line);
+  background-color: #fffdfa;
+}
+.student-page-header > .student-page-header__art { position: absolute; z-index: -1; inset: 0 0 0 auto; width: min(80%, 1100px); height: 100%; object-fit: cover; object-position: right 44%; mask: none; -webkit-mask: none; pointer-events: none; }
+.student-page-header__inner { position: relative; width: min(100%, 1536px); min-height: 176px; margin-inline: auto; padding: 32px clamp(20px, 4vw, 64px); }
+.student-page-header__title { margin: 0; font-size: clamp(1.65rem, 2.4vw, 2.1rem); line-height: 1.4; font-weight: 700; letter-spacing: -.025em; text-wrap: balance; max-width: 70%; }
+.student-page-header__description { margin: 5px 0 0; max-width: 62%; color: var(--shell-muted); font-size: 1rem; line-height: 1.7; }
+.student-page-header__meta { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; margin-top: 12px; color: var(--shell-muted); font-size: .85rem; }
+.student-page-content { width: min(100%, 1536px); margin-inline: auto; padding: 24px clamp(20px, 4vw, 64px) 32px; min-width: 0; }
+.student-portal .shell-button { min-height: 44px; gap: 9px; padding: 10px 18px; border-radius: 6px; font-size: .9rem; font-weight: 600; box-shadow: none; text-decoration: none; }
+.student-portal .shell-button:hover:not(:disabled) { box-shadow: none; transform: none; }
+.student-portal .shell-button--secondary { background: #fff; color: var(--shell-ink); border-color: #98a4b5; }
+.student-portal .shell-button--secondary:hover:not(:disabled) { background: #f7f9fb; color: var(--shell-primary); border-color: var(--shell-primary); }
+.student-portal :where(a, button, input, select, textarea, summary):focus-visible { outline: 3px solid var(--shell-primary); outline-offset: 3px; }
+.student-link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--shell-primary); text-underline-offset: 4px; font-size: .9rem; }
+.student-record-card { min-width: 0; padding: 24px; border: 1px solid var(--shell-line); border-radius: var(--student-radius); background: #fff; }
+.student-record-card__heading { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.student-record-card__heading h2 { margin: 0; font-size: 1.1rem; line-height: 1.6; }
+.student-record-card p { margin: 6px 0; }
+.student-record-description { color: var(--shell-muted); font-size: .875rem; }
+.student-portal__footer { display: flex; align-items: center; gap: 10px; margin-top: auto; padding: 16px clamp(20px, 4vw, 64px); border-top: 1px solid var(--shell-line); background: #fff; color: var(--shell-muted); font-size: .8rem; }
+.student-portal__footer .workspace-icon { width: 19px; height: 19px; }
+.student-portal__legacy { width: min(100%, 1280px); margin-inline: auto; padding: 24px; }
+@media (max-width: 1100px) {
+  .student-portal .shell-topbar { grid-template-columns: auto 1fr auto; gap: 20px; }
+  .student-portal .shell-nav { justify-self: center; gap: 18px; }
+  .student-account__label { display: none; }
+  .student-page-header > .student-page-header__art { width: 78%; object-position: right center; }
+  .student-page-header__title { max-width: 75%; }
+  .student-page-header__description { max-width: 70%; }
+}
+@media (max-width: 700px) {
+  .student-portal .shell-topbar { grid-template-columns: 1fr auto; gap: 0 16px; padding: 8px 20px 0; }
+  .student-portal .shell-brand__name { font-size: 1.15rem; }
+  .student-portal .shell-brand__mark, .student-portal .shell-brand__logo { width: 36px; height: 36px; }
+  .student-portal .shell-nav { grid-row: 2; grid-column: 1 / -1; width: 100%; justify-content: space-between; justify-self: stretch; gap: 12px; }
+  .student-portal .shell-nav__link { gap: 5px; min-height: 52px; font-size: .8rem; white-space: nowrap; }
+  .student-portal .shell-nav .workspace-icon { width: 18px; height: 18px; }
+  .student-page-header > .student-page-header__art { width: 100%; right: -35%; opacity: .24; }
+  .student-page-header__inner { min-height: 148px; padding-block: 24px; }
+  .student-page-header__title, .student-page-header__description { max-width: 100%; }
+  .student-page-header__title { font-size: 1.5rem; }
+  .student-page-header__description { font-size: .9rem; }
+  .student-page-content { padding: 20px 16px 28px; }
+  .student-record-card { padding: 20px; }
+  .student-portal__footer { padding-inline: 20px; align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .student-portal *, .student-portal *::before, .student-portal *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+}

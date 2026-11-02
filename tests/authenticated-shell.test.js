@@ -174,7 +174,7 @@ describe('Student CSS route transitions', () => {
 describe('authenticated V3 shell and route guards', () => {
   it.each(['STUDENT', 'STAFF', 'ADVISOR'])('shares the faded campus theme and framed public logo for %s', async (role) => {
     const context = setup({ session: { role } }); await context.app.start();
-    expect(context.root.querySelector('.protected-shell--campus')).not.toBeNull();
+    expect(context.root.querySelector(role === 'STUDENT' ? '.student-portal' : '.protected-shell--campus')).not.toBeNull();
     const backdrop = context.root.querySelector('.student-campus-backdrop');
     expect(backdrop.getAttribute('width')).toBe('2172');
     expect(backdrop.getAttribute('height')).toBe('724');
@@ -287,12 +287,13 @@ describe('authenticated V3 shell and route guards', () => {
     expect(brand.getAttribute('href')).toBe('index.html');
     expect(brand.getAttribute('aria-label')).toBe('CO-ED หน้าแรก');
     expect(brand.querySelector('.shell-brand__name').textContent).toBe('CO-ED');
-    expect(brand.querySelector('.shell-brand__subtitle').textContent).toBe('ระบบข้อมูลสหกิจศึกษา');
+    expect(brand.querySelector('.shell-brand__subtitle').textContent).toBe(role === 'STUDENT' ? 'สหกิจศึกษา' : 'ระบบข้อมูลสหกิจศึกษา');
     const logo = brand.querySelector('img');
     expect(logo.getAttribute('src')).toBe('resources/images/logomini.png');
     expect(logo.getAttribute('alt')).toBe('');
     expect(fs.existsSync(path.resolve(__dirname, '..', logo.getAttribute('src')))).toBe(true);
-    expect(context.root.querySelector('.shell-role__value').textContent).not.toBe('ไม่ทราบบทบาท');
+    const roleLabel = context.root.querySelector(role === 'STUDENT' ? '.student-account__label' : '.shell-role__value');
+    expect(roleLabel.textContent).not.toBe('ไม่ทราบบทบาท');
     context.app.destroy();
   });
 
@@ -365,7 +366,7 @@ describe('authenticated V3 shell and route guards', () => {
   });
 
   it.each([
-    ['STUDENT', '#/student/profile', ['ข้อมูลของฉัน', 'สมัครเข้าแผนสหกิจ'], 'ข้อมูลนักศึกษา'],
+    ['STUDENT', '#/student/profile', ['ข้อมูลของฉัน', 'ใบสมัครสหกิจ', 'สถานประกอบการ'], 'ข้อมูลนักศึกษา'],
     ['COORDINATOR', '#/coordinator/applications', ['รับแผนสหกิจ'], 'รับแผนสหกิจศึกษา'],
     ['COMMITTEE', '#/committee/applications', ['ให้ความเห็นผู้สมัคร'], 'ความเห็นกรรมการ'],
     ['STAFF', '#/staff/review', ['จัดการนักศึกษา', 'ค้นหาแผนสหกิจ', 'คิวตรวจแผน', 'เอกสารและอาจารย์ที่ปรึกษา'], 'คิวตรวจแผนสหกิจ'],
@@ -378,7 +379,8 @@ describe('authenticated V3 shell and route guards', () => {
     expect(context.location.hash).toBe(expectedHash);
     expect([...context.root.querySelectorAll('.shell-nav__link')].map((link) => link.textContent)).toEqual(navLabels);
     expect(context.root.querySelector('h1').textContent).toBe(title);
-    expect(context.root.textContent).toContain('Backend ยังต้องตรวจสิทธิ์ทุก Request');
+    if (role === 'STUDENT') expect(context.root.querySelector('.shell-security-note')).toBeNull();
+    else expect(context.root.textContent).toContain('Backend ยังต้องตรวจสิทธิ์ทุก Request');
   });
 
   it('denies a known route owned by another role', async () => {
