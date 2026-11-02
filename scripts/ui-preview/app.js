@@ -1,3 +1,10 @@
+export const SELECTION_STUDENT_SCENARIOS = Object.freeze({
+  'selection-open': 'ผลคัดเลือก · ผ่านและเปิดยืนยันสิทธิ์ (มีปุ่ม)',
+  'selection-near-deadline': 'ผลคัดเลือก · ใกล้หมดยืนยันสิทธิ์ (< 48 ชม.)',
+  'selection-expired': 'ผลคัดเลือก · หมดเวลายืนยันสิทธิ์ (สละสิทธิ์อัตโนมัติ)',
+  'selection-confirmed': 'ผลคัดเลือก · ยืนยันสิทธิ์แล้ว (เข้า MS Teams)'
+});
+
 import '../../src/frontend/authenticated-shell.css';
 import './preview.css';
 import { createShellApp } from '../../src/frontend/shell-app.js';
@@ -20,7 +27,7 @@ const rawRole = params.get('role');
 const mappedRole = rawRole === 'STAFF' ? 'COORDINATOR' : rawRole;
 role.value = Object.hasOwn(defaultRoutes, mappedRole) ? mappedRole : 'STUDENT';
 const selectionRole=['COORDINATOR','COMMITTEE'].includes(role.value);
-const scenarios = selectionRole?SELECTION_SCENARIOS:role.value === 'ADVISOR' ? ADVISOR_SCENARIOS : role.value==='STUDENT'?{...SCENARIOS,...APPLICATION_SCENARIOS}:SCENARIOS;
+const scenarios = selectionRole?SELECTION_SCENARIOS:role.value === 'ADVISOR' ? ADVISOR_SCENARIOS : role.value==='STUDENT'?{...SCENARIOS,...APPLICATION_SCENARIOS,...SELECTION_STUDENT_SCENARIOS}:SCENARIOS;
 const defaultScenario = selectionRole?'pending':role.value === 'ADVISOR' ? 'assigned' : 'draft';
 const scenario = params.get('scenario') || defaultScenario;
 roleLabel.append(role);
@@ -39,6 +46,7 @@ select.addEventListener('change', () => {
   const url = new URL(location.href);
   url.search = new URLSearchParams({ scenario: select.value, role: role.value }).toString();
   if(Object.hasOwn(APPLICATION_SCENARIOS,select.value))url.hash='#/student/application';
+  if(Object.hasOwn(SELECTION_STUDENT_SCENARIOS,select.value))url.hash='#/student/selection';
   location.assign(url);
 });
 label.append(select);
