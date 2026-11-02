@@ -86,7 +86,8 @@ describe('Student CSS route transitions', () => {
     expect(context.root.querySelector('main')).toBe(main);
     expect(context.root.querySelector('.shell-sidebar')).toBe(sidebar);
     expect(context.root.querySelector('.shell-topbar')).toBe(topbar);
-    expect(context.root.querySelector('[aria-current="page"]').getAttribute('href')).toBe('#/student/plan');
+    expect(context.root.querySelector('.shell-nav [href="#/student/plan"]')).toBeNull();
+    expect(context.root.querySelector('[aria-current="page"]')).toBeNull();
     topbar.querySelector('button').focus();
     context.root.querySelector('.shell-skip-link').click();
     expect(document.activeElement).toBe(main);
@@ -364,7 +365,7 @@ describe('authenticated V3 shell and route guards', () => {
   });
 
   it.each([
-    ['STUDENT', '#/student/profile', ['ข้อมูลของฉัน', 'สมัครเข้าแผนสหกิจ', 'แผนระบบเดิม (V3)', 'สถานะระบบเดิม (V3)'], 'ข้อมูลนักศึกษา'],
+    ['STUDENT', '#/student/profile', ['ข้อมูลของฉัน', 'สมัครเข้าแผนสหกิจ'], 'ข้อมูลนักศึกษา'],
     ['COORDINATOR', '#/coordinator/applications', ['รับแผนสหกิจ'], 'รับแผนสหกิจศึกษา'],
     ['COMMITTEE', '#/committee/applications', ['ให้ความเห็นผู้สมัคร'], 'ความเห็นกรรมการ'],
     ['STAFF', '#/staff/review', ['จัดการนักศึกษา', 'ค้นหาแผนสหกิจ', 'คิวตรวจแผน', 'เอกสารและอาจารย์ที่ปรึกษา'], 'คิวตรวจแผนสหกิจ'],
@@ -420,7 +421,8 @@ describe('authenticated V3 shell and route guards', () => {
     context.eventTarget.dispatchEvent(new Event('hashchange'));
 
     expect(context.root.querySelector('h1').textContent).toBe('แผนสหกิจของฉัน');
-    expect(context.root.querySelector('[aria-current="page"]').getAttribute('href')).toBe('#/student/plan');
+    expect(context.root.querySelector('.shell-nav [href="#/student/plan"]')).toBeNull();
+    expect(context.root.querySelector('[aria-current="page"]')).toBeNull();
   });
 
   it('shows an expired state without an automatic redirect and remembers only an allowlisted route', async () => {

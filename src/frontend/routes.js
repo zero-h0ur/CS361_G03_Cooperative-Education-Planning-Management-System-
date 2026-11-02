@@ -28,13 +28,14 @@ const ROUTE_DEFINITIONS = Object.freeze([
   Object.freeze({
     hash: '#/student/plan',
     role: 'STUDENT',
+    navigation: false,
     navLabel: 'แผนระบบเดิม (V3)',
     eyebrow: 'CO-OP PLAN',
     title: 'แผนสหกิจของฉัน',
     description: 'ตรวจสอบข้อมูลและสถานะแผนก่อนส่งให้เจ้าหน้าที่',
     status: 'แผนระบบ V3 เดิม ไม่ใช่ใบสมัคร Phase 1'
   }),
-  Object.freeze({hash:'#/student/selection',role:'STUDENT',navLabel:'สถานะระบบเดิม (V3)',
+  Object.freeze({hash:'#/student/selection',role:'STUDENT',navigation:false,navLabel:'สถานะระบบเดิม (V3)',
     eyebrow:'APPLICATION STATUS',title:'สถานะการคัดเลือก',description:'ตรวจสถานะการรับเรื่องและจำนวนความเห็นกรรมการของแผนคุณ',
     status:'ผลการคัดเลือกยังรอประกาศ ไม่แสดงความเห็นรายบุคคล'}),
   Object.freeze({
@@ -164,6 +165,12 @@ export function getRoute(hash) {
 
 export function getRoutesForRole(role) {
   return ROUTE_DEFINITIONS.filter((route) => route.role === role);
+}
+
+// Legacy bookmarks remain guarded routes, not entries in the Phase 1 menu.
+// Navigation visibility must never grant or revoke API/route authorization.
+export function getNavigationRoutesForRole(role) {
+  return getRoutesForRole(role).filter((route) => route.navigation !== false);
 }
 
 export function getDefaultRoute(role) {

@@ -20,7 +20,7 @@ beforeEach(() => {
 afterEach(() => { navbar?.destroy(); navbar = null; });
 
 test.each([
-  ['STUDENT', 'นักศึกษา', '#/student/profile', '#/student/plan'],
+  ['STUDENT', 'นักศึกษา', '#/student/profile', '#/student/application'],
   ['STAFF', 'เจ้าหน้าที่', '#/staff/students', '#/staff/plans'],
   ['ADVISOR', 'อาจารย์ที่ปรึกษา', '#/advisor/students', null],
   ['ADMIN', 'ผู้ดูแลระบบ', '#/admin/operations', null]
@@ -35,6 +35,13 @@ test.each(['SYSTEM', 'unknown', 'student', undefined, 'toString'])('unknown role
   const { container } = setup(role, {}, async () => ({ role })); await navbar.start();
   expect(container.querySelector('.btn-login')).not.toBeNull();
   expect(container.querySelector('.user-nav-dropdown-wrapper')).toBeNull();
+});
+
+test('Student public menu leads to Phase 1 without promoting legacy Plan or status routes', async () => {
+  const { container } = setup('STUDENT'); await navbar.start();
+  const entry = container.querySelector('a[href="app.html#/student/application"]');
+  expect(entry.textContent).toBe('สมัครเข้าแผนสหกิจ');
+  expect(container.querySelector('a[href="app.html#/student/plan"],a[href="app.html#/student/selection"]')).toBeNull();
 });
 
 test.each([401, 403, 503])('HTTP %s leaves Public readable and never displays stale mock identity', async (status) => {

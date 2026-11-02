@@ -5,7 +5,7 @@ import {
   getDefaultRoute,
   getRoleLabel,
   getRoute,
-  getRoutesForRole,
+  getNavigationRoutesForRole,
   isAllowlistedRoute
 } from './routes.js';
 import {
@@ -204,7 +204,7 @@ function createNavigation(role, activeRoute) {
   const navigation = element('nav', 'shell-nav');
   navigation.setAttribute('aria-label', 'เมนูพื้นที่ผู้ใช้งาน');
 
-  for (const route of getRoutesForRole(role)) {
+  for (const route of getNavigationRoutesForRole(role)) {
     const link = element('a', 'shell-nav__link', route.navLabel);
     link.href = route.hash;
     if (['STUDENT', 'STAFF', 'ADVISOR', 'ADMIN', 'COORDINATOR', 'COMMITTEE'].includes(role)) {
