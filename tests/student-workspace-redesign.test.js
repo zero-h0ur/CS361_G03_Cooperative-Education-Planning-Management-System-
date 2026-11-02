@@ -6,6 +6,18 @@ const flush=()=>new Promise(resolve=>setTimeout(resolve,0));
 const draft={id:'14100000-0000-4000-8000-000000000001',cycle_id:'cycle-a',status:'DRAFT',updated_at:'2026-11-02T01:00:00Z'};
 const submitted={id:'14100000-0000-4000-8000-000000000002',cycle_id:'cycle-b',status:'SUBMITTED',submitted_at:'2026-10-01T01:00:00Z'};
 const cycles=[{id:'cycle-a',name:'รอบปัจจุบัน',status:'OPEN'},{id:'cycle-b',name:'รอบก่อน',status:'CLOSED'}];
+const profileData={id:'student',student_number:'SYNTHETIC-01',full_name:'นักศึกษาตัวอย่าง',program:'วิทยาการคอมพิวเตอร์',major:'ACS',
+  department:'ภาควิชาตัวอย่าง',institutional_email:'university@example.invalid',contact_email:'contact@example.invalid',
+  contact_phone:'0810000000',contact_address:'ที่อยู่ตัวอย่าง',version:1};
+const findButton=(root,text)=>[...root.querySelectorAll('button')].find(b=>b.textContent===text);
+const inputValue=(root,id,text)=>{const input=root.querySelector(id);input.value=text;input.dispatchEvent(new Event('input',{bubbles:true}));return input;};
+async function mountProfile(overrides={}) {
+  const clients={studentProfileClient:{getOwnProfile:jest.fn(async()=>({...profileData}))},
+    workflowClient:{request:jest.fn(async(_path,{body})=>({...profileData,...body,version:2}))},
+    applicationClient:{options:async()=>({cycles,official:{curriculum:'66',entry_year:2567}}),list:async()=>[draft],save:jest.fn()},...overrides};
+  const result=await mount(clients);await flush();await flush();return {...result,...clients};
+}
+beforeEach(()=>{window.confirm=jest.fn(()=>false);});
 async function mount({ role = 'STUDENT', hash = '#/student/profile', ...clients } = {}) {
   const root = document.createElement('div');
   document.body.append(root);
@@ -86,4 +98,59 @@ test('cycle lookup failure does not hide existing applications; empty list has a
   await flush();await flush();
   expect(empty.root.querySelector('.student-cycle-picker summary').textContent).toBe('เลือกรอบสมัครใหม่');
   expect(empty.root.querySelector('.student-empty-state').textContent).toContain('ยังไม่มีใบสมัคร');
+});
+
+test('profile matches the approved sections without inventing faculty/English name or editing university email',async()=>{
+  const {root}=await mountProfile();
+  expect(root.querySelectorAll('h1')).toHaveLength(1);expect(root.querySelector('h1').textContent).toBe('ข้อมูลของฉัน');
+  expect(root.querySelector('.student-identity').textContent).toContain('หลักสูตร 66');
+  expect(root.querySelector('.student-profile-grid').textContent).toContain('contact@example.invalid');
+  expect(root.textContent).toContain('ใบรับรองความประพฤติ');expect(root.textContent).not.toContain('คณะวิทยาศาสตร์');
+  root.querySelector('.student-contact-edit').click();
+  expect(document.activeElement.id).toBe('student-contact_email');
+  expect(root.querySelector('#student-institutional_email')).toBeNull();
+  expect(root.querySelector('#student-contact_address').value).toBe(profileData.contact_address);
+});
+
+test('contact edit saves all three editable fields with version/operation ID, not submitted application snapshots',async()=>{
+  const {root,workflowClient,applicationClient}=await mountProfile();
+  root.querySelector('.student-contact-edit').click();
+  inputValue(root,'#student-contact_email','updated@example.invalid');
+  findButton(root,'บันทึกข้อมูลติดต่อ').click();await flush();
+  expect(workflowClient.request).toHaveBeenCalledWith('/api/v3/students/me',expect.objectContaining({method:'PATCH',body:{
+    contact_email:'updated@example.invalid',contact_phone:profileData.contact_phone,contact_address:profileData.contact_address,version:1,operation_id:expect.any(String)}}));
+  expect(root.textContent).toContain('บันทึกข้อมูลติดต่อแล้ว');expect(root.textContent).toContain('updated@example.invalid');
+  expect(applicationClient.save).not.toHaveBeenCalled();
+  expect(document.activeElement).toBe(root.querySelector('.student-contact-edit'));
+});
+
+test('failed saves retain typed data and retry the same operation; dirty navigation/cancel requires consent',async()=>{
+  const request=jest.fn().mockRejectedValueOnce(new Error('เชื่อมต่อไม่สำเร็จ')).mockResolvedValue({...profileData,contact_email:'retry@example.invalid',version:2});
+  const {root,location,events}=await mountProfile({workflowClient:{request}});
+  root.querySelector('.student-contact-edit').click();inputValue(root,'#student-contact_email','retry@example.invalid');
+  findButton(root,'ยกเลิก').click();expect(root.querySelector('#student-contact_email').value).toBe('retry@example.invalid');
+  location.hash='#/student/application';events.dispatchEvent(new Event('hashchange'));
+  expect(location.hash).toBe('#/student/profile');expect(root.querySelector('#student-contact_email')).not.toBeNull();
+  findButton(root,'บันทึกข้อมูลติดต่อ').click();await flush();
+  expect(root.querySelector('#student-contact_email').value).toBe('retry@example.invalid');
+  findButton(root,'บันทึกข้อมูลติดต่อ').click();await flush();
+  expect(request.mock.calls[0][1].body.operation_id).toBe(request.mock.calls[1][1].body.operation_id);
+});
+
+test('conflict offers explicit reload without losing typed values when reload also fails',async()=>{
+  const getOwnProfile=jest.fn().mockResolvedValueOnce({...profileData}).mockRejectedValue(new Error('unavailable'));
+  const {root}=await mountProfile({studentProfileClient:{getOwnProfile},workflowClient:{request:jest.fn().mockRejectedValue(Object.assign(new Error('ข้อมูลเปลี่ยนแล้ว'),{status:409}))}});
+  root.querySelector('.student-contact-edit').click();inputValue(root,'#student-contact_address','เก็บข้อความนี้');
+  findButton(root,'บันทึกข้อมูลติดต่อ').click();await flush();
+  expect(findButton(root,'โหลดข้อมูลล่าสุด').hidden).toBe(false);
+  window.confirm.mockReturnValue(true);findButton(root,'โหลดข้อมูลล่าสุด').click();await flush();
+  expect(root.querySelector('#student-contact_address').value).toBe('เก็บข้อความนี้');
+  expect(root.textContent).toContain('ข้อมูลที่กรอกยังอยู่');
+});
+
+test.each([401,403])('contact authorization failure %s clears protected form values',async status=>{
+  const {root}=await mountProfile({workflowClient:{request:jest.fn().mockRejectedValue(Object.assign(new Error('denied'),{status}))}});
+  root.querySelector('.student-contact-edit').click();inputValue(root,'#student-contact_email','private@example.invalid');
+  findButton(root,'บันทึกข้อมูลติดต่อ').click();await flush();
+  expect(root.textContent).not.toContain('private@example.invalid');expect(root.querySelector('#student-contact_email')).toBeNull();
 });

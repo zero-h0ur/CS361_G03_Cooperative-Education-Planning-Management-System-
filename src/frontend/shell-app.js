@@ -15,6 +15,7 @@ import {
 } from './advisor/advisor-views.js';
 import { renderStaffPlanReviewView, renderStaffReviewQueueView } from './staff/staff-review-views.js';
 import { renderStudentDashboardView } from './student/student-dashboard-view.js';
+import { renderStudentProfile } from './student/profile-view.js';
 import { renderStudentPlanView } from './student/student-plan-view.js';
 import { renderStaffStudentManagementView } from './staff/staff-student-management-view.js';
 import { createWorkspaceIcon } from './ui/workspace-presentation.js';
@@ -857,6 +858,9 @@ export function createShellApp({
     }
 
     if (role === 'STUDENT' && route.hash === '#/student/profile' && studentProfileClient) {
+      if(applicationClient)return renderStudentProfile({profileClient:studentProfileClient,applicationClient,workflowClient,signal,
+        onNavigate:navigateToAllowlistedRoute,onSessionExpired:handleSessionExpired,onAccessDenied:message=>renderForbidden(message),
+        setLeaveGuard:guard=>{routeLeaveGuard=guard;}});
       const profile = renderStudentDashboardView({
         profileClient: studentProfileClient,
         applicationHref: applicationClient ? '#/student/application' : null,
