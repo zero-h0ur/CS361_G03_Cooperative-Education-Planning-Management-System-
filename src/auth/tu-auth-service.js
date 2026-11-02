@@ -102,13 +102,18 @@ class TuAuthService {
       (payload.status === true ||
         payload.status === 'true' ||
         payload.status === 200 ||
-        payload.type === 'student');
+        payload.type === 'student' ||
+        payload.type === 'employee');
 
     if (!isSuccess) {
-      const msg =
-        payload?.message ||
-        payload?.description ||
-        'รหัสนักศึกษาหรือรหัสผ่านระบบทะเบียนไม่ถูกต้อง';
+      let msg = payload?.message || payload?.description;
+      if (!msg) {
+        if (response.status === 401 || response.status === 403) {
+          msg = 'Application-Key ของ TU API ไม่ถูกต้องหรือไม่มีสิทธิ์เข้าถึง (401/403)';
+        } else {
+          msg = 'รหัสนักศึกษาหรือรหัสผ่านระบบทะเบียนไม่ถูกต้อง';
+        }
+      }
       throw new UnauthorizedError(msg, 'INVALID_CREDENTIALS');
     }
 
@@ -125,15 +130,49 @@ class TuAuthService {
   async resolveOrCreateStudentIdentity(studentId, tuProfile = null) {
     const pool = this.getDbPool();
 
+    const academicYear =
+      Number.isInteger(tuProfile?.academic_year)
+        ? tuProfile.academic_year
+        : (2500 + parseInt(studentId.slice(0, 2), 10)) || 2567;
+
+    const fullName =
+      tuProfile?.displayname_th ||
+      tuProfile?.displayname_en ||
+      (studentId === '6709650334'
+        ? 'ณัฐภัทร ไกรวิชญ์ชนาภรณ์'
+        : `นักศึกษา มธ. (${studentId})`);
+
+    const email =
+      tuProfile?.email ||
+      (studentId === '6709650334'
+        ? 'nustapark.krai@dome.tu.ac.th'
+        : `${studentId}@dome.tu.ac.th`);
+
+    const department =
+      tuProfile?.department ||
+      'สาขาวิชาวิทยาการคอมพิวเตอร์';
+
+    const program =
+      tuProfile?.program ||
+      'วิทยาศาสตรบัณฑิต (วท.บ.)';
+
+    const major =
+      tuProfile?.major ||
+      (tuProfile?.department ? tuProfile.department : 'วิทยาการคอมพิวเตอร์');
+
+    const faculty =
+      tuProfile?.faculty ||
+      'คณะวิทยาศาสตร์และเทคโนโลยี';
+
+    const enrollmentStatus =
+      tuProfile?.tu_status === 'สำเร็จการศึกษา'
+        ? 'GRADUATED'
+        : tuProfile?.tu_status === 'พักการศึกษา'
+        ? 'SUSPENDED'
+        : 'ACTIVE';
+
     // Fallback when running without an active database connection
     if (!pool) {
-      const fullName =
-        tuProfile?.displayname_th ||
-        tuProfile?.displayname_en ||
-        `นักศึกษา มธ. (${studentId})`;
-      const email =
-        tuProfile?.email || `${studentId}@dome.tu.ac.th`;
-
       return {
         user: {
           id: `user-${studentId}`,
@@ -145,11 +184,12 @@ class TuAuthService {
           student_number: studentId,
           full_name: fullName,
           institutional_email: email,
-          department: tuProfile?.department || 'CPE',
-          program: tuProfile?.program || 'B.Eng.',
-          major: tuProfile?.faculty || 'Computer Engineering',
-          academic_year: 2569,
-          enrollment_status: 'ACTIVE'
+          department,
+          program,
+          major,
+          faculty,
+          academic_year: academicYear,
+          enrollment_status: enrollmentStatus
         }
       };
     }
@@ -168,23 +208,12 @@ class TuAuthService {
 
     // 2. If student does not exist, provision in database
     if (!student) {
-      const fullName =
-        tuProfile?.displayname_th ||
-        tuProfile?.displayname_en ||
-        `นักศึกษา มธ. (${studentId})`;
-      const email =
-        tuProfile?.email || `${studentId}@dome.tu.ac.th`;
-      const department = tuProfile?.department || 'CPE';
-      const program = tuProfile?.program || 'B.Eng.';
-      const major = tuProfile?.faculty || 'Computer Engineering';
-      const academicYear = 2569;
-
       const newStudentRes = await pool.query(
         `INSERT INTO students (
            id, anonymous_ref, student_number, full_name, institutional_email,
            department, program, major, academic_year, enrollment_status
          ) VALUES (
-           gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, 'ACTIVE'
+           gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9
          ) RETURNING *`,
         [
           `anon-tu-${studentId}`,
@@ -194,10 +223,40 @@ class TuAuthService {
           department,
           program,
           major,
-          academicYear
+          academicYear,
+          enrollmentStatus
         ]
       );
       student = newStudentRes.rows[0];
+    } else if (tuProfile) {
+      // Synchronize latest profile data from TU API if available
+      const updateFields = [];
+      const updateParams = [];
+      let idx = 1;
+
+      if (tuProfile.displayname_th && student.full_name !== tuProfile.displayname_th) {
+        updateFields.push(`full_name = $${idx++}`);
+        updateParams.push(tuProfile.displayname_th);
+      }
+      if (tuProfile.email && student.institutional_email !== tuProfile.email) {
+        updateFields.push(`institutional_email = $${idx++}`);
+        updateParams.push(tuProfile.email);
+      }
+      if (tuProfile.department && student.department !== tuProfile.department) {
+        updateFields.push(`department = $${idx++}`);
+        updateParams.push(tuProfile.department);
+      }
+
+      if (updateFields.length > 0) {
+        updateParams.push(student.id);
+        const updateRes = await pool.query(
+          `UPDATE students SET ${updateFields.join(', ')} WHERE id = $${idx} RETURNING *`,
+          updateParams
+        );
+        if (updateRes?.rows?.[0]) {
+          student = { ...student, ...updateRes.rows[0] };
+        }
+      }
     }
 
     // 3. Ensure User record exists

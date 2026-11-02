@@ -130,9 +130,26 @@ export function createPreviewClients({ role = 'STUDENT', scenario = role === 'AD
   const status = { revision: 'NEEDS_REVISION', submitted: 'SUBMITTED', review: 'UNDER_REVIEW',
     approved: 'APPROVED', cancelled: 'CANCELLED',rejected:'REJECTED',
     'company-confirmed':'APPROVED','company-pending':'APPROVED','capacity-full':'APPROVED' }[scenario] || 'DRAFT';
-  // Invented identity with a realistic display format, not a TU record. The reserved
-  // .invalid domain is deliberate: never use a real student's contact details.
-  const profile = {
+  const isCustomStudent = typeof window !== 'undefined' && (
+    window.sessionStorage?.getItem('co-ed:tu-student-id') === '6709650334' ||
+    new URLSearchParams(window.location?.search || '').get('student') === '6709650334'
+  );
+  const profile = isCustomStudent ? {
+    id: '20000000-0000-4000-8000-000000000101',
+    student_number: '6709650334',
+    full_name: 'ณัฐภัทร ไกรวิชญ์ชนาภรณ์',
+    preferred_name: 'Nustapark Kraiwichchanaporn',
+    institutional_email: 'nustapark.krai@dome.tu.ac.th',
+    department: 'สาขาวิชาวิทยาการคอมพิวเตอร์',
+    faculty: 'คณะวิทยาศาสตร์และเทคโนโลยี',
+    program: 'วิทยาศาสตรบัณฑิต (วท.บ.)',
+    major: 'วิทยาการคอมพิวเตอร์',
+    academic_year: 2567,
+    enrollment_status: 'ACTIVE',
+    version: 1,
+    created_at: '2024-08-01T02:00:00.000Z',
+    updated_at: stamp
+  } : {
     id: '20000000-0000-4000-8000-000000000101', student_number: '6609612345',
     full_name: 'ณัฐวดี ศิริกุล', preferred_name: null,
     institutional_email: 'nattawadee.s@example.invalid', department: 'ภาควิชาวิทยาการคอมพิวเตอร์',

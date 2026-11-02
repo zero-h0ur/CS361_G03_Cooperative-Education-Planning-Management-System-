@@ -81,7 +81,7 @@ function createMockDbPool(initialStudents = []) {
           program: params[5],
           major: params[6],
           academic_year: params[7],
-          enrollment_status: 'ACTIVE',
+          enrollment_status: params[8] || 'ACTIVE',
           user_id: null
         };
         students.set(student.id, student);
@@ -96,15 +96,14 @@ function createMockDbPool(initialStudents = []) {
         return { rows: [user] };
       }
 
-      // UPDATE students SET user_id
-      if (trimmed.startsWith('UPDATE students SET user_id')) {
-        const userId = params[0];
-        const studentId = params[1];
-        const student = students.get(studentId);
-        if (student) {
-          student.user_id = userId;
+      // UPDATE students SET
+      if (trimmed.startsWith('UPDATE students SET')) {
+        const studentId = params[params.length - 1];
+        const student = students.get(studentId) || Array.from(students.values()).find((s) => s.id === studentId);
+        if (trimmed.includes('user_id =') && params[0]) {
+          if (student) student.user_id = params[0];
         }
-        return { rows: [student] };
+        return { rows: student ? [student] : [] };
       }
 
       // INSERT INTO external_identity_links

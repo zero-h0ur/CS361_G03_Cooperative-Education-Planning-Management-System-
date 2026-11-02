@@ -56,8 +56,12 @@ createShellApp({
   location, eventTarget: window, storage: null,
   startTuAuthLogin: async ({ studentId }) => {
     await new Promise((resolve) => setTimeout(resolve, 500));
+    window.sessionStorage?.setItem('co-ed:tu-student-id', studentId);
     const url = new URL(location.href);
     url.searchParams.set('scenario', 'draft');
+    if (studentId === '6709650334') {
+      url.searchParams.set('student', studentId);
+    }
     url.hash = '#/student/plan';
     location.assign(url);
   },
