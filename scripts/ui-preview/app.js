@@ -54,7 +54,18 @@ const clients = createWorkspacePreviewClients({role:role.value,scenario:select.v
 createShellApp({
   ...clients, root: document.getElementById('authenticatedApp'),
   location, eventTarget: window, storage: null,
+  startTuAuthLogin: async ({ studentId }) => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const url = new URL(location.href);
+    url.searchParams.set('scenario', 'draft');
+    url.hash = '#/student/plan';
+    location.assign(url);
+  },
   // These buttons only reload this preview, never redirect to an identity provider.
   startLogin: async () => location.reload(), restartLogin: async () => location.reload(),
-  logout: async () => location.reload()
+  logout: async () => {
+    const url = new URL(location.href);
+    url.searchParams.set('scenario', 'signin');
+    location.assign(url);
+  }
 }).start();

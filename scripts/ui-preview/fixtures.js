@@ -3,6 +3,7 @@ import { sanitizeStatusHistoryEntry } from '../../src/frontend/student/plan-subm
 import { sanitizeAdvisorStudent, sanitizeAdvisorPlanSummary, sanitizeAdvisorPlanDetail } from '../../src/frontend/advisor/advisor-client.js';
 
 export const SCENARIOS = Object.freeze({
+  signin: 'เข้าสู่ระบบ (TU Auth)',
   rejected:'ไม่ผ่านคุณสมบัติในรอบนี้',
   'company-confirmed':'ผ่านเกณฑ์และบริษัทยืนยันแล้ว',
   'company-pending':'รอแบบฟอร์มบริษัทตอบกลับ',
@@ -109,6 +110,15 @@ function createAdvisorPreviewClient({ scenario, delayMs }) {
 }
 
 export function createPreviewClients({ role = 'STUDENT', scenario = role === 'ADVISOR' ? 'assigned' : 'draft', delayMs = 250 } = {}) {
+  if (scenario === 'signin') {
+    return {
+      loadSession: async () => {
+        const error = new Error('NOT_SIGNED_IN');
+        error.code = 'NOT_SIGNED_IN';
+        throw error;
+      }
+    };
+  }
   if (role === 'ADMIN') return {loadSession:async()=>({role:'ADMIN',canReviewPlan:false})};
   if (!['STUDENT', 'STAFF', 'ADVISOR'].includes(role)) throw new Error('Unsupported preview role');
   if (role === 'ADVISOR') {
