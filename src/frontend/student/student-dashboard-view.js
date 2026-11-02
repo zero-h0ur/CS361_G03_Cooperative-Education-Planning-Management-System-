@@ -143,8 +143,9 @@ export function renderStudentDashboardView({
     title.id = 'student-dashboard-summary-title';
     const greeting = element('p', 'student-dashboard-summary__greeting', `สวัสดี ${formatOfficialValue('full_name', profile.full_name)}`);
     greeting.dataset.role = 'display-greeting';
+    const isActiveStatus = profile.enrollment_status === 'ACTIVE' || profile.enrollment_status === 'ปกติ';
     const badges = element('div', 'student-dashboard-summary__badges');
-    badges.append(element('span', `student-badge ${profile.enrollment_status === 'ACTIVE' ? 'student-badge--status' : 'student-badge--neutral'}`,
+    badges.append(element('span', `student-badge ${isActiveStatus ? 'student-badge--status' : 'student-badge--neutral'}`,
       formatOfficialValue('enrollment_status', profile.enrollment_status)),
     element('span', 'student-badge student-badge--neutral', `ปีการศึกษา ${formatOfficialValue('academic_year', profile.academic_year)}`));
     header.append(title, greeting, badges);

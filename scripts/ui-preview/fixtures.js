@@ -128,12 +128,17 @@ export function saveTuApiResponseToStorage(tuResponse) {
   const cleanId = String(tuResponse.username || '').trim();
   const yearPrefix = parseInt(cleanId.slice(0, 2), 10);
   const academicYear = Number.isInteger(yearPrefix) && yearPrefix > 0 ? 2500 + yearPrefix : 2567;
+  const rawTuStatus = String(
+    tuResponse.tu_status ||
+      tuResponse.StatusEmp ||
+      (String(tuResponse.statusid) === '40' ? 'สำเร็จการศึกษา' : 'ปกติ')
+  ).trim();
   const normalizedTu = {
     status: tuResponse.status ?? true,
     message: tuResponse.message || 'Success',
     type: tuResponse.type || 'student',
     username: cleanId || '5701010101',
-    tu_status: tuResponse.tu_status || tuResponse.StatusEmp || 'ปกติ',
+    tu_status: rawTuStatus,
     statusid: String(tuResponse.statusid || tuResponse.StatusWork || '10'),
     displayname_th: tuResponse.displayname_th || `นักศึกษา (${cleanId})`,
     displayname_en: tuResponse.displayname_en || '',
@@ -141,12 +146,7 @@ export function saveTuApiResponseToStorage(tuResponse) {
     department: tuResponse.department || 'สาขาวิชาวิทยาการคอมพิวเตอร์',
     faculty: tuResponse.faculty || tuResponse.organization || 'คณะวิทยาศาสตร์และเทคโนโลยี'
   };
-  const enrollmentStatus =
-    normalizedTu.tu_status === 'สำเร็จการศึกษา' || normalizedTu.statusid === '40'
-      ? 'GRADUATED'
-      : normalizedTu.tu_status === 'พักการศึกษา'
-      ? 'SUSPENDED'
-      : 'ACTIVE';
+  const enrollmentStatus = normalizedTu.tu_status;
   const profile = {
     id: '20000000-0000-4000-8000-000000000101',
     student_number: normalizedTu.username,
@@ -177,16 +177,16 @@ export function saveTuApiResponseToStorage(tuResponse) {
 export function getStoredTuProfile() {
   if (typeof window === 'undefined') return null;
   try {
+    const tuResp = getStoredTuApiResponse();
+    if (tuResp) {
+      return saveTuApiResponseToStorage(tuResp)?.profile || null;
+    }
     const rawProf =
       window.sessionStorage?.getItem('co-ed:tu-profile') ||
       window.localStorage?.getItem('co-ed:tu-profile');
     if (rawProf) {
       const parsed = JSON.parse(rawProf);
       if (parsed && typeof parsed === 'object' && parsed.student_number) return parsed;
-    }
-    const tuResp = getStoredTuApiResponse();
-    if (tuResp) {
-      return saveTuApiResponseToStorage(tuResp)?.profile || null;
     }
   } catch {
     return null;

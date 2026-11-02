@@ -51,12 +51,18 @@ function mapTuApiResponseToProfile(studentId, tuResponse = null, existingStudent
   const yearPrefix = parseInt(cleanId.slice(0, 2), 10);
   const derivedYear = Number.isInteger(yearPrefix) && yearPrefix > 0 ? 2500 + yearPrefix : 2567;
 
+  const rawTuStatus = String(
+    tuResponse?.tu_status ||
+      tuResponse?.StatusEmp ||
+      (String(tuResponse?.statusid) === '40' ? 'สำเร็จการศึกษา' : 'ปกติ')
+  ).trim();
+
   const raw = {
     status: tuResponse?.status ?? true,
     message: tuResponse?.message || 'Success',
     type: tuResponse?.type || 'student',
     username: cleanId,
-    tu_status: tuResponse?.tu_status || tuResponse?.StatusEmp || 'ปกติ',
+    tu_status: rawTuStatus,
     statusid: String(tuResponse?.statusid || tuResponse?.StatusWork || '10'),
     displayname_th: tuResponse?.displayname_th || tuResponse?.full_name || `นักศึกษา (${cleanId})`,
     displayname_en: tuResponse?.displayname_en || tuResponse?.preferred_name || '',
@@ -69,12 +75,11 @@ function mapTuApiResponseToProfile(studentId, tuResponse = null, existingStudent
     ? tuResponse.academic_year
     : derivedYear;
 
-  const enrollmentStatus =
-    raw.tu_status === 'สำเร็จการศึกษา' || raw.statusid === '40'
-      ? 'GRADUATED'
-      : raw.tu_status === 'พักการศึกษา'
-      ? 'SUSPENDED'
-      : 'ACTIVE';
+  const enrollmentStatus = raw.tu_status;
+  const dbEnrollmentStatus =
+    raw.tu_status === 'ปกติ' || raw.tu_status === 'ACTIVE'
+      ? 'ACTIVE'
+      : 'INACTIVE';
 
   const nowIso = new Date().toISOString();
 
@@ -93,6 +98,7 @@ function mapTuApiResponseToProfile(studentId, tuResponse = null, existingStudent
     tu_type: raw.type,
     academic_year: academicYear,
     enrollment_status: enrollmentStatus,
+    db_enrollment_status: dbEnrollmentStatus,
     version: 1,
     created_at: nowIso,
     updated_at: nowIso
@@ -333,6 +339,9 @@ class TuAuthService {
       faculty: mappedProfile.faculty,
       tu_status: mappedProfile.tu_status,
       statusid: mappedProfile.statusid,
+      enrollment_status: effectiveTuProfile
+        ? mappedProfile.enrollment_status
+        : (student?.enrollment_status || mappedProfile.enrollment_status),
       version: student?.version || 1,
       created_at: student?.created_at || mappedProfile.created_at,
       updated_at: student?.updated_at || mappedProfile.updated_at
