@@ -67,6 +67,7 @@ test('import accepts the complete reviewed migration history 001 through 011', a
     '009_coordinator_committee_selection.sql',
     '010_phase1_applications_documents.sql',
     '011_student_contact_email.sql',
+    '012_committee_workspace.sql',
   ]);
   await runImport(payload);
 });

@@ -60,7 +60,7 @@ test('account disclosure supports Escape and skip link still focuses the persist
 
 test.each([
   ['STAFF', '#/staff/review'], ['ADVISOR', '#/advisor/students'],
-  ['COORDINATOR', '#/coordinator/applications'], ['COMMITTEE', '#/committee/applications'], ['ADMIN', '#/admin/operations']
+  ['COORDINATOR', '#/coordinator/applications'], ['ADMIN', '#/admin/operations']
 ])('%s retains its previous shell and role-scoped navigation', async (role, hash) => {
   const { root } = await mount({ role, hash });
   expect(root.querySelector('.student-portal')).toBeNull();
@@ -162,4 +162,11 @@ test.each([401,403])('contact authorization failure %s clears protected form val
   root.querySelector('.student-contact-edit').click();inputValue(root,'#student-contact_email','private@example.invalid');
   findButton(root,'บันทึกข้อมูลติดต่อ').click();await flush();
   expect(root.textContent).not.toContain('private@example.invalid');expect(root.querySelector('#student-contact_email')).toBeNull();
+});
+
+test('Committee shares the Student theme while retaining Committee-only routes',async()=>{
+ const {root}=await mount({role:'COMMITTEE',hash:'#/committee/applications'});
+ expect(root.querySelector('.student-portal')).not.toBeNull();
+ expect(root.querySelector('.shell-nav [href="#/student/application"]')).toBeNull();
+ expect(root.querySelector('.shell-nav [href="#/committee/applications"]')).not.toBeNull();
 });

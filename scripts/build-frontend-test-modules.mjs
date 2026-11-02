@@ -32,6 +32,8 @@ await build({
     resolve(workspace, 'src/frontend/workflow/workflow-views.js'),
     resolve(workspace, 'src/frontend/workflow/admin-operations-view.js'),
     resolve(workspace, 'src/frontend/selection/selection-view.js'),
+    resolve(workspace, 'src/frontend/committee/workspace.js'),
+    resolve(workspace, 'src/frontend/committee/ranking.js'),
     resolve(workspace, 'src/frontend/staff/staff-client.js'),
     resolve(workspace, 'src/frontend/staff/staff-route-state.js'),
     resolve(workspace, 'src/frontend/staff/staff-student-management-view.js'),
