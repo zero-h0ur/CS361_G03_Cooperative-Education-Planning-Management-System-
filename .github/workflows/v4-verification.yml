@@ -39,7 +39,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
       - run: npm ci
       - name: Prepare isolated selection test database
@@ -75,6 +75,15 @@ jobs:
           npm test 2>&1 | tee v4-verification.log
       - name: Verify isolated UI Preview
         run: npm run test:ui-preview
+      - name: Verify team local setup and signed test identities
+        env:
+          CO_ED_LOCAL_DEV_TESTS: '1'
+        run: |
+          docker compose -f compose.dev.yml up -d --wait
+          npm run test:local-dev
+      - name: Stop disposable team development database
+        if: always()
+        run: docker compose -f compose.dev.yml down -v
       - name: Build for the new AWS account with strict production authentication
         run: npm run build:v4
       - name: Preserve verification evidence
