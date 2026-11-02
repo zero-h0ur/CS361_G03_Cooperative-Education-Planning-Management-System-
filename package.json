@@ -18,7 +18,7 @@
     "format:migration-eol": "node scripts/operations/reviewed-migrations.mjs --normalize-eol",
     "test:release": "node --test tests/release-migrations.test.mjs tests/release-migrations-db.test.mjs tests/zip-archive.test.mjs tests/package-v4-candidate.test.mjs",
     "migrate": "node src/db/migrate.js",
-    "test": "npm run test:dataset && npm run test:fixtures && npm run test:api && npm run test:directory-db && npm run test:contract && npm run test:auth && npm run test:authz && npm run test:workflow && npm run test:session && npm run test:profile && npm run test:plan && npm run test:staff && npm run test:review && npm run test:staff-plan && npm run test:submit && npm run test:history && npm run test:advisor && npm run test:v3-t02 && npm run test:v3-t03 && npm run test:lambda && npm run test:runtime-grants && npm run test:frontend && npm run test:migration && npm run test:dal && npm run test:three-role && npm run test:workflow-ui && npm run test:selection && npm run test:v4-build && npm run test:application && npm run test:release",
+    "test": "npm run test:dataset && npm run test:fixtures && npm run test:api && npm run test:directory-db && npm run test:contract && npm run test:auth && npm run test:authz && npm run test:workflow && npm run test:session && npm run test:profile && npm run test:plan && npm run test:staff && npm run test:review && npm run test:staff-plan && npm run test:submit && npm run test:history && npm run test:advisor && npm run test:v3-t02 && npm run test:v3-t03 && npm run test:lambda && npm run test:runtime-grants && npm run test:frontend && npm run test:migration && npm run test:dal && npm run test:three-role && npm run test:workflow-ui && npm run test:selection && npm run test:v4-build && npm run test:application && npm run test:release && npm run test:committee",
     "test:api": "jest --runInBand tests/api.test.js tests/directory-api.test.js",
     "test:contract": "jest --runInBand tests/v3-api-contract.test.js",
     "test:auth": "jest --runInBand tests/auth-context.test.js",
@@ -64,7 +64,8 @@
     "dev:token": "node scripts/local-dev/token.mjs",
     "test:local": "node scripts/local-dev/test.mjs",
     "test:local-dev": "node --test tests/local-dev.test.mjs",
-    "test:application": "node --test tests/application.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/application-ui.test.js tests/application-api.test.js"
+    "test:application": "node --test tests/application.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/application-ui.test.js tests/application-api.test.js",
+    "test:committee": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/committee-workspace.test.js tests/committee-ui.test.js && node --test tests/committee-workspace-db.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1161.0",

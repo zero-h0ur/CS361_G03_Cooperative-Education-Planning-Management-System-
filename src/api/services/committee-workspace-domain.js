@@ -1,0 +1,45 @@
+const { ValidationError, ConflictError, ForbiddenError } = require("../errors");
+const v = require("./workflow-input");
+function transition(state, actor, body, students, members) {
+  if (!members.includes(actor)) throw new ForbiddenError();
+  const next = structuredClone(state);
+  if (next.finalized) throw new ConflictError("Selection already finalized.");
+  if (body.action === "propose") {
+    if (next.proposal && next.proposal.status !== "rejected") throw new ConflictError("A proposal already exists.");
+    if (!Number.isInteger(body.normal) || !Number.isInteger(body.special) || body.normal < 0 || body.special < 0 || body.normal + body.special < 1 || body.normal + body.special > 999) throw new ValidationError("Invalid capacity.");
+    const reason = v.text(body.reason, "reason", 2e3);
+    next.proposal = {
+      number: (next.proposal?.number || 0) + 1,
+      normal: body.normal,
+      special: body.special,
+      reason,
+      proposer: actor,
+      votes: Object.fromEntries(members.filter((x) => x !== actor).map((x) => [x, "pending"])),
+      status: "pending",
+      created: (new Date()).toISOString()
+    };
+  } else if (body.action === "accept" || body.action === "reject") {
+    const p = next.proposal;
+    if (!p || p.status !== "pending" || p.proposer === actor || p.votes[actor] !== "pending") throw new ConflictError("Proposal changed; refresh.");
+    if (body.action === "reject") {
+      p.rejection_reason = v.text(body.reason, "reason", 2e3);
+      p.votes[actor] = "rejected";
+      p.status = "rejected";
+    } else {
+      p.votes[actor] = "accepted";
+      if (Object.values(p.votes).every((x) => x === "accepted")) p.status = "accepted";
+    }
+  } else if (body.action === "finalize") {
+    if (next.proposal?.status !== "accepted") throw new ConflictError("Capacity needs both approvals.");
+    if (!["core", "gpax"].includes(body.ranking)) throw new ValidationError("Invalid ranking.");
+    if (!Array.isArray(body.selected) || !body.selected.length || new Set(body.selected).size !== body.selected.length || body.selected.some((id) => !students.some((s) => s.id === id))) throw new ValidationError("Invalid selection.");
+    next.applicants = students.map((s) => ({ id: s.id, version: s.plan_version }));
+    next.selected = body.selected;
+    next.finalized = true;
+    next.finalized_by = actor;
+    next.ranking = body.ranking;
+  } else throw new ValidationError("Unknown action.");
+  next.history = [{ title: body.action, text: body.reason || "", actor, at: (new Date()).toISOString() }, ...next.history || []];
+  return next;
+}
+module.exports = { transition };
