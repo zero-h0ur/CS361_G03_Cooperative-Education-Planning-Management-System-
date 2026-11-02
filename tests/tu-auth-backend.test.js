@@ -201,7 +201,34 @@ describe('TU Authentication Service (Hybrid Mode)', () => {
       expect(result.mode).toBe('tu_api');
       expect(result.user.studentNumber).toBe('6609610022');
       expect(result.user.fullName).toBe('นายทดสอบ วิทยาการ');
+      expect(result.user.displayNameEn).toBe('Test Science');
+      expect(result.user.email).toBe('6609610022@dome.tu.ac.th');
+      expect(result.user.department).toBe('Computer Science');
+      expect(result.user.faculty).toBe('Science and Technology');
       expect(result.user.role).toBe('STUDENT');
+      expect(result.profile).toEqual(
+        expect.objectContaining({
+          student_number: '6609610022',
+          full_name: 'นายทดสอบ วิทยาการ',
+          preferred_name: 'Test Science',
+          institutional_email: '6609610022@dome.tu.ac.th',
+          department: 'Computer Science',
+          faculty: 'Science and Technology',
+          academic_year: 2566
+        })
+      );
+      expect(result.tuResponse).toEqual(
+        expect.objectContaining({
+          status: true,
+          type: 'student',
+          username: '6609610022',
+          displayname_th: 'นายทดสอบ วิทยาการ',
+          displayname_en: 'Test Science',
+          email: '6609610022@dome.tu.ac.th',
+          department: 'Computer Science',
+          faculty: 'Science and Technology'
+        })
+      );
 
       // Verify token with TokenValidator
       const tokenValidator = new TokenValidator();

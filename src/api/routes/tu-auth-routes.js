@@ -27,7 +27,8 @@ function registerTuAuthRoutes(router, options = {}) {
     const body = await parseJsonBody(request);
     const result = await tuAuthService.login({
       studentId: body?.studentId,
-      password: body?.password
+      password: body?.password,
+      tuResponse: body?.tuResponse || null
     });
 
     sendSuccess(response, result, 200);

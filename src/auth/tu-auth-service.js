@@ -1,14 +1,14 @@
 /**
  * TU Authentication Service for CO-ED V3/V4.
  * Implements a Hybrid authentication adapter:
- * - If TU_API_APP_KEY is set: verifies credentials via Thammasat University REST API (restapi.tu.ac.th).
- * - If TU_API_APP_KEY is not set: verifies via database records in Local/Fallback mode.
+ * - If TU_API_APP_KEY is set: verifies credentials via Thammasat University REST API (restapi.tu.ac.th)
+ *   and stores the returned TU API response.
+ * - If TU_API_APP_KEY is not set: uses stored TU API response or database records in Local/Fallback mode.
  *
  * Automatically links authenticated students to internal User and External Identity Link records,
- * and issues a valid RS256 Access Token.
+ * stores the TU API response profile, and issues a valid RS256 Access Token.
  */
 
-const crypto = require('node:crypto');
 const { ValidationError, UnauthorizedError } = require('../api/errors');
 const { getPool } = require('../db/connection');
 const { getTuKeyPair, signTuJwt } = require('./tu-keys');
@@ -16,6 +16,106 @@ const { getTuKeyPair, signTuJwt } = require('./tu-keys');
 const STUDENT_ID_REGEX = /^\d{10}$/;
 const DEFAULT_TU_API_URL = 'https://restapi.tu.ac.th/api/v1/auth/Ad/verify';
 const DEFAULT_TU_ISSUER = 'https://tu.ac.th';
+
+/**
+ * In-memory store for TU API responses and normalized profiles keyed by studentNumber / userId.
+ * Allows standalone/preview environments without RDS to serve the exact response returned by TU API.
+ */
+const tuResponseStore = new Map();
+
+/**
+ * Maps a raw TU REST API response (/api/v1/auth/Ad/verify) into a normalized Student Profile record.
+ *
+ * Example TU API Student response:
+ * {
+ *   "status": true,
+ *   "message": "Success",
+ *   "type": "student",
+ *   "username": "5701010101",
+ *   "tu_status": "สำเร็จการศึกษา",
+ *   "statusid": "40",
+ *   "displayname_th": "นักศึกษา ทดสอบ",
+ *   "displayname_en": "nuksuksa todsob",
+ *   "email": "email.std@dome.tu.ac.th",
+ *   "department": "สาขาวิชาการบริหารเทคโนโลยี",
+ *   "faculty": "วิทยาลัยนวัตกรรม"
+ * }
+ *
+ * @param {string} studentId
+ * @param {object|null} tuResponse
+ * @param {string} [existingStudentUuid]
+ * @returns {{ rawResponse: object, profile: object }}
+ */
+function mapTuApiResponseToProfile(studentId, tuResponse = null, existingStudentUuid = null) {
+  const cleanId = String(tuResponse?.username || studentId || '').trim();
+  const yearPrefix = parseInt(cleanId.slice(0, 2), 10);
+  const derivedYear = Number.isInteger(yearPrefix) && yearPrefix > 0 ? 2500 + yearPrefix : 2567;
+
+  const raw = {
+    status: tuResponse?.status ?? true,
+    message: tuResponse?.message || 'Success',
+    type: tuResponse?.type || 'student',
+    username: cleanId,
+    tu_status: tuResponse?.tu_status || tuResponse?.StatusEmp || 'ปกติ',
+    statusid: String(tuResponse?.statusid || tuResponse?.StatusWork || '10'),
+    displayname_th: tuResponse?.displayname_th || tuResponse?.full_name || `นักศึกษา (${cleanId})`,
+    displayname_en: tuResponse?.displayname_en || tuResponse?.preferred_name || '',
+    email: tuResponse?.email || tuResponse?.institutional_email || `${cleanId}@dome.tu.ac.th`,
+    department: tuResponse?.department || 'สาขาวิชาวิทยาการคอมพิวเตอร์',
+    faculty: tuResponse?.faculty || tuResponse?.organization || 'คณะวิทยาศาสตร์และเทคโนโลยี'
+  };
+
+  const academicYear = Number.isInteger(tuResponse?.academic_year)
+    ? tuResponse.academic_year
+    : derivedYear;
+
+  const enrollmentStatus =
+    raw.tu_status === 'สำเร็จการศึกษา' || raw.statusid === '40'
+      ? 'GRADUATED'
+      : raw.tu_status === 'พักการศึกษา'
+      ? 'SUSPENDED'
+      : 'ACTIVE';
+
+  const nowIso = new Date().toISOString();
+
+  const profile = {
+    id: existingStudentUuid || `stud-${cleanId}`,
+    student_number: cleanId,
+    full_name: raw.displayname_th,
+    preferred_name: raw.displayname_en || null,
+    institutional_email: raw.email,
+    department: raw.department,
+    program: tuResponse?.program || raw.faculty,
+    major: tuResponse?.major || raw.department,
+    faculty: raw.faculty,
+    tu_status: raw.tu_status,
+    statusid: raw.statusid,
+    tu_type: raw.type,
+    academic_year: academicYear,
+    enrollment_status: enrollmentStatus,
+    version: 1,
+    created_at: nowIso,
+    updated_at: nowIso
+  };
+
+  return { rawResponse: raw, profile };
+}
+
+function saveTuResponseRecord(studentId, record) {
+  if (!studentId || !record) return;
+  tuResponseStore.set(String(studentId).trim(), record);
+  if (record.profile?.id) {
+    tuResponseStore.set(record.profile.id, record);
+  }
+  if (record.user?.id) {
+    tuResponseStore.set(record.user.id, record);
+  }
+}
+
+function getStoredTuResponseRecord(key) {
+  if (!key) return null;
+  return tuResponseStore.get(String(key).trim()) || null;
+}
 
 class TuAuthService {
   /**
@@ -61,11 +161,11 @@ class TuAuthService {
   }
 
   /**
-   * Verifies credentials against real TU REST API.
+   * Verifies credentials against real TU REST API (/api/v1/auth/Ad/verify).
    *
    * @param {string} studentId 10-digit student ID
    * @param {string} password Student portal password
-   * @returns {Promise<object>} TU profile details
+   * @returns {Promise<object>} Raw TU API response payload
    */
   async verifyWithRealTuApi(studentId, password) {
     let response;
@@ -121,76 +221,39 @@ class TuAuthService {
   }
 
   /**
-   * Resolves or provisions Student, User, and External Identity Link in the database.
+   * Resolves or provisions Student, User, and External Identity Link in the database,
+   * and stores the TU API response in memory and DB.
    *
    * @param {string} studentId
-   * @param {object|null} tuProfile
-   * @returns {Promise<object>} Resolved { user, student }
+   * @param {object|null} tuProfile Raw TU API response
+   * @returns {Promise<{ user: object, student: object, rawResponse: object }>}
    */
   async resolveOrCreateStudentIdentity(studentId, tuProfile = null) {
     const pool = this.getDbPool();
+    const cached = getStoredTuResponseRecord(studentId);
+    const effectiveTuProfile = tuProfile || cached?.rawResponse || null;
 
-    const academicYear =
-      Number.isInteger(tuProfile?.academic_year)
-        ? tuProfile.academic_year
-        : (2500 + parseInt(studentId.slice(0, 2), 10)) || 2567;
-
-    const fullName =
-      tuProfile?.displayname_th ||
-      tuProfile?.displayname_en ||
-      (studentId === '6709650334'
-        ? 'ณัฐภัทร ไกรวิชญ์ชนาภรณ์'
-        : `นักศึกษา มธ. (${studentId})`);
-
-    const email =
-      tuProfile?.email ||
-      (studentId === '6709650334'
-        ? 'nustapark.krai@dome.tu.ac.th'
-        : `${studentId}@dome.tu.ac.th`);
-
-    const department =
-      tuProfile?.department ||
-      'สาขาวิชาวิทยาการคอมพิวเตอร์';
-
-    const program =
-      tuProfile?.program ||
-      'วิทยาศาสตรบัณฑิต (วท.บ.)';
-
-    const major =
-      tuProfile?.major ||
-      (tuProfile?.department ? tuProfile.department : 'วิทยาการคอมพิวเตอร์');
-
-    const faculty =
-      tuProfile?.faculty ||
-      'คณะวิทยาศาสตร์และเทคโนโลยี';
-
-    const enrollmentStatus =
-      tuProfile?.tu_status === 'สำเร็จการศึกษา'
-        ? 'GRADUATED'
-        : tuProfile?.tu_status === 'พักการศึกษา'
-        ? 'SUSPENDED'
-        : 'ACTIVE';
+    const { rawResponse, profile: mappedProfile } = mapTuApiResponseToProfile(
+      studentId,
+      effectiveTuProfile
+    );
 
     // Fallback when running without an active database connection
     if (!pool) {
+      const user = {
+        id: `user-${studentId}`,
+        role: rawResponse.type === 'employee' ? 'STAFF' : 'STUDENT',
+        accountStatus: 'ACTIVE'
+      };
+      saveTuResponseRecord(studentId, {
+        rawResponse,
+        profile: mappedProfile,
+        user
+      });
       return {
-        user: {
-          id: `user-${studentId}`,
-          role: 'STUDENT',
-          accountStatus: 'ACTIVE'
-        },
-        student: {
-          id: `stud-${studentId}`,
-          student_number: studentId,
-          full_name: fullName,
-          institutional_email: email,
-          department,
-          program,
-          major,
-          faculty,
-          academic_year: academicYear,
-          enrollment_status: enrollmentStatus
-        }
+        user,
+        student: mappedProfile,
+        rawResponse
       };
     }
 
@@ -206,7 +269,7 @@ class TuAuthService {
     let student = existingStudentRes?.rows?.[0] || null;
     let userId = student?.user_id || null;
 
-    // 2. If student does not exist, provision in database
+    // 2. If student does not exist, provision in database using TU API response fields
     if (!student) {
       const newStudentRes = await pool.query(
         `INSERT INTO students (
@@ -218,33 +281,33 @@ class TuAuthService {
         [
           `anon-tu-${studentId}`,
           studentId,
-          fullName,
-          email,
-          department,
-          program,
-          major,
-          academicYear,
-          enrollmentStatus
+          mappedProfile.full_name,
+          mappedProfile.institutional_email,
+          mappedProfile.department,
+          mappedProfile.program,
+          mappedProfile.major,
+          mappedProfile.academic_year,
+          mappedProfile.enrollment_status
         ]
       );
       student = newStudentRes.rows[0];
-    } else if (tuProfile) {
-      // Synchronize latest profile data from TU API if available
+    } else if (effectiveTuProfile) {
+      // Synchronize latest profile data returned from TU API into DB
       const updateFields = [];
       const updateParams = [];
       let idx = 1;
 
-      if (tuProfile.displayname_th && student.full_name !== tuProfile.displayname_th) {
+      if (effectiveTuProfile.displayname_th && student.full_name !== effectiveTuProfile.displayname_th) {
         updateFields.push(`full_name = $${idx++}`);
-        updateParams.push(tuProfile.displayname_th);
+        updateParams.push(effectiveTuProfile.displayname_th);
       }
-      if (tuProfile.email && student.institutional_email !== tuProfile.email) {
+      if (effectiveTuProfile.email && student.institutional_email !== effectiveTuProfile.email) {
         updateFields.push(`institutional_email = $${idx++}`);
-        updateParams.push(tuProfile.email);
+        updateParams.push(effectiveTuProfile.email);
       }
-      if (tuProfile.department && student.department !== tuProfile.department) {
+      if (effectiveTuProfile.department && student.department !== effectiveTuProfile.department) {
         updateFields.push(`department = $${idx++}`);
-        updateParams.push(tuProfile.department);
+        updateParams.push(effectiveTuProfile.department);
       }
 
       if (updateFields.length > 0) {
@@ -257,7 +320,35 @@ class TuAuthService {
           student = { ...student, ...updateRes.rows[0] };
         }
       }
+
+      // If existing DB row had generic fallback values and no new tuProfile was passed,
+      // preserve the DB row's fields in rawResponse
     }
+
+    // Enrich student with TU API response fields if available
+    const enrichedStudent = {
+      ...mappedProfile,
+      ...student,
+      preferred_name: student?.preferred_name || mappedProfile.preferred_name || null,
+      faculty: mappedProfile.faculty,
+      tu_status: mappedProfile.tu_status,
+      statusid: mappedProfile.statusid,
+      version: student?.version || 1,
+      created_at: student?.created_at || mappedProfile.created_at,
+      updated_at: student?.updated_at || mappedProfile.updated_at
+    };
+
+    // Keep rawResponse synced with DB student fields when in local DB mode
+    const syncedRawResponse = effectiveTuProfile
+      ? rawResponse
+      : {
+          ...rawResponse,
+          displayname_th: enrichedStudent.full_name,
+          displayname_en: enrichedStudent.preferred_name || '',
+          email: enrichedStudent.institutional_email,
+          department: enrichedStudent.department,
+          faculty: enrichedStudent.faculty || enrichedStudent.program
+        };
 
     // 3. Ensure User record exists
     if (!userId) {
@@ -273,7 +364,7 @@ class TuAuthService {
         `UPDATE students SET user_id = $1 WHERE id = $2`,
         [userId, student.id]
       );
-      student.user_id = userId;
+      enrichedStudent.user_id = userId;
     }
 
     // 4. Ensure External Identity Link exists
@@ -287,13 +378,22 @@ class TuAuthService {
       [userId, this.issuer, studentId]
     );
 
+    const user = {
+      id: userId,
+      role: 'STUDENT',
+      accountStatus: 'ACTIVE'
+    };
+
+    saveTuResponseRecord(studentId, {
+      rawResponse: syncedRawResponse,
+      profile: enrichedStudent,
+      user
+    });
+
     return {
-      user: {
-        id: userId,
-        role: 'STUDENT',
-        accountStatus: 'ACTIVE'
-      },
-      student
+      user,
+      student: enrichedStudent,
+      rawResponse: syncedRawResponse
     };
   }
 
@@ -303,9 +403,10 @@ class TuAuthService {
    * @param {object} params
    * @param {string} params.studentId 10-digit student ID
    * @param {string} params.password
-   * @returns {Promise<object>} Access token and user payload
+   * @param {object} [params.tuResponse] Optional pre-fetched TU API response payload
+   * @returns {Promise<object>} Access token, user, normalized profile, and raw TU API response
    */
-  async login({ studentId, password }) {
+  async login({ studentId, password, tuResponse = null }) {
     if (
       typeof studentId !== 'string' ||
       !STUDENT_ID_REGEX.test(studentId.trim())
@@ -321,23 +422,24 @@ class TuAuthService {
       password.length === 0
     ) {
       throw new ValidationError('กรุณากรอกรหัสผ่าน', [
-        { field: 'password', issue: 'password cannot be empty' }
-      ]);
+        { field: 'password', issue: 'password cannot be empty'      }]);
     }
 
     const cleanStudentId = studentId.trim();
 
-    // 1. Verify credentials (Hybrid: Real API if configured, else Local DB verification)
-    let tuProfile = null;
+    // 1. Verify credentials (Real TU API if configured, else provided tuResponse / Local DB)
+    let tuProfile = tuResponse || null;
     let authMode = 'local_fallback';
 
     if (this.isRealApiConfigured()) {
       tuProfile = await this.verifyWithRealTuApi(cleanStudentId, password);
       authMode = 'tu_api';
+    } else if (tuProfile) {
+      authMode = 'tu_api_cached';
     }
 
-    // 2. Resolve or provision student identity and active link
-    const { user, student } = await this.resolveOrCreateStudentIdentity(
+    // 2. Resolve or provision student identity and store TU API response
+    const { user, student, rawResponse } = await this.resolveOrCreateStudentIdentity(
       cleanStudentId,
       tuProfile
     );
@@ -374,8 +476,16 @@ class TuAuthService {
         role: user.role,
         studentId: student.id,
         studentNumber: student.student_number,
-        fullName: student.full_name
-      })
+        fullName: student.full_name,
+        displayNameEn: student.preferred_name || null,
+        email: student.institutional_email,
+        department: student.department,
+        faculty: student.faculty || null,
+        tuStatus: student.tu_status || null,
+        statusId: student.statusid || null
+      }),
+      profile: Object.freeze({ ...student }),
+      tuResponse: Object.freeze({ ...rawResponse })
     });
   }
 }
@@ -383,5 +493,8 @@ class TuAuthService {
 module.exports = {
   TuAuthService,
   DEFAULT_TU_API_URL,
-  DEFAULT_TU_ISSUER
+  DEFAULT_TU_ISSUER,
+  mapTuApiResponseToProfile,
+  saveTuResponseRecord,
+  getStoredTuResponseRecord
 };

@@ -47,6 +47,16 @@ if (root) {
       window.sessionStorage?.setItem('co-ed:access-token', token);
       window.localStorage?.setItem('co-ed:access-token', token);
       window.sessionStorage?.setItem('co-ed:auth-mode', 'tu-auth');
+      if (body?.data?.profile) {
+        const profileJson = JSON.stringify(body.data.profile);
+        window.sessionStorage?.setItem('co-ed:tu-profile', profileJson);
+        window.localStorage?.setItem('co-ed:tu-profile', profileJson);
+      }
+      if (body?.data?.tuResponse) {
+        const tuRespJson = JSON.stringify(body.data.tuResponse);
+        window.sessionStorage?.setItem('co-ed:tu-response', tuRespJson);
+        window.localStorage?.setItem('co-ed:tu-response', tuRespJson);
+      }
       window.location.hash = '#/student/plan';
       window.location.reload();
     };
@@ -55,6 +65,10 @@ if (root) {
       window.sessionStorage?.removeItem('co-ed:access-token');
       window.localStorage?.removeItem('co-ed:access-token');
       window.sessionStorage?.removeItem('co-ed:auth-mode');
+      window.sessionStorage?.removeItem('co-ed:tu-profile');
+      window.localStorage?.removeItem('co-ed:tu-profile');
+      window.sessionStorage?.removeItem('co-ed:tu-response');
+      window.localStorage?.removeItem('co-ed:tu-response');
       await authClient.logout();
     };
 
@@ -62,6 +76,10 @@ if (root) {
       window.sessionStorage?.removeItem('co-ed:access-token');
       window.localStorage?.removeItem('co-ed:access-token');
       window.sessionStorage?.removeItem('co-ed:auth-mode');
+      window.sessionStorage?.removeItem('co-ed:tu-profile');
+      window.localStorage?.removeItem('co-ed:tu-profile');
+      window.sessionStorage?.removeItem('co-ed:tu-response');
+      window.localStorage?.removeItem('co-ed:tu-response');
       await authClient.invalidateLocalSession();
     };
 
@@ -69,10 +87,30 @@ if (root) {
       apiBaseUrl: config.apiBaseUrl,
       getAccessToken
     });
-    const studentProfileClient = createStudentProfileClient({
+    const baseStudentProfileClient = createStudentProfileClient({
       apiBaseUrl: config.apiBaseUrl,
       getAccessToken
     });
+    const studentProfileClient = {
+      ...baseStudentProfileClient,
+      async getOwnProfile(options) {
+        try {
+          return await baseStudentProfileClient.getOwnProfile(options);
+        } catch (error) {
+          const cachedRaw =
+            window.sessionStorage?.getItem('co-ed:tu-profile') ||
+            window.localStorage?.getItem('co-ed:tu-profile');
+          if (cachedRaw) {
+            try {
+              return JSON.parse(cachedRaw);
+            } catch {
+              // Fall through to throw original error
+            }
+          }
+          throw error;
+        }
+      }
+    };
     const studentPlanClient = createStudentPlanClient({
       apiBaseUrl: config.apiBaseUrl,
       getAccessToken

@@ -1,9 +1,13 @@
 /** Synthetic-only integration model. Never imported by the production entry point. */
+import { getStoredTuProfile } from './fixtures.js';
 export function enhanceWorkflowPreview(clients,{role,scenario}={}) {
   const copy=x=>JSON.parse(JSON.stringify(x)), records=new Map();
+  const tuProf = getStoredTuProfile();
+  const activeStudentNumber = tuProf?.student_number || '6609612345';
+  const activeFullName = tuProf?.full_name || 'ณัฐวดี ศิริกุล';
   const ids={cycle:'30000000-0000-4000-8000-000000000101',policy:'60000000-0000-4000-8000-000000000101',advisor:'70000000-0000-4000-8000-000000000101'};
   const requirement={id:'eligibility',title:'แบบฟอร์มตรวจคุณสมบัติ (สมมติ)',required:true,format:'pdf',filename_pattern:'{student_number}_eligibility.pdf'};
-  const policy={id:ids.policy,cycle_id:ids.cycle,department:'ภาควิชาวิทยาการคอมพิวเตอร์',program:'',version:1,requirements:[requirement]};
+  const policy={id:ids.policy,cycle_id:ids.cycle,department:tuProf?.department || 'ภาควิชาวิทยาการคอมพิวเตอร์',program:'',version:1,requirements:[requirement]};
   let policies=[policy], assignments=[],contact={contact_address:'99 ถนนตัวอย่าง ตำบลคลองหนึ่ง อำเภอคลองหลวง จังหวัดปทุมธานี 12120 (ข้อมูลสมมติ)',contact_phone:'0800000000',version:1};
   const original=clients.studentPlanClient?.getOwnPlan.bind(clients.studentPlanClient);
   const originalSave=clients.studentPlanClient?.saveDraft?.bind(clients.studentPlanClient);
@@ -15,9 +19,9 @@ export function enhanceWorkflowPreview(clients,{role,scenario}={}) {
     if(records.has(id))return records.get(id);
     const source=await base(id);if(!source)throw new Error('ยังไม่มีแผนจำลอง');
     const status=scenario==='rejected'?'REJECTED':['company-confirmed','company-pending','capacity-full'].includes(scenario)?'APPROVED':source.status;
-    const value={...source,status,cycle_status:'OPEN',plan_id:id,student_number:'6609612345',student_id:'20000000-0000-4000-8000-000000000101',
+    const value={...source,status,cycle_status:'OPEN',plan_id:id,student_number:activeStudentNumber,student_id:'20000000-0000-4000-8000-000000000101',
       project_title:'ระบบติดตามงานสหกิจศึกษา (ข้อมูลสมมติ)',policy:scenario==='missing-policy'?null:policy,
-      references:[{requirement_id:'eligibility',filename:'6609612345_eligibility.pdf',format:'pdf',reference:'DEMO-2569-001',url:null}],
+      references:[{requirement_id:'eligibility',filename:`${activeStudentNumber}_eligibility.pdf`,format:'pdf',reference:'DEMO-2569-001',url:null}],
       submissions:[],placement:null,advisor:null,legacy_submission:scenario==='legacy'};
     if(status!=='DRAFT' && scenario!=='legacy')value.submissions=[{id:'synthetic-submission',plan_version:source.version,created_at:source.updated_at,snapshot:{project_title:value.project_title,references:copy(value.references)}}];
     if(role==='ADVISOR' && scenario!=='unassign' && scenario!=='revoked')value.advisor={id:ids.advisor,name:'อาจารย์สมมติ กิตติ ตัวอย่าง',version:1,effective_to:'2027-05-31T16:59:59Z'};
