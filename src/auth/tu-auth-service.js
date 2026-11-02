@@ -9,6 +9,7 @@
  * stores the TU API response profile, and issues a valid RS256 Access Token.
  */
 
+const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
 const { ValidationError, UnauthorizedError } = require('../api/errors');
 const { getPool } = require('../db/connection');
 const { getTuKeyPair, signTuJwt } = require('./tu-keys');
@@ -16,6 +17,7 @@ const { getTuKeyPair, signTuJwt } = require('./tu-keys');
 const STUDENT_ID_REGEX = /^\d{10}$/;
 const DEFAULT_TU_API_URL = 'https://restapi.tu.ac.th/api/v1/auth/Ad/verify';
 const DEFAULT_TU_ISSUER = 'https://tu.ac.th';
+const SECRET_ARN_REGEX = /^arn:(aws|aws-us-gov|aws-cn):secretsmanager:([a-z0-9-]+):\d{12}:secret:[A-Za-z0-9/_+=.@-]+$/;
 
 /**
  * In-memory store for TU API responses and normalized profiles keyed by studentNumber / userId.
@@ -141,6 +143,13 @@ class TuAuthService {
       options.tuAppKey !== undefined
         ? options.tuAppKey
         : (process.env.TU_API_APP_KEY || '');
+    this.tuSecretArn =
+      options.tuSecretArn !== undefined
+        ? options.tuSecretArn
+        : (process.env.TU_API_SECRET_ARN || '');
+    this.secretsClient = options.secretsClient || null;
+    this.cachedSecretKey = null;
+    this.cachedSecretExpiresAt = 0;
     this.issuer =
       options.issuer || process.env.TU_AUTH_ISSUER || DEFAULT_TU_ISSUER;
     this.clientId =
@@ -163,7 +172,39 @@ class TuAuthService {
   }
 
   isRealApiConfigured() {
-    return typeof this.tuAppKey === 'string' && this.tuAppKey.trim().length > 0;
+    return (
+      (typeof this.tuAppKey === 'string' && this.tuAppKey.trim().length > 0) ||
+      (typeof this.tuSecretArn === 'string' && SECRET_ARN_REGEX.test(this.tuSecretArn.trim()))
+    );
+  }
+
+  async resolveAppKey() {
+    if (typeof this.tuAppKey === 'string' && this.tuAppKey.trim().length > 0) {
+      return this.tuAppKey.trim();
+    }
+    const arn = typeof this.tuSecretArn === 'string' ? this.tuSecretArn.trim() : '';
+    const match = arn.match(SECRET_ARN_REGEX);
+    if (!match) {
+      return '';
+    }
+    if (this.cachedSecretKey && Date.now() < this.cachedSecretExpiresAt) {
+      return this.cachedSecretKey;
+    }
+    const client =
+      this.secretsClient ||
+      new SecretsManagerClient({ region: match[2], maxAttempts: 2 });
+    const response = await client.send(
+      new GetSecretValueCommand({ SecretId: arn, VersionStage: 'AWSCURRENT' })
+    );
+    const rawSecret = response?.SecretString || '';
+    let resolvedKey = rawSecret.trim();
+    if (resolvedKey.startsWith('{')) {
+      const parsed = JSON.parse(resolvedKey);
+      resolvedKey = String(parsed.TU_API_APP_KEY || parsed.applicationKey || parsed.appKey || '').trim();
+    }
+    this.cachedSecretKey = resolvedKey;
+    this.cachedSecretExpiresAt = Date.now() + 300000;
+    return resolvedKey;
   }
 
   /**
@@ -174,13 +215,22 @@ class TuAuthService {
    * @returns {Promise<object>} Raw TU API response payload
    */
   async verifyWithRealTuApi(studentId, password) {
+    let appKey;
+    try {
+      appKey = await this.resolveAppKey();
+    } catch {
+      throw new UnauthorizedError(
+        'ไม่สามารถดึง Application-Key จาก AWS Secrets Manager ได้',
+        'TU_SECRET_UNAVAILABLE'
+      );
+    }
     let response;
     try {
       response = await this.fetchImpl(this.tuApiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Application-Key': this.tuAppKey.trim()
+          'Application-Key': appKey
         },
         body: JSON.stringify({
           UserName: studentId,

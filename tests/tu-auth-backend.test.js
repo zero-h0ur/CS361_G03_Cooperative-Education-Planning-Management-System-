@@ -238,6 +238,54 @@ describe('TU Authentication Service (Hybrid Mode)', () => {
       expect(claims.scopes).toContain('coed-api/access');
     });
 
+    it('resolves TU_API_APP_KEY from AWS Secrets Manager when TU_API_SECRET_ARN is configured on Lambda', async () => {
+      const mockSecretsClient = {
+        send: jest.fn().mockResolvedValue({
+          SecretString: JSON.stringify({ TU_API_APP_KEY: 'secret-manager-tu-key' })
+        })
+      };
+      const mockFetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          status: true,
+          type: 'student',
+          username: '6709650334',
+          tu_status: 'ปกติ',
+          statusid: '10',
+          displayname_th: 'นักศึกษา ซีเคร็ท',
+          displayname_en: 'Secret Student',
+          email: 'secret@dome.tu.ac.th',
+          department: 'สาขาวิชาวิทยาการคอมพิวเตอร์',
+          faculty: 'คณะวิทยาศาสตร์และเทคโนโลยี'
+        })
+      });
+
+      const service = new TuAuthService({
+        tuAppKey: '',
+        tuSecretArn: 'arn:aws:secretsmanager:ap-southeast-1:123456789012:secret:coed/tu-api-AbCdEf',
+        secretsClient: mockSecretsClient,
+        fetchImpl: mockFetch,
+        pool: createMockDbPool()
+      });
+
+      expect(service.isRealApiConfigured()).toBe(true);
+      const result = await service.login({
+        studentId: '6709650334',
+        password: 'pass'
+      });
+
+      expect(mockSecretsClient.send).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://restapi.tu.ac.th/api/v1/auth/Ad/verify',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Application-Key': 'secret-manager-tu-key'
+          })
+        })
+      );
+      expect(result.profile.full_name).toBe('นักศึกษา ซีเคร็ท');
+    });
+
     it('rejects login with 401 when TU REST API returns status: false', async () => {
       const mockFetch = jest.fn().mockResolvedValue({
         ok: true,
