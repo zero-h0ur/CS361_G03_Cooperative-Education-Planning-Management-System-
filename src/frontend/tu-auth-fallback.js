@@ -50,9 +50,60 @@ export function createTuAuthClients({
   baseStudentProfileClient,
   baseApplicationClient,
   baseWorkflowClient,
-  baseStudentPlanClient
+  baseStudentPlanClient,
+  tuStudentProfileClient = baseStudentProfileClient,
+  tuApplicationClient = baseApplicationClient,
+  tuWorkflowClient = baseWorkflowClient,
+  tuStudentPlanClient = baseStudentPlanClient
 }) {
   const getTuRaw = () => readJsonStorage('co-ed:tu-response');
+
+  const mergeTuProfileWithDb = (dbRow = {}) => {
+    const cached = getCachedTuProfile() || {};
+    const tuRaw = getTuRaw() || {};
+    const merged = {
+      ...cached,
+      ...dbRow,
+      student_number: tuRaw.username || cached.student_number || dbRow.student_number,
+      full_name: tuRaw.displayname_th || cached.full_name || dbRow.full_name,
+      preferred_name: tuRaw.displayname_en || cached.preferred_name || dbRow.preferred_name || null,
+      institutional_email: tuRaw.email || cached.institutional_email || dbRow.institutional_email,
+      department: tuRaw.department || cached.department || dbRow.department,
+      program: cached.program || tuRaw.faculty || dbRow.program,
+      major: cached.major || tuRaw.department || dbRow.major,
+      faculty: tuRaw.faculty || cached.faculty || dbRow.program,
+      tu_status: tuRaw.tu_status || cached.tu_status || dbRow.enrollment_status,
+      enrollment_status: tuRaw.tu_status || cached.enrollment_status || dbRow.enrollment_status
+    };
+    writeJsonStorage('co-ed:tu-profile', merged);
+    return copy(merged);
+  };
+
+  const enrichApplicationWithTu = (app) => {
+    if (!app || typeof app !== 'object') return app;
+    const tuRaw = getTuRaw() || {};
+    const cached = getCachedTuProfile() || {};
+    const next = copy(app);
+    if (next.official && typeof next.official === 'object') {
+      next.official = {
+        ...next.official,
+        full_name: tuRaw.displayname_th || cached.full_name || next.official.full_name,
+        student_number: tuRaw.username || cached.student_number || next.official.student_number
+      };
+    }
+    if (next.payload && typeof next.payload === 'object') {
+      if (!next.payload.thai_full_name && (tuRaw.displayname_th || cached.full_name)) {
+        next.payload.thai_full_name = tuRaw.displayname_th || cached.full_name;
+      }
+      if (!next.payload.english_full_name && (tuRaw.displayname_en || cached.preferred_name)) {
+        next.payload.english_full_name = tuRaw.displayname_en || cached.preferred_name;
+      }
+      if (!next.payload.contact_email && (tuRaw.email || cached.institutional_email)) {
+        next.payload.contact_email = tuRaw.email || cached.institutional_email;
+      }
+    }
+    return next;
+  };
 
   const getOfficialFromTu = () => {
     const cached = getCachedTuProfile() || {};
@@ -111,8 +162,13 @@ export function createTuAuthClients({
     ...baseStudentProfileClient,
     async getOwnProfile(options) {
       if (isTuAuthActive()) {
-        const cached = getCachedTuProfile();
-        if (cached) return copy(cached);
+        try {
+          const dbProfile = await tuStudentProfileClient.getOwnProfile(options);
+          return mergeTuProfileWithDb(dbProfile);
+        } catch {
+          const cached = getCachedTuProfile();
+          if (cached) return copy(cached);
+        }
       }
       try {
         return await baseStudentProfileClient.getOwnProfile(options);
@@ -144,133 +200,180 @@ export function createTuAuthClients({
     ...baseApplicationClient,
     async options(optionsArg) {
       if (isTuAuthActive()) {
-        return {
-          official: getOfficialFromTu(),
-          cycles: copy(DEFAULT_CYCLES),
-          criteria: policyModule.templates(),
-          storage_configured: true
-        };
+        try {
+          const res = await tuApplicationClient.options(optionsArg);
+          const tuRaw = getTuRaw() || {};
+          const cached = getCachedTuProfile() || {};
+          return {
+            ...res,
+            official: {
+              ...(res.official || getOfficialFromTu()),
+              full_name: tuRaw.displayname_th || cached.full_name || res.official?.full_name,
+              student_number: tuRaw.username || cached.student_number || res.official?.student_number
+            }
+          };
+        } catch {
+          return {
+            official: getOfficialFromTu(),
+            cycles: copy(DEFAULT_CYCLES),
+            criteria: policyModule.templates(),
+            storage_configured: true
+          };
+        }
       }
       return baseApplicationClient.options(optionsArg);
     },
     async list(optionsArg) {
       if (isTuAuthActive()) {
-        const apps = getStoredApps();
-        return apps.map((a) => ({
-          id: a.id,
-          cycle_id: a.cycle_id,
-          status: a.status,
-          version: a.version,
-          submitted_at: a.submitted_at || null,
-          updated_at: a.updated_at || new Date().toISOString()
-        }));
+        try {
+          return await tuApplicationClient.list(optionsArg);
+        } catch {
+          const apps = getStoredApps();
+          return apps.map((a) => ({
+            id: a.id,
+            cycle_id: a.cycle_id,
+            status: a.status,
+            version: a.version,
+            submitted_at: a.submitted_at || null,
+            updated_at: a.updated_at || new Date().toISOString()
+          }));
+        }
       }
       return baseApplicationClient.list(optionsArg);
     },
     async get(appId, optionsArg) {
       if (isTuAuthActive()) {
-        const apps = getStoredApps();
-        const found = apps.find((a) => a.id === appId);
-        if (!found) throw new Error('ไม่พบใบสมัครที่ระบุ');
-        return copy(found);
+        try {
+          const app = await tuApplicationClient.get(appId, optionsArg);
+          return enrichApplicationWithTu(app);
+        } catch (err) {
+          const apps = getStoredApps();
+          const found = apps.find((a) => a.id === appId);
+          if (found) return copy(found);
+          throw err;
+        }
       }
       return baseApplicationClient.get(appId, optionsArg);
     },
     async create(body, optionsArg) {
       if (isTuAuthActive()) {
-        const apps = getStoredApps();
-        const existing = apps.find((a) => a.cycle_id === body.cycle_id);
-        if (existing) return copy(existing);
-        const official = getOfficialFromTu();
-        const tuRaw = getTuRaw() || {};
-        const cycleObj = DEFAULT_CYCLES.find((c) => c.id === body.cycle_id) || DEFAULT_CYCLES[0];
-        const newApp = {
-          id: crypto.randomUUID(),
-          cycle_id: cycleObj.id,
-          student_id: official.student_id,
-          cycle_name: cycleObj.name,
-          form_version: form.FORM_VERSION,
-          status: 'DRAFT',
-          version: 1,
-          payload: {
-            curriculum: '66',
-            thai_full_name: official.full_name,
-            english_full_name: tuRaw.displayname_en || '',
-            contact_email: official.institutional_email
-          },
-          official,
-          policy: getPolicyForCurriculum('66'),
-          documents: [],
-          availability: { can_edit: true },
-          updated_at: new Date().toISOString()
-        };
-        apps.unshift(newApp);
-        saveStoredApps(apps);
-        return copy(newApp);
+        try {
+          const created = await tuApplicationClient.create(body, optionsArg);
+          return enrichApplicationWithTu(created);
+        } catch {
+          const apps = getStoredApps();
+          const existing = apps.find((a) => a.cycle_id === body.cycle_id);
+          if (existing) return copy(existing);
+          const official = getOfficialFromTu();
+          const tuRaw = getTuRaw() || {};
+          const cycleObj = DEFAULT_CYCLES.find((c) => c.id === body.cycle_id) || DEFAULT_CYCLES[0];
+          const newApp = {
+            id: crypto.randomUUID(),
+            cycle_id: cycleObj.id,
+            student_id: official.student_id,
+            cycle_name: cycleObj.name,
+            form_version: form.FORM_VERSION,
+            status: 'DRAFT',
+            version: 1,
+            payload: {
+              curriculum: '66',
+              thai_full_name: official.full_name,
+              english_full_name: tuRaw.displayname_en || '',
+              contact_email: official.institutional_email
+            },
+            official,
+            policy: getPolicyForCurriculum('66'),
+            documents: [],
+            availability: { can_edit: true },
+            updated_at: new Date().toISOString()
+          };
+          apps.unshift(newApp);
+          saveStoredApps(apps);
+          return copy(newApp);
+        }
       }
       return baseApplicationClient.create(body, optionsArg);
     },
     async save(appId, body, optionsArg) {
       if (isTuAuthActive()) {
-        const apps = getStoredApps();
-        const app = apps.find((a) => a.id === appId);
-        if (!app) throw new Error('ไม่พบใบสมัครที่ระบุ');
-        app.payload = {
-          ...app.payload,
-          ...inputModule.payload(copy(body.payload || {}))
-        };
-        app.version = (Number(app.version) || 1) + 1;
-        app.updated_at = new Date().toISOString();
-        saveStoredApps(apps);
-        return copy(app);
+        try {
+          const saved = await tuApplicationClient.save(appId, body, optionsArg);
+          return enrichApplicationWithTu(saved);
+        } catch (err) {
+          const apps = getStoredApps();
+          const app = apps.find((a) => a.id === appId);
+          if (!app) throw err;
+          app.payload = {
+            ...app.payload,
+            ...inputModule.payload(copy(body.payload || {}))
+          };
+          app.version = (Number(app.version) || 1) + 1;
+          app.updated_at = new Date().toISOString();
+          saveStoredApps(apps);
+          return copy(app);
+        }
       }
       return baseApplicationClient.save(appId, body, optionsArg);
     },
     async readiness(appId, optionsArg) {
       if (isTuAuthActive()) {
-        const apps = getStoredApps();
-        const app = apps.find((a) => a.id === appId);
-        if (!app) throw new Error('ไม่พบใบสมัครที่ระบุ');
-        return checkReadiness(app);
+        try {
+          return await tuApplicationClient.readiness(appId, optionsArg);
+        } catch (err) {
+          const apps = getStoredApps();
+          const app = apps.find((a) => a.id === appId);
+          if (!app) throw err;
+          return checkReadiness(app);
+        }
       }
       return baseApplicationClient.readiness(appId, optionsArg);
     },
     async submit(appId, body, optionsArg) {
       if (isTuAuthActive()) {
-        const apps = getStoredApps();
-        const app = apps.find((a) => a.id === appId);
-        if (!app) throw new Error('ไม่พบใบสมัครที่ระบุ');
-        const check = checkReadiness(app);
-        if (!check.can_submit) throw new Error('ข้อมูลใบสมัครยังไม่ครบถ้วนตามเกณฑ์');
-        app.status = 'SUBMITTED';
-        app.version = (Number(app.version) || 1) + 1;
-        app.submitted_at = new Date().toISOString();
-        app.updated_at = app.submitted_at;
-        saveStoredApps(apps);
-        return copy(app);
+        try {
+          const submitted = await tuApplicationClient.submit(appId, body, optionsArg);
+          return enrichApplicationWithTu(submitted);
+        } catch (err) {
+          const apps = getStoredApps();
+          const app = apps.find((a) => a.id === appId);
+          if (!app) throw err;
+          const check = checkReadiness(app);
+          if (!check.can_submit) throw new Error('ข้อมูลใบสมัครยังไม่ครบถ้วนตามเกณฑ์');
+          app.status = 'SUBMITTED';
+          app.version = (Number(app.version) || 1) + 1;
+          app.submitted_at = new Date().toISOString();
+          app.updated_at = app.submitted_at;
+          saveStoredApps(apps);
+          return copy(app);
+        }
       }
       return baseApplicationClient.submit(appId, body, optionsArg);
     },
     async upload(appId, kind, file, uploadOptions = {}) {
       if (isTuAuthActive()) {
-        uploadOptions.onPhase?.('กำลังบันทึกไฟล์แนบ');
-        const apps = getStoredApps();
-        const app = apps.find((a) => a.id === appId);
-        if (!app) throw new Error('ไม่พบใบสมัครที่ระบุ');
-        app.documents = [
-          ...(app.documents || []).filter((d) => d.kind !== kind),
-          {
-            id: crypto.randomUUID(),
-            kind,
-            filename: file.name,
-            byte_size: file.size,
-            content_type: file.type
-          }
-        ];
-        app.version = (Number(app.version) || 1) + 1;
-        app.updated_at = new Date().toISOString();
-        saveStoredApps(apps);
-        return copy(app);
+        try {
+          const uploaded = await tuApplicationClient.upload(appId, kind, file, uploadOptions);
+          return enrichApplicationWithTu(uploaded);
+        } catch (err) {
+          const apps = getStoredApps();
+          const app = apps.find((a) => a.id === appId);
+          if (!app) throw err;
+          uploadOptions.onPhase?.('กำลังบันทึกไฟล์แนบ');
+          app.documents = [
+            ...(app.documents || []).filter((d) => d.kind !== kind),
+            {
+              id: crypto.randomUUID(),
+              kind,
+              filename: file.name,
+              byte_size: file.size,
+              content_type: file.type
+            }
+          ];
+          app.version = (Number(app.version) || 1) + 1;
+          app.updated_at = new Date().toISOString();
+          saveStoredApps(apps);
+          return copy(app);
+        }
       }
       return baseApplicationClient.upload(appId, kind, file, uploadOptions);
     }
@@ -280,190 +383,208 @@ export function createTuAuthClients({
     ...baseStudentPlanClient,
     async listCycles(optionsArg) {
       if (isTuAuthActive()) {
-        return copy(DEFAULT_CYCLES);
+        try {
+          return await tuStudentPlanClient.listCycles(optionsArg);
+        } catch {
+          return copy(DEFAULT_CYCLES);
+        }
       }
-      try {
-        return await baseStudentPlanClient.listCycles(optionsArg);
-      } catch (error) {
-        if (isTuAuthActive()) return copy(DEFAULT_CYCLES);
-        throw error;
-      }
+      return baseStudentPlanClient.listCycles(optionsArg);
     },
     async searchCompanies({ q = '', page = 1, signal } = {}) {
       if (isTuAuthActive()) {
-        const query = new URLSearchParams({
-          q: q.trim(),
-          page: String(page),
-          pageSize: '10'
-        });
-        const res = await fetch(`${apiBaseUrl}/api/companies?${query.toString()}`, { signal });
-        const payload = await res.json();
-        return {
-          items: (payload?.data || []).map(({ id, name }) => ({ id, name })),
-          pagination: payload?.pagination || { page: 1, pageSize: 10, total: 0, totalPages: 1 }
-        };
+        try {
+          return await tuStudentPlanClient.searchCompanies({ q, page, signal });
+        } catch {
+          const query = new URLSearchParams({
+            q: q.trim(),
+            page: String(page),
+            pageSize: '10'
+          });
+          const res = await fetch(`${apiBaseUrl}/api/companies?${query.toString()}`, { signal });
+          const payload = await res.json();
+          return {
+            items: (payload?.data || []).map(({ id, name }) => ({ id, name })),
+            pagination: payload?.pagination || { page: 1, pageSize: 10, total: 0, totalPages: 1 }
+          };
+        }
       }
       return baseStudentPlanClient.searchCompanies({ q, page, signal });
     },
     async getCompanyPositions({ companyId, signal } = {}) {
       if (isTuAuthActive()) {
-        const res = await fetch(`${apiBaseUrl}/api/companies/${encodeURIComponent(companyId)}/positions`, { signal });
-        const payload = await res.json();
-        const items = Array.isArray(payload?.data) && payload.data.length > 0
-          ? payload.data.map(({ id, company_id, title }) => ({ id, company_id, title }))
-          : [
-              { id: `pos-sw-${companyId}`, company_id: companyId, title: 'Software Engineer (สหกิจศึกษา)' },
-              { id: `pos-fe-${companyId}`, company_id: companyId, title: 'Frontend Developer (สหกิจศึกษา)' },
-              { id: `pos-da-${companyId}`, company_id: companyId, title: 'Data Analyst (สหกิจศึกษา)' }
-            ];
-        return items;
+        try {
+          return await tuStudentPlanClient.getCompanyPositions({ companyId, signal });
+        } catch {
+          const res = await fetch(`${apiBaseUrl}/api/companies/${encodeURIComponent(companyId)}/positions`, { signal });
+          const payload = await res.json();
+          return Array.isArray(payload?.data) && payload.data.length > 0
+            ? payload.data.map(({ id, company_id, title }) => ({ id, company_id, title }))
+            : [
+                { id: `pos-sw-${companyId}`, company_id: companyId, title: 'Software Engineer (สหกิจศึกษา)' },
+                { id: `pos-fe-${companyId}`, company_id: companyId, title: 'Frontend Developer (สหกิจศึกษา)' },
+                { id: `pos-da-${companyId}`, company_id: companyId, title: 'Data Analyst (สหกิจศึกษา)' }
+              ];
+        }
       }
       return baseStudentPlanClient.getCompanyPositions({ companyId, signal });
     },
     async getOwnPlan({ signal, planId = null } = {}) {
       if (isTuAuthActive()) {
-        const plans = getStoredPlans();
-        const historyMap = getStoredPlanHistory();
-        const current = planId ? plans.find((p) => p.id === planId) : plans[0] || null;
-        if (!current) {
+        try {
+          return await tuStudentPlanClient.getOwnPlan({ signal, planId });
+        } catch {
+          const plans = getStoredPlans();
+          const historyMap = getStoredPlanHistory();
+          const current = planId ? plans.find((p) => p.id === planId) : plans[0] || null;
+          if (!current) {
+            return Object.freeze({
+              plan: null,
+              plans: Object.freeze([]),
+              statusHistory: Object.freeze([])
+            });
+          }
           return Object.freeze({
-            plan: null,
-            plans: Object.freeze([]),
-            statusHistory: Object.freeze([])
+            plan: copy(current),
+            plans: Object.freeze(copy(plans)),
+            statusHistory: Object.freeze(copy(historyMap[current.id] || []))
           });
         }
-        return Object.freeze({
-          plan: copy(current),
-          plans: Object.freeze(copy(plans)),
-          statusHistory: Object.freeze(copy(historyMap[current.id] || []))
-        });
       }
       return baseStudentPlanClient.getOwnPlan({ signal, planId });
     },
     async saveDraft({ planId = null, content, expectedVersion, operationId, signal } = {}) {
       if (isTuAuthActive()) {
-        const plans = getStoredPlans();
-        const historyMap = getStoredPlanHistory();
-        const now = new Date().toISOString();
-        let companyName = content.company_name || null;
-        if (content.company_id && !companyName) {
-          try {
-            const res = await fetch(`${apiBaseUrl}/api/companies/${encodeURIComponent(content.company_id)}`, { signal });
-            const body = await res.json();
-            companyName = body?.data?.name || null;
-          } catch {
-            // Ignore public lookup error
+        try {
+          return await tuStudentPlanClient.saveDraft({ planId, content, expectedVersion, operationId, signal });
+        } catch {
+          const plans = getStoredPlans();
+          const historyMap = getStoredPlanHistory();
+          const now = new Date().toISOString();
+          let companyName = content.company_name || null;
+          if (content.company_id && !companyName) {
+            try {
+              const res = await fetch(`${apiBaseUrl}/api/companies/${encodeURIComponent(content.company_id)}`, { signal });
+              const body = await res.json();
+              companyName = body?.data?.name || null;
+            } catch {
+              // Ignore public lookup error
+            }
           }
-        }
-        let target = planId ? plans.find((p) => p.id === planId) : null;
-        if (!target) {
-          target = {
-            id: crypto.randomUUID(),
-            cycle_id: content.cycle_id,
-            company_id: content.company_id,
-            position_id: content.position_id,
-            company_name: companyName,
-            position_title: content.position_title || 'Software Engineer (สหกิจศึกษา)',
-            notes: content.notes || null,
-            status: 'DRAFT',
-            version: 1,
-            created_at: now,
-            updated_at: now,
-            project_title: '',
-            references: [],
-            policy: {
-              id: '60000000-0000-4000-8000-000000000101',
-              cycle_id: content.cycle_id,
-              department: getOfficialFromTu().department,
-              program: '',
-              version: 1,
-              requirements: [
-                {
-                  id: 'eligibility',
-                  title: 'แบบฟอร์มตรวจคุณสมบัติ',
-                  required: true,
-                  format: 'pdf',
-                  filename_pattern: '{student_number}_eligibility.pdf'
-                }
-              ]
-            },
-            submissions: [],
-            placement: null,
-            advisor: null
-          };
-          plans.unshift(target);
-          historyMap[target.id] = [
-            {
+          let target = planId ? plans.find((p) => p.id === planId) : null;
+          if (!target) {
+            target = {
               id: crypto.randomUUID(),
-              action: 'PLAN_CREATED',
-              action_label: 'สร้างแผน',
-              from_status: null,
-              to_status: 'DRAFT',
+              cycle_id: content.cycle_id,
+              company_id: content.company_id,
+              position_id: content.position_id,
+              company_name: companyName,
+              position_title: content.position_title || 'Software Engineer (สหกิจศึกษา)',
+              notes: content.notes || null,
+              status: 'DRAFT',
+              version: 1,
+              created_at: now,
+              updated_at: now,
+              project_title: '',
+              references: [],
+              policy: {
+                id: '60000000-0000-4000-8000-000000000101',
+                cycle_id: content.cycle_id,
+                department: getOfficialFromTu().department,
+                program: '',
+                version: 1,
+                requirements: [
+                  {
+                    id: 'eligibility',
+                    title: 'แบบฟอร์มตรวจคุณสมบัติ',
+                    required: true,
+                    format: 'pdf',
+                    filename_pattern: '{student_number}_eligibility.pdf'
+                  }
+                ]
+              },
+              submissions: [],
+              placement: null,
+              advisor: null
+            };
+            plans.unshift(target);
+            historyMap[target.id] = [
+              {
+                id: crypto.randomUUID(),
+                action: 'PLAN_CREATED',
+                action_label: 'สร้างแผน',
+                from_status: null,
+                to_status: 'DRAFT',
+                actor_role: 'STUDENT',
+                actor_role_label: 'นักศึกษา (เจ้าของแผน)',
+                reason: null,
+                created_at: now
+              }
+            ];
+          } else {
+            Object.assign(target, {
+              cycle_id: content.cycle_id ?? target.cycle_id,
+              company_id: content.company_id ?? target.company_id,
+              position_id: content.position_id ?? target.position_id,
+              company_name: companyName || target.company_name,
+              notes: content.notes ?? target.notes,
+              version: (Number(target.version) || 1) + 1,
+              updated_at: now
+            });
+            historyMap[target.id] = historyMap[target.id] || [];
+            historyMap[target.id].unshift({
+              id: crypto.randomUUID(),
+              action: 'PLAN_DRAFT_UPDATED',
+              action_label: 'แก้ไขข้อมูลแผน',
+              from_status: target.status,
+              to_status: target.status,
               actor_role: 'STUDENT',
               actor_role_label: 'นักศึกษา (เจ้าของแผน)',
               reason: null,
               created_at: now
-            }
-          ];
-        } else {
-          Object.assign(target, {
-            cycle_id: content.cycle_id ?? target.cycle_id,
-            company_id: content.company_id ?? target.company_id,
-            position_id: content.position_id ?? target.position_id,
-            company_name: companyName || target.company_name,
-            notes: content.notes ?? target.notes,
-            version: (Number(target.version) || 1) + 1,
-            updated_at: now
-          });
-          historyMap[target.id] = historyMap[target.id] || [];
-          historyMap[target.id].unshift({
-            id: crypto.randomUUID(),
-            action: 'PLAN_DRAFT_UPDATED',
-            action_label: 'แก้ไขข้อมูลแผน',
-            from_status: target.status,
-            to_status: target.status,
-            actor_role: 'STUDENT',
-            actor_role_label: 'นักศึกษา (เจ้าของแผน)',
-            reason: null,
-            created_at: now
-          });
+            });
+          }
+          saveStoredPlans(plans);
+          saveStoredPlanHistory(historyMap);
+          return copy(target);
         }
-        saveStoredPlans(plans);
-        saveStoredPlanHistory(historyMap);
-        return copy(target);
       }
       return baseStudentPlanClient.saveDraft({ planId, content, expectedVersion, operationId, signal });
     },
     async submitPlan({ planId, expectedVersion, operationId, signal } = {}) {
       if (isTuAuthActive()) {
-        const plans = getStoredPlans();
-        const historyMap = getStoredPlanHistory();
-        const target = plans.find((p) => p.id === planId);
-        if (!target) throw new Error('ไม่พบแผนสหกิจศึกษา');
-        const now = new Date().toISOString();
-        const prevStatus = target.status;
-        target.status = 'SUBMITTED';
-        target.version = (Number(target.version) || 1) + 1;
-        target.updated_at = now;
-        historyMap[target.id] = historyMap[target.id] || [];
-        historyMap[target.id].unshift({
-          id: crypto.randomUUID(),
-          action: 'PLAN_SUBMITTED',
-          action_label: 'ส่งแผน',
-          from_status: prevStatus,
-          to_status: 'SUBMITTED',
-          actor_role: 'STUDENT',
-          actor_role_label: 'นักศึกษา (เจ้าของแผน)',
-          reason: null,
-          created_at: now
-        });
-        saveStoredPlans(plans);
-        saveStoredPlanHistory(historyMap);
-        return Object.freeze({
-          status: target.status,
-          version: target.version,
-          idempotentReplay: false
-        });
+        try {
+          return await tuStudentPlanClient.submitPlan({ planId, expectedVersion, operationId, signal });
+        } catch (err) {
+          const plans = getStoredPlans();
+          const historyMap = getStoredPlanHistory();
+          const target = plans.find((p) => p.id === planId);
+          if (!target) throw err;
+          const now = new Date().toISOString();
+          const prevStatus = target.status;
+          target.status = 'SUBMITTED';
+          target.version = (Number(target.version) || 1) + 1;
+          target.updated_at = now;
+          historyMap[target.id] = historyMap[target.id] || [];
+          historyMap[target.id].unshift({
+            id: crypto.randomUUID(),
+            action: 'PLAN_SUBMITTED',
+            action_label: 'ส่งแผน',
+            from_status: prevStatus,
+            to_status: 'SUBMITTED',
+            actor_role: 'STUDENT',
+            actor_role_label: 'นักศึกษา (เจ้าของแผน)',
+            reason: null,
+            created_at: now
+          });
+          saveStoredPlans(plans);
+          saveStoredPlanHistory(historyMap);
+          return Object.freeze({
+            status: target.status,
+            version: target.version,
+            idempotentReplay: false
+          });
+        }
       }
       return baseStudentPlanClient.submitPlan({ planId, expectedVersion, operationId, signal });
     }
@@ -473,45 +594,54 @@ export function createTuAuthClients({
     ...baseWorkflowClient,
     async request(path, reqOptions = {}) {
       if (isTuAuthActive()) {
-        const cached = getCachedTuProfile();
-        if (cached && path === '/api/v3/students/me') {
-          if (reqOptions.method === 'PATCH' && reqOptions.body) {
-            const updated = {
-              ...cached,
-              contact_email: reqOptions.body.contact_email ?? cached.contact_email ?? null,
-              contact_phone: reqOptions.body.contact_phone ?? cached.contact_phone ?? null,
-              contact_address: reqOptions.body.contact_address ?? cached.contact_address ?? null,
-              version: (Number(cached.version) || 1) + 1
-            };
-            writeJsonStorage('co-ed:tu-profile', updated);
-            return copy(updated);
+        try {
+          const dbRes = await tuWorkflowClient.request(path, reqOptions);
+          if (path === '/api/v3/students/me' && dbRes && typeof dbRes === 'object') {
+            return mergeTuProfileWithDb(dbRes);
           }
-          return copy(cached);
-        }
-        const planMatch = path.match(/^\/api\/v3\/plans\/([^/]+)\/(.+)$/);
-        if (planMatch) {
-          const [, planId, action] = planMatch;
-          const plans = getStoredPlans();
-          const target = plans.find((p) => p.id === planId);
-          if (!target) throw new Error('ไม่พบแผนสหกิจศึกษา');
-          if (reqOptions.method === 'GET') {
-            return copy(target);
+          return dbRes;
+        } catch (err) {
+          const cached = getCachedTuProfile();
+          if (cached && path === '/api/v3/students/me') {
+            if (reqOptions.method === 'PATCH' && reqOptions.body) {
+              const updated = {
+                ...cached,
+                contact_email: reqOptions.body.contact_email ?? cached.contact_email ?? null,
+                contact_phone: reqOptions.body.contact_phone ?? cached.contact_phone ?? null,
+                contact_address: reqOptions.body.contact_address ?? cached.contact_address ?? null,
+                version: (Number(cached.version) || 1) + 1
+              };
+              writeJsonStorage('co-ed:tu-profile', updated);
+              return copy(updated);
+            }
+            return copy(cached);
           }
-          if (action === 'workflow' && reqOptions.body) {
-            target.project_title = reqOptions.body.project_title || '';
-            target.references = copy(reqOptions.body.references || []);
-            target.version = (Number(target.version) || 1) + 1;
-            target.updated_at = new Date().toISOString();
-            saveStoredPlans(plans);
-            return copy(target);
+          const planMatch = path.match(/^\/api\/v3\/plans\/([^/]+)\/(.+)$/);
+          if (planMatch) {
+            const [, planId, action] = planMatch;
+            const plans = getStoredPlans();
+            const target = plans.find((p) => p.id === planId);
+            if (!target) throw err;
+            if (reqOptions.method === 'GET') {
+              return copy(target);
+            }
+            if (action === 'workflow' && reqOptions.body) {
+              target.project_title = reqOptions.body.project_title || '';
+              target.references = copy(reqOptions.body.references || []);
+              target.version = (Number(target.version) || 1) + 1;
+              target.updated_at = new Date().toISOString();
+              saveStoredPlans(plans);
+              return copy(target);
+            }
+            if (action === 'cancel') {
+              target.status = 'CANCELLED';
+              target.version = (Number(target.version) || 1) + 1;
+              target.updated_at = new Date().toISOString();
+              saveStoredPlans(plans);
+              return copy(target);
+            }
           }
-          if (action === 'cancel') {
-            target.status = 'CANCELLED';
-            target.version = (Number(target.version) || 1) + 1;
-            target.updated_at = new Date().toISOString();
-            saveStoredPlans(plans);
-            return copy(target);
-          }
+          throw err;
         }
       }
       return baseWorkflowClient.request(path, reqOptions);

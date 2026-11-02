@@ -99,9 +99,12 @@ class Router {
   async handle(request, response, dal = {}) {
     try {
       const url = new URL(request.url, 'http://localhost');
-      const pathname = url.pathname.length > 1
+      const rawPathname = url.pathname.length > 1
         ? url.pathname.replace(/\/$/, '')
         : url.pathname;
+      const pathname = rawPathname.startsWith('/api/tu-proxy/')
+        ? rawPathname.slice('/api/tu-proxy'.length)
+        : rawPathname;
       const method = (request.method || 'GET').toUpperCase();
 
       // 1. Find matching routes by path

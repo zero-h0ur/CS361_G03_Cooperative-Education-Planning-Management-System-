@@ -138,6 +138,8 @@ class TokenValidator {
       process.env.AUTH_ISSUER ??
       process.env.COGNITO_ISSUER ??
       null;
+    this.explicitClientId =
+      options.expectedClientId !== undefined || options.expectedAudience !== undefined;
     this.expectedClientId =
       options.expectedClientId ??
       options.expectedAudience ??
@@ -232,8 +234,13 @@ class TokenValidator {
       ? payload.aud.filter(isNonEmptyExactString)
       : (isNonEmptyExactString(payload.aud) ? [payload.aud] : []);
 
-    const matchesClientId = clientIdClaim === this.expectedClientId;
-    const matchesAud = audCandidates.includes(this.expectedClientId);
+    const isTuIssuer = payload.iss === 'https://tu.ac.th' || (process.env.TU_AUTH_ISSUER && payload.iss === process.env.TU_AUTH_ISSUER);
+    const matchesClientId =
+      clientIdClaim === this.expectedClientId ||
+      (!this.explicitClientId && isTuIssuer && clientIdClaim === 'coed-api');
+    const matchesAud =
+      audCandidates.includes(this.expectedClientId) ||
+      (!this.explicitClientId && isTuIssuer && audCandidates.includes('coed-api'));
 
     if (clientIdClaim !== null) {
       if (!matchesClientId) {

@@ -104,6 +104,7 @@ if (root) {
       await authClient.invalidateLocalSession();
     };
 
+    const tuProxyBaseUrl = `${String(config.apiBaseUrl || '').replace(/\/$/, '')}/api/tu-proxy`;
     const sessionClient = createSessionClient({
       apiBaseUrl: config.apiBaseUrl,
       getAccessToken
@@ -124,6 +125,22 @@ if (root) {
       apiBaseUrl: config.apiBaseUrl,
       getAccessToken
     });
+    const tuStudentProfileClient = createStudentProfileClient({
+      apiBaseUrl: tuProxyBaseUrl,
+      getAccessToken
+    });
+    const tuApplicationClient = createApplicationClient({
+      apiBaseUrl: tuProxyBaseUrl,
+      getAccessToken
+    });
+    const tuWorkflowClient = createWorkflowClient({
+      apiBaseUrl: tuProxyBaseUrl,
+      getAccessToken
+    });
+    const tuStudentPlanClient = createStudentPlanClient({
+      apiBaseUrl: tuProxyBaseUrl,
+      getAccessToken
+    });
     const {
       studentProfileClient,
       applicationClient,
@@ -136,7 +153,11 @@ if (root) {
       baseStudentProfileClient,
       baseApplicationClient,
       baseWorkflowClient,
-      baseStudentPlanClient
+      baseStudentPlanClient,
+      tuStudentProfileClient,
+      tuApplicationClient,
+      tuWorkflowClient,
+      tuStudentPlanClient
     });
     const advisorClient = createAdvisorClient({
       apiBaseUrl: config.apiBaseUrl,

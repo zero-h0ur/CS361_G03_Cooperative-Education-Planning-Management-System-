@@ -9,6 +9,7 @@
 
 const { TuAuthService } = require('../src/auth/tu-auth-service');
 const { TokenValidator } = require('../src/auth/token-validator');
+const { IdentityResolver } = require('../src/auth/identity-resolver');
 const { getTuKeyPair } = require('../src/auth/tu-keys');
 const { createApiServer } = require('../src/api/app');
 const { ValidationError, UnauthorizedError } = require('../src/api/errors');
@@ -120,6 +121,36 @@ function createMockDbPool(initialStudents = []) {
         };
         identityLinks.set(`${userId}:${issuer}`, link);
         return { rows: [link] };
+      }
+
+      if (trimmed.includes('FROM students s') && trimmed.includes('JOIN users u ON u.id = s.user_id')) {
+        const subject = params[0];
+        const student =
+          Array.from(students.values()).find((s) => s.student_number === subject) ||
+          Array.from(students.values())[0];
+        if (!student) return { rows: [] };
+        return {
+          rows: [
+            {
+              user_id: student.user_id || `user-${student.student_number}`,
+              role: 'STUDENT',
+              account_status: 'ACTIVE',
+              identity_link_id: null,
+              link_status: 'ACTIVE',
+              active_link_count: 1,
+              student_id: student.id,
+              student_number: student.student_number,
+              full_name: student.full_name,
+              preferred_name: student.preferred_name || null,
+              institutional_email: student.institutional_email,
+              department: student.department,
+              program: student.program,
+              major: student.major,
+              academic_year: student.academic_year,
+              enrollment_status: student.enrollment_status
+            }
+          ]
+        };
       }
 
       return { rows: [] };
@@ -379,9 +410,11 @@ describe('TU Authentication Service (Hybrid Mode)', () => {
         }
       ]);
       const tuAuthService = new TuAuthService({ tuAppKey: '', pool });
+      const identityResolver = new IdentityResolver({ pool });
 
       server = createApiServer({
-        tuAuthService
+        tuAuthService,
+        authOptions: { identityResolver }
       });
 
       await new Promise((resolve) => {
@@ -480,6 +513,17 @@ describe('TU Authentication Service (Hybrid Mode)', () => {
       expect(body.data.profile.tu_status).toBe('ปกติ');
       expect(body.data.profile.statusid).toBe('10');
       expect(body.data.profile.academic_year).toBe(2567);
+
+      // Verify /api/tu-proxy route bridge authenticates TU RS256 token on protected V3 endpoints
+      const meRes = await fetch(`${baseUrl}/api/tu-proxy/api/v3/me`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${body.data.accessToken}`
+        }
+      });
+      expect(meRes.status).toBe(200);
+      const meBody = await meRes.json();
+      expect(meBody.data.role).toBe('STUDENT');
     });
   });
 });
