@@ -26,6 +26,13 @@ let syntheticSchedule = {
 
 import {committeePreview} from './committee-fixtures.js';
 // Synthetic presentation only. Never import into production or call an AWS API.
+export const SELECTION_STUDENT_SCENARIOS = Object.freeze({
+  'selection-open': 'ผลคัดเลือก · ผ่านและเปิดยืนยันสิทธิ์ (มีปุ่ม)',
+  'selection-near-deadline': 'ผลคัดเลือก · ใกล้หมดยืนยันสิทธิ์ (< 48 ชม.)',
+  'selection-expired': 'ผลคัดเลือก · หมดเวลายืนยันสิทธิ์ (สละสิทธิ์อัตโนมัติ)',
+  'selection-confirmed': 'ผลคัดเลือก · ยืนยันสิทธิ์แล้ว (เข้า MS Teams)'
+});
+
 export const SELECTION_SCENARIOS = Object.freeze({
   pending: 'รอรับเรื่อง / เริ่มให้ความเห็น',
   revision: 'ส่งกลับให้แก้ไขแล้ว 1 รายการ',

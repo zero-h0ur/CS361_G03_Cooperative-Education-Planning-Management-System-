@@ -1,7 +1,6 @@
-import { SELECTION_STUDENT_SCENARIOS } from './app.js';
 import {createPreviewClients} from './fixtures.js';
 import {enhanceWorkflowPreview} from './workflow-fixtures.js';
-import {selectionPreview} from './selection-fixtures.js';
+import {selectionPreview, SELECTION_STUDENT_SCENARIOS} from './selection-fixtures.js';
 import {createApplicationPreview,APPLICATION_SCENARIOS} from './application-fixtures.js';
 // Keep the old preview model on a recognized legacy scenario when a new
 // application scenario is selected. Only the new client receives that scenario.

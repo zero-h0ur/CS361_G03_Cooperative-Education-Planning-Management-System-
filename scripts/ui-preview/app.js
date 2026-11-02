@@ -1,15 +1,8 @@
-export const SELECTION_STUDENT_SCENARIOS = Object.freeze({
-  'selection-open': 'ผลคัดเลือก · ผ่านและเปิดยืนยันสิทธิ์ (มีปุ่ม)',
-  'selection-near-deadline': 'ผลคัดเลือก · ใกล้หมดยืนยันสิทธิ์ (< 48 ชม.)',
-  'selection-expired': 'ผลคัดเลือก · หมดเวลายืนยันสิทธิ์ (สละสิทธิ์อัตโนมัติ)',
-  'selection-confirmed': 'ผลคัดเลือก · ยืนยันสิทธิ์แล้ว (เข้า MS Teams)'
-});
-
 import '../../src/frontend/authenticated-shell.css';
 import './preview.css';
 import { createShellApp } from '../../src/frontend/shell-app.js';
 import { SCENARIOS, ADVISOR_SCENARIOS } from './fixtures.js';
-import { SELECTION_SCENARIOS } from './selection-fixtures.js';
+import { SELECTION_SCENARIOS, SELECTION_STUDENT_SCENARIOS } from './selection-fixtures.js';
 import {APPLICATION_SCENARIOS} from './application-fixtures.js';
 import {createWorkspacePreviewClients} from './workspace-fixtures.js';
 
@@ -55,14 +48,18 @@ notice.textContent = 'Local UI Preview — ข้อมูลจำลอง ไ
 const reset = document.createElement('button');
 reset.type = 'button'; reset.textContent = 'รีเซ็ตข้อมูลจำลอง';
 reset.addEventListener('click', () => location.reload());
-document.getElementById('previewControls').append(notice, roleLabel, label, reset);
+const controls = document.getElementById('previewControls');
+if (controls) controls.append(notice, roleLabel, label, reset);
 
 if (!location.hash || location.hash.startsWith('#/staff')) location.hash = defaultRoutes[role.value];
 const clients = createWorkspacePreviewClients({role:role.value,scenario:select.value});
-createShellApp({
-  ...clients, root: document.getElementById('authenticatedApp'),
+const appRoot = document.getElementById('authenticatedApp');
+if (appRoot) {
+  createShellApp({
+  ...clients, root: appRoot,
   location, eventTarget: window, storage: null,
   // These buttons only reload this preview, never redirect to an identity provider.
   startLogin: async () => location.reload(), restartLogin: async () => location.reload(),
   logout: async () => location.reload()
 }).start();
+}
