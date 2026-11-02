@@ -514,6 +514,15 @@ describe('TU Authentication Service (Hybrid Mode)', () => {
       expect(body.data.profile.statusid).toBe('10');
       expect(body.data.profile.academic_year).toBe(2567);
 
+      // Verify CORS preflight OPTIONS on /api/tu-proxy/* returns 204
+      const preflightRes = await fetch(`${baseUrl}/api/tu-proxy/api/v3/students/me`, {
+        method: 'OPTIONS',
+        headers: {
+          Origin: 'https://main.d1bpmj87vmjb96.amplifyapp.com'
+        }
+      });
+      expect(preflightRes.status).toBe(204);
+
       // Verify /api/tu-proxy route bridge authenticates TU RS256 token on protected V3 endpoints
       const meRes = await fetch(`${baseUrl}/api/tu-proxy/api/v3/me`, {
         method: 'GET',
