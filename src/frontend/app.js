@@ -19,12 +19,34 @@ if (root) {
     const config = window.CO_ED_CONFIG || {};
     const authClient = createAmplifyAuthClient({ config: config.auth });
 
-    const getAccessToken = async () => {
-      const tuToken =
+    const clearTuAuthStorage = () => {
+      for (const key of ['co-ed:access-token', 'co-ed:auth-mode', 'co-ed:tu-profile', 'co-ed:tu-response']) {
+        window.sessionStorage?.removeItem(key);
+        window.localStorage?.removeItem(key);
+      }
+    };
+
+    // If returning from Cognito OAuth callback (?code=...), clear any leftover TU Auth session first
+    if (typeof window.location?.search === 'string' && /[?&](code|error)=/.test(window.location.search)) {
+      clearTuAuthStorage();
+    }
+
+    const isTuAuthActive = () =>
+      (window.sessionStorage?.getItem('co-ed:auth-mode') === 'tu-auth' ||
+        Boolean(window.sessionStorage?.getItem('co-ed:tu-profile') || window.localStorage?.getItem('co-ed:tu-profile'))) &&
+      Boolean(
         window.sessionStorage?.getItem('co-ed:access-token') ||
-        window.localStorage?.getItem('co-ed:access-token');
-      if (tuToken) return tuToken;
-      return authClient.getAccessToken();
+        window.localStorage?.getItem('co-ed:access-token')
+      );
+
+    const getAccessToken = async (options) => {
+      if (isTuAuthActive()) {
+        const tuToken =
+          window.sessionStorage?.getItem('co-ed:access-token') ||
+          window.localStorage?.getItem('co-ed:access-token');
+        if (tuToken) return tuToken;
+      }
+      return authClient.getAccessToken(options);
     };
 
     const startTuAuthLogin = async ({ studentId, password }) => {
@@ -62,14 +84,6 @@ if (root) {
       window.location.reload();
     };
 
-    const isTuAuthActive = () =>
-      (window.sessionStorage?.getItem('co-ed:auth-mode') === 'tu-auth' ||
-        Boolean(window.sessionStorage?.getItem('co-ed:tu-profile') || window.localStorage?.getItem('co-ed:tu-profile'))) &&
-      Boolean(
-        window.sessionStorage?.getItem('co-ed:access-token') ||
-        window.localStorage?.getItem('co-ed:access-token')
-      );
-
     const getCachedTuProfile = () => {
       const cachedRaw =
         window.sessionStorage?.getItem('co-ed:tu-profile') ||
@@ -82,25 +96,18 @@ if (root) {
       }
     };
 
+    const startCognitoLogin = async () => {
+      clearTuAuthStorage();
+      await authClient.restartLogin();
+    };
+
     const logout = async () => {
-      window.sessionStorage?.removeItem('co-ed:access-token');
-      window.localStorage?.removeItem('co-ed:access-token');
-      window.sessionStorage?.removeItem('co-ed:auth-mode');
-      window.sessionStorage?.removeItem('co-ed:tu-profile');
-      window.localStorage?.removeItem('co-ed:tu-profile');
-      window.sessionStorage?.removeItem('co-ed:tu-response');
-      window.localStorage?.removeItem('co-ed:tu-response');
+      clearTuAuthStorage();
       await authClient.logout();
     };
 
     const invalidateLocalSession = async () => {
-      window.sessionStorage?.removeItem('co-ed:access-token');
-      window.localStorage?.removeItem('co-ed:access-token');
-      window.sessionStorage?.removeItem('co-ed:auth-mode');
-      window.sessionStorage?.removeItem('co-ed:tu-profile');
-      window.localStorage?.removeItem('co-ed:tu-profile');
-      window.sessionStorage?.removeItem('co-ed:tu-response');
-      window.localStorage?.removeItem('co-ed:tu-response');
+      clearTuAuthStorage();
       await authClient.invalidateLocalSession();
     };
 
@@ -189,8 +196,8 @@ if (root) {
       workflowClient,
       root,
       loadSession,
-      startLogin: authClient.startLogin,
-      restartLogin: authClient.restartLogin,
+      startLogin: startCognitoLogin,
+      restartLogin: startCognitoLogin,
       logout,
       startTuAuthLogin,
       invalidateLocalSession,

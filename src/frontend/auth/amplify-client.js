@@ -74,6 +74,7 @@ export function configureAmplifyAuth(config, currentOrigin = window.location.ori
   }
 
   if (!configuredSignature) {
+    cognitoUserPoolsTokenProvider.setKeyValueStorage(amplifySessionStorage);
     Amplify.configure({
       Auth: {
         Cognito: {
@@ -92,7 +93,6 @@ export function configureAmplifyAuth(config, currentOrigin = window.location.ori
       }
     });
 
-    cognitoUserPoolsTokenProvider.setKeyValueStorage(amplifySessionStorage);
     configuredSignature = signature;
   }
 
