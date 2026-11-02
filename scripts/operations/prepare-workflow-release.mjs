@@ -18,6 +18,7 @@ export function assertExternalReleaseDirectory(output) {
 
 export function workflowMigrationSQL() {
   const migrations=readReviewedMigrations();
+  const migrationCount=migrations.length;
   const expected=migrations.map(row=>`(${quote(row.name)},${quote(row.checksum)})`).join(',');
   const tables=['users','external_identity_links','students','plans','advisor_assignments','staff_scopes','rounds','companies','positions','audit_events','plan_operations'];
   const key=table=>({audit_events:'event_id',plan_operations:'operation_id'})[table]||'id';
@@ -60,9 +61,9 @@ ${grants}
 DO $preserve$
 BEGIN
  ${preserve}
- IF (SELECT count(*) FROM public.schema_migrations)<>10 THEN RAISE EXCEPTION 'Incomplete schema'; END IF;
+ IF (SELECT count(*) FROM public.schema_migrations)<>${migrationCount} THEN RAISE EXCEPTION 'Incomplete schema'; END IF;
 END $preserve$;
-SELECT json_build_object('Migrations',10,'ExistingRowsPreserved',true,'RuntimeRoleMutation',has_column_privilege('coed_app','public.users','role','UPDATE'));
+SELECT json_build_object('Migrations',${migrationCount},'ExistingRowsPreserved',true,'RuntimeRoleMutation',has_column_privilege('coed_app','public.users','role','UPDATE'));
 \\if :apply
 COMMIT;
 \\else

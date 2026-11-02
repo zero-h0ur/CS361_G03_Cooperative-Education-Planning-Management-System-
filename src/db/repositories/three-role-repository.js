@@ -106,10 +106,10 @@ class ThreeRoleRepository extends WorkflowRepository {
   async assignment(client, id, lock = false) {
     return this.one(client, `SELECT * FROM advisor_assignments WHERE id=$1 ${lock ? 'FOR UPDATE' : ''}`, [id]);
   }
-  async contact(client, actor, address, phone) {
-    return this.one(client, `UPDATE students SET contact_address=$3,contact_phone=$4,
+  async contact(client, actor, address, phone, email) {
+    return this.one(client, `UPDATE students SET contact_address=$3,contact_phone=$4,contact_email=$5,
       version=version+1,updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND user_id=$2 RETURNING *`,
-    [actor.studentId,actor.userId,address,phone]);
+    [actor.studentId,actor.userId,address,phone,email]);
   }
   async createAssignment(client, actor, plan, body) {
     return this.one(client, `INSERT INTO advisor_assignments

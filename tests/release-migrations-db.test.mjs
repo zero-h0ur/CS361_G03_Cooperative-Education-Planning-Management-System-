@@ -53,7 +53,7 @@ test('release/import checks preserve stored LF history and reject tampering in a
           await client.query(apply ? 'COMMIT' : 'ROLLBACK');
         } catch (error) { await client.query('ROLLBACK'); throw error; }
       };
-      await t.test('all ten correct checksums pass; apply/import remains idempotent', async () => {
+      await t.test('all reviewed checksums pass; apply/import remains idempotent', async () => {
         await run(null, true); await run(null, true);
         assert.equal((await client.query('SELECT count(*)::integer AS n FROM companies')).rows[0].n, 1);
         await unchanged();

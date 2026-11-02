@@ -14,7 +14,8 @@ const v = require('../src/api/services/workflow-input');
 const command = version => ({expected_version:version,operation_id:randomUUID()});
 function operatorFunction(name, expression, payload) {
   const source=`import importlib.util,json,sys\ns=importlib.util.spec_from_file_location("ops", "scripts/operations/${name}.py")\nm=importlib.util.module_from_spec(s);s.loader.exec_module(m)\nv=json.load(sys.stdin)\nprint(${expression})`;
-  const result=spawnSync('python3',['-c',source],{input:JSON.stringify(payload),encoding:'utf8'});
+  const python=process.env.PYTHON || (process.platform==='win32'?'python':'python3');
+  const result=spawnSync(python,['-c',source],{input:JSON.stringify(payload),encoding:'utf8'});
   assert.equal(result.status,0,result.stderr);
   return result.stdout.trim();
 }
@@ -78,7 +79,7 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
       const result=await adminService.read(adminActor);
       assert.ok(result.accounts.some(row=>row.role==='ADMIN'));
       assert.equal(result.student_workflow_access,false);
-      assert.equal(result.migrations.length,10);
+      assert.equal(result.migrations.length,11);
       assert.ok(result.accounts.every(row=>Object.keys(row).sort().join(',')==='account_status,id,role,version'));
       for(const actor of [staff,advisor])await assert.rejects(adminService.read(actor),e=>e.statusCode===403);
       await assert.rejects(service.dashboard(adminActor),e=>e.statusCode===403);
@@ -106,8 +107,13 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
     });
     await t.test('Student contact fields are mutable but TU identity and other Students remain protected',async()=>{
       const a=people[0].actor;
-      const updated=await service.saveContact(a,{contact_address:'123 Synthetic Road',contact_phone:'+66 81 000 0000',version:1,operation_id:randomUUID()});
+      const updated=await service.saveContact(a,{contact_address:'123 Synthetic Road',contact_phone:'+66 81 000 0000',contact_email:'contact@example.invalid',version:1,operation_id:randomUUID()});
       assert.equal(updated.contact_phone,'+66 81 000 0000');
+      assert.equal(updated.contact_email,'contact@example.invalid');
+      const emailOnly=await service.saveContact(a,{contact_email:'changed@example.invalid',version:2,operation_id:randomUUID()});
+      assert.equal(emailOnly.contact_address,updated.contact_address);
+      assert.equal(emailOnly.institutional_email,'test@example.invalid');
+      await assert.rejects(q('UPDATE students SET contact_email=$1 WHERE id=$2',['bad email',a.studentId]),e=>e.code==='23514');
       await assert.rejects(service.saveContact(a,{contact_address:'Stale value',version:1,operation_id:randomUUID()}),e=>e.statusCode===409);
       await assert.rejects(service.saveContact(a,{contact_address:'No operation ID',version:2}),e=>e.statusCode===400);
       await assert.rejects(service.saveContact(a,{contact_address:'No version',operation_id:randomUUID()}),e=>e.statusCode===400);
@@ -264,8 +270,9 @@ test('three-role workflow on isolated PostgreSQL schema', {skip:!process.env.CO_
         assert.equal((await runtime.dashboard(staff)).advisors.length,2);
         assert.equal((await runtime.getWorkflow(people[0].actor,people[0].plan)).placement.status,'CONFIRMED');
         const profile=(await q('SELECT version FROM students WHERE id=$1',[people[0].student])).rows[0];
-        const contact=await runtime.saveContact(people[0].actor,{contact_address:'Updated synthetic address',contact_phone:'0810000000',version:profile.version,operation_id:randomUUID()});
+        const contact=await runtime.saveContact(people[0].actor,{contact_address:'Updated synthetic address',contact_phone:'0810000000',contact_email:'runtime@example.invalid',version:profile.version,operation_id:randomUUID()});
         assert.equal(contact.version,profile.version+1);
+        assert.equal(contact.contact_email,'runtime@example.invalid');
         const c=await repository.getClient();
         try {
           await assert.rejects(c.query(`UPDATE students SET full_name='Spoof' WHERE id=$1`,[people[0].student]),e=>e.code==='42501');

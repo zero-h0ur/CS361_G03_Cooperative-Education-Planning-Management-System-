@@ -16,6 +16,7 @@ export const REVIEWED_MIGRATIONS = Object.freeze([
   ['008_returned_plan_cancellation.sql', '1e9853c72dcb7f1860521e4e157495f3e76f940dd573ec7a4855e1928013b0ca'],
   ['009_coordinator_committee_selection.sql', 'adf284bac0a62237ee1c73044c17754eae71c0e9ab1450f998653615c7234c3b'],
   ['010_phase1_applications_documents.sql', '033de7bdc6737a3637428d486365f5d4978c4490f632635f0fdc647c479b2523'],
+  ['011_student_contact_email.sql', 'ec16ab1d64a17d10ed60cded62aeef281f30f816c68c5e287568ef4ad53f4137'],
 ].map(row => Object.freeze(row)));
 
 const defaultDirectory = fileURLToPath(new URL('../../src/db/migrations/', import.meta.url));
@@ -24,7 +25,7 @@ function migrationFiles(directory) {
   const actual = readdirSync(directory).filter(name => name.endsWith('.sql')).sort();
   const expected = REVIEWED_MIGRATIONS.map(([name]) => name);
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error('Migration files differ from the reviewed 001–010 allowlist. Missing/unknown migrations are not accepted.');
+    throw new Error('Migration files differ from the reviewed 001–011 allowlist. Missing/unknown migrations are not accepted.');
   }
   return REVIEWED_MIGRATIONS.map(([name, expectedHash]) => {
     const path = join(directory, name);

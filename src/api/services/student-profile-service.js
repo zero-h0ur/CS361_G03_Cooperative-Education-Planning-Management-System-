@@ -34,6 +34,7 @@ const STUDENT_SELF_PROFILE_FIELDS = Object.freeze([
   'preferred_name',
   'contact_address',
   'contact_phone',
+  'contact_email',
   'institutional_email',
   'department',
   'program',
@@ -64,7 +65,7 @@ const STUDENT_SELF_MASKED_FIELDS = Object.freeze([
 /**
  * Explicit allowlist of fields editable by the Student (#51 & #65).
  */
-const STUDENT_SELF_EDITABLE_FIELDS = Object.freeze(['contact_address','contact_phone']);
+const STUDENT_SELF_EDITABLE_FIELDS = Object.freeze(['contact_address','contact_phone','contact_email']);
 
 /**
  * Explicit allowlist of fields accepted in Student self-profile update payloads (#51 & #65).

@@ -65,7 +65,8 @@ test('rejects unsafe protocols, credential URLs, escapes and undefined reference
 
 test('rejects symlinks that escape the checked repository', async t => {
   const root = await fixture(t, { 'README.md': '[outside](linked.md)\n' });
-  await symlink(join(root, '..'), join(root, 'linked.md'));
+  // Directory junctions exercise the same realpath escape check without requiring Windows admin privileges.
+  await symlink(join(root, '..'), join(root, 'linked.md'), process.platform==='win32'?'junction':'dir');
   const result = await checkDocuments({ root, entries: ['README.md'] });
   assert.ok(result.errors.some(error => error.includes('outside repository')));
 });
