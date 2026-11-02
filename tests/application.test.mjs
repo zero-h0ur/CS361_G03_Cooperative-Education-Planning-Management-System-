@@ -329,6 +329,13 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
       await q(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data)
         VALUES($1,$2,'66',3,2568,'synthetic future policy',false,true,'{}')`,[randomUUID(),cycle]);
       const retained=await service.get(actor,app.id);assert.equal(retained.policy.id,pol.id);assert.equal(retained.submission.checksum,snapshot);
+      const {ThreeRoleService}=require('../src/api/services/three-role-service');
+      const contactVersion=(await q('SELECT version FROM students WHERE id=$1',[sid])).rows[0].version;
+      const profile=await new ThreeRoleService({pool}).saveContact(actor,{contact_email:'new-profile@example.invalid',version:contactVersion,operation_id:randomUUID()});
+      assert.equal(profile.contact_email,'new-profile@example.invalid');
+      const unchanged=await service.get(actor,app.id);
+      assert.equal(unchanged.submission.checksum,snapshot);
+      assert.equal(unchanged.submission.snapshot.payload.contact_email,'contact@example.invalid');
     });
     await t.test('production-equivalent least privileges can save and upload, but cannot forge verified metadata',async()=>{
       await admin.query(`CREATE ROLE "${role}" NOLOGIN`);

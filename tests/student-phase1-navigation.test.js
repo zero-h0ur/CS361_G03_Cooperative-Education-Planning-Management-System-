@@ -26,7 +26,7 @@ test.each(['#/student/plan', '#/student/selection'])('legacy bookmark %s still r
     await app.start();
     expect(root.querySelector('h1').textContent).toBe(getRoute(hash).title);
     expect([...root.querySelectorAll('.shell-nav__link')].map(link => link.getAttribute('href')))
-      .toEqual(['#/student/profile', '#/student/application']);
+      .toEqual(['#/student/profile', '#/student/application', 'company-directory.html']);
     expect(root.querySelector('.shell-nav').textContent).not.toContain('ระบบเดิม');
     expect(root.querySelector('[aria-current="page"]')).toBeNull();
   } finally { app.destroy(); root.remove(); }

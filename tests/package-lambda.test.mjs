@@ -36,6 +36,7 @@ test('Lambda release is self-contained and preserves reviewed migrations without
       await mkdir(dirname(join(extracted, entry)), { recursive: true });
       await writeFile(join(extracted, entry), readZipEntry(manifest.artifact, entry));
     }
+    assert.doesNotMatch(await readFile(join(extracted, 'src/lambda.js'), 'utf8'), /coed-local\.example\.invalid|LOCAL140/);
     assert.deepEqual(await readFile(join(extracted, 'global-bundle.pem')), await readFile(caFile));
     for (const name of ['001_initial_schema.sql', '002_v3_identity_student_plan_assignment_audit.sql',
       '009_coordinator_committee_selection.sql','010_phase1_applications_documents.sql']) {

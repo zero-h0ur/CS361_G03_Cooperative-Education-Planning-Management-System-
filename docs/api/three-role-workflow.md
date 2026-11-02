@@ -33,7 +33,7 @@ no-store` and the standard `{ data: ... }` envelope.
 
 | Method | Path | Authorized actor / behavior |
 | --- | --- | --- |
-| GET | `/students/me` | Own Student; now includes `contact_address`, `contact_phone` |
+| GET | `/students/me` | Own Student; includes `contact_address`, `contact_phone`, `contact_email` |
 | GET | `/admin/operations` | Active Admin only: account role/status/version, migration names, catalogue counts; no Student/Plan business data |
 | PATCH | `/students/me` | Own contact fields, `version`, `operation_id`; TU fields rejected |
 | GET | `/plans/:id/workflow` | Owner / scoped Staff / currently assigned Advisor |
@@ -54,6 +54,8 @@ no-store` and the standard `{ data: ... }` envelope.
 | POST | `/plans/:id/placement/mark-sent` | Scoped Staff; record external form dispatch reference |
 | POST | `/plans/:id/placement/return` | Scoped Staff; return company form with reason |
 | POST | `/plans/:id/placement/confirm` | Scoped Staff; compare company/Student and retain external evidence reference |
+
+Profile contact email is separate from read-only `institutional_email`. A blank string or `null` clears it; omitted fields retain their current values. Email must be plain text, at most 254 characters, with a valid address shape. Changes use the existing ownership check, optimistic version, idempotency receipt and audit transaction; they never rewrite submitted application snapshots. Migration `011_student_contact_email.sql` adds the nullable column without copying university or application email into it. Applying this migration and the updated column grants requires a separately approved release.
 
 Existing start-review, return-for-revision, approve, history and Advisor read endpoints
 remain canonical. Historical preferred-name data remains readable, but the legacy

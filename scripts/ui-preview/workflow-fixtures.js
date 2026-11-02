@@ -8,7 +8,9 @@ export function enhanceWorkflowPreview(clients,{role,scenario}={}) {
   const ids={cycle:'30000000-0000-4000-8000-000000000101',policy:'60000000-0000-4000-8000-000000000101',advisor:'70000000-0000-4000-8000-000000000101'};
   const requirement={id:'eligibility',title:'แบบฟอร์มตรวจคุณสมบัติ (สมมติ)',required:true,format:'pdf',filename_pattern:'{student_number}_eligibility.pdf'};
   const policy={id:ids.policy,cycle_id:ids.cycle,department:tuProf?.department || 'ภาควิชาวิทยาการคอมพิวเตอร์',program:'',version:1,requirements:[requirement]};
-  let policies=[policy], assignments=[],contact={contact_address:'99 ถนนตัวอย่าง ตำบลคลองหนึ่ง อำเภอคลองหลวง จังหวัดปทุมธานี 12120 (ข้อมูลสมมติ)',contact_phone:'0800000000',version:1};
+  let policies=[policy], assignments=[],contact={contact_address:'99 ถนนตัวอย่าง ตำบลคลองหนึ่ง อำเภอคลองหลวง จังหวัดปทุมธานี 12120 (ข้อมูลสมมติ)',contact_phone:'0800000000',contact_email:'contact@example.invalid',version:1};
+  const originalProfile=clients.studentProfileClient?.getOwnProfile.bind(clients.studentProfileClient);
+  if(originalProfile)clients.studentProfileClient={async getOwnProfile(options){return {...await originalProfile(options),...copy(contact)};}};
   const original=clients.studentPlanClient?.getOwnPlan.bind(clients.studentPlanClient);
   const originalSave=clients.studentPlanClient?.saveDraft?.bind(clients.studentPlanClient);
   async function base(id){

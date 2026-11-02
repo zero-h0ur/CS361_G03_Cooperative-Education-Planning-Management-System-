@@ -10,12 +10,12 @@
  */
 
 const { execFileSync } = require('child_process');
-const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
 const { migrate } = require('../src/db/migrate');
 const { assertDestructiveResetAllowed } = require('../src/db/seed');
+const { readReviewedMigrationRows } = require('./helpers/reviewed-migrations');
 
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'src', 'db', 'migrations');
 const VERIFICATION_SQL_PATH = path.join(
@@ -31,10 +31,7 @@ const V2_DATASET_PATH = path.join(__dirname, '..', 'data', 'v2', 'mock-dataset.j
 const V3_FIXTURES_PATH = path.join(__dirname, '..', 'data', 'v3', 'fixtures.json');
 
 const SILENT_LOGGER = { log: () => {}, error: () => {} };
-
-function sha256(content) {
-  return crypto.createHash('sha256').update(content, 'utf8').digest('hex');
-}
+const REVIEWED_MIGRATIONS = readReviewedMigrationRows();
 
 const MIGRATION_001_SQL = fs.readFileSync(
   path.join(MIGRATIONS_DIR, '001_initial_schema.sql'),
@@ -44,14 +41,8 @@ const MIGRATION_002_SQL = fs.readFileSync(
   path.join(MIGRATIONS_DIR, '002_v3_identity_student_plan_assignment_audit.sql'),
   'utf8'
 );
-const CHECKSUM_001 = sha256(MIGRATION_001_SQL);
-const CHECKSUM_002 = sha256(MIGRATION_002_SQL);
+const CHECKSUM_001 = REVIEWED_MIGRATIONS.find(row => row.version === '001_initial_schema.sql').checksum;
 const MIGRATION_003_SQL = fs.readFileSync(path.join(MIGRATIONS_DIR, '003_partner_directory.sql'), 'utf8');
-const CHECKSUM_003 = sha256(MIGRATION_003_SQL);
-const WORKFLOW_MIGRATIONS = ['004_three_role_workflow.sql','005_submission_snapshots.sql',
-  '006_advisor_display_name.sql','007_submission_policy_integrity.sql','008_returned_plan_cancellation.sql',
-  '009_coordinator_committee_selection.sql','010_phase1_applications_documents.sql']
-  .map(version=>({version,checksum:sha256(fs.readFileSync(path.join(MIGRATIONS_DIR,version),'utf8'))}));
 
 const SENSITIVE_FIELD_PATTERN =
   /(?:^|_)(?:password|passwd|secret|token|api_key|access_key|secret_key|private_key|credential|database_url|connection_string)(?:$|_)/i;
@@ -251,18 +242,10 @@ describe('Issue #78 [V3-T01]: Verify V3 migrations, constraints and safe fixture
 
       expect(harness.wasLockAcquired()).toBe(true);
       expect(harness.wasReleased()).toBe(true);
-      expect(harness.getCommittedMigrations()).toEqual([
-        { version: '001_initial_schema.sql', checksum: CHECKSUM_001 },
-        {
-          version: '002_v3_identity_student_plan_assignment_audit.sql',
-          checksum: CHECKSUM_002
-        },
-        { version: '003_partner_directory.sql', checksum: CHECKSUM_003 },
-        ...WORKFLOW_MIGRATIONS
-      ]);
+      expect(harness.getCommittedMigrations()).toEqual(REVIEWED_MIGRATIONS);
     });
 
-    it('migrates from V2 without rerunning 001, backfills its checksum, and applies 002 and 003', async () => {
+    it('migrates from V2 without rerunning 001, backfills its checksum, and applies every remaining reviewed migration', async () => {
       const harness = createMockMigrationPool({
         initialApplied: [{ version: '001_initial_schema.sql', checksum: null }]
       });
@@ -276,39 +259,20 @@ describe('Issue #78 [V3-T01]: Verify V3 migrations, constraints and safe fixture
       expect(sqls).toContain(MIGRATION_002_SQL.trim());
       expect(sqls).toContain(MIGRATION_003_SQL.trim());
 
-      expect(harness.getCommittedMigrations()).toEqual([
-        { version: '001_initial_schema.sql', checksum: CHECKSUM_001 },
-        {
-          version: '002_v3_identity_student_plan_assignment_audit.sql',
-          checksum: CHECKSUM_002
-        },
-        { version: '003_partner_directory.sql', checksum: CHECKSUM_003 },
-        ...WORKFLOW_MIGRATIONS
-      ]);
+      expect(harness.getCommittedMigrations()).toEqual(REVIEWED_MIGRATIONS);
     });
 
     it('is idempotent when rerun on an already-migrated V3 database', async () => {
       const harness = createMockMigrationPool({
-        initialApplied: [
-          { version: '001_initial_schema.sql', checksum: CHECKSUM_001 },
-          {
-            version: '002_v3_identity_student_plan_assignment_audit.sql',
-            checksum: CHECKSUM_002
-          },
-          { version: '003_partner_directory.sql', checksum: CHECKSUM_003 },
-          ...WORKFLOW_MIGRATIONS
-        ]
+        initialApplied: REVIEWED_MIGRATIONS
       });
 
       await migrate({ pool: harness.pool, logger: SILENT_LOGGER });
 
       const sqls = harness.getExecutedSqlLog().map((entry) => entry.sql);
-      expect(sqls).not.toContain(MIGRATION_001_SQL.trim());
-      expect(sqls).not.toContain(MIGRATION_002_SQL.trim());
-      expect(sqls).not.toContain(MIGRATION_003_SQL.trim());
-      expect(harness.getCommittedMigrations()).toHaveLength(10);
-      for(const migration of WORKFLOW_MIGRATIONS) {
-        expect(sqls).not.toContain(fs.readFileSync(path.join(MIGRATIONS_DIR,migration.version),'utf8').trim());
+      expect(harness.getCommittedMigrations()).toEqual(REVIEWED_MIGRATIONS);
+      for (const migration of REVIEWED_MIGRATIONS) {
+        expect(sqls).not.toContain(fs.readFileSync(path.join(MIGRATIONS_DIR, migration.version), 'utf8').trim());
       }
     });
 

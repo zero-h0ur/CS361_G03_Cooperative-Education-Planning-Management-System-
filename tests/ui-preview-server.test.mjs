@@ -35,6 +35,6 @@ test('production dependency graph contains no Preview entry point or fixtures', 
   for (const entry of ['src/frontend/app.js', 'navbar-auth.js']) {
     const result = await build({ entryPoints: [entry], bundle: true, write: false,
       outfile: 'tmp/ui-preview/production-check.js', metafile: true, logLevel: 'silent' });
-    assert.equal(Object.keys(result.metafile.inputs).some((path) => /ui-preview|dev-ui/.test(path)), false);
+    assert.equal(Object.keys(result.metafile.inputs).some((path) => /ui-preview|dev-ui|scripts\/local-dev/.test(path)), false);
   }
 });

@@ -1,5 +1,7 @@
 const { getPool, close } = require('../src/db/connection');
 const { seed } = require('../src/db/seed');
+const { readReviewedMigrationRows } = require('./helpers/reviewed-migrations');
+const REVIEWED_MIGRATIONS = readReviewedMigrationRows();
 const { 
   listPublicCompanies, 
   listPublicPositionsByCompany, 
@@ -51,21 +53,7 @@ describe('Data Access Layer', () => {
     it('should have schema_migrations tracking table', async () => {
       const pool = getPool();
       const res = await pool.query(`SELECT version, checksum FROM schema_migrations ORDER BY version`);
-      expect(res.rows.map(row => row.version)).toEqual([
-        '001_initial_schema.sql',
-        '002_v3_identity_student_plan_assignment_audit.sql',
-        '003_partner_directory.sql',
-        '004_three_role_workflow.sql',
-        '005_submission_snapshots.sql',
-        '006_advisor_display_name.sql',
-        '007_submission_policy_integrity.sql',
-        '008_returned_plan_cancellation.sql',
-        '009_coordinator_committee_selection.sql',
-        '010_phase1_applications_documents.sql',
-      ]);
-      for (const migration of res.rows) {
-        expect(migration.checksum).toMatch(/^[0-9a-f]{64}$/);
-      }
+      expect(res.rows).toEqual(REVIEWED_MIGRATIONS);
     });
   });
 

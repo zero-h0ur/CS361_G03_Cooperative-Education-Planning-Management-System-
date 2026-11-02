@@ -42,7 +42,7 @@ describe('V3 runtime ACL policy on isolated PostgreSQL', () => {
     try {
       await client.query('BEGIN');
       await client.query('SET LOCAL ROLE coed_app');
-      const result = await client.query(`UPDATE students SET contact_address='ACL regression',
+      const result = await client.query(`UPDATE students SET contact_address='ACL regression',contact_email='contact@example.invalid',
         version=version+1,updated_at=CURRENT_TIMESTAMP WHERE id=(
           SELECT id FROM students WHERE user_id IS NOT NULL LIMIT 1) RETURNING id`);
       expect(result.rowCount).toBe(1);

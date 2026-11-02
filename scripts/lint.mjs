@@ -5,7 +5,8 @@ const root = new URL('../', import.meta.url);
 let count = 0;
 async function inspect(path) {
   for (const entry of await readdir(new URL(path || '.', root), {withFileTypes:true})) {
-    const name = join(path, entry.name);
+    // Use URL-style relative paths for traversal and ES-module classification on Windows too.
+    const name = join(path, entry.name).replaceAll('\\', '/');
     if (entry.isDirectory() && ['src','scripts','tests'].includes(name.split('/')[0])) await inspect(name);
     else if (entry.isFile() && /\.(?:js|mjs)$/.test(name)) {
       const module = name.startsWith('src/frontend/') || name.startsWith('scripts/ui-preview/');

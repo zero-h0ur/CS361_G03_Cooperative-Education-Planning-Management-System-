@@ -11,7 +11,14 @@ export const APPLICATION_SCENARIOS=Object.freeze({
   'application-61':'ใบสมัคร · หลักสูตร 61 (ข้อมูลสมมติ)',
   'application-failed':'ใบสมัคร · บันทึกล้มเหลว (เก็บที่กรอก)',
   'application-conflict':'ใบสมัคร · ข้อมูลเปลี่ยนระหว่างใช้งาน',
-  'application-submitted':'ใบสมัคร · ส่งแล้ว (อ่านอย่างเดียว)'
+  'application-submitted':'ใบสมัคร · ส่งแล้ว (อ่านอย่างเดียว)',
+  'application-overview':'ใบสมัครทั้งหมด · ฉบับร่างและประวัติ',
+  'application-empty':'ใบสมัครทั้งหมด · ยังไม่มีใบสมัคร',
+  'application-multiple':'ใบสมัครทั้งหมด · หลายฉบับร่าง',
+  'application-closed':'ใบสมัคร · รอบปิดแล้ว',
+  'application-long-text':'ใบสมัคร · ข้อความยาว',
+  'application-list-error':'ใบสมัครทั้งหมด · โหลดรายการไม่สำเร็จ',
+  'application-options-error':'ใบสมัครทั้งหมด · โหลดรอบไม่สำเร็จ'
 });
 export const APPLICATION_PREVIEW_ID='14100000-0000-4000-8000-000000000001';
 export function createApplicationPreview({scenario='application-pending'}={}) {
@@ -53,6 +60,16 @@ export function createApplicationPreview({scenario='application-pending'}={}) {
     documents:scenario==='application-pending'?[]:docs,submitted_at:scenario==='application-submitted'?new Date().toISOString():null,preview:true}];
   const cycles=[{id:cycle,name:'รอบ 1/2569 · ข้อมูลสมมติ',status:'OPEN',academic_year:2569,semester:1},
     {id:otherCycle,name:'รอบ 2/2569 · ข้อมูลสมมติ',status:'OPEN',academic_year:2569,semester:2}];
+  if(['application-overview','application-multiple'].includes(scenario))apps.push({...copy(apps[0]),id:'14100000-0000-4000-8000-000000000020',cycle_id:otherCycle,cycle_name:'รอบ 2/2568 · ข้อมูลสมมติ',status:'SUBMITTED',submitted_at:'2026-08-10T03:00:00Z'});
+  if(['application-overview','application-multiple'].includes(scenario))Object.assign(cycles[1],{name:'รอบ 2/2568 · ข้อมูลสมมติ',academic_year:2568,status:'CLOSED'});
+  if(scenario==='application-multiple') {
+    const third='14100000-0000-4000-8000-000000000030';
+    cycles.push({id:third,name:'รอบพิเศษ · ข้อมูลสมมติ',status:'OPEN'});
+    apps.push({...copy(apps[0]),id:'14100000-0000-4000-8000-000000000031',cycle_id:third,cycle_name:'รอบพิเศษ · ข้อมูลสมมติ'});
+  }
+  if(scenario==='application-empty')apps=[];
+  if(scenario==='application-closed'){cycles[0].status='CLOSED';apps[0].availability={can_edit:false,closes_at:'2026-01-01T00:00:00Z'};}
+  if(scenario==='application-long-text')cycles[0].name=apps[0].cycle_name='รอบรับสมัครสำหรับนักศึกษาหลักสูตรวิทยาศาสตรบัณฑิต สาขาวิทยาการคอมพิวเตอร์ (ข้อมูลยาวสมมติสำหรับทดสอบการตัดบรรทัด)';
   const receipt=new Map();
   function get(id){const app=apps.find(a=>a.id===id);if(!app)throw new Error('ไม่พบใบสมัครจำลอง');return app;}
   function mutation(id,body,work){
@@ -64,8 +81,8 @@ export function createApplicationPreview({scenario='application-pending'}={}) {
   }
   const check=app=>readiness({app,official:app.official,policy:app.policy,documents:app.documents,window:{is_open:true},roundOpen:true,allowSynthetic:true});
   return {
-    async options(){return copy({official,cycles,criteria:policyModule.templates(),storage_configured:false,preview:true});},
-    async list(){return copy(apps);},async get(id){return copy(get(id));},
+    async options(){if(scenario==='application-options-error')throw new Error('โหลดข้อมูลรอบไม่สำเร็จ (จำลอง)');return copy({official,cycles,criteria:policyModule.templates(),storage_configured:false,preview:true});},
+    async list(){if(scenario==='application-list-error')throw new Error('โหลดใบสมัครไม่สำเร็จ (จำลอง)');return copy(apps.map(a=>({id:a.id,cycle_id:a.cycle_id,status:a.status,version:a.version,submitted_at:a.submitted_at,updated_at:a.updated_at})));},async get(id){return copy(get(id));},
     async create(body){if(receipt.has(body.operation_id))return copy(receipt.get(body.operation_id));
       if(apps.some(a=>a.cycle_id===body.cycle_id))throw new Error('มีใบสมัครในรอบนี้แล้ว');
       const app={id:crypto.randomUUID(),cycle_id:body.cycle_id,student_id:official.student_id,cycle_name:cycles.find(c=>c.id===body.cycle_id)?.name,form_version:form.FORM_VERSION,status:'DRAFT',version:1,payload:{},official,policy,documents:[],preview:true};

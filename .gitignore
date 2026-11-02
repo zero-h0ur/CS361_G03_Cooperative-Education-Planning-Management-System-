@@ -4,10 +4,13 @@
 /tmp/grill-me/
 /tmp/frontend-test-modules/
 /tmp/three-role-pg/
+/tmp/local-dev/
 /tmp/application-documents/
 /dist/
 /tmp/release-candidates/
 /tmp/release-trust/
+/tmp/student-ui-browser/
+/tmp/student-workspace-pg-20261102/
 
 # macOS system files
 .DS_Store

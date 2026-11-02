@@ -1,0 +1,26 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadPasswordRulesAndMfaList",
+      "Effect": "Allow",
+      "Action": ["iam:GetAccountPasswordPolicy", "iam:ListVirtualMFADevices"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ManageOwnPasswordAndEnrollOwnMfa",
+      "Effect": "Allow",
+      "Action": ["iam:GetUser", "iam:ChangePassword", "iam:ListMFADevices", "iam:EnableMFADevice", "iam:ResyncMFADevice"],
+      "Resource": [
+        "arn:aws:iam::130165494095:user/${aws:username}",
+        "arn:aws:iam::130165494095:user/*/${aws:username}"
+      ]
+    },
+    {
+      "Sid": "CreateOwnVirtualMfaDevice",
+      "Effect": "Allow",
+      "Action": "iam:CreateVirtualMFADevice",
+      "Resource": "arn:aws:iam::130165494095:mfa/${aws:username}"
+    }
+  ]
+}

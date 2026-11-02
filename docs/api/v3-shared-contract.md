@@ -256,6 +256,9 @@ Response (`GET` และผลของการ Update) ส่งเฉพา�
     "student_number": "6509610001",
     "full_name": "<ชื่อทางการ>",
     "preferred_name": "Chai",
+    "contact_address": null,
+    "contact_phone": null,
+    "contact_email": null,
     "institutional_email": "<email>@dome.tu.ac.th",
     "department": "Computer Science",
     "program": "B.Sc. Computer Science",
@@ -272,10 +275,11 @@ Response (`GET` และผลของการ Update) ส่งเฉพา�
 Update payload:
 
 ```json
-{ "contact_address": "Synthetic address", "contact_phone": "0810000000", "version": 3, "operation_id": "90000000-0000-4000-8000-000000000001" }
+{ "contact_address": "Synthetic address", "contact_phone": "0810000000", "contact_email": "contact@example.invalid", "version": 3, "operation_id": "90000000-0000-4000-8000-000000000001" }
 ```
 
-- ส่ง `contact_address` หรือ `contact_phone` อย่างน้อยหนึ่งช่อง ช่องที่ไม่ได้ส่งจะคงค่าเดิม ชื่อและข้อมูลทางการเป็นแบบอ่านอย่างเดียว
+- ส่ง `contact_address`, `contact_phone` หรือ `contact_email` อย่างน้อยหนึ่งช่อง ช่องที่ไม่ได้ส่งจะคงค่าเดิม ชื่อและข้อมูลทางการเป็นแบบอ่านอย่างเดียว
+- `contact_email` แยกจาก `institutional_email`: ไม่เกิน 254 ตัวอักษร ไม่มีอักขระควบคุม และต้องเป็นรูปแบบอีเมล; ส่ง `null` หรือข้อความว่างเพื่อล้างค่า การแก้โปรไฟล์ไม่ย้อนเปลี่ยน Snapshot ของใบสมัครที่ส่งแล้ว ต้องมี Migration 011 และสิทธิ์แก้คอลัมน์นี้ก่อนใช้ API รุ่นใหม่
 - ต้องส่ง `version` ล่าสุดและ `operation_id` UUID การเปลี่ยนข้อมูล ผลลัพธ์สำหรับ retry และ audit อยู่ใน transaction เดียวกัน ไม่มี Last-write-wins fallback
 - ถ้ามี Field อื่นใน Payload (Field ทางการ, Immutable หรือไม่รู้จัก) ระบบจะปฏิเสธทั้ง Request โดยไม่แก้ข้อมูลบางส่วน
 - ไม่รับ Query parameter ใดๆ

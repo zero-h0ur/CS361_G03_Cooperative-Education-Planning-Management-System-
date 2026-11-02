@@ -4,7 +4,7 @@
   "description": "CO-ED V2 Data Access Layer",
   "main": "index.js",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "scripts": {
     "lint": "node scripts/lint.mjs",
@@ -26,7 +26,7 @@
     "test:authz": "jest --runInBand tests/authorization.test.js",
     "test:workflow": "jest --runInBand tests/workflow-service.test.js",
     "test:session": "jest --runInBand tests/session-me.test.js",
-    "test:profile": "jest --runInBand tests/student-profile.test.js",
+    "test:profile": "jest --runInBand tests/student-profile.test.js tests/student-contact-email.test.js",
     "test:advisor": "jest --runInBand tests/advisor-read.test.js",
     "test:plan": "jest --runInBand tests/student-plan.test.js tests/plan-cycle-options.test.js",
     "test:staff": "jest --runInBand tests/staff-review-queue.test.js",
@@ -42,8 +42,9 @@
     "test:fixtures": "node --test tests/v3-dataset.test.mjs && jest --runInBand tests/v3-fixtures.test.js",
     "test:v3-t01": "node --test tests/v3-dataset.test.mjs && jest --runInBand tests/v3-fixtures.test.js tests/v3-t01-migrations-constraints-fixtures.test.js tests/v3-migration.test.js",
     "test:dal": "jest --runInBand tests/dal.test.js",
-    "test:frontend": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/company-directory.test.js tests/authenticated-session.test.js tests/authenticated-shell.test.js tests/student-phase1-navigation.test.js tests/login-logout-session-ux.test.js tests/auth-client-logout.test.js tests/auth-client-revocation.test.js tests/student-dashboard-profile.test.js tests/student-plan-submission-ux.test.js tests/student-plan-editor.test.js tests/advisor-assigned-ui.test.js tests/staff-review-workspace-ui.test.js tests/staff-student-management.test.js tests/navbar-auth.test.js tests/company-directory-real-data.test.js",
+    "test:frontend": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/company-directory.test.js tests/authenticated-session.test.js tests/authenticated-shell.test.js tests/student-phase1-navigation.test.js tests/student-workspace-redesign.test.js tests/login-logout-session-ux.test.js tests/auth-client-logout.test.js tests/auth-client-revocation.test.js tests/student-dashboard-profile.test.js tests/student-plan-submission-ux.test.js tests/student-plan-editor.test.js tests/advisor-assigned-ui.test.js tests/staff-review-workspace-ui.test.js tests/staff-student-management.test.js tests/navbar-auth.test.js tests/company-directory-real-data.test.js",
     "test:staff-ui": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/staff-student-management.test.js",
+    "test:student-workspace": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/student-workspace-redesign.test.js tests/application-ui.test.js tests/student-dashboard-profile.test.js",
     "test:migration": "jest --runInBand tests/v3-migration.test.js tests/v3-t01-migrations-constraints-fixtures.test.js",
     "test:deployment": "node --test tests/deployed-v2.test.mjs",
     "test:docs": "node --test tests/docs-links.test.mjs && node scripts/verify-doc-links.mjs",
@@ -57,6 +58,13 @@
     "test:selection": "node --test tests/selection-workflow.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/selection-api.test.js tests/selection-ui.test.js",
     "build:v4": "node scripts/build-v4.mjs",
     "test:v4-build": "node --test tests/v4-build.test.mjs",
+    "dev:db": "docker compose -f compose.dev.yml up -d --wait",
+    "dev:db:stop": "docker compose -f compose.dev.yml stop",
+    "dev:setup": "node scripts/local-dev/setup.mjs --reset",
+    "dev:api": "node scripts/local-dev/api.mjs",
+    "dev:token": "node scripts/local-dev/token.mjs",
+    "test:local": "node scripts/local-dev/test.mjs",
+    "test:local-dev": "node --test tests/local-dev.test.mjs",
     "test:application": "node --test tests/application.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/application-ui.test.js tests/application-api.test.js"
   },
   "dependencies": {

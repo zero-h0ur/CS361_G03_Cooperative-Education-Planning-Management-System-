@@ -83,8 +83,8 @@ class ThreeRoleService {
     });
   }
   async saveContact(actor,body) {
-    student(actor); v.fields(body,['contact_address','contact_phone','version','operation_id']);
-    if(!Object.hasOwn(body,'contact_address')&&!Object.hasOwn(body,'contact_phone'))throw new ValidationError('กรุณาระบุข้อมูลติดต่อที่ต้องการแก้ไข');
+    student(actor); v.fields(body,['contact_address','contact_phone','contact_email','version','operation_id']);
+    if(!['contact_address','contact_phone','contact_email'].some(key=>Object.hasOwn(body,key)))throw new ValidationError('กรุณาระบุข้อมูลติดต่อที่ต้องการแก้ไข');
     let address=body.contact_address;
     if(address!=null) {
       if(typeof address!=='string'||address.length>1000||/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(address))throw new ValidationError('กรุณาระบุที่อยู่ไม่เกิน 1000 ตัวอักษร');
@@ -92,12 +92,14 @@ class ThreeRoleService {
     }
     const phone=v.text(body.contact_phone,'contact_phone',40,false);
     if (phone && (!/^[+()\d .-]{5,40}$/.test(phone)||!/\d/.test(phone))) throw new ValidationError('กรุณาตรวจสอบรูปแบบเบอร์โทรศัพท์');
+    const email=v.text(body.contact_email,'contact_email',254,false);
+    if(email && !require('../../shared/application-form').EMAIL.test(email))throw new ValidationError('กรุณาตรวจสอบรูปแบบอีเมลติดต่อ',[{field:'contact_email',issue:'invalid email'}]);
     return this.transaction(actor,async (c,r) => {
-      const s=await r.one(c,'SELECT id,user_id,version,contact_address,contact_phone FROM students WHERE id=$1 FOR UPDATE',[actor.studentId]);
+      const s=await r.one(c,'SELECT id,user_id,version,contact_address,contact_phone,contact_email FROM students WHERE id=$1 FOR UPDATE',[actor.studentId]);
       if (!s || s.user_id !== actor.userId) throw new ForbiddenError();
       return this.write(c,actor,'contact:save',s.id,{...body,expected_version:body.version},async () => {
         version(s.version,body.version);
-        const updated=await r.contact(c,actor,Object.hasOwn(body,'contact_address')?address:s.contact_address,Object.hasOwn(body,'contact_phone')?phone:s.contact_phone);
+        const updated=await r.contact(c,actor,Object.hasOwn(body,'contact_address')?address:s.contact_address,Object.hasOwn(body,'contact_phone')?phone:s.contact_phone,Object.hasOwn(body,'contact_email')?email:s.contact_email);
         return require('./student-profile-service').toStudentSelfProfile(updated);
       });
     });

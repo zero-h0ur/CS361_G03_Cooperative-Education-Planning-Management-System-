@@ -1,0 +1,60 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadAndDeployExistingApiCode",
+      "Effect": "Allow",
+      "Action": ["lambda:GetFunction", "lambda:GetFunctionConfiguration", "lambda:GetFunctionConcurrency", "lambda:ListVersionsByFunction", "lambda:GetPolicy", "lambda:UpdateFunctionCode"],
+      "Resource": "arn:aws:lambda:ap-southeast-2:130165494095:function:coed-api"
+    },
+    {
+      "Sid": "ReadExistingWebApp",
+      "Effect": "Allow",
+      "Action": ["amplify:GetApp", "amplify:ListBranches"],
+      "Resource": "arn:aws:amplify:ap-southeast-2:130165494095:apps/d1bpmj87vmjb96"
+    },
+    {
+      "Sid": "ReadAndManuallyDeployExistingWebBranch",
+      "Effect": "Allow",
+      "Action": ["amplify:GetBranch", "amplify:ListJobs", "amplify:CreateDeployment", "amplify:StartDeployment"],
+      "Resource": "arn:aws:amplify:ap-southeast-2:130165494095:apps/d1bpmj87vmjb96/branches/main"
+    },
+    {
+      "Sid": "ReadExistingWebJobs",
+      "Effect": "Allow",
+      "Action": "amplify:GetJob",
+      "Resource": "arn:aws:amplify:ap-southeast-2:130165494095:apps/d1bpmj87vmjb96/branches/main/jobs/*"
+    },
+    {
+      "Sid": "ReadExistingApiAndAuthentication",
+      "Effect": "Allow",
+      "Action": "apigateway:GET",
+      "Resource": ["arn:aws:apigateway:ap-southeast-2::/apis/yhfevhqtoa", "arn:aws:apigateway:ap-southeast-2::/apis/yhfevhqtoa/*"]
+    },
+    {
+      "Sid": "ReadExistingTestUserPool",
+      "Effect": "Allow",
+      "Action": ["cognito-idp:DescribeUserPool", "cognito-idp:DescribeUserPoolClient", "cognito-idp:ListUserPoolClients", "cognito-idp:ListUsers"],
+      "Resource": "arn:aws:cognito-idp:ap-southeast-2:130165494095:userpool/ap-southeast-2_Um6nksXa1"
+    },
+    {
+      "Sid": "ReadApiLogs",
+      "Effect": "Allow",
+      "Action": ["logs:DescribeLogStreams", "logs:FilterLogEvents", "logs:GetLogEvents"],
+      "Resource": ["arn:aws:logs:ap-southeast-2:130165494095:log-group:/aws/lambda/coed-api", "arn:aws:logs:ap-southeast-2:130165494095:log-group:/aws/lambda/coed-api:*"]
+    },
+    {
+      "Sid": "ReadRegionalResourceMetadata",
+      "Effect": "Allow",
+      "Action": ["rds:DescribeDBInstances", "rds:DescribeDBSubnetGroups", "ec2:DescribeVpcs", "ec2:DescribeSubnets", "ec2:DescribeSecurityGroups", "ec2:DescribeVpcEndpoints", "lambda:ListFunctions", "amplify:ListApps", "logs:DescribeLogGroups"],
+      "Resource": "*",
+      "Condition": {"StringEquals": {"aws:RequestedRegion": "ap-southeast-2"}}
+    },
+    {
+      "Sid": "LocalCliSignIn",
+      "Effect": "Allow",
+      "Action": ["signin:AuthorizeOAuth2Access", "signin:CreateOAuth2Token"],
+      "Resource": "arn:aws:signin:ap-southeast-2:130165494095:oauth2/public-client/localhost"
+    }
+  ]
+}
