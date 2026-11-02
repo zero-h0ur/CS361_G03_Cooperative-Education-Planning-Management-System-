@@ -391,5 +391,47 @@ describe('TU Authentication Service (Hybrid Mode)', () => {
       const body = await res.json();
       expect(body.error.code).toBe('VALIDATION_ERROR');
     });
+
+    it('dynamically stores and returns arbitrary TU API response fields without using hardcoded mocks', async () => {
+      const uniqueSuffix = Date.now();
+      const dynamicTuApiResponse = {
+        status: true,
+        message: 'Success',
+        type: 'student',
+        username: '6709650334',
+        tu_status: 'ปกติ',
+        statusid: '10',
+        displayname_th: `ชื่อจริงจาก_TU_API_${uniqueSuffix}`,
+        displayname_en: `Real_Name_${uniqueSuffix}`,
+        email: `real_${uniqueSuffix}@dome.tu.ac.th`,
+        department: `สาขาวิชาจริง_${uniqueSuffix}`,
+        faculty: `คณะจริง_${uniqueSuffix}`
+      };
+
+      const res = await fetch(`${baseUrl}/api/v3/auth/tu-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: '6709650334',
+          password: 'any-password',
+          tuResponse: dynamicTuApiResponse
+        })
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+
+      // Verify every single field in profile & tuResponse comes from the dynamic TU API response
+      expect(body.data.tuResponse).toEqual(dynamicTuApiResponse);
+      expect(body.data.profile.student_number).toBe('6709650334');
+      expect(body.data.profile.full_name).toBe(`ชื่อจริงจาก_TU_API_${uniqueSuffix}`);
+      expect(body.data.profile.preferred_name).toBe(`Real_Name_${uniqueSuffix}`);
+      expect(body.data.profile.institutional_email).toBe(`real_${uniqueSuffix}@dome.tu.ac.th`);
+      expect(body.data.profile.department).toBe(`สาขาวิชาจริง_${uniqueSuffix}`);
+      expect(body.data.profile.faculty).toBe(`คณะจริง_${uniqueSuffix}`);
+      expect(body.data.profile.tu_status).toBe('ปกติ');
+      expect(body.data.profile.statusid).toBe('10');
+      expect(body.data.profile.academic_year).toBe(2567);
+    });
   });
 });
