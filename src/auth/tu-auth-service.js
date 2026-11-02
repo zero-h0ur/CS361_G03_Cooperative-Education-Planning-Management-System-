@@ -130,7 +130,7 @@ class TuAuthService {
       const fullName =
         tuProfile?.displayname_th ||
         tuProfile?.displayname_en ||
-        (studentId === '6709650334' ? 'ณัฐภัทร ไกรวิชญ์ชนาภรณ์' : `นักศึกษา มธ. (${studentId})`);
+        `นักศึกษา มธ. (${studentId})`;
       const email =
         tuProfile?.email || `${studentId}@dome.tu.ac.th`;
 
