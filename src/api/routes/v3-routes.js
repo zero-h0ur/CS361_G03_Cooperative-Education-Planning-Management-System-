@@ -136,6 +136,9 @@ function registerV3Routes(router, options = {}) {
   // Issue #70: Staff review commands
   registerStaffReviewRoutes(router, registerProtectedRoute, options);
 
+  // TU Authentication public login & status routes
+  require('./tu-auth-routes').registerTuAuthRoutes(router, options);
+
   return options;
 }
 

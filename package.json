@@ -22,6 +22,7 @@
     "test:api": "jest --runInBand tests/api.test.js tests/directory-api.test.js",
     "test:contract": "jest --runInBand tests/v3-api-contract.test.js",
     "test:auth": "jest --runInBand tests/auth-context.test.js",
+    "test:tu-auth": "jest --runInBand tests/tu-auth-backend.test.js",
     "test:authz": "jest --runInBand tests/authorization.test.js",
     "test:workflow": "jest --runInBand tests/workflow-service.test.js",
     "test:session": "jest --runInBand tests/session-me.test.js",
