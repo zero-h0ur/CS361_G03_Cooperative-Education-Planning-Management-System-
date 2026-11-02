@@ -56,7 +56,7 @@ test('dry run rolls back catalogue rows and preserves private records', async ()
   assert.deepEqual(await digest(tables), before);
 });
 
-test('import accepts the complete reviewed migration history 001 through 011', async () => {
+test('import accepts the complete reviewed migration history 001 through 013', async () => {
   const { rows } = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
   assert.deepEqual(rows.map(row => row.version), [
     '001_initial_schema.sql', '002_v3_identity_student_plan_assignment_audit.sql',
@@ -68,6 +68,7 @@ test('import accepts the complete reviewed migration history 001 through 011', a
     '010_phase1_applications_documents.sql',
     '011_student_contact_email.sql',
     '012_committee_workspace.sql',
+    '013_phase1_schedules_and_confirmations.sql',
   ]);
   await runImport(payload);
 });
