@@ -39,29 +39,25 @@ function getTuKeyPair() {
     return cachedKeyPair;
   }
 
-  if (process.env.TU_AUTH_PRIVATE_KEY && process.env.TU_AUTH_PUBLIC_KEY) {
-    cachedKeyPair = {
-      privateKey: process.env.TU_AUTH_PRIVATE_KEY,
-      publicKey: process.env.TU_AUTH_PUBLIC_KEY
-    };
-    return cachedKeyPair;
-  }
+  const publicKey =
+    process.env.TU_AUTH_PUBLIC_KEY ||
+    crypto
+      .createPublicKey({
+        key: Buffer.from(DEFAULT_SPKI_DER_B64, 'base64'),
+        format: 'der',
+        type: 'spki'
+      })
+      .export({ type: 'spki', format: 'pem' });
 
-  const publicKey = crypto
-    .createPublicKey({
-      key: Buffer.from(DEFAULT_SPKI_DER_B64, 'base64'),
-      format: 'der',
-      type: 'spki'
-    })
-    .export({ type: 'spki', format: 'pem' });
-
-  const privateKey = crypto
-    .createPrivateKey({
-      key: Buffer.from(DEFAULT_PKCS8_DER_B64, 'base64'),
-      format: 'der',
-      type: 'pkcs8'
-    })
-    .export({ type: 'pkcs8', format: 'pem' });
+  const privateKey =
+    process.env.TU_AUTH_PRIVATE_KEY ||
+    crypto
+      .createPrivateKey({
+        key: Buffer.from(DEFAULT_PKCS8_DER_B64, 'base64'),
+        format: 'der',
+        type: 'pkcs8'
+      })
+      .export({ type: 'pkcs8', format: 'pem' });
 
   cachedKeyPair = { privateKey, publicKey };
   return cachedKeyPair;

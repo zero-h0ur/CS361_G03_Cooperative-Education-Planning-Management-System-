@@ -139,14 +139,14 @@ class IdentityResolver {
           `SELECT upsert_tu_student_identity($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
           [
             subject,
-            `นักศึกษา (${subject})`,
-            null,
+            subject,
             `${subject}@dome.tu.ac.th`,
-            'สาขาวิชาวิทยาการคอมพิวเตอร์',
-            'วิทยาศาสตรบัณฑิต',
-            2567,
-            'ปกติ',
-            issuer
+            `นักศึกษา (${subject})`,
+            'คณะวิทยาศาสตร์และเทคโนโลยี',
+            'CS',
+            'CS',
+            'ปริญญาตรี',
+            'ACTIVE'
           ]
         );
         res = await pool.query(query, [issuer, subject]);
