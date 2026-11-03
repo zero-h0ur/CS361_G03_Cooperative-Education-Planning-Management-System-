@@ -16,6 +16,9 @@ npm.cmd run dev:ui
 - ใบสมัคร Phase 1: http://localhost:8081/app.html?scenario=application-pending#/student/application
 - Staff: http://localhost:8081/app.html?role=STAFF#/staff/students
 - Advisor: http://localhost:8081/app.html?role=ADVISOR#/advisor/students
+- Coordinator ตรวจใบสมัคร: http://localhost:8081/app.html?role=COORDINATOR&scenario=pending#/coordinator/applications
+- Coordinator ติดตามการพิจารณา: http://localhost:8081/app.html?role=COORDINATOR&scenario=ranking#/coordinator/tracking
+- Coordinator กำหนดการ: http://localhost:8081/app.html?role=COORDINATOR&scenario=pending#/coordinator/schedule
 
 ใช้พอร์ต 8081 แยกจากเว็บจริงที่อาจเปิดอยู่บน 8080 ไม่ต้องรัน `npm run build`
 เลือกพื้นที่ Student/Staff/Advisor จากแถบด้านบน Staff มีข้อมูลค้นหาแบบอ่านอย่างเดียวเท่านั้น
@@ -26,6 +29,13 @@ Advisor มีหน้ารายชื่อ รายละเอียด�
 รายละเอียดขั้นตอนอยู่ใน [Advisor workspace](v3-advisor-workspace.md)
 เลือกสถานการณ์จำลองจากแถบสีเหลืองด้านบน เปลี่ยน scenario/refresh จะรีเซ็ตข้อมูล
 กด Ctrl+C ใน Terminal เพื่อหยุด Server หลังแก้ source ให้หยุดและเปิดคำสั่งใหม่
+
+Coordinator ใช้ clients จำลองของตนเอง แยกจาก Staff และ Committee: ตรวจใบสมัครได้ทั้ง 5 แท็บ
+จำลองส่งกลับ/รับเรื่อง เรียงอันดับ และบันทึกกำหนดการได้ใน memory เท่านั้น
+สถานการณ์ `missing-data`, `long-text`, `failed-command`, `conflict` และ `readonly-schedule`
+ช่วยตรวจข้อมูลไม่ครบ/การเก็บค่าหลังบันทึกล้มเหลว แต่ไม่ใช่การทดสอบสิทธิ์หรือ transaction ของฐานข้อมูลจริง
+ไม่มีไฟล์เอกสารจริงให้ดาวน์โหลด และไม่มีการประกาศผลหรือยืนยันสิทธิ์นักศึกษาใน Preview นี้
+ดู [ผลทดสอบและข้อจำกัดของ Coordinator](../evidence/coordinator-workspace-redesign.md)
 
 ## สิ่งที่ตรวจได้
 
