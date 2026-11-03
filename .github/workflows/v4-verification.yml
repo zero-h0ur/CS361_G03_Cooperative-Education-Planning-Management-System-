@@ -35,6 +35,7 @@ jobs:
       CO_ED_WORKFLOW_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/coed_v3_test
       CO_ED_SELECTION_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/coed_selection_test
       CO_ED_APPLICATION_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/coed_v3_test
+      COORDINATOR_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/coed_v3_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -75,6 +76,8 @@ jobs:
           npm test 2>&1 | tee v4-verification.log
       - name: Verify isolated UI Preview
         run: npm run test:ui-preview
+      - name: Verify Coordinator workspace and correction-window integration
+        run: npm run test:coordinator
       - name: Verify team local setup and signed test identities
         env:
           CO_ED_LOCAL_DEV_TESTS: '1'

@@ -4,7 +4,7 @@ export function createWorkflowClient({apiBaseUrl,getAccessToken,fetchImpl=global
   const base=new URL(apiBaseUrl,currentOrigin);
   return Object.freeze({
     async request(path,{method='GET',body,signal}={}) {
-      if (!/^\/api\/v3\//.test(path)) throw new Error('Unsupported API path.');
+      if (!/^\/api\/(?:v3\/|v4\/coordinator\/)/.test(path)) throw new Error('Unsupported API path.');
       const relative=new URL(path,'https://local.invalid');
       const endpoint=new URL(base.href); endpoint.pathname=`${base.pathname.replace(/\/$/,'')}${relative.pathname}`;
       endpoint.search=relative.search; endpoint.hash='';

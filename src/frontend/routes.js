@@ -1,10 +1,14 @@
 import { parseStaffRouteState } from './staff/staff-route-state.js';
 
 const ROUTE_DEFINITIONS = Object.freeze([
-  Object.freeze({hash:'#/coordinator/applications',role:'COORDINATOR',navLabel:'รับแผนสหกิจ',
+  Object.freeze({hash:'#/coordinator/applications',role:'COORDINATOR',navLabel:'ตรวจใบสมัคร',
     eyebrow:'COORDINATOR',title:'รับแผนสหกิจศึกษา',
     description:'รับเรื่องเฉพาะรอบและหลักสูตรที่ได้รับมอบหมาย แล้วส่งต่อกรรมการสามคน ไม่ใช่การอนุมัติผล',
     status:'ขอบเขตรายรอบจากฐานข้อมูล'}),
+  Object.freeze({hash:'#/coordinator/tracking',role:'COORDINATOR',navLabel:'ติดตามการพิจารณา',
+    title:'ติดตามการพิจารณา',description:'ดูข้อมูลเรียงลำดับ และติดตามมติคณะกรรมการ',status:'อ่านข้อมูลภายในรอบที่ได้รับมอบหมาย'}),
+  Object.freeze({hash:'#/coordinator/schedule',role:'COORDINATOR',navLabel:'กำหนดการและช่วงเวลายืนยันสิทธิ์',
+    title:'กำหนดการและช่วงเวลายืนยันสิทธิ์',description:'ตั้งค่าวัน–เวลาของแต่ละช่วงในรอบสหกิจศึกษา',status:'กำหนดการที่มีเวอร์ชันและตรวจสิทธิ์รายรอบ'}),
   Object.freeze({hash:'#/committee/applications',role:'COMMITTEE',navLabel:'การคัดเลือก',
     eyebrow:'COMMITTEE',title:'การคัดเลือกนักศึกษา',
     description:'พิจารณาอันดับ ตกลงจำนวนรับ และยืนยันรายชื่อในรอบที่ได้รับมอบหมาย',

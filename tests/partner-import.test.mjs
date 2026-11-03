@@ -36,7 +36,7 @@ test('contact columns never enter either JSON or SQL', () => {
   assert.ok(sql.includes('Private records changed'));
 });
 
-test('import verifies all ten reviewed migration checksums but executes only directory migration 003', () => {
+test('import verifies all reviewed migration checksums but executes only directory migration 003', () => {
   const sql = buildImportSql(buildCatalogue(raw, options));
   const names = [
     '001_initial_schema.sql', '002_v3_identity_student_plan_assignment_audit.sql',
