@@ -13,7 +13,7 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
   const root=node('div','application-editor student-editor');root.dataset.studentPage='true';let app=application,draft=copy(app.payload || {}),dirty=false,busy=false,result=null;
   let activeStep=app.status==='SUBMITTED'?5:0,message='',errors=[],confirming=false,hasError=false;
   const selectedFiles=new Map(),attempts=new Map();
-  const readOnly=()=>app.status!=='DRAFT' || app.availability?.can_edit===false;
+  const readOnly=()=>!['DRAFT','NEEDS_REVISION'].includes(app.status) || app.availability?.can_edit===false;
   const canLeave=()=>!(dirty || busy || selectedFiles.size) || window.confirm(busy?'กำลังทำรายการ ผลอาจถูกบันทึกแล้ว ต้องการออกจากหน้านี้หรือไม่?':'ยังมีข้อมูลหรือไฟล์ที่ไม่ได้บันทึก ต้องการออกจากหน้านี้และทิ้งข้อมูลที่กรอกหรือไม่?');
   setLeaveGuard?.(canLeave);
   const beforeUnload=e=>{if(dirty || busy || selectedFiles.size){e.preventDefault();e.returnValue='';}};
@@ -119,10 +119,10 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
   function header(){
     const back=button('← ใบสมัครทั้งหมด',onBack);back.disabled=busy;back.className='student-editor-back';
     const meta=node('div','student-page-header__meta');
-    const state=node('span','student-editor-state',app.status==='SUBMITTED'?'ส่งแล้ว · อ่านอย่างเดียว':readOnly()?'รอบปิด / หมดเวลา · อ่านอย่างเดียว':'ฉบับร่าง');
+    const state=node('span','student-editor-state',app.status==='SUBMITTED'?'ส่งแล้ว · อ่านอย่างเดียว':readOnly()?'รอบปิด / หมดเวลา · อ่านอย่างเดียว':app.status==='NEEDS_REVISION'?'ส่งกลับแก้ไข':'ฉบับร่าง');
     const saved=node('span','student-editor-save-state',dirty?'มีข้อมูลที่ยังไม่ได้บันทึก':'ข้อมูลตรงกับฉบับที่บันทึกแล้ว');saved.dataset.saveState='';saved.setAttribute('role','status');meta.append(state,saved);
     const closes=formatStudentDate(app.availability?.closes_at,{time:true});
-    if(closes)meta.append(node('span','',`ปิดรับ ${closes} (เวลาไทย)`));
+    if(closes)meta.append(node('span','',`${app.status==='NEEDS_REVISION'?'แก้ไขและส่งซ้ำได้ถึง':'ปิดรับ'} ${closes} (เวลาไทย)`));
     return renderStudentPageHeader({title:'สมัครเข้าแผนสหกิจศึกษา',description:app.cycle_name||'ใบสมัครเข้าแผนสหกิจศึกษา',back,meta});
   }
   function stepRail(){
@@ -237,7 +237,8 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
   function render(){
     root.replaceChildren();root.setAttribute('aria-busy',String(busy));root.append(header());
     const body=node('div','student-editor-body student-page-content'),main=node('div','student-editor-main');body.append(stepRail(),main);main.append(feedback());
-    if(readOnly())main.append(node('p','application-notice',app.status==='SUBMITTED'?'ข้อมูลและเอกสารถูกล็อกไว้ตามฉบับที่ส่ง การส่งใบสมัครยังไม่ใช่การได้รับคัดเลือกเข้าแผน':'ใบสมัครนี้ยังไม่ได้ส่ง แต่รอบไม่เปิดให้แก้ไขแล้ว ข้อมูลที่บันทึกยังดูและดาวน์โหลดได้'));
+    if(app.status==='NEEDS_REVISION')main.append(node('p','application-warning',`ส่งกลับแก้ไข: ${app.correction?.reason || 'กรุณาตรวจสอบข้อมูลตามที่ผู้ประสานงานแจ้ง'}${readOnly()?' · หมดช่วงแก้ไขแล้ว กรุณาติดต่อผู้ประสานงาน':''}`));
+    if(readOnly())main.append(node('p','application-notice',app.status==='SUBMITTED'?'ข้อมูลและเอกสารถูกล็อกไว้ตามฉบับที่ส่ง การส่งใบสมัครยังไม่ใช่การได้รับคัดเลือกเข้าแผน':app.status==='NEEDS_REVISION'?'หมดช่วงแก้ไข ฉบับที่ส่งก่อนหน้ายังเก็บไว้ครบถ้วน':'ใบสมัครนี้ยังไม่ได้ส่ง แต่รอบไม่เปิดให้แก้ไขแล้ว ข้อมูลที่บันทึกยังดูและดาวน์โหลดได้'));
     const panels=[identity(),academic(),interests(),documents(),guardian(),review()];panels.forEach((panel,index)=>{panel.classList.add('application-step');panel.hidden=index!==activeStep;panel.dataset.step=String(index+1);main.append(panel);});
     const reload=button('โหลดข้อมูลล่าสุด',async()=>{if((dirty || selectedFiles.size) && !window.confirm('การโหลดใหม่จะทิ้งข้อมูลและไฟล์ที่เลือกแต่ยังไม่ได้บันทึก ต้องการโหลดฉบับล่าสุดหรือไม่?'))return;await run(async()=>{const fresh=await client.get(app.id,{signal});if(signal?.aborted)return;app=fresh;draft=copy(fresh.payload);dirty=false;result=null;errors=[];selectedFiles.clear();message='โหลดข้อมูลล่าสุดแล้ว';attempts.clear();});});reload.disabled=busy;reload.classList.add('student-editor-reload');main.append(reload);root.append(body,footer());if(busy)for(const b of root.querySelectorAll('button'))b.disabled=true;
   }

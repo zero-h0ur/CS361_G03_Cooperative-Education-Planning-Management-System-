@@ -32,7 +32,7 @@ class ApplicationRepository {
   async application(db,id,actor,lock=false) {
     const row=(await db.query(`SELECT a.* FROM phase1_applications a JOIN students s ON s.id=a.student_id
       WHERE a.id=$1 AND (($2='STUDENT' AND s.user_id=$3 AND s.id=$4) OR
-        ($2='COORDINATOR' AND a.status='SUBMITTED' AND EXISTS(SELECT 1 FROM selection_cohorts c
+        ($2='COORDINATOR' AND a.status IN ('SUBMITTED','NEEDS_REVISION') AND EXISTS(SELECT 1 FROM selection_cohorts c
           WHERE c.cycle_id=a.cycle_id AND c.department=s.department AND c.program=s.program
           AND c.status='ACTIVE' AND c.coordinator_id=$3))) ${lock?'FOR UPDATE OF a':''}`,
     [id,actor.role,actor.userId,actor.studentId || null])).rows[0];
@@ -48,10 +48,21 @@ class ApplicationRepository {
       FROM phase1_attachments a JOIN phase1_documents d ON d.id=a.document_id WHERE a.application_id=$1 ORDER BY d.kind`,[id])).rows;
   }
   async editable(db,app,official) {
-    if(app.status!=='DRAFT')throw new InvalidStateTransitionError('ใบสมัครที่ส่งแล้วแก้ไขไม่ได้');
-    const cycle=await this.cycle(db,app.cycle_id,official,true);
+    if(!['DRAFT','NEEDS_REVISION'].includes(app.status))throw new InvalidStateTransitionError('ใบสมัครที่ส่งแล้วแก้ไขไม่ได้');
+    const cycle=await this.cycleForApplication(db,app,official,true);
     if(cycle.status!=='OPEN' || (cycle.window && !cycle.window.is_open))throw new InvalidStateTransitionError('รอบสมัครนี้ไม่เปิดให้แก้ไขแล้ว');
     return cycle;
+  }
+  async cycleForApplication(db,app,official,lock=false) {
+    const cycle=await this.cycle(db,app.cycle_id,official,lock);
+    if(app.status!=='NEEDS_REVISION')return cycle;
+    const window=(await db.query(`SELECT w.opens_at,COALESCE(s.review_closes_at,w.closes_at) AS closes_at,w.version,
+      clock_timestamp()>=w.opens_at AND clock_timestamp()<COALESCE(s.review_closes_at,w.closes_at) AS is_open
+      FROM phase1_reviews rv JOIN selection_cohorts c ON c.id=rv.cohort_id AND c.status='ACTIVE'
+      JOIN phase1_cycle_windows w ON w.cycle_id=c.cycle_id LEFT JOIN coordinator_round_schedules s ON s.cycle_id=c.cycle_id
+      WHERE rv.application_id=$1 AND rv.state='RETURNED' AND c.cycle_id=$2`,[app.id,app.cycle_id])).rows[0];
+    // A correction never creates an exception without a recorded return and a stored deadline.
+    return {...cycle,window:window || {is_open:false}};
   }
 }
 module.exports={ApplicationRepository};

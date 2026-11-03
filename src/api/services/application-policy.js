@@ -70,6 +70,6 @@ function readiness({app,official,policy,documents=[],window,roundOpen,allowSynth
   for (const group of EXTRA[curr] || []) if (!group.some(code=>['ENROLLED','STUDIED'].includes(p.additional_studies?.[code]))) add('additional_studies','ADDITIONAL_REQUIRED',`ต้องกำลังศึกษาหรือเคยศึกษา ${group.join(' หรือ ')}`);
   for (const kind of ['resume','transcript','conduct','photo']) if (!documents.some(d=>d.kind===kind)) add(`documents.${kind}`,'DOCUMENT_REQUIRED','กรุณาแนบไฟล์ที่ผ่านการบันทึกแล้ว');
   for (const name of ACKNOWLEDGEMENTS) if (p.acknowledgements?.[name]!==true) add(`acknowledgements.${name}`,'ACK_REQUIRED','กรุณาตรวจสอบและรับรองเงื่อนไขข้อนี้ด้วยตนเอง');
-  return {can_submit:app.status==='DRAFT' && blockers.length===0,eligibility:!configured || !official?.academic_verified || !valid?'UNKNOWN':blockers.length?'FAIL':'PASS',group_gpa:groupGpa,blockers,preliminary:true};
+  return {can_submit:['DRAFT','NEEDS_REVISION'].includes(app.status) && blockers.length===0,eligibility:!configured || !official?.academic_verified || !valid?'UNKNOWN':blockers.length?'FAIL':'PASS',group_gpa:groupGpa,blockers,preliminary:true};
 }
 module.exports={GROUPS,EXTRA,BASELINE,effectiveCriteria,templates,scaled,readiness};

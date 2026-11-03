@@ -6,8 +6,9 @@ export function applicationCycleLabel(application,cycles=[]) {
 }
 
 export function applicationEditState(application,cycles=[]) {
-  if(application.status!=='DRAFT'||application.availability?.can_edit===false)return false;
+  if(!['DRAFT','NEEDS_REVISION'].includes(application.status)||application.availability?.can_edit===false)return false;
   if(application.availability?.can_edit===true)return true;
+  if(application.status==='NEEDS_REVISION')return null; // Only the server may authorize a correction exception.
   const cycle=cycles.find(c=>c.id===application.cycle_id);if(!cycle)return null;
   if(cycle.status!=='OPEN')return false;
   if(cycle.opens_at&&Date.now()<Date.parse(cycle.opens_at)||cycle.closes_at&&Date.now()>=Date.parse(cycle.closes_at))return false;
@@ -16,7 +17,7 @@ export function applicationEditState(application,cycles=[]) {
 
 export function latestApplication(applications,cycles=[]) {
   // Prefer a resumable draft. Preserve API order when timestamps are missing/equal.
-  const priority=app=>app.status!=='DRAFT'?0:applicationEditState(app,cycles)===false?1:2;
+  const priority=app=>!['DRAFT','NEEDS_REVISION'].includes(app.status)?0:applicationEditState(app,cycles)===false?1:app.status==='NEEDS_REVISION'?3:2;
   return [...applications].sort((a,b)=>priority(b)-priority(a) ||
     (Date.parse(b.updated_at)||0)-(Date.parse(a.updated_at)||0))[0] || null;
 }
@@ -27,12 +28,13 @@ export function renderApplicationFeature(application,{cycles=[],onNavigate,compa
   const label=el('div','student-application-feature__label');
   label.append(createWorkspaceIcon('file'),el('h2','','ใบสมัครล่าสุด'));
   const title=el('h3','',applicationCycleLabel(application,cycles));
-  const draft=application.status==='DRAFT';
+  const correction=application.status==='NEEDS_REVISION',draft=application.status==='DRAFT'||correction;
   const editable=applicationEditState(application,cycles);
-  const badge=el('span','student-feature-badge',draft?'ฉบับร่าง':'ส่งแล้ว');
+  const badge=el('span','student-feature-badge',correction?'ส่งกลับแก้ไข':draft?'ฉบับร่าง':'ส่งแล้ว');
   const headline=el('div','student-application-feature__headline');headline.append(title,badge);
   content.append(label,headline);
   if(draft) {
+    if(correction)content.append(el('p','',application.correction_reason || 'แก้ไขตามที่ผู้ประสานงานแจ้ง แล้วตรวจสอบและส่งใบสมัครอีกครั้ง'));
     content.append(el('p','','ใบสมัคร 6 ส่วน · ตรวจทานข้อมูลและเอกสารก่อนส่ง'));
     const steps=el('div','student-feature-sections');steps.setAttribute('aria-hidden','true');
     // Neutral sections, not a fabricated saved-step / completion percentage.
