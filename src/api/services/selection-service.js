@@ -154,7 +154,7 @@ class SelectionService {
   }
   async studentList(actor){
     roleGuard(actor,['STUDENT']);const db=this.db();await this.active(db,actor,'STUDENT');
-    const rows=(await db.query(`SELECT p.id,p.status,r.name AS cycle_name,a.id AS receipt_id,a.acknowledged_at,
+    const rows=(await db.query(`SELECT p.id,p.cycle_id,p.status,r.name AS cycle_name,a.id AS receipt_id,a.acknowledged_at,
       (SELECT count(*)::int FROM selection_opinions o WHERE o.receipt_id=a.id) AS opinion_count,
       (SELECT ae.notes FROM audit_events ae WHERE ae.plan_id=p.id AND ae.to_state='NEEDS_REVISION' ORDER BY ae.created_at DESC LIMIT 1) AS revision_notes
       FROM plans p JOIN students s ON s.id=p.student_id JOIN rounds r ON r.id=p.cycle_id
@@ -164,7 +164,7 @@ class SelectionService {
       ORDER BY p.created_at DESC,p.id LIMIT 100`,[actor.userId])).rows;
     return {applications:rows.map(x=>{
       const state=stateFor(x.receipt_id,x.opinion_count,x.status);
-      return {plan_id:x.id,cycle_name:x.cycle_name,state,
+      return {plan_id:x.id,cycle_id:x.cycle_id,cycle_name:x.cycle_name,state,
         acknowledged_at:x.acknowledged_at,opinion_count:x.opinion_count,required_opinions:3,announcement_available:false,
         ...(state==='NEEDS_REVISION'&&x.revision_notes?{revision_notes:x.revision_notes}:{})};
     })};

@@ -1,3 +1,14 @@
+import {
+  PHASE1_TIMEZONE,
+  DEFAULT_NEAR_DEADLINE_HOURS,
+  WINDOW_STATES,
+  CONFIRMATION_STATUSES,
+  CONFIRMATION_STATUS_LABELS,
+  evaluateWindow,
+  formatThaiDateTime,
+  formatRemainingTime
+} from '../../shared/phase1-schedule.js';
+
 const LABELS = Object.freeze({
   AWAITING_COORDINATOR: 'รอผู้ประสานงานรับเรื่อง',
   NEEDS_REVISION: 'ส่งกลับให้แก้ไข',
@@ -361,6 +372,8 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
     filter.append(filterActions);
   }
 
+  const scheduleSection = coordinator ? el('section', 'workflow-card coordinator-schedule-section') : null;
+  if (scheduleSection) scheduleSection.hidden = true;
   const summaryBar = el('div', 'coordinator-summary-bar');
   const content = el('div', 'workflow-stack selection-applications');
   const modalHost = el('div', 'coordinator-modal-host');
@@ -372,9 +385,536 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
   pager.hidden = true;
 
   if (coordinator) {
-    root.append(intro, summaryBar, filter, feedback, content, pager, modalHost);
+    root.append(intro, scheduleSection, summaryBar, filter, feedback, content, pager, modalHost);
   } else {
     root.append(intro, filter, feedback, content, pager);
+  }
+
+  
+
+  let currentSchedule = null;
+  let scheduleEditing = false;
+  let announcing = false;
+  let showConfirmations = false;
+  let loadedConfirmations = null;
+
+  function renderWindowBadge(state, labelPrefix) {
+    let tone = 'unscheduled';
+    let text = 'ยังไม่ได้กำหนด';
+    if (state === 'OPEN') {
+      tone = 'open';
+      text = `เปิด${labelPrefix}`;
+    } else if (state === 'NEAR_DEADLINE') {
+      tone = 'near-deadline';
+      text = `ใกล้ครบกำหนด${labelPrefix}`;
+    } else if (state === 'CLOSED') {
+      tone = 'closed';
+      text = `ปิด${labelPrefix}แล้ว`;
+    } else if (state === 'UPCOMING') {
+      tone = 'upcoming';
+      text = `ยังไม่เปิด${labelPrefix}`;
+    }
+    const badge = el('span', `coordinator-schedule-badge coordinator-schedule-badge--${tone}`, text);
+    return badge;
+  }
+
+  function renderScheduleEditForm(cycleId) {
+    const form = el('form', 'coordinator-schedule-form');
+    form.append(
+      el('h4', null, 'แก้ไขกำหนดการรับสมัครและกำหนดยืนยันสิทธิ์'),
+      el('p', 'shell-muted', 'ระบุวันเวลาตามมาตรฐานเวลาประเทศไทย (Asia/Bangkok UTC+07:00) และจุดตัดเวลาเป็นแบบ [opens_at, closes_at)')
+    );
+
+    const grid = el('div', 'coordinator-form-grid');
+
+    const appWin = currentSchedule.application_window || {};
+    const confWin = currentSchedule.confirmation_window || {};
+
+    const opensInput = el('input', 'application-input coordinator-input-opens');
+    opensInput.type = 'text';
+    opensInput.placeholder = 'YYYY-MM-DDTHH:mm:ss.sssZ';
+    opensInput.value = appWin.opens_at || '';
+
+    const closesInput = el('input', 'application-input coordinator-input-closes');
+    closesInput.type = 'text';
+    closesInput.placeholder = 'YYYY-MM-DDTHH:mm:ss.sssZ';
+    closesInput.value = appWin.closes_at || '';
+
+    const confOpensInput = el('input', 'application-input coordinator-input-conf-opens');
+    confOpensInput.type = 'text';
+    confOpensInput.placeholder = 'YYYY-MM-DDTHH:mm:ss.sssZ';
+    confOpensInput.value = confWin.opens_at || '';
+
+    const confClosesInput = el('input', 'application-input coordinator-input-conf-closes');
+    confClosesInput.type = 'text';
+    confClosesInput.placeholder = 'YYYY-MM-DDTHH:mm:ss.sssZ';
+    confClosesInput.value = confWin.closes_at || '';
+
+    const nearHoursInput = el('input', 'application-input coordinator-input-near-hours');
+    nearHoursInput.type = 'number';
+    nearHoursInput.value = String(currentSchedule.near_deadline_hours || 48);
+
+    const f1 = el('label', null, 'วันเปิดรับสมัคร (opens_at)');
+    f1.append(opensInput);
+    const f2 = el('label', null, 'วันปิดรับสมัคร (closes_at)');
+    f2.append(closesInput);
+    const f3 = el('label', null, 'วันเปิดยืนยันสิทธิ์ (confirmation_opens_at)');
+    f3.append(confOpensInput);
+    const f4 = el('label', null, 'วันสิ้นสุดยืนยันสิทธิ์ (confirmation_closes_at)');
+    f4.append(confClosesInput);
+    const f5 = el('label', null, 'เกณฑ์แจ้งเตือนใกล้ครบกำหนด (ชั่วโมง)');
+    f5.append(nearHoursInput);
+
+    grid.append(f1, f2, f3, f4, f5);
+    form.append(grid);
+
+    const errBox = el('p', 'coordinator-form-error');
+    errBox.style.color = '#dc2626';
+
+    const btnWrap = el('div', 'shell-actions');
+    const saveBtn = el('button', 'shell-button', 'บันทึกกำหนดการ');
+    saveBtn.type = 'submit';
+    const cancelBtn = el('button', 'shell-button shell-button--secondary', 'ยกเลิก');
+    cancelBtn.type = 'button';
+    cancelBtn.addEventListener('click', () => {
+      scheduleEditing = false;
+      renderCoordinatorSchedule(cycleId);
+    });
+
+    btnWrap.append(saveBtn, cancelBtn);
+    form.append(errBox, btnWrap);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      saveBtn.disabled = true;
+      errBox.textContent = '';
+      try {
+        await client.request(`/api/v4/cycles/${cycleId}/schedule`, {
+          method: 'PUT',
+          body: {
+            operation_id: globalThis.crypto.randomUUID(),
+            expected_version: currentSchedule.version,
+            opens_at: opensInput.value.trim(),
+            closes_at: closesInput.value.trim(),
+            confirmation_opens_at: confOpensInput.value.trim() || null,
+            confirmation_closes_at: confClosesInput.value.trim() || null,
+            near_deadline_hours: Number(nearHoursInput.value) || 48
+          },
+          signal
+        });
+        scheduleEditing = false;
+        feedback.textContent = 'บันทึกกำหนดการเรียบร้อยแล้ว';
+        await loadSchedule(cycleId);
+      } catch (err) {
+        saveBtn.disabled = false;
+        errBox.textContent = err.message || 'บันทึกกำหนดการไม่สำเร็จ';
+      }
+    });
+
+    return form;
+  }
+
+  function renderAnnounceForm(cycleId) {
+    const form = el('form', 'coordinator-announce-form');
+    form.append(
+      el('h4', null, 'ประกาศผลการคัดเลือกและเปิดกำหนดยืนยันสิทธิ์'),
+      el('p', 'shell-muted', 'ระบบจะประกาศผลการคัดเลือกให้แก่นักศึกษาในรอบนี้ และเริ่มนับถอยหลังกำหนดยืนยันสิทธิ์ตามช่วงเวลาที่กำหนด')
+    );
+
+    const grid = el('div', 'coordinator-form-grid');
+    const confWin = currentSchedule.confirmation_window || {};
+
+    const confOpensInput = el('input', 'application-input coordinator-announce-opens');
+    confOpensInput.type = 'text';
+    confOpensInput.value = confWin.opens_at || new Date().toISOString();
+
+    const confClosesInput = el('input', 'application-input coordinator-announce-closes');
+    confClosesInput.type = 'text';
+    confClosesInput.value = confWin.closes_at || new Date(Date.now() + 7 * 86400000).toISOString();
+
+    const f1 = el('label', null, 'วันเริ่มยืนยันสิทธิ์ (confirmation_opens_at)');
+    f1.append(confOpensInput);
+    const f2 = el('label', null, 'วันสิ้นสุดยืนยันสิทธิ์ (confirmation_closes_at)');
+    f2.append(confClosesInput);
+
+    grid.append(f1, f2);
+    form.append(grid);
+
+    const errBox = el('p', 'coordinator-form-error');
+    errBox.style.color = '#dc2626';
+
+    const btnWrap = el('div', 'shell-actions');
+    const confirmAnnounceBtn = el('button', 'shell-button coordinator-confirm-announce-btn', 'ยืนยันประกาศผลการคัดเลือก');
+    confirmAnnounceBtn.type = 'submit';
+    const cancelBtn = el('button', 'shell-button shell-button--secondary', 'ยกเลิก');
+    cancelBtn.type = 'button';
+    cancelBtn.addEventListener('click', () => {
+      announcing = false;
+      renderCoordinatorSchedule(cycleId);
+    });
+
+    btnWrap.append(confirmAnnounceBtn, cancelBtn);
+    form.append(errBox, btnWrap);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      confirmAnnounceBtn.disabled = true;
+      errBox.textContent = '';
+      try {
+        await client.request(`/api/v4/cycles/${cycleId}/announce`, {
+          method: 'POST',
+          body: {
+            operation_id: globalThis.crypto.randomUUID(),
+            expected_version: currentSchedule.version,
+            confirmation_opens_at: confOpensInput.value.trim(),
+            confirmation_closes_at: confClosesInput.value.trim()
+          },
+          signal
+        });
+        announcing = false;
+        feedback.textContent = 'ประกาศผลการคัดเลือกเรียบร้อยแล้ว';
+        await loadSchedule(cycleId);
+        await refresh('ประกาศผลเรียบร้อยแล้ว');
+      } catch (err) {
+        confirmAnnounceBtn.disabled = false;
+        errBox.textContent = err.message || 'ประกาศผลไม่สำเร็จ';
+      }
+    });
+
+    return form;
+  }
+
+  async function loadConfirmations(cycleId) {
+    try {
+      loadedConfirmations = await client.request(`/api/v4/coordinator/cycles/${cycleId}/confirmations`, { signal });
+      renderCoordinatorSchedule(cycleId);
+    } catch (e) {
+      feedback.textContent = e.message || 'โหลดรายการยืนยันสิทธิ์ไม่สำเร็จ';
+    }
+  }
+
+  let confirmationFilter = 'ALL';
+  let confirmationSearchQuery = '';
+
+  function renderConfirmationsPanel(cycleId) {
+    const panel = el('div', 'coordinator-confirmations-panel');
+    panel.append(el('h4', 'coordinator-confirmations-title', 'รายการติดตามสถานะการยืนยันสิทธิ์'));
+
+    const summary = loadedConfirmations?.summary || loadedConfirmations?.stats || {};
+    const total = summary.total_selected ?? summary.total ?? 0;
+    const confirmed = summary.confirmed ?? 0;
+    const pending = summary.pending ?? summary.pending_confirmation ?? 0;
+    const waived = summary.waived ?? 0;
+    const autoWaived = summary.auto_waived ?? 0;
+
+    // 1. Alert banner for near deadline / expired
+    const confWin = currentSchedule?.confirmation_window || {};
+    let bannerType = 'info';
+    let bannerMsg = '';
+
+    if (confWin.is_closed || (confWin.remaining_ms !== undefined && confWin.remaining_ms <= 0)) {
+      if (autoWaived > 0 || pending > 0) {
+        bannerType = 'danger';
+        bannerMsg = `⚠️ สิ้นสุดกำหนดยืนยันสิทธิ์แล้ว: มีนักศึกษาถูกสละสิทธิ์อัตโนมัติ ${autoWaived} คน${pending > 0 ? ` (ยังมีผู้ค้างสถานะ ${pending} คน สามารถกดปุ่ม "ประมวลผลสละสิทธิ์อัตโนมัติ (Sweep)" ด้านบนเพื่อตัดสิทธิ์)` : ''}`;
+      } else {
+        bannerType = 'info';
+        bannerMsg = 'ℹ️ กำหนดยืนยันสิทธิ์สิ้นสุดลงแล้ว การตอบรับสิทธิ์ของนักศึกษาเสร็จสิ้นครบถ้วน';
+      }
+    } else if (confWin.is_near_deadline) {
+      if (pending > 0) {
+        bannerType = 'urgent';
+        bannerMsg = `⏰ ใกล้ครบกำหนดยืนยันสิทธิ์ (เหลือน้อยกว่า ${currentSchedule?.near_deadline_hours || 48} ชั่วโมง): มีนักศึกษาที่ยังไม่ได้ยืนยันสิทธิ์อีก ${pending} คน กรุณาเร่งติดตาม`;
+      } else {
+        bannerType = 'success';
+        bannerMsg = '✅ นักศึกษาทุกคนได้ทำการยืนยันสิทธิ์หรือสละสิทธิ์เรียบร้อยแล้ว';
+      }
+    } else if (pending === 0 && total > 0) {
+      bannerType = 'success';
+      bannerMsg = '✅ นักศึกษาที่ผ่านการคัดเลือกทุกคนได้ดำเนินการยืนยันสิทธิ์หรือสละสิทธิ์เรียบร้อยแล้ว';
+    } else if (confWin.is_open) {
+      bannerType = 'info';
+      bannerMsg = `📢 กำลังเปิดให้นักศึกษายืนยันสิทธิ์: เหลือเวลายืนยันสิทธิ์อีก ${formatRemainingTime(confWin.remaining_ms)} (รอยืนยันสิทธิ์ ${pending} คน)`;
+    }
+
+    if (bannerMsg) {
+      const banner = el('div', `coordinator-confirmations-alert-banner coordinator-confirmations-alert-banner--${bannerType}`);
+      banner.append(el('p', null, bannerMsg));
+      panel.append(banner);
+    }
+
+    // 2. Summary stats pills
+    const statsBar = el('div', 'coordinator-confirmation-stats');
+    statsBar.append(
+      el('span', 'coordinator-stat-pill', `ทั้งหมด: ${total} คน`),
+      el('span', 'coordinator-stat-pill', `ยืนยันสิทธิ์แล้ว: ${confirmed} คน`),
+      el('span', 'coordinator-stat-pill', `รอยืนยันสิทธิ์: ${pending} คน`),
+      el('span', 'coordinator-stat-pill', `สละสิทธิ์แล้ว: ${waived} คน`),
+      el('span', 'coordinator-stat-pill', `สละสิทธิ์อัตโนมัติ: ${autoWaived} คน`)
+    );
+    panel.append(statsBar);
+
+    // 3. Interactive Filter & Search Bar
+    const filterBar = el('div', 'coordinator-confirmations-filter-bar');
+    const filterOptions = [
+      { key: 'ALL', label: `ทั้งหมด (${total})` },
+      { key: 'CONFIRMED', label: `ยืนยันสิทธิ์แล้ว (${confirmed})` },
+      { key: 'PENDING_CONFIRMATION', label: `รอยืนยันสิทธิ์ (${pending})` },
+      { key: 'WAIVED', label: `สละสิทธิ์ (${waived})` },
+      { key: 'AUTO_WAIVED', label: `สละสิทธิ์อัตโนมัติ (${autoWaived})` }
+    ];
+
+    const filterBtnGroup = el('div', 'coordinator-confirmations-filter-group');
+    for (const opt of filterOptions) {
+      const btn = el(
+        'button',
+        `shell-button shell-button--secondary coordinator-filter-btn ${confirmationFilter === opt.key ? 'coordinator-filter-btn--active' : ''}`,
+        opt.label
+      );
+      btn.type = 'button';
+      btn.addEventListener('click', () => {
+        confirmationFilter = opt.key;
+        renderCoordinatorSchedule(cycleId);
+      });
+      filterBtnGroup.append(btn);
+    }
+
+    const searchInput = el('input', 'coordinator-confirmations-search');
+    searchInput.type = 'search';
+    searchInput.placeholder = 'ค้นหารหัสนักศึกษา / ชื่อ / บริษัท';
+    searchInput.value = confirmationSearchQuery;
+    searchInput.addEventListener('input', (e) => {
+      confirmationSearchQuery = e.target.value.toLowerCase().trim();
+      updateTableRows();
+    });
+
+    filterBar.append(filterBtnGroup, searchInput);
+    panel.append(filterBar);
+
+    // 4. Data Table
+    const rawResults = loadedConfirmations?.confirmations || loadedConfirmations?.results || [];
+    const tableContainer = el('div', 'coordinator-table-container');
+    const table = el('table', 'coordinator-confirmations-table');
+
+    const thead = el('thead');
+    const trHead = el('tr');
+    trHead.append(
+      el('th', null, 'นักศึกษา (รหัส / ชื่อ-นามสกุล)'),
+      el('th', null, 'สถานประกอบการ'),
+      el('th', null, 'ตำแหน่ง'),
+      el('th', null, 'สถานะการยืนยันสิทธิ์'),
+      el('th', null, 'วันเวลาที่ทำรายการ')
+    );
+    thead.append(trHead);
+    table.append(thead);
+
+    const tbody = el('tbody');
+    table.append(tbody);
+    tableContainer.append(table);
+    panel.append(tableContainer);
+
+    function getFilteredRows() {
+      return rawResults.filter((item) => {
+        if (confirmationFilter !== 'ALL') {
+          if (confirmationFilter === 'PENDING_CONFIRMATION') {
+            if (item.confirmation_status !== 'PENDING_CONFIRMATION') return false;
+          } else if (item.confirmation_status !== confirmationFilter) {
+            return false;
+          }
+        }
+        if (confirmationSearchQuery) {
+          const text = `${item.student_number || ''} ${item.full_name || ''} ${item.company_name || ''} ${item.position_title || ''}`.toLowerCase();
+          if (!text.includes(confirmationSearchQuery)) return false;
+        }
+        return true;
+      });
+    }
+
+    function updateTableRows() {
+      tbody.replaceChildren();
+      const filtered = getFilteredRows();
+      if (!filtered.length) {
+        const emptyTr = el('tr');
+        const emptyTd = el('td', 'shell-muted', 'ไม่พบข้อมูลนักศึกษาในสถานะหรือเงื่อนไขที่เลือก');
+        emptyTd.colSpan = 5;
+        emptyTd.style.textAlign = 'center';
+        emptyTd.style.padding = '24px';
+        emptyTr.append(emptyTd);
+        tbody.append(emptyTr);
+        return;
+      }
+
+      for (const item of filtered) {
+        const tr = el('tr');
+        const statusKey = item.confirmation_status;
+        let badgeClass = 'coordinator-badge';
+        if (statusKey === 'CONFIRMED' || statusKey === 'TEAM_JOINED') badgeClass += ' coordinator-badge--complete';
+        else if (statusKey === 'PENDING_CONFIRMATION') badgeClass += ' coordinator-badge--pending';
+        else if (statusKey === 'AUTO_WAIVED') badgeClass += ' coordinator-badge--revision';
+        else if (statusKey === 'WAIVED') badgeClass += ' coordinator-badge--review';
+
+        const statusLabel = CONFIRMATION_STATUS_LABELS[statusKey] || statusKey;
+        const dateStr = item.responded_at || item.auto_waived_at || item.team_joined_at || null;
+        const formattedDate = dateStr ? formatThaiDateTime(dateStr) : '-';
+
+        const tdStudent = el('td');
+        tdStudent.append(el('strong', null, `${item.student_number} · ${item.full_name}`));
+
+        const tdCompany = el('td', null, item.company_name || '-');
+        const tdPosition = el('td', null, item.position_title || '-');
+        const tdStatus = el('td');
+        tdStatus.append(el('span', badgeClass, statusLabel));
+        const tdDate = el('td', 'shell-muted', formattedDate);
+
+        tr.append(tdStudent, tdCompany, tdPosition, tdStatus, tdDate);
+        tbody.append(tr);
+      }
+    }
+
+    updateTableRows();
+    return panel;
+  }
+
+  function renderCoordinatorSchedule(cycleId) {
+    if (!scheduleSection || !currentSchedule) return;
+    scheduleSection.hidden = false;
+    scheduleSection.replaceChildren();
+
+    const head = el('div', 'coordinator-schedule-header');
+    head.append(
+      el('h3', null, `กำหนดการรับสมัครและกำหนดยืนยันสิทธิ์ (${currentSchedule.cycle_name || 'รอบ 1/69'})`)
+    );
+
+    const actions = el('div', 'coordinator-schedule-actions');
+
+    const editBtn = el('button', 'shell-button shell-button--secondary coordinator-schedule-edit-btn', scheduleEditing ? 'ปิดฟอร์มแก้ไข' : 'แก้ไขกำหนดการ');
+    editBtn.type = 'button';
+    editBtn.addEventListener('click', () => {
+      scheduleEditing = !scheduleEditing;
+      announcing = false;
+      renderCoordinatorSchedule(cycleId);
+    });
+
+    const announceBtn = el('button', 'shell-button coordinator-announce-btn', announcing ? 'ปิดฟอร์มประกาศผล' : 'ประกาศผลการคัดเลือก');
+    announceBtn.type = 'button';
+    announceBtn.addEventListener('click', () => {
+      announcing = !announcing;
+      scheduleEditing = false;
+      renderCoordinatorSchedule(cycleId);
+    });
+
+    const sweepBtn = el('button', 'shell-button shell-button--secondary coordinator-sweep-btn', 'ประมวลผลสละสิทธิ์อัตโนมัติ (Sweep)');
+    sweepBtn.type = 'button';
+    sweepBtn.addEventListener('click', async () => {
+      sweepBtn.disabled = true;
+      try {
+        const res = await client.request(`/api/v4/coordinator/cycles/${cycleId}/confirmations/sweep`, {
+          method: 'POST',
+          signal
+        });
+        feedback.textContent = `ประมวลผลสละสิทธิ์อัตโนมัติเรียบร้อยแล้ว: สละสิทธิ์ใหม่ ${res.expired_count || 0} รายการ`;
+        await loadSchedule(cycleId);
+        if (showConfirmations) await loadConfirmations(cycleId);
+      } catch (e) {
+        feedback.textContent = e.message || 'ประมวลผลสละสิทธิ์อัตโนมัติไม่สำเร็จ';
+      } finally {
+        sweepBtn.disabled = false;
+      }
+    });
+
+    const confirmToggleBtn = el('button', 'shell-button shell-button--secondary coordinator-confirmations-toggle-btn', showConfirmations ? 'ซ่อนการยืนยันสิทธิ์' : 'ติดตามการยืนยันสิทธิ์');
+    confirmToggleBtn.type = 'button';
+    confirmToggleBtn.addEventListener('click', async () => {
+      showConfirmations = !showConfirmations;
+      if (showConfirmations && !loadedConfirmations) {
+        await loadConfirmations(cycleId);
+      } else {
+        renderCoordinatorSchedule(cycleId);
+      }
+    });
+
+    actions.append(editBtn, announceBtn, sweepBtn, confirmToggleBtn);
+    head.append(actions);
+    scheduleSection.append(head);
+
+    const grid = el('div', 'coordinator-schedule-grid');
+
+    const appWin = currentSchedule.application_window || {};
+    const appCard = el('div', 'coordinator-schedule-card coordinator-schedule-card--application');
+    const appHead = el('div', 'coordinator-schedule-card__head');
+    appHead.append(
+      el('h4', 'coordinator-schedule-card__title', '1. ช่วงเวลารับสมัคร (Application Window)'),
+      renderWindowBadge(appWin.state, 'รับสมัคร')
+    );
+    const appDates = el(
+      'p',
+      'coordinator-schedule-dates',
+      `เปิด: ${formatThaiDateTime(appWin.opens_at)}\nปิด: ${formatThaiDateTime(appWin.closes_at)}`
+    );
+    const appCountdown = el(
+      'p',
+      `coordinator-schedule-countdown ${appWin.is_near_deadline ? 'coordinator-schedule-countdown--urgent' : ''}`,
+      appWin.is_open
+        ? `เหลือเวลารับสมัครอีก ${formatRemainingTime(appWin.remaining_ms)}`
+        : appWin.is_closed
+          ? 'ปิดรับสมัครแล้ว (ระบบไม่อนุญาตให้สร้างร่าง บันทึกร่าง หรือยื่นใหม่)'
+          : 'ยังไม่ถึงกำหนดเปิดรับสมัคร'
+    );
+    appCard.append(appHead, appDates, appCountdown);
+
+    const confWin = currentSchedule.confirmation_window || {};
+    const confCard = el('div', 'coordinator-schedule-card coordinator-schedule-card--confirmation');
+    const confHead = el('div', 'coordinator-schedule-card__head');
+    confHead.append(
+      el('h4', 'coordinator-schedule-card__title', '2. ช่วงเวลายืนยันสิทธิ์ (Confirmation Window)'),
+      renderWindowBadge(confWin.state, 'ยืนยันสิทธิ์')
+    );
+    const confDates = el(
+      'p',
+      'coordinator-schedule-dates',
+      `เปิด: ${formatThaiDateTime(confWin.opens_at)}\nปิด: ${formatThaiDateTime(confWin.closes_at)}`
+    );
+    const confStatus = el(
+      'p',
+      'coordinator-schedule-notice',
+      currentSchedule.announced_at
+        ? `ประกาศผลการคัดเลือกแล้วเมื่อ: ${formatThaiDateTime(currentSchedule.announced_at)}`
+        : 'ยังไม่ได้ประกาศผลการคัดเลือก (รอความเห็นครบ 3 ท่านและกดยืนยันประกาศผล)'
+    );
+    const confCountdown = el(
+      'p',
+      `coordinator-schedule-countdown ${confWin.is_near_deadline ? 'coordinator-schedule-countdown--urgent' : ''}`,
+      confWin.is_open
+        ? `เหลือเวลายืนยันสิทธิ์อีก ${formatRemainingTime(confWin.remaining_ms)}`
+        : confWin.is_closed
+          ? 'หมดเวลายืนยันสิทธิ์แล้ว (ผู้ที่ไม่ยืนยันสิทธิ์จะถูกสละสิทธิ์อัตโนมัติ)'
+          : 'ยังไม่ถึงกำหนดยืนยันสิทธิ์'
+    );
+    confCard.append(confHead, confDates, confStatus, confCountdown);
+
+    grid.append(appCard, confCard);
+    scheduleSection.append(grid);
+
+    if (scheduleEditing) {
+      scheduleSection.append(renderScheduleEditForm(cycleId));
+    }
+
+    if (announcing) {
+      scheduleSection.append(renderAnnounceForm(cycleId));
+    }
+
+    if (showConfirmations && loadedConfirmations) {
+      scheduleSection.append(renderConfirmationsPanel(cycleId));
+    }
+  }
+
+  async function loadSchedule(cycleId) {
+    if (!cycleId || signal?.aborted) return;
+    try {
+      currentSchedule = await client.request(`/api/v4/cycles/${cycleId}/schedule`, { signal });
+      renderCoordinatorSchedule(cycleId);
+    } catch {
+      if (scheduleSection) scheduleSection.hidden = true;
+    }
   }
 
   let page = 1;
@@ -1221,6 +1761,11 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
       loadedCohorts = data.cohorts || [];
       hasMoreData = Boolean(data.has_more);
 
+      const activeCycleId = loadedCohorts[0]?.cycle_id || loadedApplications[0]?.cycle_id || null;
+      if (coordinator && activeCycleId) {
+        await loadSchedule(activeCycleId);
+      }
+
       if (coordinator) {
         renderCoordinatorSplitView();
       } else {
@@ -1298,13 +1843,25 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
   return root;
 }
 
+function renderTeamsBox(parent, url) {
+  const box = el('div', 'student-teams-box');
+  box.append(
+    el('strong', null, 'ขั้นตอนถัดไป: เข้าร่วมกลุ่ม MS Teams สำหรับผู้ปฏิบัติงานสหกิจศึกษา'),
+    el('p', 'shell-muted', 'กรุณากดเข้าร่วมกลุ่มเพื่อรับข้อมูลการปฐมนิเทศและการเตรียมตัวปฏิบัติงาน'),
+    el('a', 'shell-button shell-button--primary student-teams-link', 'เข้าร่วมกลุ่ม MS Teams')
+  );
+  box.querySelector('a').href = url || 'https://teams.microsoft.com';
+  box.querySelector('a').target = '_blank';
+  parent.append(box);
+}
+
 export function renderStudentSelectionStatus({ client, signal, onSessionExpired, onAccessDenied } = {}) {
   const root = el('section', 'workflow-card');
   root.setAttribute('aria-busy', 'true');
   root.append(el('p', null, 'กำลังโหลดสถานะ…'));
   void client
     .request('/api/v3/student/selection', { signal })
-    .then((data) => {
+    .then(async (data) => {
       if (signal?.aborted) return;
       root.replaceChildren();
       root.append(
@@ -1329,6 +1886,109 @@ export function renderStudentSelectionStatus({ client, signal, onSessionExpired,
           revNotice.querySelector('a').href = '#/student/plan';
           card.append(revNotice);
         }
+
+        if (row.cycle_id) {
+          try {
+            const decision = await client.request(`/api/v4/cycles/${row.cycle_id}/selection-decision`, { signal });
+            if (decision && decision.has_result) {
+              const decisionBox = el('div', `student-decision-card ${decision.outcome === 'SELECTED' ? 'student-decision-card--selected' : 'student-decision-card--not-selected'}`);
+              if (decision.outcome === 'SELECTED') {
+                const confWindow = decision.confirmation_window || {};
+                const head = el('h4', null, 'ผลการคัดเลือก: ผ่านการคัดเลือก (ได้รับคัดเลือก)');
+                const deadlineText = el(
+                  'p',
+                  'coordinator-schedule-dates',
+                  `กำหนดยืนยันสิทธิ์: ${formatThaiDateTime(confWindow.opens_at)} ถึง ${formatThaiDateTime(confWindow.closes_at)}`
+                );
+                decisionBox.append(head, deadlineText);
+
+                if (confWindow.is_near_deadline && decision.confirmation_status === 'PENDING_CONFIRMATION') {
+                  const urgent = el(
+                    'div',
+                    'coordinator-eligibility-banner coordinator-eligibility-banner--warn',
+                    `ใกล้ครบกำหนดยืนยันสิทธิ์ (เหลือเวลาอีก ${formatRemainingTime(confWindow.remaining_ms)}) กรุณายืนยันสิทธิ์ก่อนหมดเวลา`
+                  );
+                  decisionBox.append(urgent);
+                }
+
+                const statusMessage = el('p', 'student-decision-status');
+                const actions = el('div', 'student-decision-actions');
+
+                if (decision.confirmation_status === 'PENDING_CONFIRMATION') {
+                  if (confWindow.is_open && !confWindow.is_closed) {
+                    statusMessage.textContent = 'สถานะ: ได้รับคัดเลือกแล้ว กรุณากดยืนยันสิทธิ์หรือสละสิทธิ์ภายในเวลาที่กำหนด';
+
+                    const confirmBtn = el('button', 'shell-button student-confirm-btn', 'ยืนยันสิทธิ์');
+                    confirmBtn.type = 'button';
+                    confirmBtn.addEventListener('click', async () => {
+                      confirmBtn.disabled = true;
+                      try {
+                        await client.request(`/api/v4/cycles/${row.cycle_id}/confirm`, {
+                          method: 'POST',
+                          body: { operation_id: globalThis.crypto.randomUUID(), expected_version: decision.version },
+                          signal
+                        });
+                        statusMessage.textContent = 'ยืนยันสิทธิ์แล้ว';
+                        actions.replaceChildren();
+                        renderTeamsBox(decisionBox, decision.teams_join_url);
+                      } catch (err) {
+                        confirmBtn.disabled = false;
+                        if (err.status === 422 || err.message?.includes('EXPIRED') || err.message?.includes('สละสิทธิ')) {
+                          statusMessage.textContent = 'คุณไม่ได้ยืนยันสิทธิ์ในระยะเวลาที่กำหนด (ระบบสละสิทธิโดยอัตโนมัติ)';
+                          actions.replaceChildren();
+                        } else {
+                          statusMessage.textContent = err.message || 'ทำรายการไม่สำเร็จ กรุณาลองใหม่';
+                        }
+                      }
+                    });
+
+                    const waiveBtn = el('button', 'shell-button shell-button--secondary student-waive-btn', 'สละสิทธิ์');
+                    waiveBtn.type = 'button';
+                    waiveBtn.addEventListener('click', async () => {
+                      waiveBtn.disabled = true;
+                      try {
+                        await client.request(`/api/v4/cycles/${row.cycle_id}/waive`, {
+                          method: 'POST',
+                          body: { operation_id: globalThis.crypto.randomUUID(), expected_version: decision.version, reason: 'นักศึกษาสละสิทธิ์' },
+                          signal
+                        });
+                        statusMessage.textContent = 'คุณได้ทำการสละสิทธิ์ในรอบการรับสมัครนี้เรียบร้อยแล้ว';
+                        actions.replaceChildren();
+                      } catch (err) {
+                        waiveBtn.disabled = false;
+                        statusMessage.textContent = err.message || 'ทำรายการไม่สำเร็จ กรุณาลองใหม่';
+                      }
+                    });
+
+                    actions.append(confirmBtn, waiveBtn);
+                  } else {
+                    statusMessage.textContent = 'คุณไม่ได้ยืนยันสิทธิ์ในระยะเวลาที่กำหนด (ระบบสละสิทธิโดยอัตโนมัติ)';
+                  }
+                } else if (decision.confirmation_status === 'CONFIRMED' || decision.confirmation_status === 'TEAM_JOINED') {
+                  statusMessage.textContent = decision.confirmation_status === 'TEAM_JOINED'
+                    ? 'ยืนยันสิทธิ์และเข้าร่วม MS Teams เรียบร้อยแล้ว'
+                    : 'ยืนยันสิทธิ์แล้ว';
+                  renderTeamsBox(decisionBox, decision.teams_join_url);
+                } else if (decision.confirmation_status === 'AUTO_WAIVED') {
+                  statusMessage.textContent = 'คุณไม่ได้ยืนยันสิทธิ์ในระยะเวลาที่กำหนด (ระบบสละสิทธิโดยอัตโนมัติ)';
+                } else if (decision.confirmation_status === 'WAIVED') {
+                  statusMessage.textContent = 'คุณได้ทำการสละสิทธิ์ในรอบการรับสมัครนี้เรียบร้อยแล้ว';
+                }
+
+                decisionBox.append(statusMessage, actions);
+              } else {
+                decisionBox.append(
+                  el('h4', null, 'ผลการคัดเลือก: ไม่ผ่านการคัดเลือกในรอบนี้'),
+                  el('p', 'shell-muted', 'ขอขอบคุณที่ให้ความสนใจเข้าร่วมโครงการสหกิจศึกษา')
+                );
+              }
+              card.append(decisionBox);
+            }
+          } catch {
+            // Ignore if decision not available
+          }
+        }
+
         root.append(card);
       }
     })

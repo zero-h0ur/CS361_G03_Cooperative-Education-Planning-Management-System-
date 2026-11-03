@@ -2,8 +2,8 @@ import '../../src/frontend/authenticated-shell.css';
 import './preview.css';
 import { createShellApp } from '../../src/frontend/shell-app.js';
 import { SCENARIOS, ADVISOR_SCENARIOS } from './fixtures.js';
-import { SELECTION_SCENARIOS } from './selection-fixtures.js';
-import {COORDINATOR_SCENARIOS} from './coordinator-fixtures.js';
+import { SELECTION_SCENARIOS, SELECTION_STUDENT_SCENARIOS } from './selection-fixtures.js';
+import { COORDINATOR_SCENARIOS } from './coordinator-fixtures.js';
 import {APPLICATION_SCENARIOS} from './application-fixtures.js';
 import {createWorkspacePreviewClients} from './workspace-fixtures.js';
 
@@ -21,7 +21,7 @@ const rawRole = params.get('role');
 const mappedRole = rawRole === 'STAFF' ? 'COORDINATOR' : rawRole;
 role.value = Object.hasOwn(defaultRoutes, mappedRole) ? mappedRole : 'STUDENT';
 const selectionRole=['COORDINATOR','COMMITTEE'].includes(role.value);
-const scenarios = role.value==='COORDINATOR'?COORDINATOR_SCENARIOS:selectionRole?SELECTION_SCENARIOS:role.value === 'ADVISOR' ? ADVISOR_SCENARIOS : role.value==='STUDENT'?{...SCENARIOS,...APPLICATION_SCENARIOS}:SCENARIOS;
+const scenarios = role.value === 'COORDINATOR' ? COORDINATOR_SCENARIOS : selectionRole ? SELECTION_SCENARIOS : role.value === 'ADVISOR' ? ADVISOR_SCENARIOS : role.value === 'STUDENT' ? { ...SCENARIOS, ...APPLICATION_SCENARIOS, ...SELECTION_STUDENT_SCENARIOS } : SCENARIOS;
 const defaultScenario = selectionRole?'pending':role.value === 'ADVISOR' ? 'assigned' : 'draft';
 const scenario = params.get('scenario') || defaultScenario;
 roleLabel.append(role);
@@ -40,6 +40,7 @@ select.addEventListener('change', () => {
   const url = new URL(location.href);
   url.search = new URLSearchParams({ scenario: select.value, role: role.value }).toString();
   if(Object.hasOwn(APPLICATION_SCENARIOS,select.value))url.hash='#/student/application';
+  if(Object.hasOwn(SELECTION_STUDENT_SCENARIOS,select.value))url.hash='#/student/selection';
   location.assign(url);
 });
 label.append(select);
@@ -48,14 +49,18 @@ notice.textContent = 'Local UI Preview — ข้อมูลจำลอง ไ
 const reset = document.createElement('button');
 reset.type = 'button'; reset.textContent = 'รีเซ็ตข้อมูลจำลอง';
 reset.addEventListener('click', () => location.reload());
-document.getElementById('previewControls').append(notice, roleLabel, label, reset);
+const controls = document.getElementById('previewControls');
+if (controls) controls.append(notice, roleLabel, label, reset);
 
 if (!location.hash || location.hash.startsWith('#/staff')) location.hash = defaultRoutes[role.value];
 const clients = createWorkspacePreviewClients({role:role.value,scenario:select.value});
-createShellApp({
-  ...clients, root: document.getElementById('authenticatedApp'),
+const appRoot = document.getElementById('authenticatedApp');
+if (appRoot) {
+  createShellApp({
+  ...clients, root: appRoot,
   location, eventTarget: window, storage: null,
   // These buttons only reload this preview, never redirect to an identity provider.
   startLogin: async () => location.reload(), restartLogin: async () => location.reload(),
   logout: async () => location.reload()
 }).start();
+}
