@@ -8,7 +8,10 @@ function schedule(input) {
   const result={};
   for(const key of keys) {
     // Require an explicit UTC offset; never interpret a browser/host local datetime.
-    if(typeof input[key]!=='string' || !/T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/.test(input[key]) || !Number.isFinite(Date.parse(input[key])))
+    const parts=typeof input[key]==='string' && /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/.exec(input[key]);
+    const [year,month,day,hour,minute,second]=parts?parts.slice(1,7).map(x=>Number(x || 0)):[];
+    const days=[31,year%4===0 && (year%100!==0 || year%400===0)?29:28,31,30,31,30,31,31,30,31,30,31];
+    if(!parts || year<1 || month<1 || month>12 || day<1 || day>days[month-1] || hour>23 || minute>59 || second>59 || !Number.isFinite(Date.parse(input[key])))
       throw new ValidationError('กรุณาระบุวันเวลาและเขตเวลาให้ครบ',[{field:key,message:'วันเวลาไม่ถูกต้อง'}]);
     result[key]=new Date(input[key]).toISOString();
   }

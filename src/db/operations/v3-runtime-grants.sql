@@ -12,6 +12,10 @@ REVOKE CREATE ON SCHEMA public FROM coed_app;
 GRANT USAGE ON SCHEMA public TO coed_app;
 REVOKE ALL PRIVILEGES ON public.selection_cohorts, public.selection_receipts, public.selection_opinions FROM coed_app;
 GRANT SELECT ON public.selection_cohorts, public.selection_receipts, public.selection_opinions TO coed_app;
+-- PostgreSQL requires UPDATE on one column for SELECT ... FOR SHARE. Locking
+-- the assigned cohort prevents authorization changes during a review command;
+-- grant only non-authorization metadata, never assignment/panel/status columns.
+GRANT UPDATE (created_at) ON public.selection_cohorts TO coed_app;
 GRANT INSERT ON public.selection_receipts, public.selection_opinions TO coed_app;
 GRANT SELECT, INSERT, UPDATE ON public.committee_workspaces TO coed_app;
 GRANT SELECT, INSERT ON public.committee_workspace_events TO coed_app;
@@ -66,6 +70,11 @@ BEGIN
      OR has_table_privilege('coed_app','public.plan_operations','UPDATE')
      OR has_column_privilege('coed_app','public.users','role','UPDATE')
      OR has_column_privilege('coed_app','public.users','account_status','UPDATE')
+     OR has_column_privilege('coed_app','public.selection_cohorts','coordinator_id','UPDATE')
+     OR has_column_privilege('coed_app','public.selection_cohorts','committee_one','UPDATE')
+     OR has_column_privilege('coed_app','public.selection_cohorts','committee_two','UPDATE')
+     OR has_column_privilege('coed_app','public.selection_cohorts','committee_three','UPDATE')
+     OR has_column_privilege('coed_app','public.selection_cohorts','status','UPDATE')
      OR has_column_privilege('coed_app','public.students','full_name','UPDATE')
      OR has_table_privilege('coed_app','public.phase1_policies','INSERT,UPDATE,DELETE')
      OR has_table_privilege('coed_app','public.phase1_academic_profiles','INSERT,UPDATE,DELETE')

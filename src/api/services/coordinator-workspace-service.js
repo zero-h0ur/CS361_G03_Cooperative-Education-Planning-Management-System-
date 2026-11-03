@@ -32,10 +32,13 @@ class CoordinatorWorkspaceService {
       c.id AS cohort_id,c.program,c.department,r.name AS cycle_name,r.status AS cycle_status,
       sub.id AS submission_id,sub.application_version AS submitted_version,sub.snapshot,sub.checksum,sub.submitted_at,
       rv.state AS review_state,rv.version AS review_version,rv.reason,rv.updated_at AS reviewed_at,
-      cw.state AS committee_state,cw.version AS committee_version
+      cw.state AS committee_state,cw.version AS committee_version,
+      clock_timestamp()<COALESCE(sched.review_closes_at,win.closes_at) AS review_open
       FROM phase1_applications a JOIN students st ON st.id=a.student_id
       JOIN selection_cohorts c ON c.cycle_id=a.cycle_id AND c.department=st.department AND c.program=st.program
       JOIN rounds r ON r.id=a.cycle_id
+      LEFT JOIN phase1_cycle_windows win ON win.cycle_id=a.cycle_id
+      LEFT JOIN coordinator_round_schedules sched ON sched.cycle_id=a.cycle_id
       JOIN LATERAL(SELECT * FROM phase1_submissions s WHERE s.application_id=a.id ORDER BY s.application_version DESC LIMIT 1) sub ON true
       LEFT JOIN phase1_reviews rv ON rv.application_id=a.id
       LEFT JOIN selection_cohorts canonical ON canonical.id=(SELECT min(cc.id::text)::uuid FROM selection_cohorts cc
@@ -56,7 +59,7 @@ class CoordinatorWorkspaceService {
       positions:p.interested_position_codes || [],...domain.academic(s,{allowSynthetic:this.allowSynthetic})};
     if(detail)Object.assign(record,{official,payload:p,documents:s.documents || [],policy:s.policy || null,
       declarations:domain.declarations(s),checksum:row.checksum,reviewed_at:row.reviewed_at,
-      can_review:state==='PENDING' && row.status==='SUBMITTED' && row.cycle_status==='OPEN'});
+      can_review:state==='PENDING' && row.status==='SUBMITTED' && row.cycle_status==='OPEN' && row.review_open===true && !row.committee_state?.finalized});
     return record;
   }
   async list(actor,filters={}) {
@@ -83,7 +86,8 @@ class CoordinatorWorkspaceService {
     v.uuid(id,'application_id');const db=this.db();const row=(await this.rows(db,actor)).find(r=>r.id===id);
     if(!row)throw new NotFoundError('ไม่พบใบสมัครที่คุณมีสิทธิ์ตรวจ');
     const history=(await db.query('SELECT id,application_version,submitted_at,checksum FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC',[id])).rows;
-    return {...this.present(row,true),submission_history:history};
+    const reviews=(await db.query("SELECT action,result,created_at FROM coordinator_operations WHERE resource_id=$1 AND action IN ('return','forward') ORDER BY created_at",[id])).rows;
+    return {...this.present(row,true),submission_history:history,review_history:reviews};
   }
   async command(actor,id,body,action,work) {
     roleGuard(actor,['COORDINATOR']);v.uuid(id,'resource_id');v.command(body);
@@ -106,7 +110,8 @@ class CoordinatorWorkspaceService {
     if(!['return','forward'].includes(action))throw new ValidationError('คำสั่งไม่ถูกต้อง');
     v.fields(body,['operation_id','expected_version','submission_id',...(action==='return'?['reason']:[])]);
     v.uuid(body.submission_id,'submission_id');
-    const reason=action==='return'?v.text(body.reason,'reason',2000):null;
+    const reason=action==='return' && typeof body.reason==='string'?body.reason.replace(/\r\n?/g,'\n').trim():null;
+    if(action==='return' && (!reason || reason.length>2000 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(reason)))throw new ValidationError('กรุณาระบุเหตุผลไม่เกิน 2,000 ตัวอักษร');
     return this.command(actor,id,body,action,async(db,replay)=>{
       const app=(await db.query('SELECT * FROM phase1_applications WHERE id=$1 FOR UPDATE',[id])).rows[0];
       if(!app)throw new NotFoundError();
@@ -141,7 +146,7 @@ class CoordinatorWorkspaceService {
       else await db.query(`INSERT INTO committee_workspaces(cohort_id,version,state) VALUES($1,1,$2)
         ON CONFLICT(cohort_id) DO UPDATE SET version=committee_workspaces.version+1`,
         [canonical.id,JSON.stringify({proposal:null,history:[],selected:[],finalized:false})]);
-      return {id,state,review_version:version};
+      return {id,state,review_version:version,submission_id:latest.id,reason,actor_id:actor.userId};
     });
   }
   async tracking(actor,filters={}) {

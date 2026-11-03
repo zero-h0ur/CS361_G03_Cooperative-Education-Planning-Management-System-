@@ -41,7 +41,7 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
     add('program_type','ประเภทหลักสูตร',[['','ทั้งหมด'],['regular','ภาคปกติ'],['special','ภาคพิเศษ'],['unknown','รอยืนยันประเภท']]);
     add('sort','เรียงลำดับ',page==='tracking'?[['core','เฉลี่ยวิชาหลักมากไปน้อย'],['gpax','GPAX มากไปน้อย']]:[['newest','ส่งล่าสุดก่อน'],['oldest','ส่งเก่าสุดก่อน'],['name','ชื่อ–นามสกุล']]);
     if(page==='tracking'){bar.classList.add('coord-filters--tracking');bar.lastElementChild.append(el('small','coord-muted',filters.sort==='gpax'?'คะแนนเท่ากัน เรียงตามเฉลี่ยวิชาหลัก':'คะแนนเท่ากัน เรียงตาม GPAX'));}host.append(bar);return {state};}
-  function query(){const q=new URLSearchParams({cycle_id:cycleId,page:String(pageNo),pageSize:page==='review'?'8':'20'});for(const [key,value] of Object.entries(filters))if(value && !(page==='tracking'&&key==='state'))q.set(key,value.trim());return q;}
+  function query(){const q=new URLSearchParams({cycle_id:cycleId,page:String(pageNo),pageSize:page==='review'?'8':'20'});for(const [key,value] of Object.entries(filters))if(value.trim() && !(page==='tracking'&&key==='state'))q.set(key,value.trim());return q;}
   function returnForm(record,refresh){if(busy)return;const form=el('form','coord-return-form'),reason=el('textarea');reason.required=true;reason.maxLength=2000;reason.rows=4;form.append(field('เหตุผลที่ส่งกลับแก้ไข',reason),note('นักศึกษาที่ถูกส่งกลับแก้ไขและส่งซ้ำได้จนสิ้นสุดช่วงพิจารณา โดยเก็บฉบับเดิมไว้'));
     const message=el('p','coord-feedback');message.setAttribute('role','status');let pending=false;
     const confirm=button('ยืนยันส่งกลับแก้ไข',null,{primary:true});confirm.type='submit';form.append(message,confirm);
@@ -50,7 +50,7 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
     form.addEventListener('submit',async e=>{e.preventDefault();if(pending||!reason.value.trim()){reason.focus();return;}pending=true;busy=true;confirm.disabled=true;reason.readOnly=true;
       const body=attempt('return-'+record.id,{expected_version:record.review_version,submission_id:record.submission_id,reason:reason.value.trim()});
       try{await request('/applications/'+record.id+'/return',{method:'POST',body});if(stopped())return;attempts.delete('return-'+record.id);modal.close();feedback(status,'ส่งกลับแก้ไขแล้ว');await refresh();}
-      catch(error){if(!stopped()){feedback(message,(error.message || 'ยังยืนยันผลไม่ได้')+' · เหตุผลที่กรอกยังอยู่ ลองรายการเดิมซ้ำได้',true);message.tabIndex=-1;message.focus();}if(error.status===401)onSessionExpired?.();}
+      catch(error){if(!stopped()){feedback(message,(error.message || 'ยังยืนยันผลไม่ได้')+' · เหตุผลที่กรอกยังอยู่ ลองรายการเดิมซ้ำได้',true);message.tabIndex=-1;message.focus();if(error.status===401)onSessionExpired?.();if(error.status===403)onAccessDenied?.('ไม่มีสิทธิ์ทำรายการในขอบเขตนี้');}}
       finally{pending=false;busy=false;confirm.disabled=false;reason.readOnly=false;}
     });reason.focus();}
   async function forward(record,refresh){if(busy)return;

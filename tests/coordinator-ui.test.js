@@ -51,6 +51,11 @@ test('missing documents, grades, and declarations are explicit and never fabrica
   const docs=root.querySelector('[data-panel=documents]');expect(docs.querySelectorAll('.coord-badge--returned')).toHaveLength(2);expect(docs.querySelectorAll('button:disabled')).toHaveLength(2);
   expect(root.querySelectorAll('.coord-declarations input:not(:checked)')).toHaveLength(1);
 });
+test('whitespace-only searches are cleared before requesting the API',async()=>{
+  const {root,request}=await setup();const search=root.querySelector('input[type=search]');search.value='   ';search.dispatchEvent(new Event('input',{bubbles:true}));
+  root.querySelector('.coord-filters').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));await flush();
+  const calls=request.mock.calls.filter(([path])=>path.includes('/applications?'));expect(calls.length).toBeGreaterThan(1);expect(new URL(calls.at(-1)[0],'https://test.invalid').searchParams.has('search')).toBe(false);
+});
 test('return form retains reason and operation id after uncertain failure, then retries the same command',async()=>{
   let fail=true;const captured=[];const {root,request}=await setup({wrap:request=>async(path,options)=>{if(options?.method==='POST'){captured.push(options.body);if(fail)throw new Error('Network result unknown');}return request(path,options);}});
   find(root.querySelector('.coord-detail-actions'),'ส่งกลับแก้ไข').click();const form=root.querySelector('.coord-return-form'),reason=form.querySelector('textarea');reason.value='แก้ที่อยู่';

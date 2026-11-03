@@ -13,7 +13,7 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
   const root=node('div','application-editor student-editor');root.dataset.studentPage='true';let app=application,draft=copy(app.payload || {}),dirty=false,busy=false,result=null;
   let activeStep=app.status==='SUBMITTED'?5:0,message='',errors=[],confirming=false,hasError=false;
   const selectedFiles=new Map(),attempts=new Map();
-  const readOnly=()=>!['DRAFT','NEEDS_REVISION'].includes(app.status) || app.availability?.can_edit===false;
+  const readOnly=()=>!['DRAFT','NEEDS_REVISION'].includes(app.status) || app.availability?.can_edit===false || app.status==='NEEDS_REVISION' && app.availability?.can_edit!==true;
   const canLeave=()=>!(dirty || busy || selectedFiles.size) || window.confirm(busy?'กำลังทำรายการ ผลอาจถูกบันทึกแล้ว ต้องการออกจากหน้านี้หรือไม่?':'ยังมีข้อมูลหรือไฟล์ที่ไม่ได้บันทึก ต้องการออกจากหน้านี้และทิ้งข้อมูลที่กรอกหรือไม่?');
   setLeaveGuard?.(canLeave);
   const beforeUnload=e=>{if(dirty || busy || selectedFiles.size){e.preventDefault();e.returnValue='';}};

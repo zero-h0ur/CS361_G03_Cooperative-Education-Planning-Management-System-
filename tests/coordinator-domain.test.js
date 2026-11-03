@@ -8,6 +8,9 @@ test('schedule is timezone-explicit and all three windows have ordered boundarie
   expect(()=>schedule({...windows,review_closes_at:windows.review_opens_at})).toThrow();
   expect(()=>schedule({...windows,confirmation_opens_at:windows.closes_at})).toThrow();
   expect(()=>schedule({...windows,closes_at:'not a date'})).toThrow();
+  for(const invalid of ['2026-11-31T09:00:00+07:00','2026-02-29T09:00:00Z','2026-11-02T24:00:00+07:00','prefix2026-11-02T09:00:00Z'])
+    expect(()=>schedule({...windows,opens_at:invalid})).toThrow();
+  expect(schedule({...windows,opens_at:'2024-02-29T09:00:00+07:00'}).opens_at).toBe('2024-02-29T02:00:00.000Z');
 });
 test('missing or unverified academic data is unknown, never an invented pass or zero',()=>{
   expect(academic(null)).toEqual({core:null,gpax:null,declared_core:null});

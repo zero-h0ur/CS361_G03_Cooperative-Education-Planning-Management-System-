@@ -48,8 +48,8 @@ class ApplicationService {
     return {id:app.id,student_id:app.student_id,cycle_id:app.cycle_id,status:app.status,version:app.version,
       payload:submission?.snapshot.payload || app.payload,form_version:submission ? submission.snapshot.form_version || 1 : FORM_VERSION,
       official:submission?.snapshot.official || official,policy:submission?.snapshot.policy || safePolicy(policy),documents,
-      cycle_name:submission?.snapshot.cycle?.name || cycle.name,availability:{can_edit:actor.role==='STUDENT' &&
-        (app.status==='DRAFT' && cycle.status==='OPEN' && cycle.window_open || app.status==='NEEDS_REVISION' && effective?.status==='OPEN' && effective.window?.is_open),
+      cycle_name:submission?.snapshot.cycle?.name || cycle.name,availability:{can_edit:Boolean(actor.role==='STUDENT' &&
+        (app.status==='DRAFT' && cycle.status==='OPEN' && cycle.window_open || app.status==='NEEDS_REVISION' && effective?.status==='OPEN' && effective.window?.is_open)),
         opens_at:cycle.opens_at,closes_at:effective?.window?.closes_at || cycle.closes_at},
       correction:correction?{...correction,closes_at:effective?.window?.closes_at}:null,
       last_submission:retained?{id:retained.id,checksum:retained.checksum,submitted_at:retained.submitted_at}:null,
