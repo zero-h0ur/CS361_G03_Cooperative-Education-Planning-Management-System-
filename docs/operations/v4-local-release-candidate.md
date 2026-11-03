@@ -5,6 +5,15 @@ connect to an application database, invoke a migration, configure credentials,
 commit or push. The current target remains AWS Free Tier account `130165494095`,
 Sydney `ap-southeast-2`; historical Learner Lab tooling is not used.
 
+## Coordinator schema cutover
+
+The current candidate requires Backend + Migration 016 + compatible runtime grants.
+Fresh workspace installs use 001–013 + 016. The external 013–015 lineage must use
+the separately reviewed **upgrade-only** path, never workspace 013 or the default
+bootstrap migrator. Missing authentic 014/015 source remains a production approval
+gate. Candidate manifests state this explicitly and do not grant deployment
+authority. See [local alignment evidence](../evidence/coordinator-schema-alignment.md).
+
 ## Exact migration bytes
 
 Migration checksums cover bytes, not SQL meaning. The reviewed Git versions of

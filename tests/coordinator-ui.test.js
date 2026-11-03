@@ -94,6 +94,16 @@ test('schedule stale state is not silently overwritten; only explicit reload dis
   const post=request.mock.calls.find(([,o])=>o?.method==='POST');expect(post[1].body.opens_at).toBe('2026-11-02T09:00:00+07:00');expect(post[1].body.expected_window_version).toBe(1);
   expect(root.querySelectorAll('input')).toHaveLength(12);expect(root.querySelector('.coord-feedback').getAttribute('role')).toBe('alert');
 });
+
+test('published schedule explains the read-only reason without enabling time controls',async()=>{
+  const {root}=await setup({page:'schedule',wrap:request=>async(path,options)=>{const data=await request(path,options);return path.includes('/schedules/')?{...data,can_edit:false,read_only_reason:'ประกาศผลแล้ว: ไม่อนุญาตให้เปลี่ยนช่วงเวลาที่ประกาศแล้ว'}:data;}});
+  expect(root.textContent).toContain('ประกาศผลแล้ว');expect([...root.querySelectorAll('input')].every(n=>n.disabled)).toBe(true);
+});
+
+test('missing review dates stay blank and request real configuration, never mock deadlines',async()=>{
+  const {root}=await setup({page:'schedule',wrap:request=>async(path,options)=>{const data=await request(path,options);return path.includes('/schedules/')?{...data,review_opens_at:null,review_closes_at:null,review_configuration_required:true}:data;}});
+  expect(root.textContent).toContain('ยังไม่ได้ตั้งช่วงพิจารณา');expect([...root.querySelectorAll('input[type=date]')].filter(n=>n.value==='')).toHaveLength(2);
+});
 test('abort fences late options responses and renders no private records after leaving',async()=>{
   let resolve;const root=renderCoordinatorWorkspace({client:{request:()=>new Promise(r=>{resolve=r;})},signal:controller.signal});document.body.append(root);controller.abort();resolve({cycles:[{id:'late',name:'Late data'}]});await flush();expect(root.textContent).not.toContain('Late data');
 });

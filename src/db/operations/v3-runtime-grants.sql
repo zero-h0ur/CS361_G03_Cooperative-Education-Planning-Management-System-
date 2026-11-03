@@ -52,14 +52,19 @@ GRANT INSERT ON public.phase1_applications, public.phase1_uploads, public.phase1
 GRANT UPDATE(payload,status,version,submitted_at,updated_at) ON public.phase1_applications TO coed_app;
 GRANT UPDATE(status) ON public.phase1_uploads TO coed_app;
 GRANT UPDATE(document_id) ON public.phase1_attachments TO coed_app;
-REVOKE ALL PRIVILEGES ON public.phase1_reviews, public.coordinator_round_schedules, public.coordinator_operations FROM coed_app;
-GRANT SELECT, INSERT ON public.phase1_reviews, public.coordinator_round_schedules, public.coordinator_operations TO coed_app;
-GRANT UPDATE(submission_id,state,version,reason,actor_id,updated_at) ON public.phase1_reviews TO coed_app;
-GRANT UPDATE(review_opens_at,review_closes_at,confirmation_opens_at,confirmation_closes_at,version,updated_by,updated_at)
-  ON public.coordinator_round_schedules TO coed_app;
+REVOKE ALL PRIVILEGES ON public.phase1_reviews, public.coordinator_round_schedules, public.coordinator_operations, public.coordinator_reviews FROM coed_app;
+-- Historical column grants are not removed by a table-level REVOKE.
+REVOKE INSERT(application_id,submission_id,cohort_id,state,version,reason,actor_id,updated_at),
+  UPDATE(submission_id,state,version,reason,actor_id,updated_at) ON public.phase1_reviews FROM coed_app;
+REVOKE UPDATE(review_opens_at,review_closes_at,confirmation_opens_at,confirmation_closes_at,version,updated_by,updated_at)
+  ON public.coordinator_round_schedules FROM coed_app;
+GRANT SELECT ON public.phase1_reviews,public.coordinator_round_schedules,public.coordinator_reviews,public.coordinator_operations TO coed_app;
+GRANT INSERT ON public.coordinator_operations TO coed_app;
+GRANT INSERT(application_id,submission_id,cohort_id,state,version,reason,actor_id,updated_at) ON public.coordinator_reviews TO coed_app;
+GRANT UPDATE(submission_id,state,version,reason,actor_id,updated_at) ON public.coordinator_reviews TO coed_app;
 -- Scoped, versioned Coordinator schedule commands own these timestamps.
 GRANT INSERT ON public.phase1_cycle_windows TO coed_app;
-GRANT UPDATE(opens_at,closes_at,version) ON public.phase1_cycle_windows TO coed_app;
+GRANT UPDATE(opens_at,closes_at,version,review_opens_at,review_closes_at,confirmation_opens_at,confirmation_closes_at,updated_by,updated_at) ON public.phase1_cycle_windows TO coed_app;
 
 DO $acl$
 BEGIN
@@ -86,6 +91,10 @@ BEGIN
      OR has_table_privilege('coed_app','public.phase1_cycle_windows','DELETE,TRUNCATE')
      OR has_table_privilege('coed_app','public.coordinator_operations','UPDATE,DELETE,TRUNCATE')
      OR has_table_privilege('coed_app','public.phase1_reviews','DELETE,TRUNCATE')
+     OR has_any_column_privilege('coed_app','public.phase1_reviews','INSERT,UPDATE')
+     OR has_any_column_privilege('coed_app','public.coordinator_round_schedules','INSERT,UPDATE')
+     OR has_column_privilege('coed_app','public.coordinator_reviews','source_provenance','INSERT,UPDATE')
+     OR has_table_privilege('coed_app','public.coordinator_reviews','DELETE,TRUNCATE')
      OR has_any_column_privilege('coed_app','public.phase1_documents','UPDATE')
      OR has_any_column_privilege('coed_app','public.phase1_submissions','UPDATE')
      OR has_table_privilege('coed_app','public.phase1_documents','TRUNCATE')

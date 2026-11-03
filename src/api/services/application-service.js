@@ -1,5 +1,6 @@
 const {randomUUID,createHash}=require('node:crypto');
 const {ApplicationRepository}=require('../../db/repositories/application-repository');
+const {assertCoordinatorSchema}=require('../../db/coordinator-schema-contract');
 const {UnauthorizedError,ForbiddenError,ConflictError,InvalidStateTransitionError,ValidationError,ServiceUnavailableError}=require('../errors');
 const v=require('./application-input');
 const {templates,readiness,effectiveCriteria}=require('./application-policy');
@@ -44,7 +45,7 @@ class ApplicationService {
       (w.cycle_id IS NULL OR (clock_timestamp()>=w.opens_at AND clock_timestamp()<w.closes_at)) AS window_open
       FROM rounds r LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id WHERE r.id=$1`,[app.cycle_id])).rows[0];
     const effective=app.status==='NEEDS_REVISION'?await this.repository.cycleForApplication(db,app,official):null;
-    const correction=app.status==='NEEDS_REVISION'?(await db.query('SELECT reason,version FROM phase1_reviews WHERE application_id=$1 AND state=\'RETURNED\'',[app.id])).rows[0]:null;
+    const correction=app.status==='NEEDS_REVISION'?(await db.query('SELECT reason,version FROM coordinator_reviews WHERE application_id=$1 AND state=\'RETURNED\'',[app.id])).rows[0]:null;
     return {id:app.id,student_id:app.student_id,cycle_id:app.cycle_id,status:app.status,version:app.version,
       payload:submission?.snapshot.payload || app.payload,form_version:submission ? submission.snapshot.form_version || 1 : FORM_VERSION,
       official:submission?.snapshot.official || official,policy:submission?.snapshot.policy || safePolicy(policy),documents,
@@ -64,12 +65,12 @@ class ApplicationService {
     return {official,cycles,criteria:templates(),storage_configured:Boolean(this.store || process.env.CO_ED_APPLICATION_STORAGE)};
   }
   async list(actor) {
-    guard(actor,true);const db=this.repository.pool;await this.repository.profile(db,actor);
+    guard(actor,true);const db=this.repository.pool;await this.repository.profile(db,actor);await assertCoordinatorSchema(db);
     return (await db.query(`SELECT a.id,a.cycle_id,a.status,a.version,a.submitted_at,a.updated_at,rv.reason AS correction_reason,
       CASE WHEN a.status='NEEDS_REVISION' THEN jsonb_build_object('can_edit',r.status='OPEN' AND rv.state='RETURNED'
-        AND clock_timestamp()>=w.opens_at AND clock_timestamp()<COALESCE(s.review_closes_at,w.closes_at)) ELSE NULL END AS availability
-      FROM phase1_applications a JOIN rounds r ON r.id=a.cycle_id LEFT JOIN phase1_reviews rv ON rv.application_id=a.id
-      LEFT JOIN phase1_cycle_windows w ON w.cycle_id=a.cycle_id LEFT JOIN coordinator_round_schedules s ON s.cycle_id=a.cycle_id
+        AND clock_timestamp()>=w.review_opens_at AND clock_timestamp()<w.review_closes_at) ELSE NULL END AS availability
+      FROM phase1_applications a JOIN rounds r ON r.id=a.cycle_id LEFT JOIN coordinator_reviews rv ON rv.application_id=a.id
+      LEFT JOIN phase1_cycle_windows w ON w.cycle_id=a.cycle_id
       WHERE a.student_id=$1 ORDER BY a.created_at DESC,a.id LIMIT 100`,[actor.studentId])).rows;
   }
   async get(actor,id) {
@@ -158,7 +159,7 @@ class ApplicationService {
       const submissionId=randomUUID();
       await db.query(`INSERT INTO phase1_submissions(id,application_id,application_version,policy_id,snapshot,checksum,submitted_by)
         VALUES($1,$2,$3,$4,$5,$6,$7)`,[submissionId,id,app.version+1,policy.id,JSON.stringify(snapshot),hash(snapshot),actor.userId]);
-      if(app.status==='NEEDS_REVISION')await db.query(`UPDATE phase1_reviews SET submission_id=$2,state='PENDING',reason=NULL,
+      if(app.status==='NEEDS_REVISION')await db.query(`UPDATE coordinator_reviews SET submission_id=$2,state='PENDING',reason=NULL,
         version=version+1,actor_id=$3,updated_at=clock_timestamp() WHERE application_id=$1 AND state='RETURNED'`,[id,submissionId,actor.userId]);
       const updated=(await db.query(`UPDATE phase1_applications SET status='SUBMITTED',submitted_at=clock_timestamp(),version=version+1,updated_at=clock_timestamp() WHERE id=$1 RETURNING *`,[id])).rows[0];
       return this.detail(db,actor,updated);

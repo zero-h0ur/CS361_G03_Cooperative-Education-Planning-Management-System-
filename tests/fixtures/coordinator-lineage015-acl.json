@@ -1,0 +1,1568 @@
+{
+  "notice": "Inspected ACL metadata only; synthetic local fixture, not original 014/015 SQL",
+  "tableAcl": [
+    {
+      "table_name": "audit_events",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true,
+      "can_delete": true,
+      "can_truncate": false
+    },
+    {
+      "table_name": "committee_workspaces",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true,
+      "can_delete": true,
+      "can_truncate": false
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "phase1_applications",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "phase1_attachments",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "phase1_documents",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "phase1_events",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "phase1_notifications",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "phase1_operations",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "phase1_policies",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "phase1_reviews",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "phase1_schedule_events",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "phase1_submissions",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "phase1_uploads",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "rounds",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "selection_cohorts",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "students",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "table_name": "users",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false,
+      "can_delete": false,
+      "can_truncate": false
+    }
+  ],
+  "columnAcl": [
+    {
+      "table_name": "audit_events",
+      "column_name": "event_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "plan_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "actor_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "actor_role",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "action",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "resource_type",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "resource_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "from_state",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "to_state",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "notes",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "correlation_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "operation_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "created_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "column_name": "id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "column_name": "operation_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "column_name": "cohort_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "column_name": "actor_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "column_name": "request_hash",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "column_name": "result",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "column_name": "created_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "committee_workspaces",
+      "column_name": "cohort_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "committee_workspaces",
+      "column_name": "version",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "committee_workspaces",
+      "column_name": "state",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "column_name": "student_id",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "column_name": "curriculum",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "column_name": "entry_year",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "column_name": "institution",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "column_name": "source",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "column_name": "verified_by",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "column_name": "verified_at",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "student_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "cycle_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "status",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "version",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "payload",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "submitted_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "created_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "updated_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_attachments",
+      "column_name": "application_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_attachments",
+      "column_name": "kind",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_attachments",
+      "column_name": "document_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "cycle_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "opens_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "closes_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "version",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "confirmation_opens_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "confirmation_closes_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "announced_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "announced_by",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "near_deadline_hours",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "updated_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "updated_by",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "application_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "ticket_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "kind",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "filename",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "content_type",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "byte_size",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "checksum",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "object_key",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "created_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_events",
+      "column_name": "id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_events",
+      "column_name": "operation_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_events",
+      "column_name": "application_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_events",
+      "column_name": "actor_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_events",
+      "column_name": "action",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_events",
+      "column_name": "application_version",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_events",
+      "column_name": "created_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_notifications",
+      "column_name": "id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_notifications",
+      "column_name": "cycle_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_notifications",
+      "column_name": "recipient_user_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_notifications",
+      "column_name": "recipient_role",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_notifications",
+      "column_name": "event_type",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_notifications",
+      "column_name": "dedupe_key",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_notifications",
+      "column_name": "title",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_notifications",
+      "column_name": "message",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_notifications",
+      "column_name": "metadata",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_notifications",
+      "column_name": "read_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_notifications",
+      "column_name": "created_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_operations",
+      "column_name": "operation_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_operations",
+      "column_name": "application_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_operations",
+      "column_name": "actor_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_operations",
+      "column_name": "action",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_operations",
+      "column_name": "request_hash",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_operations",
+      "column_name": "result",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_operations",
+      "column_name": "created_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "id",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "cycle_id",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "curriculum",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "version",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "source_year",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "source",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "verified",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "synthetic",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "data",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "created_at",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "application_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "submission_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "cohort_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "status",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "reviewed_by",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "reviewed_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "reason",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_schedule_events",
+      "column_name": "id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_schedule_events",
+      "column_name": "cycle_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_schedule_events",
+      "column_name": "event_type",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_schedule_events",
+      "column_name": "actor_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_schedule_events",
+      "column_name": "actor_role",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_schedule_events",
+      "column_name": "student_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_schedule_events",
+      "column_name": "operation_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_schedule_events",
+      "column_name": "payload",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_schedule_events",
+      "column_name": "created_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "cycle_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "application_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "plan_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "student_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "outcome",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "confirmation_status",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "decided_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "decided_by",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "announced_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "responded_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "auto_waived_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "team_joined_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "response_notes",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "version",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "created_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_selection_results",
+      "column_name": "updated_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "application_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "application_version",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "policy_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "snapshot",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "checksum",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "submitted_by",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "submitted_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "application_id",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "kind",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "filename",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "content_type",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "byte_size",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "checksum",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "staging_key",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "expected_version",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "status",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": true
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "expires_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "created_at",
+      "can_select": true,
+      "can_insert": true,
+      "can_update": false
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "id",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "name",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "academic_year",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "source",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "updated_at",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "visibility",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "data_status",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "semester",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "status",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "end_date",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "id",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "cycle_id",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "department",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "program",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "coordinator_id",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "committee_one",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "committee_two",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "committee_three",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "status",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "created_at",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "id",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "anonymous_ref",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "source",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "updated_at",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": true
+    },
+    {
+      "table_name": "students",
+      "column_name": "visibility",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "data_status",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "user_id",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "student_number",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "full_name",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "preferred_name",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "institutional_email",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "department",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "program",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "major",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "academic_year",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "enrollment_status",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "created_at",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "students",
+      "column_name": "version",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": true
+    },
+    {
+      "table_name": "students",
+      "column_name": "contact_address",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": true
+    },
+    {
+      "table_name": "students",
+      "column_name": "contact_phone",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": true
+    },
+    {
+      "table_name": "students",
+      "column_name": "contact_email",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": true
+    },
+    {
+      "table_name": "users",
+      "column_name": "id",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "users",
+      "column_name": "role",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "users",
+      "column_name": "account_status",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "users",
+      "column_name": "version",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "users",
+      "column_name": "created_at",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    },
+    {
+      "table_name": "users",
+      "column_name": "updated_at",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": true
+    },
+    {
+      "table_name": "users",
+      "column_name": "display_name",
+      "can_select": true,
+      "can_insert": false,
+      "can_update": false
+    }
+  ]
+}

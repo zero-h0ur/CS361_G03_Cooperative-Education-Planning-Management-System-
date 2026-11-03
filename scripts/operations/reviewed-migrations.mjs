@@ -19,6 +19,7 @@ export const REVIEWED_MIGRATIONS = Object.freeze([
   ['011_student_contact_email.sql', 'ec16ab1d64a17d10ed60cded62aeef281f30f816c68c5e287568ef4ad53f4137'],
   ['012_committee_workspace.sql', '9bb45e3f2ddbc16d1797472482d55fd542ee8bc6e78cad4e5f9146e89372041e'],
   ['013_coordinator_workspace.sql', '2dfe6c0247b12fdb7e82314468870bf70fb3437b64827fe8ca0615edf9374ac4'],
+  ['016_coordinator_schema_alignment.sql', '8e33e530d53684fb640f850a670f0096ab5111e781c397f081ec4745699c10a3'],
 ].map(row => Object.freeze(row)));
 
 const defaultDirectory = fileURLToPath(new URL('../../src/db/migrations/', import.meta.url));

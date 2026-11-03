@@ -1,4 +1,5 @@
 const {getPool}=require('../connection');
+const {assertCoordinatorSchema}=require('../coordinator-schema-contract');
 const {ForbiddenError,NotFoundError,InvalidStateTransitionError}=require('../../api/errors');
 class ApplicationRepository {
   constructor({pool}={}) {this.injectedPool=pool;}
@@ -17,6 +18,7 @@ class ApplicationRepository {
   async active(db,actor,lock=false) {
     const user=(await db.query(`SELECT role FROM users WHERE id=$1 AND account_status='ACTIVE' ${lock?'FOR SHARE':''}`,[actor.userId])).rows[0];
     if(!user || user.role!==actor.role)throw new ForbiddenError();
+    await assertCoordinatorSchema(db);
   }
   async cycle(db,id,profile,lock=false) {
     if(lock)await db.query("SELECT pg_advisory_xact_lock(hashtextextended('phase1:cycle:' || $1::text,0))",[id]);
@@ -56,11 +58,12 @@ class ApplicationRepository {
   async cycleForApplication(db,app,official,lock=false) {
     const cycle=await this.cycle(db,app.cycle_id,official,lock);
     if(app.status!=='NEEDS_REVISION')return cycle;
-    const window=(await db.query(`SELECT w.opens_at,COALESCE(s.review_closes_at,w.closes_at) AS closes_at,w.version,
-      clock_timestamp()>=w.opens_at AND clock_timestamp()<COALESCE(s.review_closes_at,w.closes_at) AS is_open
-      FROM phase1_reviews rv JOIN selection_cohorts c ON c.id=rv.cohort_id AND c.status='ACTIVE'
-      JOIN phase1_cycle_windows w ON w.cycle_id=c.cycle_id LEFT JOIN coordinator_round_schedules s ON s.cycle_id=c.cycle_id
-      WHERE rv.application_id=$1 AND rv.state='RETURNED' AND c.cycle_id=$2`,[app.id,app.cycle_id])).rows[0];
+    const window=(await db.query(`SELECT w.review_opens_at AS opens_at,w.review_closes_at AS closes_at,w.version,
+      clock_timestamp()>=w.review_opens_at AND clock_timestamp()<w.review_closes_at AS is_open
+      FROM coordinator_reviews rv JOIN selection_cohorts c ON c.id=rv.cohort_id AND c.status='ACTIVE'
+      JOIN phase1_cycle_windows w ON w.cycle_id=c.cycle_id
+      WHERE rv.application_id=$1 AND rv.state='RETURNED' AND c.cycle_id=$2
+        AND c.department=$3 AND c.program=$4`,[app.id,app.cycle_id,official.department,official.program])).rows[0];
     // A correction never creates an exception without a recorded return and a stored deadline.
     return {...cycle,window:window || {is_open:false}};
   }

@@ -89,7 +89,8 @@ async function ensureChecksumTracking(client, migrationsByFile) {
     const migration = migrationsByFile.get(applied.version);
     if (!migration) {
       throw new Error(
-        `Applied migration ${applied.version} is missing from the migrations directory.`
+        `Applied migration ${applied.version} is missing from the migrations directory. ` +
+        'External Coordinator 013-015 histories require the explicit upgrade-only coordinator-schema-upgrade path; never replay workspace 013.'
       );
     }
 

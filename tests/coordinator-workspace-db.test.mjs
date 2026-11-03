@@ -3,14 +3,15 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import pg from 'pg';
 import {readFileSync} from 'node:fs';
-import {readReviewedMigrations} from '../scripts/operations/reviewed-migrations.mjs';
+import {bootstrapCoordinatorFixture,grantExternalFixtureRuntime} from './helpers/coordinator-schema-fixture.mjs';
+import {upgradeCoordinatorSchema} from '../scripts/operations/coordinator-schema-upgrade.mjs';
 import application from '../src/api/services/application-service.js';
 import coordinator from '../src/api/services/coordinator-workspace-service.js';
 import committee from '../src/api/services/committee-workspace.js';
 import form from '../src/shared/application-form.js';
 const url=process.env.COORDINATOR_TEST_DATABASE_URL;
 
-test('Coordinator Phase 1 review, retained corrections, schedule concurrency, scope and Committee bridge',{skip:!url},async t=>{
+for(const profile of ['workspace013','external015'])test(profile+': Coordinator Phase 1 review, retained corrections, schedule concurrency, scope and Committee bridge',{skip:!url},async t=>{
   const target=new URL(url);
   assert.ok(['127.0.0.1','localhost'].includes(target.hostname));
   assert.match(target.pathname,/_test$/);assert.notEqual(url,process.env.DATABASE_URL);
@@ -21,15 +22,16 @@ test('Coordinator Phase 1 review, retained corrections, schedule concurrency, sc
   try {
     await admin.query(`CREATE SCHEMA ${schema}`);
     pool=new pg.Pool({connectionString:url,options:`-c search_path=${schema},public`});
-    for(const migration of readReviewedMigrations())await pool.query(migration.sql);
+    await bootstrapCoordinatorFixture(pool,profile);
     // Exercise the service with the actual least-privilege runtime policy, not
     // the table owner's implicit permission to lock or modify every column.
-    await pool.query('CREATE TABLE schema_migrations(version text PRIMARY KEY, checksum text NOT NULL)');
     await admin.query(`CREATE ROLE ${runtimeRole} NOLOGIN`);
     const grants=readFileSync(new URL('../src/db/operations/v3-runtime-grants.sql',import.meta.url),'utf8')
       .replace(/^\\set[^\n]*\n/m,'').replaceAll('public.',schema+'.').replaceAll('SCHEMA public','SCHEMA '+schema)
       .replaceAll("'public'","'"+schema+"'").replaceAll('coed_app',runtimeRole);
-    await pool.query(grants);
+    if(profile==='external015')await grantExternalFixtureRuntime(pool,schema,runtimeRole);
+    const upgrade=await pool.connect();try{await upgradeCoordinatorSchema(upgrade,{profile,mode:'apply',runtimeRole:profile==='external015'?runtimeRole:null});}finally{upgrade.release();}
+    if(profile==='workspace013')await pool.query(grants);
     runtime=new pg.Pool({connectionString:url,options:`-c search_path=${schema},public -c role=${runtimeRole}`});
     const coordId=ids(),outsiderId=ids(),members=[ids(),ids(),ids()],studentId=ids(),studentUser=ids(),draftStudent=ids(),draftUser=ids(),cycle=ids();
     for(const [id,role] of [[coordId,'COORDINATOR'],[outsiderId,'COORDINATOR'],...members.map(id=>[id,'COMMITTEE']),[studentUser,'STUDENT'],[draftUser,'STUDENT']])
@@ -73,9 +75,12 @@ test('Coordinator Phase 1 review, retained corrections, schedule concurrency, sc
     const draftActor=actor(draftUser,'STUDENT',draftStudent);
     const draft=await appService.create(draftActor,{operation_id:ids(),cycle_id:cycle});
     const now=Date.now(),at=hours=>new Date(now+hours*3600000).toISOString();
-    let schedule={...command(0),expected_window_version:1,opens_at:at(-24),closes_at:at(-2),review_opens_at:at(-1),review_closes_at:at(24),confirmation_opens_at:at(25),confirmation_closes_at:at(48)};
+    let schedule={...command(1),expected_window_version:1,opens_at:at(-24),closes_at:at(-2),review_opens_at:at(-1),review_closes_at:at(24),confirmation_opens_at:at(25),confirmation_closes_at:at(48)};
     await t.test('real assigned scope, complete filters/counts, no fabricated grades or applicant voting',async()=>{
-      for(const sql of ["UPDATE selection_cohorts SET coordinator_id=coordinator_id WHERE false","UPDATE users SET role=role WHERE false","UPDATE phase1_submissions SET snapshot=snapshot WHERE false","DELETE FROM coordinator_operations WHERE false"])
+      for(const sql of ["UPDATE selection_cohorts SET coordinator_id=coordinator_id WHERE false","UPDATE users SET role=role WHERE false","UPDATE phase1_submissions SET snapshot=snapshot WHERE false","DELETE FROM coordinator_operations WHERE false",
+        "UPDATE coordinator_reviews SET source_provenance='{}' WHERE false","INSERT INTO coordinator_reviews(source_provenance) VALUES('{}')",
+        "UPDATE committee_workspace_events SET result=result WHERE false","DELETE FROM committee_workspace_events WHERE false",
+        "UPDATE phase1_reviews SET reason=reason WHERE false","DELETE FROM coordinator_reviews WHERE false","TRUNCATE coordinator_reviews"])
         await assert.rejects(runtime.query(sql),e=>e.code==='42501');
       assert.equal((await review.options(coord)).cycles.length,1);
       const list=await review.list(coord,{search:'นักศึกษา',curriculum:'66',program_type:'regular',pageSize:'1'});
@@ -88,7 +93,7 @@ test('Coordinator Phase 1 review, retained corrections, schedule concurrency, sc
       const tracking=await review.tracking(coord,{cycle_id:cycle});assert.equal(tracking.meetings.length,1);assert.equal(tracking.meetings[0].members.length,3);
     });
     await t.test('audited idempotent schedule uses the real application window and stale writes fail',async()=>{
-      const saved=await review.saveSchedule(coord,cycle,schedule);assert.equal(saved.version,1);
+      const saved=await review.saveSchedule(coord,cycle,schedule);assert.equal(saved.version,2);assert.equal(saved.window_version,2);
       assert.deepEqual(await review.saveSchedule(coord,cycle,schedule),saved);
       await assert.rejects(review.saveSchedule(coord,cycle,{...schedule,operation_id:ids()}),e=>e.statusCode===409);
       assert.equal((await review.getSchedule(coord,cycle)).window_version,2);
@@ -113,12 +118,12 @@ test('Coordinator Phase 1 review, retained corrections, schedule concurrency, sc
       assert.equal((await board.read(actor(members[0],'COMMITTEE'))).students.length,0);
     });
     await t.test('correction access closes at the consideration deadline, without opening ordinary Drafts',async()=>{
-      await pool.query('UPDATE coordinator_round_schedules SET review_closes_at=clock_timestamp() WHERE cycle_id=$1',[cycle]);
+      await pool.query('UPDATE phase1_cycle_windows SET review_closes_at=clock_timestamp(),version=version+1 WHERE cycle_id=$1',[cycle]);
       assert.equal((await appService.get(student,app.id)).availability.can_edit,false);
       assert.equal((await appService.readiness(student,app.id)).can_submit,false);
       await assert.rejects(appService.save(student,app.id,{...command(app.version),expected_policy_id:policyId,payload:{contact_address:'too late'}}),e=>e.statusCode===422);
       await assert.rejects(appService.submit(student,app.id,{...command(app.version),expected_policy_id:policyId}),e=>e.statusCode===422);
-      await pool.query('UPDATE coordinator_round_schedules SET review_closes_at=$2 WHERE cycle_id=$1',[cycle,schedule.review_closes_at]);
+      await pool.query('UPDATE phase1_cycle_windows SET review_closes_at=$2,version=version+1 WHERE cycle_id=$1',[cycle,schedule.review_closes_at]);
       assert.equal((await appService.get(student,app.id)).availability.can_edit,true);
       assert.equal((await appService.get(draftActor,draft.id)).availability.can_edit,false);
     });
@@ -151,6 +156,17 @@ test('Coordinator Phase 1 review, retained corrections, schedule concurrency, sc
       assert.equal((await review.getSchedule(coord,cycle)).can_edit,false);
       const latest=await review.getSchedule(coord,cycle);
       await assert.rejects(review.saveSchedule(coord,cycle,{...body,...command(latest.version),expected_window_version:latest.window_version}),e=>e.statusCode===403);
+    });
+    await t.test('published periods stay read only and unrelated external grants survive cutover',async()=>{
+      await pool.query('UPDATE selection_cohorts SET coordinator_id=$2 WHERE id=$1',[cohorts[1],coordId]);
+      await pool.query('UPDATE phase1_cycle_windows SET announced_at=clock_timestamp(),announced_by=$2 WHERE cycle_id=$1',[cycle,coordId]);
+      const current=await review.getSchedule(coord,cycle);assert.equal(current.can_edit,false);assert.match(current.read_only_reason,/ประกาศผลแล้ว/);
+      await assert.rejects(review.saveSchedule(coord,cycle,{...schedule,...command(current.version),expected_window_version:current.window_version}),e=>e.statusCode===422);
+      assert.equal((await pool.query("SELECT count(*)::int AS n FROM phase1_operations WHERE action='schedule'")).rows[0].n,0);
+      assert.ok((await pool.query("SELECT count(*)::int AS n FROM coordinator_operations WHERE action='schedule'")).rows[0].n>0);
+      if(profile==='external015'){
+        for(const table of ['phase1_notifications','phase1_selection_results'])assert.equal((await pool.query('SELECT has_table_privilege($1,$2,\'INSERT\') AS allowed',[runtimeRole,table])).rows[0].allowed,true);
+      }
     });
   }finally{
     await runtime?.end();await pool?.end();await admin.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);await admin.query(`DROP ROLE IF EXISTS ${runtimeRole}`);await admin.end();

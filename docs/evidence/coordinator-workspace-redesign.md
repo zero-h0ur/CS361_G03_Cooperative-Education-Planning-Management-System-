@@ -1,5 +1,10 @@
 # Coordinator workspace — local implementation and verification
 
+> Upgrade guidance updated on 2026-11-04: this earlier record describes the
+> workspace 013 lineage only. Do not apply that 013 to an external 013–015 database.
+> See [Coordinator schema alignment](coordinator-schema-alignment.md) for the new
+> forward-only 016 path, provenance limits and separate production release gates.
+
 Date: 2026-11-03 (Asia/Bangkok). Branch: `feature/coordinator-workspace-redesign`, based on `41f3a80`.
 
 This is local source/test evidence, not deployment or production acceptance evidence. No AWS writes, production migrations, real student data, Issue/PR creation or push were performed.

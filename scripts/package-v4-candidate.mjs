@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
 import { archiveFiles, createZip, listZipEntries, readZipEntry } from './operations/zip-archive.mjs';
 import { readReviewedMigrations } from './operations/reviewed-migrations.mjs';
+import {LINEAGE_SUPPORT} from './operations/coordinator-schema-lineages.mjs';
 import formContract from '../src/shared/application-form.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -101,8 +102,10 @@ const manifest = {
   frontendAssets: { 'runtime-config.js': sha256(runtimeBytes), 'assets/authenticated-shell.js': sha256(shellBytes),
     'assets/authenticated-shell.css': sha256(styleBytes) },
   migrations: migrations.map(({ name, checksum }) => ({ name, checksum })),
+  coordinatorSchema: LINEAGE_SUPPORT,
   caBundleSha256: sha256(readZipEntry(backend, 'global-bundle.pem')),
   blockers: ['Commit/review source and regenerate a clean final release; this is only a local candidate.',
+    'Coordinator requires coupled Backend + 016 + scoped ACL cutover. External 015 is upgrade-only; authentic 014/015 source is missing and baseline adoption is not production-approved.',
     'Verify live migration history, runtime grants and API integration/alias; retain backup and rollback artifacts.',
     'Verify private document storage and actual authenticated Profile error; no synthetic academic metadata in production.',
     'Obtain separate approval before any upload, deployment, migration or permission change.']

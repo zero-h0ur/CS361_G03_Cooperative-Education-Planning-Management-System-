@@ -1,0 +1,8 @@
+{
+  "notice": "Catalog reconstruction only, NOT authentic 014/015 SQL. No real business rows.",
+  "catalogContract": "../../scripts/operations/coordinator-schema-external015.json",
+  "verified013Source": "coordinator-external013-verified.sql",
+  "verified013Sha256": "91466678848777ebe71759f178eaa35b7d51ccc9bff5367dd52159f5ad573396",
+  "sourceMetadataSha256": "5d899a8afc6cb28423aabe29e25b9d008eb65f13c6062aa511a8068a66a61830",
+  "productionProvenanceComplete": false
+}

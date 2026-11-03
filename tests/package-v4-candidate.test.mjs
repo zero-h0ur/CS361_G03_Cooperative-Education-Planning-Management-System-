@@ -30,6 +30,10 @@ test('paired candidate pins V4 target, current form/API, exact migrations and ho
     const manifest = JSON.parse(readFileSync(result.manifest, 'utf8'));
     assert.equal(manifest.status, 'LOCAL_CANDIDATE_NOT_DEPLOYED');
     assert.equal(manifest.deploymentApproved, false);
+    assert.equal(manifest.coordinatorSchema.fresh,'workspace013-plus016');
+    assert.equal(manifest.coordinatorSchema.external,'recorded015-upgrade-only');
+    assert.equal(manifest.coordinatorSchema.authentic014015SourceVerified,false);
+    assert.equal(manifest.coordinatorSchema.productionBaselineAdoptionApproved,false);
     assert.equal(manifest.applicationFormVersion, 2);
     assert.equal(typeof manifest.source.dirty, 'boolean');
     assert.match(manifest.source.inputSha256, /^[a-f0-9]{64}$/);

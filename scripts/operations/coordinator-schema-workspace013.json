@@ -1,0 +1,3091 @@
+{
+  "notice": "Catalog from unchanged, checksum-verified workspace migrations 001-013 on PostgreSQL 16. No business records.",
+  "columns": [
+    {
+      "table_name": "audit_events",
+      "column_name": "event_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "plan_id",
+      "data_type": "uuid",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "actor_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "actor_role",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "action",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "resource_type",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "resource_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "from_state",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "to_state",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "notes",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "correlation_id",
+      "data_type": "uuid",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "operation_id",
+      "data_type": "uuid",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "audit_events",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "column_name": "operation_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "column_name": "cohort_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "column_name": "actor_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "column_name": "request_hash",
+      "data_type": "character(64)",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "column_name": "result",
+      "data_type": "jsonb",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "committee_workspaces",
+      "column_name": "cohort_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "committee_workspaces",
+      "column_name": "version",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "committee_workspaces",
+      "column_name": "state",
+      "data_type": "jsonb",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "coordinator_operations",
+      "column_name": "operation_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "coordinator_operations",
+      "column_name": "actor_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "coordinator_operations",
+      "column_name": "action",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "coordinator_operations",
+      "column_name": "resource_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "coordinator_operations",
+      "column_name": "request_hash",
+      "data_type": "character(64)",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "coordinator_operations",
+      "column_name": "result",
+      "data_type": "jsonb",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "coordinator_operations",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "column_name": "cycle_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "column_name": "review_opens_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "column_name": "review_closes_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "column_name": "confirmation_opens_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "column_name": "confirmation_closes_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "column_name": "version",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "column_name": "updated_by",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "column_name": "student_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "column_name": "curriculum",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "column_name": "entry_year",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "column_name": "institution",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "column_name": "source",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "column_name": "verified_by",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "column_name": "verified_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "student_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "cycle_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "status",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": "'DRAFT'::text"
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "version",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": "1"
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "payload",
+      "data_type": "jsonb",
+      "not_null": true,
+      "default_expression": "'{}'::jsonb"
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "submitted_at",
+      "data_type": "timestamp with time zone",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "phase1_applications",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "phase1_attachments",
+      "column_name": "application_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_attachments",
+      "column_name": "kind",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_attachments",
+      "column_name": "document_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "cycle_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "opens_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "closes_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "column_name": "version",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": "1"
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "application_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "ticket_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "kind",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "filename",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "content_type",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "byte_size",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "checksum",
+      "data_type": "character(64)",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "object_key",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_documents",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "phase1_events",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_events",
+      "column_name": "operation_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_events",
+      "column_name": "application_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_events",
+      "column_name": "actor_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_events",
+      "column_name": "action",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_events",
+      "column_name": "application_version",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_events",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "phase1_operations",
+      "column_name": "operation_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_operations",
+      "column_name": "application_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_operations",
+      "column_name": "actor_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_operations",
+      "column_name": "action",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_operations",
+      "column_name": "request_hash",
+      "data_type": "character(64)",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_operations",
+      "column_name": "result",
+      "data_type": "jsonb",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_operations",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "cycle_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "curriculum",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "version",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "source_year",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "source",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "verified",
+      "data_type": "boolean",
+      "not_null": true,
+      "default_expression": "false"
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "synthetic",
+      "data_type": "boolean",
+      "not_null": true,
+      "default_expression": "false"
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "data",
+      "data_type": "jsonb",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_policies",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "application_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "submission_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "cohort_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "state",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "version",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "reason",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "actor_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_reviews",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "application_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "application_version",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "policy_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "snapshot",
+      "data_type": "jsonb",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "checksum",
+      "data_type": "character(64)",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "submitted_by",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_submissions",
+      "column_name": "submitted_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "application_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "kind",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "filename",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "content_type",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "byte_size",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "checksum",
+      "data_type": "character(64)",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "staging_key",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "expected_version",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "status",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": "'PENDING'::text"
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "phase1_uploads",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "name",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "academic_year",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "source",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "visibility",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "data_status",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "semester",
+      "data_type": "integer",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "status",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "rounds",
+      "column_name": "end_date",
+      "data_type": "timestamp with time zone",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "cycle_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "department",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "program",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "coordinator_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "committee_one",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "committee_two",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "committee_three",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "status",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": "'ACTIVE'::text"
+    },
+    {
+      "table_name": "selection_cohorts",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "students",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "anonymous_ref",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "source",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "students",
+      "column_name": "visibility",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "data_status",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "student_number",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "full_name",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "preferred_name",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "institutional_email",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "department",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "program",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "major",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "academic_year",
+      "data_type": "integer",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "enrollment_status",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "students",
+      "column_name": "version",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": "1"
+    },
+    {
+      "table_name": "students",
+      "column_name": "contact_address",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "contact_phone",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "students",
+      "column_name": "contact_email",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "role",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "account_status",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": "'ACTIVE'::text"
+    },
+    {
+      "table_name": "users",
+      "column_name": "version",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": "1"
+    },
+    {
+      "table_name": "users",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "users",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "users",
+      "column_name": "display_name",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    }
+  ],
+  "constraints": [
+    {
+      "table_name": "audit_events",
+      "name": "audit_events_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (event_id)"
+    },
+    {
+      "table_name": "audit_events",
+      "name": "chk_audit_events_action",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((char_length(action) > 0) AND (action = btrim(action))))"
+    },
+    {
+      "table_name": "audit_events",
+      "name": "chk_audit_events_actor_role",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((actor_role = ANY (ARRAY['STUDENT'::text, 'STAFF'::text, 'ADVISOR'::text, 'ADMIN'::text, 'SYSTEM'::text, 'COORDINATOR'::text, 'COMMITTEE'::text])))"
+    },
+    {
+      "table_name": "audit_events",
+      "name": "chk_audit_events_from_state",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((from_state IS NULL) OR (from_state = ANY (ARRAY['DRAFT'::text, 'SUBMITTED'::text, 'UNDER_REVIEW'::text, 'NEEDS_REVISION'::text, 'APPROVED'::text, 'REJECTED'::text, 'CANCELLED'::text]))))"
+    },
+    {
+      "table_name": "audit_events",
+      "name": "chk_audit_events_notes",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((notes IS NULL) OR (((char_length(notes) >= 1) AND (char_length(notes) <= 2000)) AND (notes = btrim(notes)))))"
+    },
+    {
+      "table_name": "audit_events",
+      "name": "chk_audit_events_resource_type",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((char_length(resource_type) > 0) AND (resource_type = btrim(resource_type))))"
+    },
+    {
+      "table_name": "audit_events",
+      "name": "chk_audit_events_to_state",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((to_state IS NULL) OR (to_state = ANY (ARRAY['DRAFT'::text, 'SUBMITTED'::text, 'UNDER_REVIEW'::text, 'NEEDS_REVISION'::text, 'APPROVED'::text, 'REJECTED'::text, 'CANCELLED'::text]))))"
+    },
+    {
+      "table_name": "audit_events",
+      "name": "fk_audit_events_actor",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "audit_events",
+      "name": "fk_audit_events_operation",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (operation_id) REFERENCES plan_operations(operation_id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "audit_events",
+      "name": "fk_audit_events_plan",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "name": "committee_workspace_events_actor_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (actor_id) REFERENCES users(id)"
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "name": "committee_workspace_events_cohort_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (cohort_id) REFERENCES selection_cohorts(id)"
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "name": "committee_workspace_events_operation_id_key",
+      "type": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "UNIQUE (operation_id)"
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "name": "committee_workspace_events_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "committee_workspaces",
+      "name": "committee_workspaces_cohort_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (cohort_id) REFERENCES selection_cohorts(id)"
+    },
+    {
+      "table_name": "committee_workspaces",
+      "name": "committee_workspaces_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (cohort_id)"
+    },
+    {
+      "table_name": "committee_workspaces",
+      "name": "committee_workspaces_state_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((jsonb_typeof(state) = 'object'::text))"
+    },
+    {
+      "table_name": "committee_workspaces",
+      "name": "committee_workspaces_version_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((version > 0))"
+    },
+    {
+      "table_name": "coordinator_operations",
+      "name": "coordinator_operations_actor_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (actor_id) REFERENCES users(id)"
+    },
+    {
+      "table_name": "coordinator_operations",
+      "name": "coordinator_operations_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (operation_id)"
+    },
+    {
+      "table_name": "coordinator_operations",
+      "name": "coordinator_operations_request_hash_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((request_hash ~ '^[a-f0-9]{64}$'::text))"
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "name": "coordinator_round_schedules_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((review_closes_at > review_opens_at))"
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "name": "coordinator_round_schedules_check1",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((confirmation_closes_at > confirmation_opens_at))"
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "name": "coordinator_round_schedules_check2",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((confirmation_opens_at >= review_closes_at))"
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "name": "coordinator_round_schedules_cycle_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (cycle_id) REFERENCES rounds(id)"
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "name": "coordinator_round_schedules_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (cycle_id)"
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "name": "coordinator_round_schedules_updated_by_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (updated_by) REFERENCES users(id)"
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "name": "coordinator_round_schedules_version_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((version > 0))"
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "name": "phase1_academic_profiles_curriculum_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((curriculum = ANY (ARRAY['61'::text, '66'::text])))"
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "name": "phase1_academic_profiles_entry_year_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((entry_year >= 2500) AND (entry_year <= 2700)))"
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "name": "phase1_academic_profiles_institution_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((institution = 'TU_CS'::text))"
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "name": "phase1_academic_profiles_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (student_id)"
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "name": "phase1_academic_profiles_source_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((length(btrim(source)) >= 1) AND (length(btrim(source)) <= 500)))"
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "name": "phase1_academic_profiles_student_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (student_id) REFERENCES students(id)"
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "name": "phase1_academic_profiles_verified_by_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (verified_by) REFERENCES users(id)"
+    },
+    {
+      "table_name": "phase1_applications",
+      "name": "phase1_applications_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((status = 'SUBMITTED'::text) = (submitted_at IS NOT NULL)))"
+    },
+    {
+      "table_name": "phase1_applications",
+      "name": "phase1_applications_cycle_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (cycle_id) REFERENCES rounds(id)"
+    },
+    {
+      "table_name": "phase1_applications",
+      "name": "phase1_applications_payload_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((jsonb_typeof(payload) = 'object'::text))"
+    },
+    {
+      "table_name": "phase1_applications",
+      "name": "phase1_applications_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "phase1_applications",
+      "name": "phase1_applications_status_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((status = ANY (ARRAY['DRAFT'::text, 'SUBMITTED'::text, 'NEEDS_REVISION'::text])))"
+    },
+    {
+      "table_name": "phase1_applications",
+      "name": "phase1_applications_student_id_cycle_id_key",
+      "type": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "UNIQUE (student_id, cycle_id)"
+    },
+    {
+      "table_name": "phase1_applications",
+      "name": "phase1_applications_student_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (student_id) REFERENCES students(id)"
+    },
+    {
+      "table_name": "phase1_applications",
+      "name": "phase1_applications_version_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((version > 0))"
+    },
+    {
+      "table_name": "phase1_attachments",
+      "name": "phase1_attachments_application_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (application_id) REFERENCES phase1_applications(id)"
+    },
+    {
+      "table_name": "phase1_attachments",
+      "name": "phase1_attachments_document_id_application_id_kind_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (document_id, application_id, kind) REFERENCES phase1_documents(id, application_id, kind)"
+    },
+    {
+      "table_name": "phase1_attachments",
+      "name": "phase1_attachments_document_id_key",
+      "type": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "UNIQUE (document_id)"
+    },
+    {
+      "table_name": "phase1_attachments",
+      "name": "phase1_attachments_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (application_id, kind)"
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "name": "phase1_cycle_windows_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((closes_at > opens_at))"
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "name": "phase1_cycle_windows_cycle_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (cycle_id) REFERENCES rounds(id)"
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "name": "phase1_cycle_windows_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (cycle_id)"
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "name": "phase1_cycle_windows_version_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((version > 0))"
+    },
+    {
+      "table_name": "phase1_documents",
+      "name": "phase1_documents_application_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (application_id) REFERENCES phase1_applications(id)"
+    },
+    {
+      "table_name": "phase1_documents",
+      "name": "phase1_documents_byte_size_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((byte_size > 0))"
+    },
+    {
+      "table_name": "phase1_documents",
+      "name": "phase1_documents_checksum_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((checksum ~ '^[a-f0-9]{64}$'::text))"
+    },
+    {
+      "table_name": "phase1_documents",
+      "name": "phase1_documents_id_application_id_kind_key",
+      "type": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "UNIQUE (id, application_id, kind)"
+    },
+    {
+      "table_name": "phase1_documents",
+      "name": "phase1_documents_kind_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((kind = ANY (ARRAY['resume'::text, 'transcript'::text, 'conduct'::text, 'photo'::text])))"
+    },
+    {
+      "table_name": "phase1_documents",
+      "name": "phase1_documents_object_key_key",
+      "type": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "UNIQUE (object_key)"
+    },
+    {
+      "table_name": "phase1_documents",
+      "name": "phase1_documents_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "phase1_documents",
+      "name": "phase1_documents_ticket_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (ticket_id) REFERENCES phase1_uploads(id)"
+    },
+    {
+      "table_name": "phase1_documents",
+      "name": "phase1_documents_ticket_id_key",
+      "type": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "UNIQUE (ticket_id)"
+    },
+    {
+      "table_name": "phase1_events",
+      "name": "phase1_events_actor_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (actor_id) REFERENCES users(id)"
+    },
+    {
+      "table_name": "phase1_events",
+      "name": "phase1_events_application_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (application_id) REFERENCES phase1_applications(id)"
+    },
+    {
+      "table_name": "phase1_events",
+      "name": "phase1_events_operation_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (operation_id) REFERENCES phase1_operations(operation_id)"
+    },
+    {
+      "table_name": "phase1_events",
+      "name": "phase1_events_operation_id_key",
+      "type": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "UNIQUE (operation_id)"
+    },
+    {
+      "table_name": "phase1_events",
+      "name": "phase1_events_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "phase1_operations",
+      "name": "phase1_operations_actor_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (actor_id) REFERENCES users(id)"
+    },
+    {
+      "table_name": "phase1_operations",
+      "name": "phase1_operations_application_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (application_id) REFERENCES phase1_applications(id)"
+    },
+    {
+      "table_name": "phase1_operations",
+      "name": "phase1_operations_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (operation_id)"
+    },
+    {
+      "table_name": "phase1_operations",
+      "name": "phase1_operations_request_hash_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((request_hash ~ '^[a-f0-9]{64}$'::text))"
+    },
+    {
+      "table_name": "phase1_policies",
+      "name": "phase1_policies_curriculum_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((curriculum = ANY (ARRAY['61'::text, '66'::text])))"
+    },
+    {
+      "table_name": "phase1_policies",
+      "name": "phase1_policies_cycle_id_curriculum_version_key",
+      "type": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "UNIQUE (cycle_id, curriculum, version)"
+    },
+    {
+      "table_name": "phase1_policies",
+      "name": "phase1_policies_cycle_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (cycle_id) REFERENCES rounds(id)"
+    },
+    {
+      "table_name": "phase1_policies",
+      "name": "phase1_policies_data_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((jsonb_typeof(data) = 'object'::text))"
+    },
+    {
+      "table_name": "phase1_policies",
+      "name": "phase1_policies_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "phase1_policies",
+      "name": "phase1_policies_source_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((length(btrim(source)) >= 1) AND (length(btrim(source)) <= 500)))"
+    },
+    {
+      "table_name": "phase1_policies",
+      "name": "phase1_policies_source_year_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((source_year >= 2500) AND (source_year <= 2700)))"
+    },
+    {
+      "table_name": "phase1_policies",
+      "name": "phase1_policies_version_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((version > 0))"
+    },
+    {
+      "table_name": "phase1_reviews",
+      "name": "phase1_reviews_actor_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (actor_id) REFERENCES users(id)"
+    },
+    {
+      "table_name": "phase1_reviews",
+      "name": "phase1_reviews_application_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (application_id) REFERENCES phase1_applications(id)"
+    },
+    {
+      "table_name": "phase1_reviews",
+      "name": "phase1_reviews_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((state = 'RETURNED'::text) = (reason IS NOT NULL)))"
+    },
+    {
+      "table_name": "phase1_reviews",
+      "name": "phase1_reviews_cohort_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (cohort_id) REFERENCES selection_cohorts(id)"
+    },
+    {
+      "table_name": "phase1_reviews",
+      "name": "phase1_reviews_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (application_id)"
+    },
+    {
+      "table_name": "phase1_reviews",
+      "name": "phase1_reviews_reason_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((length(btrim(reason)) >= 1) AND (length(btrim(reason)) <= 2000)))"
+    },
+    {
+      "table_name": "phase1_reviews",
+      "name": "phase1_reviews_state_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((state = ANY (ARRAY['PENDING'::text, 'RETURNED'::text, 'FORWARDED'::text])))"
+    },
+    {
+      "table_name": "phase1_reviews",
+      "name": "phase1_reviews_submission_id_application_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (submission_id, application_id) REFERENCES phase1_submissions(id, application_id)"
+    },
+    {
+      "table_name": "phase1_reviews",
+      "name": "phase1_reviews_version_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((version > 0))"
+    },
+    {
+      "table_name": "phase1_submissions",
+      "name": "phase1_submissions_application_id_application_version_key",
+      "type": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "UNIQUE (application_id, application_version)"
+    },
+    {
+      "table_name": "phase1_submissions",
+      "name": "phase1_submissions_application_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (application_id) REFERENCES phase1_applications(id)"
+    },
+    {
+      "table_name": "phase1_submissions",
+      "name": "phase1_submissions_checksum_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((checksum ~ '^[a-f0-9]{64}$'::text))"
+    },
+    {
+      "table_name": "phase1_submissions",
+      "name": "phase1_submissions_id_application_id_key",
+      "type": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "UNIQUE (id, application_id)"
+    },
+    {
+      "table_name": "phase1_submissions",
+      "name": "phase1_submissions_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "phase1_submissions",
+      "name": "phase1_submissions_policy_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (policy_id) REFERENCES phase1_policies(id)"
+    },
+    {
+      "table_name": "phase1_submissions",
+      "name": "phase1_submissions_submitted_by_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (submitted_by) REFERENCES users(id)"
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_application_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (application_id) REFERENCES phase1_applications(id)"
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_byte_size_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((byte_size > 0) AND (byte_size <= 10485760)))"
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((kind <> 'photo'::text) OR ((byte_size <= 5242880) AND (content_type <> 'application/pdf'::text))))"
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_check1",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((kind = 'photo'::text) OR (content_type = 'application/pdf'::text)))"
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_checksum_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((checksum ~ '^[a-f0-9]{64}$'::text))"
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_content_type_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((content_type = ANY (ARRAY['application/pdf'::text, 'image/jpeg'::text, 'image/png'::text])))"
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_expected_version_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((expected_version > 0))"
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_filename_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((length(filename) >= 1) AND (length(filename) <= 200)))"
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_kind_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((kind = ANY (ARRAY['resume'::text, 'transcript'::text, 'conduct'::text, 'photo'::text])))"
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_staging_key_key",
+      "type": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "UNIQUE (staging_key)"
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_status_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((status = ANY (ARRAY['PENDING'::text, 'ATTACHED'::text])))"
+    },
+    {
+      "table_name": "rounds",
+      "name": "chk_rounds_semester",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((semester IS NULL) OR (semester > 0)))"
+    },
+    {
+      "table_name": "rounds",
+      "name": "chk_rounds_status",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((status = ANY (ARRAY['OPEN'::text, 'CLOSED'::text])))"
+    },
+    {
+      "table_name": "rounds",
+      "name": "rounds_data_status_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((data_status = ANY (ARRAY['mock'::text, 'to_validate'::text, 'verified'::text])))"
+    },
+    {
+      "table_name": "rounds",
+      "name": "rounds_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "rounds",
+      "name": "rounds_visibility_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((visibility = ANY (ARRAY['public'::text, 'private'::text])))"
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((committee_one <> committee_two) AND (committee_one <> committee_three) AND (committee_two <> committee_three)))"
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_check1",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((((coordinator_id <> committee_one) AND (coordinator_id <> committee_two)) AND (coordinator_id <> committee_three)))"
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_committee_one_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (committee_one) REFERENCES users(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_committee_three_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (committee_three) REFERENCES users(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_committee_two_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (committee_two) REFERENCES users(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_coordinator_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (coordinator_id) REFERENCES users(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_cycle_id_department_program_key",
+      "type": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "UNIQUE (cycle_id, department, program)"
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_cycle_id_fkey",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (cycle_id) REFERENCES rounds(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_department_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((length(btrim(department)) > 0) AND (department = btrim(department))))"
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_program_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((length(btrim(program)) > 0) AND (program = btrim(program))))"
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_status_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((status = ANY (ARRAY['ACTIVE'::text, 'INACTIVE'::text])))"
+    },
+    {
+      "table_name": "students",
+      "name": "chk_student_contact_address",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((char_length(contact_address) <= 1000))"
+    },
+    {
+      "table_name": "students",
+      "name": "chk_student_contact_phone",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((char_length(contact_phone) <= 40))"
+    },
+    {
+      "table_name": "students",
+      "name": "chk_students_academic_year",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((academic_year IS NULL) OR (academic_year > 0)))"
+    },
+    {
+      "table_name": "students",
+      "name": "chk_students_enrollment_status",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((enrollment_status IS NULL) OR (enrollment_status = ANY (ARRAY['ACTIVE'::text, 'INACTIVE'::text]))))"
+    },
+    {
+      "table_name": "students",
+      "name": "chk_students_linked_profile_complete",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((user_id IS NULL) OR ((student_number IS NOT NULL) AND (char_length(btrim(student_number)) > 0) AND (full_name IS NOT NULL) AND (char_length(btrim(full_name)) > 0) AND (institutional_email IS NOT NULL) AND (char_length(btrim(institutional_email)) > 0) AND (department IS NOT NULL) AND (char_length(btrim(department)) > 0) AND (program IS NOT NULL) AND (char_length(btrim(program)) > 0) AND (major IS NOT NULL) AND (char_length(btrim(major)) > 0) AND (academic_year IS NOT NULL) AND (enrollment_status IS NOT NULL))))"
+    },
+    {
+      "table_name": "students",
+      "name": "chk_students_preferred_name",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((preferred_name IS NULL) OR ((char_length(preferred_name) > 0) AND (preferred_name = btrim(preferred_name)))))"
+    },
+    {
+      "table_name": "students",
+      "name": "chk_students_version",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((version >= 1))"
+    },
+    {
+      "table_name": "students",
+      "name": "fk_students_user",
+      "type": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "students",
+      "name": "students_anonymous_ref_key",
+      "type": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "UNIQUE (anonymous_ref)"
+    },
+    {
+      "table_name": "students",
+      "name": "students_contact_email_format",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((contact_email IS NULL) OR (((char_length(contact_email) >= 3) AND (char_length(contact_email) <= 254)) AND (contact_email = btrim(contact_email)) AND (contact_email !~ '[[:cntrl:][:space:]]'::text) AND (contact_email ~ '^[^@]+@[^@]+\\.[^@]+$'::text))))"
+    },
+    {
+      "table_name": "students",
+      "name": "students_data_status_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((data_status = 'mock'::text))"
+    },
+    {
+      "table_name": "students",
+      "name": "students_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "students",
+      "name": "students_visibility_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((visibility = 'private'::text))"
+    },
+    {
+      "table_name": "students",
+      "name": "uq_students_user",
+      "type": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "UNIQUE (user_id)"
+    },
+    {
+      "table_name": "users",
+      "name": "chk_users_account_status",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((account_status = ANY (ARRAY['ACTIVE'::text, 'DISABLED'::text])))"
+    },
+    {
+      "table_name": "users",
+      "name": "chk_users_role",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((role = ANY (ARRAY['STUDENT'::text, 'STAFF'::text, 'ADVISOR'::text, 'ADMIN'::text, 'SYSTEM'::text, 'COORDINATOR'::text, 'COMMITTEE'::text])))"
+    },
+    {
+      "table_name": "users",
+      "name": "chk_users_version",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK ((version >= 1))"
+    },
+    {
+      "table_name": "users",
+      "name": "users_display_name_check",
+      "type": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "CHECK (((display_name IS NULL) OR ((char_length(display_name) >= 1) AND (char_length(display_name) <= 200))))"
+    },
+    {
+      "table_name": "users",
+      "name": "users_pkey",
+      "type": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition": "PRIMARY KEY (id)"
+    }
+  ],
+  "indexes": [
+    {
+      "table_name": "audit_events",
+      "name": "audit_events_pkey",
+      "definition": "CREATE UNIQUE INDEX audit_events_pkey ON public.audit_events USING btree (event_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "audit_events",
+      "name": "idx_audit_events_correlation",
+      "definition": "CREATE INDEX idx_audit_events_correlation ON public.audit_events USING btree (correlation_id) WHERE (correlation_id IS NOT NULL)",
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "table_name": "audit_events",
+      "name": "idx_audit_events_plan_created",
+      "definition": "CREATE INDEX idx_audit_events_plan_created ON public.audit_events USING btree (plan_id, created_at, event_id) WHERE (plan_id IS NOT NULL)",
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "table_name": "audit_events",
+      "name": "idx_audit_events_resource_created",
+      "definition": "CREATE INDEX idx_audit_events_resource_created ON public.audit_events USING btree (resource_type, resource_id, created_at, event_id)",
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "name": "committee_workspace_events_operation_id_key",
+      "definition": "CREATE UNIQUE INDEX committee_workspace_events_operation_id_key ON public.committee_workspace_events USING btree (operation_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "name": "committee_workspace_events_pkey",
+      "definition": "CREATE UNIQUE INDEX committee_workspace_events_pkey ON public.committee_workspace_events USING btree (id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "committee_workspaces",
+      "name": "committee_workspaces_pkey",
+      "definition": "CREATE UNIQUE INDEX committee_workspaces_pkey ON public.committee_workspaces USING btree (cohort_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "coordinator_operations",
+      "name": "coordinator_operations_pkey",
+      "definition": "CREATE UNIQUE INDEX coordinator_operations_pkey ON public.coordinator_operations USING btree (operation_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "coordinator_round_schedules",
+      "name": "coordinator_round_schedules_pkey",
+      "definition": "CREATE UNIQUE INDEX coordinator_round_schedules_pkey ON public.coordinator_round_schedules USING btree (cycle_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "name": "phase1_academic_profiles_pkey",
+      "definition": "CREATE UNIQUE INDEX phase1_academic_profiles_pkey ON public.phase1_academic_profiles USING btree (student_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_applications",
+      "name": "phase1_applications_cycle",
+      "definition": "CREATE INDEX phase1_applications_cycle ON public.phase1_applications USING btree (cycle_id, status, created_at, id)",
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "table_name": "phase1_applications",
+      "name": "phase1_applications_pkey",
+      "definition": "CREATE UNIQUE INDEX phase1_applications_pkey ON public.phase1_applications USING btree (id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_applications",
+      "name": "phase1_applications_student_id_cycle_id_key",
+      "definition": "CREATE UNIQUE INDEX phase1_applications_student_id_cycle_id_key ON public.phase1_applications USING btree (student_id, cycle_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_attachments",
+      "name": "phase1_attachments_document_id_key",
+      "definition": "CREATE UNIQUE INDEX phase1_attachments_document_id_key ON public.phase1_attachments USING btree (document_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_attachments",
+      "name": "phase1_attachments_pkey",
+      "definition": "CREATE UNIQUE INDEX phase1_attachments_pkey ON public.phase1_attachments USING btree (application_id, kind)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "name": "phase1_cycle_windows_pkey",
+      "definition": "CREATE UNIQUE INDEX phase1_cycle_windows_pkey ON public.phase1_cycle_windows USING btree (cycle_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_documents",
+      "name": "phase1_documents_id_application_id_kind_key",
+      "definition": "CREATE UNIQUE INDEX phase1_documents_id_application_id_kind_key ON public.phase1_documents USING btree (id, application_id, kind)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_documents",
+      "name": "phase1_documents_object_key_key",
+      "definition": "CREATE UNIQUE INDEX phase1_documents_object_key_key ON public.phase1_documents USING btree (object_key)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_documents",
+      "name": "phase1_documents_pkey",
+      "definition": "CREATE UNIQUE INDEX phase1_documents_pkey ON public.phase1_documents USING btree (id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_documents",
+      "name": "phase1_documents_ticket_id_key",
+      "definition": "CREATE UNIQUE INDEX phase1_documents_ticket_id_key ON public.phase1_documents USING btree (ticket_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_events",
+      "name": "phase1_events_operation_id_key",
+      "definition": "CREATE UNIQUE INDEX phase1_events_operation_id_key ON public.phase1_events USING btree (operation_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_events",
+      "name": "phase1_events_pkey",
+      "definition": "CREATE UNIQUE INDEX phase1_events_pkey ON public.phase1_events USING btree (id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_operations",
+      "name": "phase1_operations_pkey",
+      "definition": "CREATE UNIQUE INDEX phase1_operations_pkey ON public.phase1_operations USING btree (operation_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_policies",
+      "name": "phase1_policies_cycle_id_curriculum_version_key",
+      "definition": "CREATE UNIQUE INDEX phase1_policies_cycle_id_curriculum_version_key ON public.phase1_policies USING btree (cycle_id, curriculum, version)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_policies",
+      "name": "phase1_policies_pkey",
+      "definition": "CREATE UNIQUE INDEX phase1_policies_pkey ON public.phase1_policies USING btree (id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_reviews",
+      "name": "phase1_reviews_cohort",
+      "definition": "CREATE INDEX phase1_reviews_cohort ON public.phase1_reviews USING btree (cohort_id, state, application_id)",
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "table_name": "phase1_reviews",
+      "name": "phase1_reviews_pkey",
+      "definition": "CREATE UNIQUE INDEX phase1_reviews_pkey ON public.phase1_reviews USING btree (application_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_submissions",
+      "name": "phase1_submission_latest",
+      "definition": "CREATE INDEX phase1_submission_latest ON public.phase1_submissions USING btree (application_id, application_version DESC)",
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "table_name": "phase1_submissions",
+      "name": "phase1_submissions_application_id_application_version_key",
+      "definition": "CREATE UNIQUE INDEX phase1_submissions_application_id_application_version_key ON public.phase1_submissions USING btree (application_id, application_version)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_submissions",
+      "name": "phase1_submissions_id_application_id_key",
+      "definition": "CREATE UNIQUE INDEX phase1_submissions_id_application_id_key ON public.phase1_submissions USING btree (id, application_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_submissions",
+      "name": "phase1_submissions_pkey",
+      "definition": "CREATE UNIQUE INDEX phase1_submissions_pkey ON public.phase1_submissions USING btree (id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_app",
+      "definition": "CREATE INDEX phase1_uploads_app ON public.phase1_uploads USING btree (application_id, status)",
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_pkey",
+      "definition": "CREATE UNIQUE INDEX phase1_uploads_pkey ON public.phase1_uploads USING btree (id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "phase1_uploads",
+      "name": "phase1_uploads_staging_key_key",
+      "definition": "CREATE UNIQUE INDEX phase1_uploads_staging_key_key ON public.phase1_uploads USING btree (staging_key)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "rounds",
+      "name": "rounds_pkey",
+      "definition": "CREATE UNIQUE INDEX rounds_pkey ON public.rounds USING btree (id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_coordinator",
+      "definition": "CREATE INDEX selection_cohorts_coordinator ON public.selection_cohorts USING btree (coordinator_id, status)",
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_cycle_id_department_program_key",
+      "definition": "CREATE UNIQUE INDEX selection_cohorts_cycle_id_department_program_key ON public.selection_cohorts USING btree (cycle_id, department, program)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_cohorts_pkey",
+      "definition": "CREATE UNIQUE INDEX selection_cohorts_pkey ON public.selection_cohorts USING btree (id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "students",
+      "name": "idx_students_staff_scope",
+      "definition": "CREATE INDEX idx_students_staff_scope ON public.students USING btree (department, program, academic_year) WHERE (user_id IS NOT NULL)",
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "table_name": "students",
+      "name": "students_anonymous_ref_key",
+      "definition": "CREATE UNIQUE INDEX students_anonymous_ref_key ON public.students USING btree (anonymous_ref)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "students",
+      "name": "students_pkey",
+      "definition": "CREATE UNIQUE INDEX students_pkey ON public.students USING btree (id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "students",
+      "name": "uq_students_student_number",
+      "definition": "CREATE UNIQUE INDEX uq_students_student_number ON public.students USING btree (student_number) WHERE (student_number IS NOT NULL)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "students",
+      "name": "uq_students_user",
+      "definition": "CREATE UNIQUE INDEX uq_students_user ON public.students USING btree (user_id)",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "table_name": "users",
+      "name": "users_pkey",
+      "definition": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)",
+      "indisvalid": true,
+      "indisunique": true
+    }
+  ],
+  "triggers": [
+    {
+      "table_name": "audit_events",
+      "name": "trg_audit_events_immutable",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER trg_audit_events_immutable BEFORE DELETE OR UPDATE ON public.audit_events FOR EACH ROW EXECUTE FUNCTION reject_immutable_row_mutation()",
+      "function_name": "reject_immutable_row_mutation"
+    },
+    {
+      "table_name": "committee_workspace_events",
+      "name": "committee_events_immutable",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER committee_events_immutable BEFORE DELETE OR UPDATE ON public.committee_workspace_events FOR EACH ROW EXECUTE FUNCTION reject_immutable_row_mutation()",
+      "function_name": "reject_immutable_row_mutation"
+    },
+    {
+      "table_name": "coordinator_operations",
+      "name": "coordinator_operation_immutable",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER coordinator_operation_immutable BEFORE DELETE OR UPDATE ON public.coordinator_operations FOR EACH ROW EXECUTE FUNCTION reject_immutable_row_mutation()",
+      "function_name": "reject_immutable_row_mutation"
+    },
+    {
+      "table_name": "phase1_academic_profiles",
+      "name": "phase1_profile_lock",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER phase1_profile_lock BEFORE INSERT OR DELETE OR UPDATE ON public.phase1_academic_profiles FOR EACH ROW EXECUTE FUNCTION lock_phase1_metadata()",
+      "function_name": "lock_phase1_metadata"
+    },
+    {
+      "table_name": "phase1_applications",
+      "name": "phase1_application_guard",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER phase1_application_guard BEFORE INSERT OR DELETE OR UPDATE ON public.phase1_applications FOR EACH ROW EXECUTE FUNCTION guard_phase1_application()",
+      "function_name": "guard_phase1_application"
+    },
+    {
+      "table_name": "phase1_attachments",
+      "name": "phase1_attachment_guard",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER phase1_attachment_guard BEFORE INSERT OR DELETE OR UPDATE ON public.phase1_attachments FOR EACH ROW EXECUTE FUNCTION guard_phase1_attachment()",
+      "function_name": "guard_phase1_attachment"
+    },
+    {
+      "table_name": "phase1_cycle_windows",
+      "name": "phase1_window_lock",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER phase1_window_lock BEFORE INSERT OR DELETE OR UPDATE ON public.phase1_cycle_windows FOR EACH ROW EXECUTE FUNCTION lock_phase1_metadata()",
+      "function_name": "lock_phase1_metadata"
+    },
+    {
+      "table_name": "phase1_documents",
+      "name": "phase1_document_immutable",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER phase1_document_immutable BEFORE DELETE OR UPDATE ON public.phase1_documents FOR EACH ROW EXECUTE FUNCTION reject_immutable_row_mutation()",
+      "function_name": "reject_immutable_row_mutation"
+    },
+    {
+      "table_name": "phase1_events",
+      "name": "phase1_event_immutable",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER phase1_event_immutable BEFORE DELETE OR UPDATE ON public.phase1_events FOR EACH ROW EXECUTE FUNCTION reject_immutable_row_mutation()",
+      "function_name": "reject_immutable_row_mutation"
+    },
+    {
+      "table_name": "phase1_operations",
+      "name": "phase1_operation_immutable",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER phase1_operation_immutable BEFORE DELETE OR UPDATE ON public.phase1_operations FOR EACH ROW EXECUTE FUNCTION reject_immutable_row_mutation()",
+      "function_name": "reject_immutable_row_mutation"
+    },
+    {
+      "table_name": "phase1_policies",
+      "name": "phase1_policy_immutable",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER phase1_policy_immutable BEFORE DELETE OR UPDATE ON public.phase1_policies FOR EACH ROW EXECUTE FUNCTION reject_immutable_row_mutation()",
+      "function_name": "reject_immutable_row_mutation"
+    },
+    {
+      "table_name": "phase1_policies",
+      "name": "phase1_policy_lock",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER phase1_policy_lock BEFORE INSERT ON public.phase1_policies FOR EACH ROW EXECUTE FUNCTION lock_phase1_metadata()",
+      "function_name": "lock_phase1_metadata"
+    },
+    {
+      "table_name": "phase1_reviews",
+      "name": "phase1_review_guard",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER phase1_review_guard BEFORE INSERT OR DELETE OR UPDATE ON public.phase1_reviews FOR EACH ROW EXECUTE FUNCTION guard_phase1_review()",
+      "function_name": "guard_phase1_review"
+    },
+    {
+      "table_name": "phase1_submissions",
+      "name": "phase1_submission_immutable",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER phase1_submission_immutable BEFORE DELETE OR UPDATE ON public.phase1_submissions FOR EACH ROW EXECUTE FUNCTION reject_immutable_row_mutation()",
+      "function_name": "reject_immutable_row_mutation"
+    },
+    {
+      "table_name": "rounds",
+      "name": "phase1_round_lock",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER phase1_round_lock BEFORE DELETE OR UPDATE ON public.rounds FOR EACH ROW EXECUTE FUNCTION lock_phase1_metadata()",
+      "function_name": "lock_phase1_metadata"
+    },
+    {
+      "table_name": "selection_cohorts",
+      "name": "selection_panel_guard",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER selection_panel_guard BEFORE INSERT OR UPDATE ON public.selection_cohorts FOR EACH ROW EXECUTE FUNCTION guard_selection_panel()",
+      "function_name": "guard_selection_panel"
+    },
+    {
+      "table_name": "students",
+      "name": "trg_students_user_role",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER trg_students_user_role BEFORE INSERT OR UPDATE ON public.students FOR EACH ROW EXECUTE FUNCTION enforce_student_user_role()",
+      "function_name": "enforce_student_user_role"
+    },
+    {
+      "table_name": "users",
+      "name": "trg_users_student_role",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER trg_users_student_role BEFORE UPDATE OF role ON public.users FOR EACH ROW EXECUTE FUNCTION prevent_linked_student_role_change()",
+      "function_name": "prevent_linked_student_role_change"
+    }
+  ],
+  "functions": [
+    {
+      "name": "enforce_student_user_role",
+      "arguments": "",
+      "security_definer": false,
+      "settings": null,
+      "definition": "CREATE OR REPLACE FUNCTION public.enforce_student_user_role()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    linked_user_role TEXT;\nBEGIN\n    IF NEW.user_id IS NULL THEN\n        RETURN NEW;\n    END IF;\n\n    -- Serialize linking against a concurrent role change. The foreign key will\n    -- report a missing user; this trigger owns only the cross-table role rule.\n    SELECT role\n    INTO linked_user_role\n    FROM users\n    WHERE id = NEW.user_id\n    FOR UPDATE;\n\n    IF linked_user_role IS NOT NULL AND linked_user_role <> 'STUDENT' THEN\n        RAISE EXCEPTION 'students.user_id must reference a user with role STUDENT'\n            USING ERRCODE = '23514',\n                  CONSTRAINT = 'chk_students_user_role';\n    END IF;\n\n    RETURN NEW;\nEND;\n$function$\n"
+    },
+    {
+      "name": "guard_phase1_application",
+      "arguments": "",
+      "security_definer": false,
+      "settings": null,
+      "definition": "CREATE OR REPLACE FUNCTION public.guard_phase1_application()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n  IF TG_OP='INSERT' THEN\n    IF NEW.status<>'DRAFT' OR NEW.version<>1 OR NEW.submitted_at IS NOT NULL THEN\n      RAISE EXCEPTION 'Applications must start as version-one Drafts' USING ERRCODE='23514'; END IF;\n    RETURN NEW;\n  END IF;\n  IF TG_OP='DELETE' THEN RAISE EXCEPTION 'Applications are retained' USING ERRCODE='55000'; END IF;\n  IF NEW.id<>OLD.id OR NEW.student_id<>OLD.student_id OR NEW.cycle_id<>OLD.cycle_id OR NEW.version<>OLD.version+1 THEN\n    RAISE EXCEPTION 'Application identity/version mismatch' USING ERRCODE='23514'; END IF;\n  IF OLD.status='SUBMITTED' THEN\n    IF NEW.status<>'NEEDS_REVISION' OR NEW.payload IS DISTINCT FROM OLD.payload OR NOT EXISTS(\n      SELECT 1 FROM phase1_reviews r JOIN phase1_submissions s ON s.id=r.submission_id\n      WHERE r.application_id=OLD.id AND r.state='RETURNED' AND s.application_version=OLD.version) THEN\n      RAISE EXCEPTION 'Submitted content requires an explicit return' USING ERRCODE='55000'; END IF;\n  ELSIF OLD.status='NEEDS_REVISION' AND NEW.status NOT IN ('NEEDS_REVISION','SUBMITTED') THEN\n    RAISE EXCEPTION 'Invalid correction transition' USING ERRCODE='23514';\n  ELSIF OLD.status='DRAFT' AND NEW.status NOT IN ('DRAFT','SUBMITTED') THEN\n    RAISE EXCEPTION 'Invalid Draft transition' USING ERRCODE='23514';\n  END IF;\n  IF NEW.status='NEEDS_REVISION' AND NOT EXISTS(SELECT 1 FROM phase1_reviews WHERE application_id=NEW.id AND state='RETURNED') THEN\n    RAISE EXCEPTION 'Active return required' USING ERRCODE='23514'; END IF;\n  IF NEW.status='SUBMITTED' AND NOT EXISTS(SELECT 1 FROM phase1_submissions WHERE application_id=NEW.id AND application_version=NEW.version) THEN\n    RAISE EXCEPTION 'Submission snapshot required' USING ERRCODE='23514'; END IF;\n  RETURN NEW;\nEND $function$\n"
+    },
+    {
+      "name": "guard_phase1_attachment",
+      "arguments": "",
+      "security_definer": false,
+      "settings": null,
+      "definition": "CREATE OR REPLACE FUNCTION public.guard_phase1_attachment()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE app UUID;\nBEGIN\n  app:=CASE WHEN TG_OP='DELETE' THEN OLD.application_id ELSE NEW.application_id END;\n  IF TG_OP='UPDATE' AND (NEW.application_id<>OLD.application_id OR NEW.kind<>OLD.kind) THEN\n    RAISE EXCEPTION 'Attachment cannot move applications' USING ERRCODE='55000'; END IF;\n  PERFORM 1 FROM phase1_applications a WHERE a.id=app AND (a.status='DRAFT' OR\n    (a.status='NEEDS_REVISION' AND EXISTS(SELECT 1 FROM phase1_reviews r WHERE r.application_id=a.id AND r.state='RETURNED'))) FOR UPDATE;\n  IF NOT FOUND THEN RAISE EXCEPTION 'Submitted attachments are immutable' USING ERRCODE='55000'; END IF;\n  IF TG_OP='DELETE' THEN RETURN OLD; END IF;\n  RETURN NEW;\nEND $function$\n"
+    },
+    {
+      "name": "guard_phase1_review",
+      "arguments": "",
+      "security_definer": false,
+      "settings": null,
+      "definition": "CREATE OR REPLACE FUNCTION public.guard_phase1_review()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE a phase1_applications; c selection_cohorts; s phase1_submissions;\nBEGIN\n  IF TG_OP='DELETE' THEN RAISE EXCEPTION 'Reviews are retained' USING ERRCODE='55000'; END IF;\n  SELECT * INTO a FROM phase1_applications WHERE id=NEW.application_id FOR UPDATE;\n  SELECT * INTO c FROM selection_cohorts WHERE id=NEW.cohort_id AND status='ACTIVE';\n  SELECT * INTO s FROM phase1_submissions WHERE id=NEW.submission_id AND application_id=a.id;\n  IF c.id IS NULL OR s.id IS NULL OR c.cycle_id<>a.cycle_id OR NOT EXISTS(\n    SELECT 1 FROM students st WHERE st.id=a.student_id AND st.department=c.department AND st.program=c.program)\n    THEN RAISE EXCEPTION 'Review scope mismatch' USING ERRCODE='23514'; END IF;\n  IF TG_OP='INSERT' THEN\n    IF NEW.version<>1 OR NEW.state NOT IN ('RETURNED','FORWARDED') THEN\n      RAISE EXCEPTION 'Invalid initial review' USING ERRCODE='23514'; END IF;\n  ELSE\n    IF NEW.application_id<>OLD.application_id OR NEW.cohort_id<>OLD.cohort_id OR NEW.version<>OLD.version+1 OR OLD.state='FORWARDED' THEN\n      RAISE EXCEPTION 'Review changed or already forwarded' USING ERRCODE='23514'; END IF;\n    IF OLD.state='RETURNED' AND NEW.state='PENDING' AND NEW.submission_id<>OLD.submission_id\n      AND s.application_version=a.version+1 AND a.status='NEEDS_REVISION'\n      AND EXISTS(SELECT 1 FROM students st JOIN users u ON u.id=st.user_id\n        WHERE st.id=a.student_id AND u.id=NEW.actor_id AND u.role='STUDENT' AND u.account_status='ACTIVE') THEN RETURN NEW; END IF;\n    IF OLD.state<>'PENDING' OR NEW.submission_id<>OLD.submission_id THEN\n      RAISE EXCEPTION 'Invalid review transition' USING ERRCODE='23514'; END IF;\n  END IF;\n  IF a.status<>'SUBMITTED' OR NEW.state NOT IN ('RETURNED','FORWARDED') OR s.application_version<>a.version\n    OR NEW.actor_id<>c.coordinator_id OR NOT EXISTS(SELECT 1 FROM users WHERE id=NEW.actor_id AND role='COORDINATOR' AND account_status='ACTIVE') THEN\n    RAISE EXCEPTION 'Current submission and assigned Coordinator required' USING ERRCODE='23514'; END IF;\n  RETURN NEW;\nEND $function$\n"
+    },
+    {
+      "name": "guard_selection_panel",
+      "arguments": "",
+      "security_definer": false,
+      "settings": null,
+      "definition": "CREATE OR REPLACE FUNCTION public.guard_selection_panel()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n  IF NOT EXISTS(SELECT 1 FROM users WHERE id=NEW.coordinator_id AND role='COORDINATOR' AND account_status='ACTIVE')\n    OR (SELECT count(*) FROM users WHERE id IN (NEW.committee_one,NEW.committee_two,NEW.committee_three)\n      AND role='COMMITTEE' AND account_status='ACTIVE')<>3 THEN\n    RAISE EXCEPTION 'Panel requires an active Coordinator and three distinct active Committee users' USING ERRCODE='23514';\n  END IF;\n  RETURN NEW;\nEND $function$\n"
+    },
+    {
+      "name": "lock_phase1_metadata",
+      "arguments": "",
+      "security_definer": false,
+      "settings": null,
+      "definition": "CREATE OR REPLACE FUNCTION public.lock_phase1_metadata()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE target UUID; prefix TEXT;\nBEGIN\n  IF TG_TABLE_NAME='phase1_academic_profiles' THEN\n    target:=CASE WHEN TG_OP='DELETE' THEN OLD.student_id ELSE NEW.student_id END;\n    prefix:='phase1:profile:';\n  ELSIF TG_TABLE_NAME='rounds' THEN\n    target:=CASE WHEN TG_OP='DELETE' THEN OLD.id ELSE NEW.id END;\n    prefix:='phase1:cycle:';\n  ELSE\n    target:=CASE WHEN TG_OP='DELETE' THEN OLD.cycle_id ELSE NEW.cycle_id END;\n    prefix:='phase1:cycle:';\n  END IF;\n  PERFORM pg_advisory_xact_lock(hashtextextended(prefix || target::text,0));\n  IF TG_OP='DELETE' THEN RETURN OLD; END IF;\n  RETURN NEW;\nEND $function$\n"
+    },
+    {
+      "name": "prevent_linked_student_role_change",
+      "arguments": "",
+      "security_definer": false,
+      "settings": null,
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_linked_student_role_change()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n    IF NEW.role <> 'STUDENT' AND EXISTS (\n        SELECT 1\n        FROM students\n        WHERE user_id = NEW.id\n    ) THEN\n        RAISE EXCEPTION 'a user linked to a Student must retain role STUDENT'\n            USING ERRCODE = '23514',\n                  CONSTRAINT = 'chk_students_user_role';\n    END IF;\n\n    RETURN NEW;\nEND;\n$function$\n"
+    },
+    {
+      "name": "reject_immutable_row_mutation",
+      "arguments": "",
+      "security_definer": false,
+      "settings": null,
+      "definition": "CREATE OR REPLACE FUNCTION public.reject_immutable_row_mutation()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n    RAISE EXCEPTION '% is append-only; % is not allowed', TG_TABLE_NAME, TG_OP\n        USING ERRCODE = '55000';\nEND;\n$function$\n"
+    }
+  ],
+  "tables": [
+    {
+      "name": "audit_events",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "committee_workspace_events",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "committee_workspaces",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "coordinator_operations",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "coordinator_round_schedules",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "phase1_academic_profiles",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "phase1_applications",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "phase1_attachments",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "phase1_cycle_windows",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "phase1_documents",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "phase1_events",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "phase1_operations",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "phase1_policies",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "phase1_reviews",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "phase1_submissions",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "phase1_uploads",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "rounds",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "selection_cohorts",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "students",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "name": "users",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    }
+  ]
+}

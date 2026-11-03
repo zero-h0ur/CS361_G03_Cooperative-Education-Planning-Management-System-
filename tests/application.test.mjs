@@ -247,11 +247,11 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
     });
     await t.test('closed deadlines reject writes and show retained Drafts as read-only; policy changes fail visibly',async()=>{
       const before=app.version;
-      await q("UPDATE phase1_cycle_windows SET closes_at=now()-interval '1 second',opens_at=now()-interval '1 day' WHERE cycle_id=$1",[cycle]);
+      await q("UPDATE phase1_cycle_windows SET closes_at=now()-interval '1 second',opens_at=now()-interval '1 day',version=version+1 WHERE cycle_id=$1",[cycle]);
       assert.equal((await service.get(actor,app.id)).availability.can_edit,false);
       await assert.rejects(save(),e=>e.statusCode===422);
       assert.equal((await service.get(actor,app.id)).version,before);
-      await q("UPDATE phase1_cycle_windows SET closes_at=now()+interval '1 day' WHERE cycle_id=$1",[cycle]);
+      await q("UPDATE phase1_cycle_windows SET closes_at=now()+interval '1 day',version=version+1 WHERE cycle_id=$1",[cycle]);
       const next={...pol,id:randomUUID(),version:2};
       await q(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data)
         VALUES($1,$2,'66',2,2568,'synthetic policy v2',true,true,$3)`,[next.id,cycle,JSON.stringify(next.data)]);

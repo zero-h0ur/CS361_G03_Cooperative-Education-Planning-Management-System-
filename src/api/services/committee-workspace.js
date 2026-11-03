@@ -5,6 +5,7 @@ const { ValidationError, ForbiddenError, ConflictError } = require("../errors");
 const v = require("./workflow-input");
 const { transition } = require("./committee-workspace-domain");
 const {academic}=require('./coordinator-domain');
+const {assertCoordinatorSchema}=require('../../db/coordinator-schema-contract');
 class CommitteeWorkspaceService {
   constructor({ pool, documentStore, allowSyntheticPolicy=false } = {}) {
     this.store = documentStore;
@@ -16,6 +17,7 @@ class CommitteeWorkspaceService {
   }
   async scope(db, actor, id) {
     roleGuard(actor, ["COMMITTEE"]);
+    await assertCoordinatorSchema(db);
     const rows = (await db.query(`SELECT c.*,r.name AS cycle_name,r.status AS cycle_status FROM selection_cohorts c JOIN rounds r ON r.id=c.cycle_id
       JOIN users u ON u.id=$1 AND u.role='COMMITTEE' AND u.account_status='ACTIVE'
       WHERE c.status='ACTIVE' AND $1 IN(c.committee_one,c.committee_two,c.committee_three)
@@ -39,7 +41,7 @@ class CommitteeWorkspaceService {
       program: /พิเศษ|special/i.test(s.program) ? "special" : "regular"
     }));
     const phase1=(await db.query(`SELECT a.id,sub.snapshot,sub.application_version,st.program
-      FROM phase1_reviews rv JOIN phase1_applications a ON a.id=rv.application_id
+      FROM coordinator_reviews rv JOIN phase1_applications a ON a.id=rv.application_id
       JOIN phase1_submissions sub ON sub.id=rv.submission_id JOIN students st ON st.id=a.student_id
       WHERE rv.cohort_id=ANY($1::uuid[]) AND rv.state='FORWARDED' AND a.status='SUBMITTED'
       ORDER BY a.id`,[cohort.ids || [cohort.id]])).rows.map(s=>({
@@ -85,7 +87,7 @@ class CommitteeWorkspaceService {
       JOIN selection_receipts receipt ON receipt.plan_id=p.id
       WHERE d.id=$1 AND receipt.cohort_id=ANY($2::uuid[]) AND NOT p.legacy_compatibility
       AND EXISTS(SELECT 1 FROM jsonb_array_elements(sub.snapshot->'documents') x WHERE x->>'id'=d.id::text)`, [documentId, cohorts.map((c) => c.id)])).rows[0];
-    if(!doc)doc=(await db.query(`SELECT d.* FROM phase1_documents d JOIN phase1_reviews rv ON rv.application_id=d.application_id
+    if(!doc)doc=(await db.query(`SELECT d.* FROM phase1_documents d JOIN coordinator_reviews rv ON rv.application_id=d.application_id
       JOIN phase1_submissions sub ON sub.id=rv.submission_id JOIN phase1_applications a ON a.id=rv.application_id
       WHERE d.id=$1 AND rv.cohort_id=ANY($2::uuid[]) AND rv.state='FORWARDED' AND a.status='SUBMITTED'
         AND EXISTS(SELECT 1 FROM jsonb_array_elements(sub.snapshot->'documents') x WHERE x->>'id'=d.id::text)`,[documentId,cohorts.map(c=>c.id)])).rows[0];

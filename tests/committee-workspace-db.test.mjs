@@ -4,12 +4,18 @@ import {randomUUID} from 'node:crypto';
 import pg from 'pg';
 import workspace from '../src/api/services/committee-workspace.js';
 import selection from '../src/api/services/selection-service.js';
+import {readReviewedMigrations} from '../scripts/operations/reviewed-migrations.mjs';
 const url=process.env.COMMITTEE_TEST_DATABASE_URL;
 test('persisted proposals, simultaneous votes, stale versions, replay, scope and audit',{skip:!url},async()=>{
  const parsed=new URL(url);assert.ok(['localhost','127.0.0.1'].includes(parsed.hostname));
- const pool=new pg.Pool({connectionString:url});
+ assert.match(parsed.pathname,/_test$/);assert.notEqual(url,process.env.DATABASE_URL);
+ const schema='committee_'+randomUUID().replaceAll('-','');
+ const admin=new pg.Pool({connectionString:url});
+ const pool=new pg.Pool({connectionString:url,options:'-c search_path='+schema+',public'});
  const [student,coordinator,...members]=Array.from({length:5},randomUUID),cycle=randomUUID(),profile=randomUUID(),company=randomUUID(),position=randomUUID(),plan=randomUUID(),cohort=randomUUID();
  try{
+  await admin.query('CREATE SCHEMA '+schema);
+  for(const migration of readReviewedMigrations())await pool.query(migration.sql);
   for(const [id,role] of [[student,'STUDENT'],[coordinator,'COORDINATOR'],...members.map(id=>[id,'COMMITTEE'])])await pool.query('INSERT INTO users(id,role) VALUES($1,$2)',[id,role]);
   await pool.query("INSERT INTO rounds(id,name,academic_year,semester,status,source,visibility,data_status) VALUES($1,'Committee test',2569,1,'OPEN','synthetic','private','mock')",[cycle]);
   await pool.query(`INSERT INTO students(id,user_id,anonymous_ref,student_number,full_name,institutional_email,department,program,major,academic_year,enrollment_status,source,visibility,data_status)
@@ -35,5 +41,5 @@ test('persisted proposals, simultaneous votes, stale versions, replay, scope and
   assert.equal(Number((await pool.query('SELECT count(*) FROM committee_workspace_events WHERE cohort_id=$1',[cohort])).rows[0].count),4);
   await assert.rejects(pool.query('DELETE FROM committee_workspace_events WHERE cohort_id=$1',[cohort]));
   await assert.rejects(service.read(actor(student),cohort),e=>e.statusCode===403);
- }finally{await pool.end();}
+ }finally{await pool.end();await admin.query('DROP SCHEMA '+schema+' CASCADE');await admin.end();}
 });

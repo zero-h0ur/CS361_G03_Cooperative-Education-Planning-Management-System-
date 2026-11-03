@@ -4,6 +4,7 @@ const {hash}=require('./application-service');
 const v=require('./workflow-input');
 const {ValidationError,ForbiddenError,NotFoundError,ConflictError,InvalidStateTransitionError}=require('../errors');
 const domain=require('./coordinator-domain');
+const {assertCoordinatorSchema}=require('../../db/coordinator-schema-contract');
 
 const panelKey=c=>[c.cycle_id,c.department,c.committee_one,c.committee_two,c.committee_three].join(':');
 const track=value=>/พิเศษ|special|\bACS\b/i.test(value || '')?'special':/ปกติ|normal|regular|\bCIS\b/i.test(value || '')?'regular':'unknown';
@@ -14,6 +15,7 @@ class CoordinatorWorkspaceService {
     roleGuard(actor,['COORDINATOR']);if(cycleId)v.uuid(cycleId,'cycle_id');
     const user=(await db.query(`SELECT id FROM users WHERE id=$1 AND role='COORDINATOR' AND account_status='ACTIVE' ${lock?'FOR SHARE':''}`,[actor.userId])).rows[0];
     if(!user)throw new ForbiddenError();
+    await assertCoordinatorSchema(db);
     const rows=(await db.query(`SELECT c.*,r.name AS cycle_name,r.academic_year,r.semester,r.status AS cycle_status
       FROM selection_cohorts c JOIN rounds r ON r.id=c.cycle_id
       WHERE c.coordinator_id=$1 AND c.status='ACTIVE' AND ($2::uuid IS NULL OR c.cycle_id=$2)
@@ -33,14 +35,14 @@ class CoordinatorWorkspaceService {
       sub.id AS submission_id,sub.application_version AS submitted_version,sub.snapshot,sub.checksum,sub.submitted_at,
       rv.state AS review_state,rv.version AS review_version,rv.reason,rv.updated_at AS reviewed_at,
       cw.state AS committee_state,cw.version AS committee_version,
-      clock_timestamp()<COALESCE(sched.review_closes_at,win.closes_at) AS review_open
+      clock_timestamp()>=win.review_opens_at AND clock_timestamp()<win.review_closes_at AS review_open,
+      (win.review_opens_at IS NOT NULL AND win.review_closes_at IS NOT NULL) AS review_configured
       FROM phase1_applications a JOIN students st ON st.id=a.student_id
       JOIN selection_cohorts c ON c.cycle_id=a.cycle_id AND c.department=st.department AND c.program=st.program
       JOIN rounds r ON r.id=a.cycle_id
       LEFT JOIN phase1_cycle_windows win ON win.cycle_id=a.cycle_id
-      LEFT JOIN coordinator_round_schedules sched ON sched.cycle_id=a.cycle_id
       JOIN LATERAL(SELECT * FROM phase1_submissions s WHERE s.application_id=a.id ORDER BY s.application_version DESC LIMIT 1) sub ON true
-      LEFT JOIN phase1_reviews rv ON rv.application_id=a.id
+      LEFT JOIN coordinator_reviews rv ON rv.application_id=a.id
       LEFT JOIN selection_cohorts canonical ON canonical.id=(SELECT min(cc.id::text)::uuid FROM selection_cohorts cc
         WHERE cc.status='ACTIVE' AND cc.cycle_id=c.cycle_id AND cc.department=c.department
           AND cc.committee_one=c.committee_one AND cc.committee_two=c.committee_two AND cc.committee_three=c.committee_three)
@@ -59,6 +61,7 @@ class CoordinatorWorkspaceService {
       positions:p.interested_position_codes || [],...domain.academic(s,{allowSynthetic:this.allowSynthetic})};
     if(detail)Object.assign(record,{official,payload:p,documents:s.documents || [],policy:s.policy || null,
       declarations:domain.declarations(s),checksum:row.checksum,reviewed_at:row.reviewed_at,
+      review_configuration_required:row.review_configured!==true,
       can_review:state==='PENDING' && row.status==='SUBMITTED' && row.cycle_status==='OPEN' && row.review_open===true && !row.committee_state?.finalized});
     return record;
   }
@@ -121,11 +124,11 @@ class CoordinatorWorkspaceService {
       if(!cohort)throw new ForbiddenError();if(replay)return;
       await db.query("SELECT pg_advisory_xact_lock(hashtextextended('phase1:cycle:' || $1::text,0))",[app.cycle_id]);
       const latest=(await db.query('SELECT id FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC LIMIT 1',[id])).rows[0];
-      const current=(await db.query('SELECT * FROM phase1_reviews WHERE application_id=$1 FOR UPDATE',[id])).rows[0];
+      const current=(await db.query('SELECT * FROM coordinator_reviews WHERE application_id=$1 FOR UPDATE',[id])).rows[0];
       if(body.expected_version!==(current?.version || 0) || latest?.id!==body.submission_id)throw new ConflictError('ใบสมัครเปลี่ยนแล้ว กรุณาโหลดฉบับล่าสุด');
-      const window=(await db.query(`SELECT r.status,COALESCE(s.review_closes_at,w.closes_at) AS deadline,
-        clock_timestamp()<COALESCE(s.review_closes_at,w.closes_at) AS is_open FROM rounds r
-        LEFT JOIN coordinator_round_schedules s ON s.cycle_id=r.id LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id WHERE r.id=$1`,[app.cycle_id])).rows[0];
+      const window=(await db.query(`SELECT r.status,w.review_closes_at AS deadline,
+        clock_timestamp()>=w.review_opens_at AND clock_timestamp()<w.review_closes_at AS is_open FROM rounds r
+        LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id WHERE r.id=$1`,[app.cycle_id])).rows[0];
       if(app.status!=='SUBMITTED' || current && current.state!=='PENDING' || window?.status!=='OPEN' || !window?.is_open)
         throw new InvalidStateTransitionError('ใบสมัครหรือช่วงพิจารณาไม่เปิดให้ทำรายการแล้ว');
       const canonical=(await db.query(`SELECT id FROM selection_cohorts WHERE status='ACTIVE' AND cycle_id=$1 AND department=$2
@@ -138,9 +141,9 @@ class CoordinatorWorkspaceService {
       const meeting=(await db.query('SELECT version,state FROM committee_workspaces WHERE cohort_id=$1 FOR UPDATE',[canonical.id])).rows[0];
       if(meeting?.state?.finalized)throw new InvalidStateTransitionError('กรรมการยืนยันผลแล้ว ไม่สามารถเปลี่ยนรายชื่อในรอบนี้');
       const state=action==='return'?'RETURNED':'FORWARDED',version=(current?.version || 0)+1;
-      if(current)await db.query(`UPDATE phase1_reviews SET state=$2,version=$3,reason=$4,actor_id=$5,updated_at=clock_timestamp()
+      if(current)await db.query(`UPDATE coordinator_reviews SET state=$2,version=$3,reason=$4,actor_id=$5,updated_at=clock_timestamp()
         WHERE application_id=$1`,[id,state,version,reason,actor.userId]);
-      else await db.query(`INSERT INTO phase1_reviews(application_id,submission_id,cohort_id,state,version,reason,actor_id)
+      else await db.query(`INSERT INTO coordinator_reviews(application_id,submission_id,cohort_id,state,version,reason,actor_id)
         VALUES($1,$2,$3,$4,$5,$6,$7)`,[id,latest.id,cohort.id,state,version,reason,actor.userId]);
       if(action==='return')await db.query("UPDATE phase1_applications SET status='NEEDS_REVISION',submitted_at=NULL,version=version+1,updated_at=clock_timestamp() WHERE id=$1",[id]);
       else await db.query(`INSERT INTO committee_workspaces(cohort_id,version,state) VALUES($1,1,$2)
@@ -172,10 +175,12 @@ class CoordinatorWorkspaceService {
   }
   async getSchedule(actor,id) {
     v.uuid(id,'cycle_id');const db=this.db();const scope=await this.scheduleScope(db,actor,id);
-    const row=(await db.query(`SELECT w.opens_at,w.closes_at,w.version AS window_version,s.review_opens_at,s.review_closes_at,
-      s.confirmation_opens_at,s.confirmation_closes_at,s.version,s.updated_at FROM rounds r
-      LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id LEFT JOIN coordinator_round_schedules s ON s.cycle_id=r.id WHERE r.id=$1`,[id])).rows[0];
-    return {cycle_id:id,cycle_name:scope.cohorts[0].cycle_name,...row,version:row.version || 0,window_version:row.window_version || 0,can_edit:scope.can_edit};
+    const row=(await db.query(`SELECT w.opens_at,w.closes_at,w.version AS window_version,w.review_opens_at,w.review_closes_at,
+      w.confirmation_opens_at,w.confirmation_closes_at,w.version,w.updated_at,w.announced_at FROM rounds r
+      LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id WHERE r.id=$1`,[id])).rows[0];
+    return {cycle_id:id,cycle_name:scope.cohorts[0].cycle_name,...row,version:row.version || 0,window_version:row.window_version || 0,
+      can_edit:scope.can_edit && !row.announced_at,read_only_reason:row.announced_at?'ประกาศผลแล้ว: ไม่อนุญาตให้เปลี่ยนช่วงเวลาที่ประกาศแล้ว':null,
+      review_configuration_required:!row.review_opens_at || !row.review_closes_at};
   }
   async saveSchedule(actor,id,body) {
     v.fields(body,['operation_id','expected_version','expected_window_version','opens_at','closes_at','review_opens_at','review_closes_at','confirmation_opens_at','confirmation_closes_at']);
@@ -184,17 +189,18 @@ class CoordinatorWorkspaceService {
     return this.command(actor,id,body,'schedule',async(db,replay)=>{
       await db.query("SELECT pg_advisory_xact_lock(hashtextextended('phase1:cycle:' || $1::text,0))",[id]);
       const scope=await this.scheduleScope(db,actor,id,true);
-      if(!scope.can_edit)throw new ForbiddenError('ต้องได้รับมอบหมายทั้งรอบ และรอบต้องยังเปิดอยู่');if(replay)return;
-      const prior=(await db.query('SELECT version FROM coordinator_round_schedules WHERE cycle_id=$1 FOR UPDATE',[id])).rows[0];
-      const window=(await db.query('SELECT version FROM phase1_cycle_windows WHERE cycle_id=$1 FOR UPDATE',[id])).rows[0];
-      if(body.expected_version!==(prior?.version || 0)||body.expected_window_version!==(window?.version || 0))throw new ConflictError('กำหนดการเปลี่ยนแล้ว กรุณาโหลดล่าสุดก่อนบันทึก');
-      await db.query(`INSERT INTO phase1_cycle_windows(cycle_id,opens_at,closes_at) VALUES($1,$2,$3)
-        ON CONFLICT(cycle_id) DO UPDATE SET opens_at=EXCLUDED.opens_at,closes_at=EXCLUDED.closes_at,version=phase1_cycle_windows.version+1`,[id,value.opens_at,value.closes_at]);
-      await db.query(`INSERT INTO coordinator_round_schedules(cycle_id,review_opens_at,review_closes_at,confirmation_opens_at,confirmation_closes_at,version,updated_by)
-        VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(cycle_id) DO UPDATE SET review_opens_at=EXCLUDED.review_opens_at,
-        review_closes_at=EXCLUDED.review_closes_at,confirmation_opens_at=EXCLUDED.confirmation_opens_at,
-        confirmation_closes_at=EXCLUDED.confirmation_closes_at,version=EXCLUDED.version,updated_by=EXCLUDED.updated_by,updated_at=clock_timestamp()`,
-      [id,value.review_opens_at,value.review_closes_at,value.confirmation_opens_at,value.confirmation_closes_at,body.expected_version+1,actor.userId]);
+      if(!scope.can_edit)throw new ForbiddenError('ต้องได้รับมอบหมายทั้งรอบ และรอบต้องยังเปิดอยู่');
+      const window=(await db.query('SELECT version,announced_at FROM phase1_cycle_windows WHERE cycle_id=$1 FOR UPDATE',[id])).rows[0];
+      if(replay)return;
+      if(window?.announced_at)throw new InvalidStateTransitionError('ประกาศผลแล้ว: ไม่อนุญาตให้เปลี่ยนช่วงเวลาที่ประกาศแล้ว');
+      if(body.expected_version!==(window?.version || 0)||body.expected_window_version!==(window?.version || 0))throw new ConflictError('กำหนดการเปลี่ยนแล้ว กรุณาโหลดล่าสุดก่อนบันทึก');
+      await db.query(`INSERT INTO phase1_cycle_windows(cycle_id,opens_at,closes_at,review_opens_at,review_closes_at,
+        confirmation_opens_at,confirmation_closes_at,version,updated_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
+        ON CONFLICT(cycle_id) DO UPDATE SET opens_at=EXCLUDED.opens_at,closes_at=EXCLUDED.closes_at,
+        review_opens_at=EXCLUDED.review_opens_at,review_closes_at=EXCLUDED.review_closes_at,
+        confirmation_opens_at=EXCLUDED.confirmation_opens_at,confirmation_closes_at=EXCLUDED.confirmation_closes_at,
+        version=EXCLUDED.version,updated_by=EXCLUDED.updated_by,updated_at=clock_timestamp()`,
+      [id,value.opens_at,value.closes_at,value.review_opens_at,value.review_closes_at,value.confirmation_opens_at,value.confirmation_closes_at,body.expected_version+1,actor.userId]);
       return {cycle_id:id,...value,version:body.expected_version+1,window_version:body.expected_window_version+1,can_edit:true,cycle_name:scope.cohorts[0].cycle_name};
     });
   }

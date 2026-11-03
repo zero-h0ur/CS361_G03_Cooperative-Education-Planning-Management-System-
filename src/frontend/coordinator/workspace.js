@@ -67,6 +67,7 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
     try{const record=await request('/applications/'+id);if(stopped()||token!==detailToken)return;
       host.replaceChildren(renderDetail(record,{activeTab,onTab:key=>{activeTab=key;},onReturn:modal?undefined:()=>returnForm(record,refresh),onForward:modal?undefined:()=>forward(record,refresh),
         onDownload:doc=>download(record,doc),host:root,signal}));
+      if(record.review_configuration_required)host.prepend(note('ยังไม่ได้ตั้งช่วงพิจารณา กรุณาตั้งวันเวลาจริงในหน้ากำหนดการก่อนทำรายการ'));
     }catch(error){if(token!==detailToken)return;failure(error);if(!stopped())host.replaceChildren(note('โหลดใบสมัครไม่สำเร็จ'),button('ลองโหลดใบสมัครอีกครั้ง',()=>showDetail(id,host,refresh,{modal})));}}
   function reviewPage(){content.replaceChildren(status);const shortcuts=el('nav','coord-status-filters');shortcuts.setAttribute('aria-label','กรองใบสมัครตามสถานะ');content.append(shortcuts);
     const host=el('div'),layout=el('div','coord-review-layout'),queue=el('aside','coord-queue'),detail=el('div','coord-detail-host');
@@ -120,7 +121,8 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
         const group=el('div','coord-datetime');group.append(field(label+' · วันที่',d),field(label+' · เวลา',time));pair.append(group);}section.append(pair);form.append(section);}
     form.append(note('วันสิ้นสุดต้องอยู่หลังวันเริ่มต้น และแต่ละช่วงต้องเรียงตามลำดับ · ใบสมัครที่ถูกส่งกลับแก้ได้ถึงสิ้นสุดช่วงพิจารณา'));
     const actions=el('div','coord-schedule-actions'),cancel=button('ยกเลิกการแก้ไข',()=>{if(!dirty||window.confirm('ทิ้งการแก้กำหนดการที่ยังไม่บันทึกหรือไม่?')){dirty=false;scheduleAttempt=null;schedulePage(currentSchedule);feedback(status,'ยกเลิกการแก้ไขแล้ว');}}),save=button('บันทึกกำหนดการ',null,{primary:true,icon:'save'});save.type='submit';cancel.disabled=!data.can_edit;save.disabled=!data.can_edit;actions.append(cancel,save);form.append(actions);
-    if(!data.can_edit)form.prepend(note('อ่านอย่างเดียว: รอบปิด หรือมีผู้ประสานงานอื่นได้รับมอบหมายในรอบเดียวกัน'));
+    if(!data.can_edit)form.prepend(note(data.read_only_reason || 'อ่านอย่างเดียว: รอบปิด หรือมีผู้ประสานงานอื่นได้รับมอบหมายในรอบเดียวกัน'));
+    else if(data.review_configuration_required)form.prepend(note('ยังไม่ได้ตั้งช่วงพิจารณา กรุณาระบุและบันทึกวันเวลาจริงก่อนรับเรื่องหรือส่งกลับแก้ไข'));
     form.append(button('โหลดกำหนดการล่าสุด',()=>{if(!dirty||window.confirm('โหลดใหม่และทิ้งการแก้ไขที่ยังไม่บันทึกหรือไม่?')){dirty=false;scheduleAttempt=null;loadSchedule();}}));preview();
     form.addEventListener('submit',async e=>{e.preventDefault();if(busy||!data.can_edit)return;
       const body={expected_version:data.version,expected_window_version:data.window_version};for(const key of Object.keys(fields)){const v=value(key);if(!v){feedback(status,'กรุณาระบุวันและเวลาให้ครบทุกช่วง',true);fields[key].date.focus();return;}body[key]=v;}
