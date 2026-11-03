@@ -2,8 +2,9 @@
 
 Date: 2026-11-04 (Asia/Bangkok). Branch: `feature/coordinator-workspace-redesign`.
 
-Local implementation only. No AWS connection, production SQL/grants, deployment,
-Git branch/stage/commit/push, or real student data was used in this implementation.
+Implementation and database verification were local. No AWS connection,
+production SQL/grants, deployment, or real student data was used. Git publication
+was separately authorized after implementation on 2026-11-04.
 The live 500 is **not** claimed fixed until a separately approved coupled rollout.
 
 ## Why another migration is necessary
@@ -90,7 +91,18 @@ unused production-style URL. Never copy these settings onto a real database.
 | `npm.cmd run test:docs` | 9 tests and linked-document verification passed |
 | `npm.cmd run lint`, `test:v4-build`, `build:v4` | Passed; local output only |
 | `test:lambda` packaging | 37 Jest and 2 self-contained ZIP tests passed, no upload |
-| `npm.cmd test` / `test:release` | Full chain reaches release checks; release has 30 passed, 1 failed, none skipped. The sole failure is 016 intentionally not in HEAD until the user authorizes commit; no gate was bypassed. Committee is run separately because the full chain stops at release |
+| `npm.cmd test` / `test:release` before commit | Full chain reached release checks: 30 passed, 1 failed, none skipped. The sole failure was 016 not yet in HEAD; no gate was bypassed. Committee was run separately because the chain stopped at release |
+
+### Post-commit verification
+
+Source commit `7179e75` contains the coupled schema/Backend/ACL/tests change.
+After committing the reviewed source, `npm.cmd run test:release` passed with
+14 passed, 0 failed, and 1 skipped database-integration test. The exact committed
+LF-byte check that previously blocked 016 now passes without changing the gate.
+Migration hashes, documentation checks and staged whitespace checks also passed.
+The full regression chain and database tests were not rerun during this Git-only
+publication step; their prior isolated results are recorded above. No deployment
+or production migration is authorized by committing/pushing these changes.
 
 Alignment tests cover both populated source layouts, exact raw provenance and
 snapshot preservation, trial rollback, concurrent runners, changed checksums,
