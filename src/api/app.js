@@ -47,6 +47,7 @@ function createAppRouter(options = {}) {
   // Register public company & health routes
   registerPublicCompanyRoutes(router);
   registerPublicDirectoryRoutes(router, options);
+  require('./routes/tu-auth-routes').registerTuAuthRoutes(router, options);
 
   // Register V3 protected extension routes
   registerV3Routes(router, options);

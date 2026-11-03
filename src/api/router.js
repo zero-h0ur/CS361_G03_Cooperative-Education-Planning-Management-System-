@@ -99,10 +99,28 @@ class Router {
   async handle(request, response, dal = {}) {
     try {
       const url = new URL(request.url, 'http://localhost');
-      const pathname = url.pathname.length > 1
+      const rawPathname = url.pathname.length > 1
         ? url.pathname.replace(/\/$/, '')
         : url.pathname;
+      const isTuProxy = rawPathname.startsWith('/api/tu-proxy/');
+      const pathname = isTuProxy
+        ? rawPathname.slice('/api/tu-proxy'.length)
+        : rawPathname;
       const method = (request.method || 'GET').toUpperCase();
+
+      if (isTuProxy && method === 'OPTIONS') {
+        response.writeHead(204, {
+          'Access-Control-Allow-Origin':
+            request?.headers?.origin ||
+            request?.headers?.Origin ||
+            'https://main.d1bpmj87vmjb96.amplifyapp.com',
+          'Access-Control-Allow-Methods': 'DELETE,GET,OPTIONS,PATCH,POST,PUT',
+          'Access-Control-Allow-Headers': 'accept,authorization,content-type',
+          'Access-Control-Max-Age': '300'
+        });
+        response.end('');
+        return;
+      }
 
       // 1. Find matching routes by path
       const matchedRoutes = this.findMatches(pathname);
