@@ -79,6 +79,10 @@ test('tracking shows one three-member panel, plain sequential row positions, rea
   expect(root.textContent).not.toContain('ร่วม');expect(root.textContent).not.toContain('0 / 3');
   find(root,'ดูมติและจำนวนรับ').click();const modal=root.querySelector('dialog');expect(modal.textContent).toContain('ยังไม่มีข้อเสนอจำนวนรับ');expect(modal.querySelector('input')).toBeNull();
 });
+test('partially assigned meeting scope is not presented as an empty or pending meeting result',async()=>{
+  const {root}=await setup({page:'tracking',scenario:'ranking',wrap:request=>async(path,options)=>{const data=await request(path,options);if(data.meetings)data.meetings=data.meetings.map(m=>({...m,scope_limited:true,state:null}));return data;}});
+  expect(root.textContent).toContain('ตรวจสอบขอบเขตการมอบหมาย');find(root,'ดูมติและจำนวนรับ').click();const modal=root.querySelector('dialog');expect(modal.textContent).toContain('นอกขอบเขตที่ได้รับมอบหมาย');expect(modal.textContent).not.toContain('ยังไม่มีข้อเสนอจำนวนรับ');
+});
 test('schedule edits represent Bangkok time and survive failure; read-only schedules have no editable fields',async()=>{
   const {root}=await setup({page:'schedule',scenario:'failed-command'});expect(root.querySelector('input[type=time]').value).toBe('09:00');
   const date=root.querySelector('input[type=date]');date.value='2026-11-03';date.dispatchEvent(new Event('input',{bubbles:true}));

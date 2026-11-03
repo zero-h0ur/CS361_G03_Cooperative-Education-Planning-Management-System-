@@ -88,7 +88,7 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
     }refresh();}
   function trackingPage(){content.replaceChildren(status);const heading=el('div','coord-section-heading'),intro=el('div'),actions=el('div','coord-tracking-actions');intro.append(el('h2','','รายชื่อที่ส่งให้กรรมการ'));heading.append(intro,actions);content.append(heading);
     const host=el('div'),records=el('div');filterBar(host,refresh);content.append(host,records);
-    function meetingSummary(meetings){const body=el('div');for(const meeting of meetings){const state=meeting.state,p=state?.proposal;body.append(el('h3','',meeting.department),el('p','','กรรมการชุดเดียว 3 คน พิจารณาทั้งภาคปกติและภาคพิเศษ'));
+    function meetingSummary(meetings){const body=el('div');for(const meeting of meetings){body.append(el('h3','',meeting.department));if(meeting.scope_limited){body.append(note('มติชุดนี้มีข้อมูลนอกขอบเขตที่ได้รับมอบหมาย กรุณาตรวจสอบการมอบหมายกับผู้ดูแลระบบ'));continue;}const state=meeting.state,p=state?.proposal;body.append(el('p','','กรรมการชุดเดียว 3 คน พิจารณาทั้งภาคปกติและภาคพิเศษ'));
       if(!p)body.append(note('ยังไม่มีข้อเสนอจำนวนรับที่บันทึกไว้'));
       else{body.append(el('h3','','จำนวนรับนักศึกษาตามข้อเสนอ'),rowsForMeeting(p),el('p','',p.status==='accepted'?'ตกลงจำนวนรับแล้ว':p.status==='rejected'?'ข้อเสนอนี้ถูกส่งกลับเพื่อปรับปรุง':'อยู่ระหว่างตกลงจำนวนรับ'));}
       body.append(note(state?.finalized?`กรรมการยืนยันรายชื่อแล้ว ${state.selected?.length || 0} คน · ยังไม่ใช่การประกาศผล`:'ยังไม่มีการยืนยันรายชื่อคัดเลือก'),note('หน้านี้อ่านอย่างเดียว Coordinator ไม่แก้ผลคัดเลือกหรือข้อเสนอจำนวนรับ'));
@@ -96,9 +96,9 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
     function rowsForMeeting(p){const dl=el('dl','coord-meeting-counts');for(const [label,value] of [['จำนวนรับภาคปกติ',p.normal],['จำนวนรับภาคพิเศษ',p.special],['เหตุผลที่เสนอ',p.reason]]){const item=el('div');item.append(el('dt','',label),el('dd','',text(value)));dl.append(item);}return dl;}
     async function refresh(){const token=++queryToken;records.setAttribute('aria-busy','true');
       try{const data=await request('/tracking?'+query());if(stopped()||token!==queryToken)return;
-        intro.replaceChildren(el('h2','',`รายชื่อที่ส่งให้กรรมการ · ${data.total} รายการ`));const one=data.meetings?.length===1;
+        intro.replaceChildren(el('h2','',`รายชื่อที่ส่งให้กรรมการ · ${data.total} รายการ`));const one=data.meetings?.length===1 && !data.meetings[0].scope_limited;
         intro.append(el('p','',one?'คณะกรรมการ 3 คน พิจารณาทั้งภาคปกติและภาคพิเศษ':'กรุณาตรวจการมอบหมายกรรมการของรอบนี้กับผู้ดูแลระบบ'));
-        actions.replaceChildren(button('ดูมติและจำนวนรับ',()=>meetingSummary(data.meetings || []),{primary:true,icon:'file'}),badge('PENDING',data.meetings?.length && data.meetings.every(m=>m.state?.finalized)?'ยืนยันรายชื่อแล้ว · รอประกาศผล':'รอมติที่ประชุม'));
+        actions.replaceChildren(button('ดูมติและจำนวนรับ',()=>meetingSummary(data.meetings || []),{primary:true,icon:'file'}),badge('PENDING',data.meetings?.some(m=>m.scope_limited)?'ตรวจสอบขอบเขตการมอบหมาย':data.meetings?.length && data.meetings.every(m=>m.state?.finalized)?'ยืนยันรายชื่อแล้ว · รอประกาศผล':'รอมติที่ประชุม'));
         records.replaceChildren();if(!data.applications.length){records.append(note('ยังไม่มีใบสมัครที่ส่งให้กรรมการตามตัวกรองนี้'));return;}
         const t=table(['ลำดับรายการ','นักศึกษา','ประเภทหลักสูตร','เฉลี่ยวิชาหลัก','GPAX','ดำเนินการ'],'รายชื่อที่ส่งให้กรรมการ เรียงตามตัวกรอง ไม่ใช่ผลคัดเลือก');
         data.applications.forEach((app,index)=>{const row=el('tr'),person=el('td');person.append(el('strong','',text(app.full_name)),el('small','coord-muted',text(app.student_number)));const action=el('td');

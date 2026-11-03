@@ -147,6 +147,7 @@ test('Coordinator Phase 1 review, retained corrections, schedule concurrency, sc
       const results=await Promise.allSettled([review.saveSchedule(coord,cycle,{...body,operation_id:ids()}),review.saveSchedule(coord,cycle,{...body,operation_id:ids()})]);
       assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(results.filter(r=>r.status==='rejected'&&r.reason.statusCode===409).length,1);
       await pool.query('UPDATE selection_cohorts SET coordinator_id=$2 WHERE id=$1',[cohorts[1],outsiderId]);
+      const limited=(await review.tracking(coord,{cycle_id:cycle})).meetings[0];assert.equal(limited.scope_limited,true);assert.equal(limited.state,null);
       assert.equal((await review.getSchedule(coord,cycle)).can_edit,false);
       const latest=await review.getSchedule(coord,cycle);
       await assert.rejects(review.saveSchedule(coord,cycle,{...body,...command(latest.version),expected_window_version:latest.window_version}),e=>e.statusCode===403);

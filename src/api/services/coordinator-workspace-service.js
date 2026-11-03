@@ -154,10 +154,15 @@ class CoordinatorWorkspaceService {
     const cohorts=await this.scope(this.db(),actor,filters.cycle_id);
     const panels=[...new Map(cohorts.map(c=>[panelKey(c),c])).values()];
     const meetings=[];
-    for(const c of panels){const same=cohorts.filter(x=>panelKey(x)===panelKey(c)).sort((a,b)=>a.id.localeCompare(b.id));
-      const saved=(await this.db().query('SELECT version,state FROM committee_workspaces WHERE cohort_id=$1',[same[0].id])).rows[0];
+    for(const c of panels){const same=(await this.db().query(`SELECT id,coordinator_id FROM selection_cohorts
+      WHERE cycle_id=$1 AND department=$2 AND committee_one=$3 AND committee_two=$4 AND committee_three=$5 AND status='ACTIVE' ORDER BY id`,
+      [c.cycle_id,c.department,c.committee_one,c.committee_two,c.committee_three])).rows;
+      const scopeLimited=same.some(x=>x.coordinator_id!==actor.userId);
+      // A shared meeting can contain selected identities and history outside a
+      // partially assigned Coordinator's scope. Do not expose that raw state.
+      const saved=!scopeLimited && (await this.db().query('SELECT version,state FROM committee_workspaces WHERE cohort_id=$1',[same[0].id])).rows[0];
       meetings.push({cycle_id:c.cycle_id,department:c.department,members:[c.committee_one,c.committee_two,c.committee_three],
-        version:saved?.version || 0,state:saved?.state || null});}
+        version:saved?.version || 0,state:saved?.state || null,scope_limited:scopeLimited});}
     return {applications,...page,meetings};
   }
   async scheduleScope(db,actor,cycleId,lock=false) {
