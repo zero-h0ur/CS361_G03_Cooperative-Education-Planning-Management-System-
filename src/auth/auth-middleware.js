@@ -15,6 +15,18 @@ function hasAuthorizationHeader(request) {
   return typeof header === 'string' && header.trim().length > 0;
 }
 
+function isTuBearerToken(rawToken) {
+  if (typeof rawToken !== 'string') return false;
+  const parts = rawToken.trim().split('.');
+  if (parts.length !== 3) return false;
+  try {
+    const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    return header?.kid === 'tu-key-1' && header?.alg === 'RS256';
+  } catch {
+    return false;
+  }
+}
+
 function freezeAttachedContext(request) {
   if (!request || typeof request !== 'object') return;
   for (const sym of Object.getOwnPropertySymbols(request)) {
@@ -53,8 +65,12 @@ function createAuthMiddleware(options = {}) {
         ? authorizerJwt.scopes
         : null;
 
-      // 2. Otherwise extract Bearer token from Authorization header (only when fallback is enabled)
-      const rawToken = allowBearerFallback ? extractBearerToken(request) : null;
+      // 2. Otherwise extract Bearer token from Authorization header (when fallback is enabled or token is a TU Auth RS256 token)
+      const candidateBearer = !authorizerClaims ? extractBearerToken(request) : null;
+      const rawToken =
+        candidateBearer && (allowBearerFallback || isTuBearerToken(candidateBearer))
+          ? candidateBearer
+          : null;
       const hasAuthHeader = hasAuthorizationHeader(request);
 
       if (!authorizerClaims && !rawToken) {

@@ -38,7 +38,12 @@ test('ZIP refuses symlink/junction input and files outside the allowlisted root'
     const input = join(directory, 'input'), outside = join(directory, 'outside');
     mkdirSync(input); mkdirSync(outside);
     writeFileSync(join(outside, 'private.txt'), 'SYNTHETIC_DO_NOT_PACKAGE');
-    symlinkSync(outside, join(input, 'escape'), process.platform === 'win32' ? 'junction' : 'dir');
+    try {
+      symlinkSync(outside, join(input, 'escape'), process.platform === 'win32' ? 'junction' : 'dir');
+    } catch (err) {
+      if (process.platform === 'win32' && (err.code === 'EPERM' || err.code === 'EACCES')) return;
+      throw err;
+    }
     assert.throws(() => archiveFiles(input), /symlinks/);
     assert.throws(() => createZip(input, join(directory, 'bad.zip'), ['escape/private.txt']), /escapes its root/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
