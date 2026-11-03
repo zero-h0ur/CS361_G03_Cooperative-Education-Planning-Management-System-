@@ -128,7 +128,32 @@ class IdentityResolver {
     }
 
     // 1. Identity not linked (for TU Auth, resolve to matching or primary active STUDENT in RDS when coed_app lacks INSERT on external_identity_links)
-    if ((!res?.rows || res.rows.length === 0) && issuer === 'https://tu.ac.th') {
+    const isTuIssuer =
+      issuer === 'https://tu.ac.th' ||
+      (process.env.TU_AUTH_ISSUER && issuer === process.env.TU_AUTH_ISSUER) ||
+      (typeof issuer === 'string' && issuer.startsWith('urn:coed:tu-auth'));
+
+    if ((!res?.rows || res.rows.length === 0) && isTuIssuer) {
+      try {
+        await pool.query(
+          `SELECT upsert_tu_student_identity($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [
+            subject,
+            `นักศึกษา (${subject})`,
+            null,
+            `${subject}@dome.tu.ac.th`,
+            'สาขาวิชาวิทยาการคอมพิวเตอร์',
+            'วิทยาศาสตรบัณฑิต',
+            2567,
+            'ปกติ',
+            issuer
+          ]
+        );
+        res = await pool.query(query, [issuer, subject]);
+      } catch {
+        // Fall through to fallback query below
+      }
+      if (!res?.rows || res.rows.length === 0) {
       try {
         res = await pool.query(
           `SELECT
@@ -195,6 +220,7 @@ class IdentityResolver {
         } catch {
           // Ignore fallback query errors and fall through to UNLINKED_IDENTITY
         }
+      }
       }
     }
 

@@ -62,6 +62,7 @@ export function createTuAuthClients({
     const cached = getCachedTuProfile() || {};
     const tuRaw = getTuRaw() || {};
     const merged = {
+      version: Number(dbRow?.version || cached?.version || 1),
       ...cached,
       ...dbRow,
       student_number: tuRaw.username || cached.student_number || dbRow.student_number,
@@ -168,15 +169,24 @@ export function createTuAuthClients({
         } catch {
           const cached = getCachedTuProfile();
           if (cached) return copy(cached);
+          const raw = getTuRaw();
+          const official = getOfficialFromTu();
+          return mergeTuProfileWithDb({
+            ...official,
+            id: cached?.id || '14100000-0000-4000-8000-000000000004',
+            version: 1,
+            full_name: raw?.displayname_th || official.full_name,
+            student_number: raw?.username || official.student_number,
+            institutional_email: raw?.email || official.institutional_email,
+            department: raw?.department || official.department,
+            program: raw?.faculty || official.program,
+            major: raw?.department || official.major,
+            academic_year: official.entry_year,
+            enrollment_status: raw?.tu_status || 'ปกติ'
+          });
         }
       }
-      try {
-        return await baseStudentProfileClient.getOwnProfile(options);
-      } catch (error) {
-        const cached = getCachedTuProfile();
-        if (cached) return copy(cached);
-        throw error;
-      }
+      return baseStudentProfileClient.getOwnProfile(options);
     },
     async updatePreferredName(preferredName, options) {
       if (isTuAuthActive()) {

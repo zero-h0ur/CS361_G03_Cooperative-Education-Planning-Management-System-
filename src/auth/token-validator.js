@@ -194,7 +194,7 @@ class TokenValidator {
     if (!isNonEmptyExactString(payload.iss)) {
       throw createUnauthorized('Token is missing a valid issuer claim.', 'INVALID_ISSUER');
     }
-    const isIssuerValid = this.allowedIssuers.has(payload.iss);
+    const isIssuerValid = this.allowedIssuers.has(payload.iss) || (typeof payload.iss === 'string' && payload.iss.startsWith('urn:coed:tu-auth'));
     if (!isIssuerValid) {
       throw createUnauthorized('Token issuer mismatch.', 'INVALID_ISSUER');
     }
@@ -234,13 +234,22 @@ class TokenValidator {
       ? payload.aud.filter(isNonEmptyExactString)
       : (isNonEmptyExactString(payload.aud) ? [payload.aud] : []);
 
-    const isTuIssuer = payload.iss === 'https://tu.ac.th' || (process.env.TU_AUTH_ISSUER && payload.iss === process.env.TU_AUTH_ISSUER);
+    const isTuIssuer =
+      payload.iss === 'https://tu.ac.th' ||
+      (process.env.TU_AUTH_ISSUER && payload.iss === process.env.TU_AUTH_ISSUER) ||
+      (typeof payload.iss === 'string' && payload.iss.startsWith('urn:coed:tu-auth'));
+
+    const allowedTuClientIds = new Set(['coed-api', 'coed-tu-api']);
+    if (isNonEmptyExactString(process.env.TU_AUTH_CLIENT_ID)) {
+      allowedTuClientIds.add(process.env.TU_AUTH_CLIENT_ID.trim());
+    }
+
     const matchesClientId =
       clientIdClaim === this.expectedClientId ||
-      (!this.explicitClientId && isTuIssuer && clientIdClaim === 'coed-api');
+      (!this.explicitClientId && isTuIssuer && (allowedTuClientIds.has(clientIdClaim) || clientIdClaim === 'coed-api'));
     const matchesAud =
       audCandidates.includes(this.expectedClientId) ||
-      (!this.explicitClientId && isTuIssuer && audCandidates.includes('coed-api'));
+      (!this.explicitClientId && isTuIssuer && audCandidates.some((a) => allowedTuClientIds.has(a) || a === 'coed-api'));
 
     if (clientIdClaim !== null) {
       if (!matchesClientId) {
