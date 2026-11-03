@@ -1,5 +1,6 @@
 /** Decorative code-native icons; permissions and page data remain in their existing layers. */
 const ICON_PATHS = Object.freeze({
+  return: ['M9 7 4 12l5 5','M4 12h10a6 6 0 0 1 0 12'],
   user: ['M20 21v-2a7 7 0 0 0-14 0v2', 'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0'],
   file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6', 'M8 13h8M8 17h6'],
   building: ['M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4', 'M9 9h.01M15 9h.01M9 13h.01M15 13h.01'],

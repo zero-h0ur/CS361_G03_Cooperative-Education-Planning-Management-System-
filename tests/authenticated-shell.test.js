@@ -367,7 +367,7 @@ describe('authenticated V3 shell and route guards', () => {
 
   it.each([
     ['STUDENT', '#/student/profile', ['ข้อมูลของฉัน', 'ใบสมัครสหกิจ', 'สถานประกอบการ'], 'ข้อมูลนักศึกษา'],
-    ['COORDINATOR', '#/coordinator/applications', ['รับแผนสหกิจ'], 'รับแผนสหกิจศึกษา'],
+    ['COORDINATOR', '#/coordinator/applications', ['ตรวจใบสมัคร','ติดตามการพิจารณา','กำหนดการและช่วงเวลายืนยันสิทธิ์'], 'รับแผนสหกิจศึกษา'],
     ['COMMITTEE', '#/committee/applications', ['การคัดเลือก','สถานประกอบการ'], 'การคัดเลือกนักศึกษา'],
     ['STAFF', '#/staff/review', ['จัดการนักศึกษา', 'ค้นหาแผนสหกิจ', 'คิวตรวจแผน', 'เอกสารและอาจารย์ที่ปรึกษา'], 'คิวตรวจแผนสหกิจ'],
     ['ADVISOR', '#/advisor/students', ['นักศึกษาที่ดูแล'], 'นักศึกษาที่ได้รับมอบหมาย']
@@ -379,7 +379,7 @@ describe('authenticated V3 shell and route guards', () => {
     expect(context.location.hash).toBe(expectedHash);
     expect([...context.root.querySelectorAll('.shell-nav__link')].map((link) => link.textContent)).toEqual(navLabels);
     expect(context.root.querySelector('h1').textContent).toBe(title);
-    if (['STUDENT','COMMITTEE'].includes(role)) expect(context.root.querySelector('.shell-security-note')).toBeNull();
+    if (['STUDENT','COMMITTEE','COORDINATOR'].includes(role)) expect(context.root.querySelector('.shell-security-note')).toBeNull();
     else expect(context.root.textContent).toContain('Backend ยังต้องตรวจสิทธิ์ทุก Request');
   });
 
