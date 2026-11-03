@@ -57,6 +57,9 @@ test('dry run rolls back catalogue rows and preserves private records', async ()
   assert.deepEqual(await digest(tables), before);
 });
 
+test('import accepts the complete checksum-verified migration history', async () => {
+  const { rows } = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
+  assert.deepEqual(rows.map(row => row.version), readReviewedMigrations().map(row => row.name));
   await runImport(payload);
 });
 
