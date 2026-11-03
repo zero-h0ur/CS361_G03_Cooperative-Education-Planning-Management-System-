@@ -3,6 +3,7 @@ import './preview.css';
 import { createShellApp } from '../../src/frontend/shell-app.js';
 import { SCENARIOS, ADVISOR_SCENARIOS } from './fixtures.js';
 import { SELECTION_SCENARIOS, SELECTION_STUDENT_SCENARIOS } from './selection-fixtures.js';
+import { COORDINATOR_SCENARIOS } from './coordinator-fixtures.js';
 import {APPLICATION_SCENARIOS} from './application-fixtures.js';
 import {createWorkspacePreviewClients} from './workspace-fixtures.js';
 
@@ -13,14 +14,14 @@ const roleLabel = document.createElement('label'); roleLabel.textContent = 'พ�
 const role = document.createElement('select'); role.setAttribute('aria-label', 'เลือกพื้นที่จำลอง');
 role.add(new Option('นักศึกษา', 'STUDENT'));
 role.add(new Option('ผู้ประสานงาน (รับเรื่อง)', 'COORDINATOR'));
-role.add(new Option('กรรมการ (ความเห็นรายบุคคล)', 'COMMITTEE'));
+role.add(new Option('กรรมการ (จัดอันดับและจำนวนรับ)', 'COMMITTEE'));
 role.add(new Option('อาจารย์ที่ปรึกษา (อ่านอย่างเดียว)', 'ADVISOR'));
 role.add(new Option('ผู้ดูแลระบบ (Operations)', 'ADMIN'));
 const rawRole = params.get('role');
 const mappedRole = rawRole === 'STAFF' ? 'COORDINATOR' : rawRole;
 role.value = Object.hasOwn(defaultRoutes, mappedRole) ? mappedRole : 'STUDENT';
 const selectionRole=['COORDINATOR','COMMITTEE'].includes(role.value);
-const scenarios = selectionRole?SELECTION_SCENARIOS:role.value === 'ADVISOR' ? ADVISOR_SCENARIOS : role.value==='STUDENT'?{...SCENARIOS,...APPLICATION_SCENARIOS,...SELECTION_STUDENT_SCENARIOS}:SCENARIOS;
+const scenarios = role.value === 'COORDINATOR' ? COORDINATOR_SCENARIOS : selectionRole ? SELECTION_SCENARIOS : role.value === 'ADVISOR' ? ADVISOR_SCENARIOS : role.value === 'STUDENT' ? { ...SCENARIOS, ...APPLICATION_SCENARIOS, ...SELECTION_STUDENT_SCENARIOS } : SCENARIOS;
 const defaultScenario = selectionRole?'pending':role.value === 'ADVISOR' ? 'assigned' : 'draft';
 const scenario = params.get('scenario') || defaultScenario;
 roleLabel.append(role);

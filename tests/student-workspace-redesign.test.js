@@ -60,11 +60,19 @@ test('account disclosure supports Escape and skip link still focuses the persist
 
 test.each([
   ['STAFF', '#/staff/review'], ['ADVISOR', '#/advisor/students'],
-  ['COORDINATOR', '#/coordinator/applications'], ['ADMIN', '#/admin/operations']
+  ['ADMIN', '#/admin/operations']
 ])('%s retains its previous shell and role-scoped navigation', async (role, hash) => {
   const { root } = await mount({ role, hash });
   expect(root.querySelector('.student-portal')).toBeNull();
   expect(root.querySelector('.shell-sidebar')).not.toBeNull();
+  expect(root.querySelector('.shell-nav [href="#/student/application"]')).toBeNull();
+});
+
+test('Coordinator has its own top navigation with no Student or company-directory menu',async()=>{
+  const {root}=await mount({role:'COORDINATOR',hash:'#/coordinator/applications'});
+  expect(root.querySelector('.coordinator-portal')).not.toBeNull();expect(root.querySelector('.shell-sidebar')).toBeNull();
+  expect(root.querySelectorAll('.shell-nav__link')).toHaveLength(3);
+  expect(root.querySelector('.shell-nav [href="company-directory.html"]')).toBeNull();
   expect(root.querySelector('.shell-nav [href="#/student/application"]')).toBeNull();
 });
 

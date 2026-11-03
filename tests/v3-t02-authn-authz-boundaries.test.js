@@ -625,6 +625,14 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
   });
 
   const PROTECTED_ENDPOINTS = [
+    { method:'GET',path:'/api/v4/coordinator/options' },
+    { method:'GET',path:'/api/v4/coordinator/applications' },
+    { method:'GET',path:'/api/v4/coordinator/tracking' },
+    { method:'GET',path:`/api/v4/coordinator/applications/${PLANS.planA_Draft.id}` },
+    { method:'POST',path:`/api/v4/coordinator/applications/${PLANS.planA_Draft.id}/return` },
+    { method:'POST',path:`/api/v4/coordinator/applications/${PLANS.planA_Draft.id}/forward` },
+    { method:'GET',path:`/api/v4/coordinator/schedules/${PLANS.planA_Draft.id}` },
+    { method:'POST',path:`/api/v4/coordinator/schedules/${PLANS.planA_Draft.id}` },
     { method:'GET',path:'/api/v4/application-options' },
     { method:'GET',path:'/api/v4/applications' },
     { method:'POST',path:'/api/v4/applications' },

@@ -1,4 +1,5 @@
 import { renderCommitteeWorkspace } from './committee/workspace.js';
+import { renderCoordinatorWorkspace } from './coordinator/workspace.js';
 import { AUTH_ERROR_CODES } from './auth/auth-errors.js';
 import { subscribeToLogout } from './auth/auth-storage.js';
 import {
@@ -22,7 +23,7 @@ import { renderStaffStudentManagementView } from './staff/staff-student-manageme
 import { createWorkspaceIcon } from './ui/workspace-presentation.js';
 import { renderContactPanel, renderStaffWorkflow } from './workflow/workflow-views.js';
 import { renderAdminOperations } from './workflow/admin-operations-view.js';
-import { renderSelectionWorkspace, renderStudentSelectionStatus } from './selection/selection-view.js';
+import { renderStudentSelectionStatus } from './selection/selection-view.js';
 import { renderApplicationWorkspace } from './student/application-view.js';
 import { renderStudentPageHeader } from './student/workspace-components.js';
 
@@ -441,7 +442,7 @@ function createNavigation(role, activeRoute) {
   for (const route of getNavigationRoutesForRole(role)) {
     const link = element('a', 'shell-nav__link', route.navLabel);
     link.href = route.hash;
-    if (['STUDENT', 'STAFF', 'ADVISOR', 'ADMIN', 'COORDINATOR', 'COMMITTEE'].includes(role)) {
+    if (['STUDENT', 'STAFF', 'ADVISOR', 'ADMIN', 'COMMITTEE'].includes(role)) {
       link.prepend(createWorkspaceIcon(route.hash.includes('students') || route.hash.endsWith('/profile')
         ? 'user' : route.hash.includes('review') ? 'clipboard' : 'file'));
     }
@@ -472,6 +473,7 @@ function createDefaultPlaceholder(route) {
 }
 
 function createProtectedLayout({ role, route, onLogout, bodyNode }) {
+  if(role==='COORDINATOR')return createCoordinatorLayout({route,onLogout,bodyNode});
   if (['STUDENT','COMMITTEE'].includes(role)) return createStudentLayout({role, route, onLogout, bodyNode });
   const layout = element('div', 'protected-shell');
   if (role === 'STUDENT') layout.classList.add('protected-shell--student');
@@ -540,6 +542,19 @@ function createProtectedLayout({ role, route, onLogout, bodyNode }) {
   mainColumn.append(topbar, main);
   layout.append(skipLink, sidebar, mainColumn);
   return { layout, main };
+}
+
+function createCoordinatorLayout({route,onLogout,bodyNode}) {
+  const layout=element('div','protected-shell coordinator-portal'),main=element('main','shell-content');main.id='shell-main-content';main.tabIndex=-1;
+  const skip=element('a','shell-skip-link','ข้ามไปยังเนื้อหาหลัก');skip.href='#shell-main-content';skip.addEventListener('click',event=>{event.preventDefault();main.focus();});
+  const top=element('header','shell-topbar'),brand=createBrand();brand.querySelector('.shell-brand__subtitle').textContent='สหกิจศึกษา';
+  const account=element('details','student-account'),summary=element('summary'),avatar=element('span','student-account__avatar');avatar.setAttribute('aria-hidden','true');avatar.append(createWorkspaceIcon('user'));
+  summary.append(avatar,element('span','','ผู้ประสานงาน'));summary.setAttribute('aria-label','บัญชีผู้ประสานงานและออกจากระบบ');
+  const actions=element('div','student-account__actions');actions.append(createActionButton('ออกจากระบบ',onLogout,true));account.append(summary,actions);
+  account.addEventListener('keydown',event=>{if(event.key==='Escape'){account.open=false;summary.focus();}});
+  top.append(brand,createNavigation('COORDINATOR',route),account);
+  if(bodyNode?.dataset.coordinatorPage)main.append(bodyNode);else main.append(renderStudentPageHeader({title:route.title,description:route.description}),bodyNode || createDefaultPlaceholder(route));
+  layout.append(skip,top,main,element('footer','coord-footer','CO-ED · ระบบข้อมูลสหกิจศึกษา'));return {layout,main};
 }
 
 function createStudentLayout({ role='STUDENT', route, onLogout, bodyNode }) {
@@ -851,8 +866,9 @@ export function createShellApp({
     }
     if(role==='COMMITTEE' && workflowClient) return renderCommitteeWorkspace({client:workflowClient,signal,onSessionExpired:handleSessionExpired,onAccessDenied:message=>renderForbidden(message)});
     if (role==='COORDINATOR' && workflowClient) {
-      return renderSelectionWorkspace({client:workflowClient,role,signal,onSessionExpired:handleSessionExpired,
-        onAccessDenied:message=>renderForbidden(message)});
+      return renderCoordinatorWorkspace({client:workflowClient,applicationClient,signal,onSessionExpired:handleSessionExpired,
+        page:route.hash.endsWith('/tracking')?'tracking':route.hash.endsWith('/schedule')?'schedule':'review',
+        setLeaveGuard:guard=>{routeLeaveGuard=guard;},onAccessDenied:message=>renderForbidden(message)});
     }
     if (role==='STUDENT' && route.hash==='#/student/selection' && workflowClient) {
       return renderStudentSelectionStatus({client:workflowClient,signal,onSessionExpired:handleSessionExpired,

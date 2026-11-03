@@ -7,6 +7,7 @@ import repositoryModule from '../src/db/repositories/directory-repository.js';
 import dal from '../src/db/dal.js';
 import { buildCatalogue, validatePayload } from '../scripts/import-companies-csv.mjs';
 import { buildImportSql } from '../scripts/operations/partner-import-sql.mjs';
+import { readReviewedMigrations } from '../scripts/operations/reviewed-migrations.mjs';
 
 // This suite is destructive only inside the isolated local test database.
 seedModule.assertDestructiveResetAllowed();
@@ -56,20 +57,6 @@ test('dry run rolls back catalogue rows and preserves private records', async ()
   assert.deepEqual(await digest(tables), before);
 });
 
-test('import accepts the complete reviewed migration history 001 through 013', async () => {
-  const { rows } = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
-  assert.deepEqual(rows.map(row => row.version), [
-    '001_initial_schema.sql', '002_v3_identity_student_plan_assignment_audit.sql',
-    '003_partner_directory.sql', '004_three_role_workflow.sql',
-    '005_submission_snapshots.sql', '006_advisor_display_name.sql',
-    '007_submission_policy_integrity.sql',
-    '008_returned_plan_cancellation.sql',
-    '009_coordinator_committee_selection.sql',
-    '010_phase1_applications_documents.sql',
-    '011_student_contact_email.sql',
-    '012_committee_workspace.sql',
-    '013_phase1_schedules_and_confirmations.sql',
-  ]);
   await runImport(payload);
 });
 

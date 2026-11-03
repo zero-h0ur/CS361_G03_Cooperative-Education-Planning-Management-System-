@@ -4,10 +4,12 @@ const { roleGuard } = require("./selection-service");
 const { ValidationError, ForbiddenError, ConflictError } = require("../errors");
 const v = require("./workflow-input");
 const { transition } = require("./committee-workspace-domain");
+const {academic}=require('./coordinator-domain');
 class CommitteeWorkspaceService {
-  constructor({ pool, documentStore } = {}) {
+  constructor({ pool, documentStore, allowSyntheticPolicy=false } = {}) {
     this.store = documentStore;
     this.pool = pool;
+    this.allowSynthetic=process.env.NODE_ENV==='test' && allowSyntheticPolicy;
   }
   db() {
     return this.pool || getPool();
@@ -23,11 +25,11 @@ class CommitteeWorkspaceService {
     return rows;
   }
   async students(db, cohort) {
-    return (await db.query(`SELECT p.id,s.full_name AS name,s.student_number AS number,s.program,
+    const legacy=(await db.query(`SELECT p.id,s.full_name AS name,s.student_number AS number,s.program,
       sub.snapshot->'payload' AS payload, sub.snapshot->'documents' AS documents,p.version AS plan_version,a.plan_version AS received_version
       FROM selection_receipts a JOIN plans p ON p.id=a.plan_id JOIN students s ON s.id=p.student_id
       LEFT JOIN phase1_applications app ON app.student_id=s.id AND app.cycle_id=p.cycle_id AND app.status='SUBMITTED'
-      LEFT JOIN phase1_submissions sub ON sub.application_id=app.id
+      LEFT JOIN LATERAL(SELECT * FROM phase1_submissions ps WHERE ps.application_id=app.id ORDER BY ps.application_version DESC LIMIT 1) sub ON true
       WHERE a.cohort_id=ANY($1::uuid[]) AND NOT p.legacy_compatibility AND p.status IN('SUBMITTED','UNDER_REVIEW') ORDER BY p.id`, [cohort.ids || [cohort.id]])).rows.map((s) => ({
       ...s,
       documents: (s.documents || []).map((d) => ({ id: d.id, filename: d.filename, kind: d.kind })),
@@ -36,6 +38,21 @@ class CommitteeWorkspaceService {
       curriculum: s.payload?.curriculum || null,
       program: /พิเศษ|special/i.test(s.program) ? "special" : "regular"
     }));
+    const phase1=(await db.query(`SELECT a.id,sub.snapshot,sub.application_version,st.program
+      FROM phase1_reviews rv JOIN phase1_applications a ON a.id=rv.application_id
+      JOIN phase1_submissions sub ON sub.id=rv.submission_id JOIN students st ON st.id=a.student_id
+      WHERE rv.cohort_id=ANY($1::uuid[]) AND rv.state='FORWARDED' AND a.status='SUBMITTED'
+      ORDER BY a.id`,[cohort.ids || [cohort.id]])).rows.map(s=>({
+        id:s.id,name:s.snapshot.official?.full_name || s.snapshot.payload?.thai_full_name || null,
+        number:s.snapshot.official?.student_number || null,payload:s.snapshot.payload,
+        documents:(s.snapshot.documents || []).map(d=>({id:d.id,filename:d.filename,kind:d.kind})),
+        core:academic(s.snapshot,{allowSynthetic:this.allowSynthetic}).core,
+        gpax:academic(s.snapshot,{allowSynthetic:this.allowSynthetic}).gpax,
+        curriculum:s.snapshot.official?.curriculum || null,
+        program:/พิเศษ|special/i.test(s.program)?'special':'regular',
+        plan_version:s.application_version,received_version:s.application_version,source:'PHASE1'
+      }));
+    return [...legacy,...phase1];
   }
   async read(actor, id) {
     if (id) v.uuid(id, "cohort_id");
@@ -62,12 +79,16 @@ class CommitteeWorkspaceService {
   async download(actor, documentId) {
     v.uuid(documentId, "document_id");
     const db = this.db(), cohorts = await this.scope(db, actor);
-    const doc = (await db.query(`SELECT d.* FROM phase1_documents d JOIN phase1_applications app ON app.id=d.application_id
+    let doc = (await db.query(`SELECT d.* FROM phase1_documents d JOIN phase1_applications app ON app.id=d.application_id
       JOIN phase1_submissions sub ON sub.application_id=app.id
       JOIN plans p ON p.student_id=app.student_id AND p.cycle_id=app.cycle_id
       JOIN selection_receipts receipt ON receipt.plan_id=p.id
       WHERE d.id=$1 AND receipt.cohort_id=ANY($2::uuid[]) AND NOT p.legacy_compatibility
       AND EXISTS(SELECT 1 FROM jsonb_array_elements(sub.snapshot->'documents') x WHERE x->>'id'=d.id::text)`, [documentId, cohorts.map((c) => c.id)])).rows[0];
+    if(!doc)doc=(await db.query(`SELECT d.* FROM phase1_documents d JOIN phase1_reviews rv ON rv.application_id=d.application_id
+      JOIN phase1_submissions sub ON sub.id=rv.submission_id JOIN phase1_applications a ON a.id=rv.application_id
+      WHERE d.id=$1 AND rv.cohort_id=ANY($2::uuid[]) AND rv.state='FORWARDED' AND a.status='SUBMITTED'
+        AND EXISTS(SELECT 1 FROM jsonb_array_elements(sub.snapshot->'documents') x WHERE x->>'id'=d.id::text)`,[documentId,cohorts.map(c=>c.id)])).rows[0];
     if (!doc) throw new ForbiddenError();
     const store = this.store || require("../../storage/application-document-store").createDocumentStore();
     return { download: await store.downloadTarget({ key: doc.object_key, applicationId: doc.application_id, documentId: doc.id }) };

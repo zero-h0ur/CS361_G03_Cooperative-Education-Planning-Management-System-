@@ -18,7 +18,8 @@ export const REVIEWED_MIGRATIONS = Object.freeze([
   ['010_phase1_applications_documents.sql', '033de7bdc6737a3637428d486365f5d4978c4490f632635f0fdc647c479b2523'],
   ['011_student_contact_email.sql', 'ec16ab1d64a17d10ed60cded62aeef281f30f816c68c5e287568ef4ad53f4137'],
   ['012_committee_workspace.sql', '9bb45e3f2ddbc16d1797472482d55fd542ee8bc6e78cad4e5f9146e89372041e'],
-  ['013_phase1_schedules_and_confirmations.sql', '91466678848777ebe71759f178eaa35b7d51ccc9bff5367dd52159f5ad573396']
+  ['013_coordinator_workspace.sql', '2dfe6c0247b12fdb7e82314468870bf70fb3437b64827fe8ca0615edf9374ac4'],
+  ['014_phase1_schedules_and_confirmations.sql', '91466678848777ebe71759f178eaa35b7d51ccc9bff5367dd52159f5ad573396'],
 ].map(row => Object.freeze(row)));
 
 const defaultDirectory = fileURLToPath(new URL('../../src/db/migrations/', import.meta.url));
@@ -27,7 +28,7 @@ function migrationFiles(directory) {
   const actual = readdirSync(directory).filter(name => name.endsWith('.sql')).sort();
   const expected = REVIEWED_MIGRATIONS.map(([name]) => name);
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error('Migration files differ from the reviewed 001–012 allowlist. Missing/unknown migrations are not accepted.');
+    throw new Error('Migration files differ from the reviewed allowlist. Missing/unknown migrations are not accepted.');
   }
   return REVIEWED_MIGRATIONS.map(([name, expectedHash]) => {
     const path = join(directory, name);

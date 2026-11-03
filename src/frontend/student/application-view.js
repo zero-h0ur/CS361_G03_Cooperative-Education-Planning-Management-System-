@@ -49,13 +49,13 @@ export function renderApplicationWorkspace({client,applicationId,signal,onNaviga
     for(const name of ['รอบสมัคร','สถานะ','ทำรายการ']){const th=node('th','',name);th.scope='col';header.append(th);}head.append(header);table.append(head);
     const body=node('tbody');
     for(const app of list) {
-      const row=node('tr'),cycle=node('td'),status=node('td'),action=node('td'),draft=app.status==='DRAFT';
+      const row=node('tr'),cycle=node('td'),status=node('td'),action=node('td'),correction=app.status==='NEEDS_REVISION',draft=app.status==='DRAFT'||correction;
       const editable=applicationEditState(app,cycles),label=draft?(editable===true?'กรอกต่อ':editable===false?'ดูฉบับร่าง':'เปิดใบสมัคร'):'ดูใบสมัคร';
       cycle.dataset.label='รอบสมัคร';status.dataset.label='สถานะ';action.dataset.label='ทำรายการ';
       cycle.append(node('h3','',applicationCycleLabel(app,cycles)));
       const date=formatStudentDate(draft?app.updated_at:app.submitted_at);
       if(date)cycle.append(node('p','student-record-description',`${draft?'แก้ไขล่าสุด':'ส่งเมื่อ'} ${date}`));
-      status.append(node('span',`student-status-badge${draft?' student-status-badge--draft':''}`,draft?'ยังไม่ได้ส่ง':'ส่งแล้ว'),
+      status.append(node('span',`student-status-badge${draft?' student-status-badge--draft':''}`,correction?'ส่งกลับแก้ไข':draft?'ยังไม่ได้ส่ง':'ส่งแล้ว'),
         node('p','student-record-description',draft?(editable===true?'แก้ไขข้อมูลและเอกสารได้':editable===false?'รอบปิด · อ่านอย่างเดียว':'ตรวจสอบช่วงรับสมัครในใบสมัคร'):'เปิดดูฉบับที่ส่ง'));
       const open=button(label,()=>onNavigate?.(`#/student/application/${app.id}`),true);
       open.setAttribute('aria-label',`${label} ${applicationCycleLabel(app,cycles)}`);

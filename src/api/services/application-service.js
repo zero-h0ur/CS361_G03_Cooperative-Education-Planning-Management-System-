@@ -34,18 +34,25 @@ class ApplicationService {
     return this.repository.profile(db,{studentId:app.student_id,userId:user.user_id},lock);
   }
   async detail(db,actor,app) {
-    const submission=(await db.query('SELECT id,policy_id,snapshot,checksum,submitted_at FROM phase1_submissions WHERE application_id=$1',[app.id])).rows[0] || null;
+    const retained=(await db.query('SELECT id,policy_id,snapshot,checksum,submitted_at FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC LIMIT 1',[app.id])).rows[0] || null;
+    // Coordinator sees the last submitted snapshot, never the student's unsent correction.
+    const submission=app.status==='SUBMITTED' || actor.role==='COORDINATOR'?retained:null;
     const official=submission?.snapshot.official || await this.official(db,actor,app);
     const policy=submission?.snapshot.policy || await this.repository.policy(db,app,official);
     const documents=submission?.snapshot.documents || await this.repository.documents(db,app.id);
     const cycle=(await db.query(`SELECT r.name,r.status,w.opens_at,w.closes_at,
       (w.cycle_id IS NULL OR (clock_timestamp()>=w.opens_at AND clock_timestamp()<w.closes_at)) AS window_open
       FROM rounds r LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id WHERE r.id=$1`,[app.cycle_id])).rows[0];
+    const effective=app.status==='NEEDS_REVISION'?await this.repository.cycleForApplication(db,app,official):null;
+    const correction=app.status==='NEEDS_REVISION'?(await db.query('SELECT reason,version FROM phase1_reviews WHERE application_id=$1 AND state=\'RETURNED\'',[app.id])).rows[0]:null;
     return {id:app.id,student_id:app.student_id,cycle_id:app.cycle_id,status:app.status,version:app.version,
       payload:submission?.snapshot.payload || app.payload,form_version:submission ? submission.snapshot.form_version || 1 : FORM_VERSION,
       official:submission?.snapshot.official || official,policy:submission?.snapshot.policy || safePolicy(policy),documents,
-      cycle_name:submission?.snapshot.cycle?.name || cycle.name,availability:{can_edit:app.status==='DRAFT' && cycle.status==='OPEN' && cycle.window_open,
-        opens_at:cycle.opens_at,closes_at:cycle.closes_at},
+      cycle_name:submission?.snapshot.cycle?.name || cycle.name,availability:{can_edit:Boolean(actor.role==='STUDENT' &&
+        (app.status==='DRAFT' && cycle.status==='OPEN' && cycle.window_open || app.status==='NEEDS_REVISION' && effective?.status==='OPEN' && effective.window?.is_open)),
+        opens_at:cycle.opens_at,closes_at:effective?.window?.closes_at || cycle.closes_at},
+      correction:correction?{...correction,closes_at:effective?.window?.closes_at}:null,
+      last_submission:retained?{id:retained.id,checksum:retained.checksum,submitted_at:retained.submitted_at}:null,
       submitted_at:app.submitted_at,submission};
   }
   async options(actor) {
@@ -58,8 +65,12 @@ class ApplicationService {
   }
   async list(actor) {
     guard(actor,true);const db=this.repository.pool;await this.repository.profile(db,actor);
-    return (await db.query(`SELECT id,cycle_id,status,version,submitted_at,updated_at FROM phase1_applications
-      WHERE student_id=$1 ORDER BY created_at DESC,id LIMIT 100`,[actor.studentId])).rows;
+    return (await db.query(`SELECT a.id,a.cycle_id,a.status,a.version,a.submitted_at,a.updated_at,rv.reason AS correction_reason,
+      CASE WHEN a.status='NEEDS_REVISION' THEN jsonb_build_object('can_edit',r.status='OPEN' AND rv.state='RETURNED'
+        AND clock_timestamp()>=w.opens_at AND clock_timestamp()<COALESCE(s.review_closes_at,w.closes_at)) ELSE NULL END AS availability
+      FROM phase1_applications a JOIN rounds r ON r.id=a.cycle_id LEFT JOIN phase1_reviews rv ON rv.application_id=a.id
+      LEFT JOIN phase1_cycle_windows w ON w.cycle_id=a.cycle_id LEFT JOIN coordinator_round_schedules s ON s.cycle_id=a.cycle_id
+      WHERE a.student_id=$1 ORDER BY a.created_at DESC,a.id LIMIT 100`,[actor.studentId])).rows;
   }
   async get(actor,id) {
     guard(actor);v.uuid(id);const db=await this.repository.pool.connect();
@@ -69,7 +80,7 @@ class ApplicationService {
   }
   async check(db,actor,app) {
     const official=await this.official(db,actor,app),policy=await this.repository.policy(db,app,official);
-    const cycle=await this.repository.cycle(db,app.cycle_id,official,true);
+    const cycle=await this.repository.cycleForApplication(db,app,official,true);
     return {policy,cycle,result:readiness({app,official,policy,documents:await this.repository.documents(db,app.id),window:cycle.window,roundOpen:cycle.status==='OPEN',allowSynthetic:this.allowSynthetic})};
   }
   async readiness(actor,id) {
@@ -144,8 +155,11 @@ class ApplicationService {
         cycle:{id:cycle.id,name:cycle.name,academic_year:cycle.academic_year,semester:cycle.semester,
           opens_at:cycle.window.opens_at,closes_at:cycle.window.closes_at,window_version:cycle.window.version},
         acknowledgements:{actor_id:actor.userId,policy_id:policy.id,accepted_at:new Date().toISOString()}};
+      const submissionId=randomUUID();
       await db.query(`INSERT INTO phase1_submissions(id,application_id,application_version,policy_id,snapshot,checksum,submitted_by)
-        VALUES($1,$2,$3,$4,$5,$6,$7)`,[randomUUID(),id,app.version+1,policy.id,JSON.stringify(snapshot),hash(snapshot),actor.userId]);
+        VALUES($1,$2,$3,$4,$5,$6,$7)`,[submissionId,id,app.version+1,policy.id,JSON.stringify(snapshot),hash(snapshot),actor.userId]);
+      if(app.status==='NEEDS_REVISION')await db.query(`UPDATE phase1_reviews SET submission_id=$2,state='PENDING',reason=NULL,
+        version=version+1,actor_id=$3,updated_at=clock_timestamp() WHERE application_id=$1 AND state='RETURNED'`,[id,submissionId,actor.userId]);
       const updated=(await db.query(`UPDATE phase1_applications SET status='SUBMITTED',submitted_at=clock_timestamp(),version=version+1,updated_at=clock_timestamp() WHERE id=$1 RETURNING *`,[id])).rows[0];
       return this.detail(db,actor,updated);
     });
@@ -196,8 +210,8 @@ class ApplicationService {
     guard(actor);v.uuid(id);v.uuid(documentId);const db=this.repository.pool;
     await this.repository.active(db,actor);await this.repository.application(db,id,actor);
     const doc=(await db.query(`SELECT d.* FROM phase1_documents d WHERE d.id=$1 AND d.application_id=$2 AND
-      (EXISTS(SELECT 1 FROM phase1_attachments a WHERE a.document_id=d.id) OR
-      EXISTS(SELECT 1 FROM phase1_submissions s,jsonb_array_elements(s.snapshot->'documents') x WHERE s.application_id=$2 AND x->>'id'=d.id::text))`,[documentId,id])).rows[0];
+      (($3='STUDENT' AND EXISTS(SELECT 1 FROM phase1_attachments a WHERE a.document_id=d.id)) OR
+      EXISTS(SELECT 1 FROM phase1_submissions s,jsonb_array_elements(s.snapshot->'documents') x WHERE s.application_id=$2 AND x->>'id'=d.id::text))`,[documentId,id,actor.role])).rows[0];
     if(!doc)throw new ForbiddenError();
     return {document:doc,download:await this.documentStore().downloadTarget({key:doc.object_key,applicationId:id,documentId})};
   }
