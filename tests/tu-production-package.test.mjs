@@ -27,6 +27,7 @@ test('production owner/API/maintenance archives load isolated and reject without
  const {path,state}=await packageProduction(Buffer.from(rootCertificates[0]+'\n'));
  const dir=dirname(path);assert.ok(relative(join(ROOT,'tmp/tu-production'),dir).startsWith('production-'));
  try{
+  assert.doesNotThrow(()=>execFileSync('git',['check-ignore','--quiet','--',path],{cwd:ROOT,encoding:'utf8'}));
   const owner=state.artifacts.owner;
   assert.deepEqual(listZipEntries(owner.file).sort(),['scripts/operations/tu-owner/handler.mjs','global-bundle.pem',...OWNER_FILES].sort());
   for(const [kind,artifact] of Object.entries(state.artifacts)){

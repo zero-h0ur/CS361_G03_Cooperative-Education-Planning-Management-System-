@@ -14,6 +14,7 @@
 /tmp/tu-*-verification.log
 /tmp/tu-delivery-regression.log
 /tmp/main-alignment/
+/tmp/tu-production/
 
 # macOS system files
 .DS_Store
