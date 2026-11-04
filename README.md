@@ -75,6 +75,8 @@ Lambda อ่านรหัสผ่านฐานข้อมูลจาก 
 - [รวม main ล่าสุดกับ TU Auth: ผลทดสอบในเครื่องและข้อจำกัดก่อน Deploy](docs/evidence/main-tu-auth-alignment.md)
 - [Split TU broker/issuer: ผลตรวจและขอบเขตเฉพาะในเครื่อง](docs/evidence/tu-split-auth-local.md)
 - [ผลตรวจหลัง local commit และ release gate](docs/evidence/tu-post-commit-release-gate.md)
+- [Migration ใหม่จาก schema จริง: ผลตรวจ read-only และทดสอบในเครื่อง](docs/evidence/tu-present-schema-upgrade.md)
+- [TU production operator: ขอบเขตและหลักฐานการ Deploy](docs/evidence/tu-production-deployment.md)
 - [TU บน AWS: รายการทรัพยากร ค่าใช้จ่าย และแผน Deploy/Rollback ที่ต้องอนุมัติแยก](docs/operations/tu-split-auth-rollout.md)
 - [คู่มือพัฒนา ดูแลระบบ และงานต่อ V4](docs/operations/v3-operating-guide.md)
 - [การทดสอบและ rollout workflow](docs/operations/three-role-workflow.md)
