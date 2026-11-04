@@ -151,3 +151,9 @@ Cleanup only exact task-tagged resources/owned policy statements, not shared SGs
 ENIs, VPC, app DB Secret, original log groups or unrelated rights. Record any
 cleanup that could not be completed. Do not publish credentials in diagnostics.
 No push or Amplify/frontend deployment is performed by this workflow.
+
+If TU accepts the owner's credentials but the private issuer stops at identity403,
+do not provision/relink or resume. The separately approved N0-N5
+[one-target read-only diagnostic](tu-identity-readonly-diagnostic.md) uses only
+the existing SELECT-only login capability, prompts locally for the owner-selected
+Student ID (no password) and withdraws all its temporary AWS capabilities.
