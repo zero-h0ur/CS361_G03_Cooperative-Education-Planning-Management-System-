@@ -1,9 +1,9 @@
 # TU production deployment evidence
 
 Date:5November2026, Asia/Bangkok. Scope: approved P0-P6.
-Status: local preparation complete; production maintenance/backup/SQL/cutover
-not yet started at this checkpoint. This file will be extended with actual
-execution, not treat approved steps or local tests as production success.
+Status: P0/P1/P2 complete; production maintenance active and snapshot available.
+P3 stopped on expired AWS operator credentials before resource creation or SQL.
+This is not a claim of successful production Login or completed cutover.
 
 ## Local proof
 
@@ -41,5 +41,36 @@ versions, snapshot ARN/available state/retention review, trial/Apply proof and
 history/preservation, effective SELECT-only login, candidate/IAM denials,
 controlled user Login->me->own-profile outcome, cleanup and monitoring.
 Keep credentials, token/profile/business data out of this evidence.
+
+## Actual maintenance and backup checkpoint
+
+- Runtime artifact source: clean committed44777e8c622ece77250740b8156218dda18d8a9d.
+  Local-only source commits also include bfdb584,7892697,7d19ece,b4f3fc0.
+  Controller-only fixes958ab2a/76a51e1 retain those exact runtime artifacts. No push.
+- Ignored checkpoint: tmp/tu-production/production-ehWrZm/state.json.
+- SHA256: owner558edaf03f1772dbe6e867886072a1e4a79fd6e93dae2f8d582b5878595b3d21;
+  APIc05d0f727e946677d990f45d407a3acc04e23997bc0583fe4c7a383431cd0939;
+  maintenanceb4689ccaf920a306edffc9776f3d6b846b82e2fa86124dabf0a4d73d25c3b29c;
+  broker31dc71e528ad1d60da146c7cf0d05e7449b0257e264457503e8818ed2dd59dbb;
+  issuer8917b2cbf110422b6e8c06c5a53b40ea78afbeca944b510802caf563b20b0c1a.
+- Maintenance started5November2026 at02:01:48 Bangkok. Both coed-api and
+  coed-tu-auth have task-created maintenance version1. Integrations ip14y62 and
+  sr47ns9 target those qualified versions; TU integration timeout25seconds.
+- Initial anonymous canonical /api/v3/me check stopped at expected Gateway401.
+  No authorizer was changed. The corrected controller confirms503 plus
+  COED_MAINTENANCE on the existing TU-proxy /me and TU status paths. Ordinary
+  Cognito Gateway authorization remains unchanged.
+- One private encrypted manual snapshot is available:
+  arn:aws:rds:ap-southeast-2:130165494095:snapshot:coed-pre-tu-018-20261105-f2ca1f7a.
+  Retention review after12November2026 at02:05:34 Bangkok. No automatic expiration,
+  snapshot deletion or actual restore test is claimed.
+- The first login-secret command returned AWS ExpiredToken from the operator
+  session. Checkpoint proves no login Secret created, owned resources empty,
+  owner invocation count0, ownerApplied=false, loginReady=false. No owner
+  password read, owner tool/role/logs/endpoint grant, SQL, credential provisioning
+  or historical/identity/application row change occurred in P3.
+- API/TU maintenance remains ACTIVE pending renewed coed-v4 login. User must
+  reauthenticate themselves; no login URL/code/token/password is requested in
+  chat. Revalidate targets, snapshot and the same checkpoint before continuing.
 
 Use the [operator runbook](../operations/tu-production-operator.md).
