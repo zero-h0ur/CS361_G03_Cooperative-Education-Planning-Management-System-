@@ -3,6 +3,7 @@
 Date:5November2026, Asia/Bangkok. Scope: approved P0-P6.
 Status: WAITING_OWNER_SMOKE. P0-P4 complete; verification-only live routing passed.
 Owner/probe temporary capabilities removed. Writes/other API reads remain paused.
+First real owner smoke failed; broker public-key config repaired, new smoke pending.
 This is not a claim of successful production Login or completed cutover.
 
 ## Local proof
@@ -140,5 +141,43 @@ Keep credentials, token/profile/business data out of this evidence.
 - Snapshot retention review remains12November2026 at02:05:34 Bangkok, no automatic
   deletion. No frontend deployment or Git push. Final post-smoke monitoring and
   next-usage review remain pending.
+
+## Owner smoke failure and bounded public-verifier repair
+
+- User independently ran the hidden-input smoke and reported HTTP503
+  TU_SIGNING_UNAVAILABLE. This was NOT an accepted owner-smoke attestation.
+- Read-only paginated safe-log inspection located two broker version3 failures
+  at2026-11-05T03:16:02/03:16:44+07:00, stage=request,19ms/0ms. No corresponding
+  issuer invocation occurred. Code tracing confirmed getTuPublicKey runs before
+  provider verification. Therefore this failure did not test TU credentials,
+  canonical identity, private signing Secret or database owner reads.
+- Root cause was the deployment controller's broker environment omitting
+  TU_AUTH_PUBLIC_KEY. Candidate negative-only tests had not detected the missing
+  verifier. No secret/key rotation, identity repair or wider IAM grant was needed.
+- Local controller commit d04a09f adds the existing API public verifier through a
+  whitelist environment builder, configured=true readiness gates and a bounded
+  configuration-only repair with code/env/fingerprint/revision/route guards.
+  Actual runtime bundles remain unchanged from44777e8. It also fixes monitoring
+  of Lambda Text-prefixed JSON; the earlier empty handled5xx report reflected a
+  JSON-only filter limitation, not proof those failures were absent.
+- Regression/tooling/smoke/readiness18passed,0failed,0skipped; actual local
+  PostgreSQL credential/SELECT-only/retry5passed,0failed,0skipped. Additional
+  isolated archive/readiness7passed includes executing the packaged broker's
+  default configuration without AWS/credentials. These counts overlap. Lint279
+  and docs9passed. Staged secret-pattern scan passed. No Git push.
+- The bounded AWS repair updated only broker environment and candidate/live
+  aliases to version4, same broker code hash. It copied the existing verified
+  API PUBLIC key, not private material, and verified candidate/public configured
+  status before/after cutover. Write503 and unchanged routes/CORS passed.
+  API live2 and private issuer live2, Secrets, IAM, endpoint, network and database
+  were not changed. No new resource or paid resource type was introduced.
+- Broker configured=true is configuration readiness only, NOT a real successful
+  TU Login or proof of provider-key validity. A new owner-run smoke is required;
+  other reads/writes remain in verification maintenance until it passes.
+- Post-repair read-only report confirms all functions Active/Successful and
+  broker version4, routes/CORS unchanged, owner tool absent and snapshot available.
+  Corrected collector sees the two historical TU_SIGNING_UNAVAILABLE events and
+  one candidate maintenance event. Runtime Errors0 still does not imply Login
+  success. No post-repair user credential test or write resume is recorded.
 
 Use the [operator runbook](../operations/tu-production-operator.md).
