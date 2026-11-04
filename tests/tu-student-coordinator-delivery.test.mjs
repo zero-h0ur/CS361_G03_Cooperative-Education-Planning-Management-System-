@@ -16,17 +16,32 @@ import schedules from '../src/api/services/phase1-schedule-service.js';
 import form from '../src/shared/application-form.js';
 import splitIssuer from '../src/tu-session-issuer.js';
 import splitBroker from '../src/auth/tu-broker-service.js';
+import {createObservedFixture} from './helpers/present-schema-fixture.mjs';
+import {upgradeObservedSchema} from '../scripts/operations/present-schema-upgrade.mjs';
+import {PROFILE} from '../scripts/operations/present-schema-baseline.mjs';
 
 const url=process.env.TU_DELIVERY_TEST_DATABASE_URL;
 test('TU Student to Cognito Coordinator: real HTTP, isolated PostgreSQL and least privilege',{skip:!url && !process.env.CI},async t=>{
   const target=new URL(url);assert.ok(['localhost','127.0.0.1'].includes(target.hostname));assert.match(target.pathname,/_test$/);assert.notEqual(url,process.env.DATABASE_URL);
   assert.equal(process.env.NODE_ENV,'test');
-  const schema='tu_delivery_'+id().replaceAll('-',''),role='tu_runtime_'+id().replaceAll('-','');
+  const observed=process.env.TU_DELIVERY_TEST_BASELINE==='observed-current';
+  const schema=(observed?'present_':'tu_delivery_')+id().replaceAll('-',''),role='tu_runtime_'+id().replaceAll('-','');
   const admin=new pg.Pool({connectionString:url});let db,runtime,server,connection;
   try {
     await admin.query(`CREATE SCHEMA ${schema}`);db=new pg.Pool({connectionString:url,options:`-c search_path=${schema},public`});
-    for(const migration of readReviewedMigrations())await db.query(migration.sql);
-    await db.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL)');
+    if(observed){
+      assert.equal(target.port,'55440');assert.equal(target.pathname,'/coed_present_test');
+      assert.equal(process.env.PRESENT_SCHEMA_DISPOSABLE,'true');
+      await admin.query('CREATE EXTENSION IF NOT EXISTS btree_gist');
+      if(!(await admin.query("SELECT 1 FROM pg_roles WHERE rolname='coed_app'")).rowCount)await admin.query('CREATE ROLE coed_app NOLOGIN');
+      const bootstrap=await db.connect();try{
+        await createObservedFixture(bootstrap,schema);
+        await upgradeObservedSchema({client:bootstrap,profile:PROFILE,expectedDatabase:'coed_present_test',expectedSchema:schema,mode:'apply',maintenanceApproved:true});
+      }finally{bootstrap.release();}
+    }else{
+      for(const migration of readReviewedMigrations())await db.query(migration.sql);
+      await db.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL)');
+    }
     await admin.query(`CREATE ROLE ${role} NOLOGIN`);
     const grants=readFileSync(new URL('../src/db/operations/v3-runtime-grants.sql',import.meta.url),'utf8').replace(/^\\set[^\n]*\n/m,'')
       .replaceAll('public.',schema+'.').replaceAll('SCHEMA public','SCHEMA '+schema).replaceAll("'public'","'"+schema+"'").replaceAll('coed_app',role);

@@ -1,2 +1,4 @@
 # Migration checksums are over exact committed bytes, on every operating system.
 /src/db/migrations/*.sql text eol=lf
+/src/db/upgrades/*.sql text eol=lf
+/src/db/operations/018-observed-runtime-grants.sql text eol=lf
