@@ -1,8 +1,8 @@
 # TU production deployment evidence
 
 Date:5November2026, Asia/Bangkok. Scope: approved P0-P6.
-Status: P0/P1/P2 complete; production maintenance active and snapshot available.
-P3 stopped on expired AWS operator credentials before resource creation or SQL.
+Status: P0-P3 complete; production maintenance active and snapshot available.
+Renewed AWS operator session verified; P4 candidate preparation in progress.
 This is not a claim of successful production Login or completed cutover.
 
 ## Local proof
@@ -69,8 +69,32 @@ Keep credentials, token/profile/business data out of this evidence.
   owner invocation count0, ownerApplied=false, loginReady=false. No owner
   password read, owner tool/role/logs/endpoint grant, SQL, credential provisioning
   or historical/identity/application row change occurred in P3.
-- API/TU maintenance remains ACTIVE pending renewed coed-v4 login. User must
-  reauthenticate themselves; no login URL/code/token/password is requested in
-  chat. Revalidate targets, snapshot and the same checkpoint before continuing.
+- The user subsequently renewed coed-v4. Correct account/operator, qualified
+  maintenance integrations/503s and the same available snapshot were reverified;
+  no duplicate snapshot was created. API/TU maintenance remains ACTIVE.
+
+## Actual P3 upgrade and credential proof
+
+- Created the task-owned temporary owner function/role/log group and two exact
+  additive endpoint grants. Initial creation stopped before invocation because
+  AWS serialized a singleton condition list as a scalar. Live policy inspection
+  confirmed identical values. Controller-only fix cad4849 accepts scalar/list
+  equivalence only in the three expected IAM string-list fields and still rejects
+  added principals, wildcards, changed conditions/effect and extra statements.
+  Regression/package/smoke tests14passed,0failed,0skipped; lint278passed.
+  See [IAM policy grammar](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html).
+  Frozen runtime artifact hashes/source were not changed by this controller fix.
+- Owner published trial version1 passed the actual observed schema/history,
+  postconditions and preservation checks; all trial changes were rolled back.
+- Owner published Apply version2 committed only018 and reviewed targeted ACL.
+  applied=true, preservationVerified=true; post-catalog SHA256
+  d916231f32114e668fb5b7720e8739833716f5d21c3653001974a60e39e63b0a.
+  Historical migration entries and old business/identity rows were preserved.
+- The dedicated coed_tu_login contract was verified on the actual database and
+  loginConnectionVerified=true. Random password was generated only inside the
+  private tool, stored in the dedicated Secret; only its SCRAM verifier was sent
+  to PostgreSQL. No credential value was printed or written to local artifacts.
+- No user TU Login, identity repair/relink, historical receipt backfill or
+  application command has been performed. P4/P5 and owner-tool cleanup pending.
 
 Use the [operator runbook](../operations/tu-production-operator.md).
