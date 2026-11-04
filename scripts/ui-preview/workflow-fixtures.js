@@ -49,6 +49,97 @@ export function enhanceWorkflowPreview(clients,{role,scenario}={}) {
     };
   }
   clients.workflowClient={async request(path,{method='GET',body,signal}={}){
+    if(path==='/api/v3/student/selection'){
+      return {
+        applications: [
+          {
+            plan_id: '50000000-0000-4000-8000-000000000101',
+            cycle_id: '10000000-0000-4000-8000-000000000001',
+            cycle_name: 'ภาคการศึกษา 1/2569 — รอบสหกิจศึกษา',
+            state: 'SELECTION_COMPLETE_PENDING_ANNOUNCEMENT',
+            opinion_count: 3
+          }
+        ]
+      };
+    }
+    if(path.includes('/selection-decision')){
+      if(scenario==='selection-expired'){
+        return {
+          has_result: true,
+          cycle_id: '10000000-0000-4000-8000-000000000001',
+          outcome: 'SELECTED',
+          confirmation_status: 'AUTO_WAIVED',
+          version: 2,
+          confirmation_window: {
+            state: 'CLOSED',
+            is_open: false,
+            is_near_deadline: false,
+            is_closed: true,
+            remaining_ms: 0,
+            opens_at: '2026-10-15T01:30:00.000Z',
+            closes_at: '2026-10-22T09:30:00.000Z'
+          }
+        };
+      }
+      if(scenario==='selection-near-deadline'){
+        return {
+          has_result: true,
+          cycle_id: '10000000-0000-4000-8000-000000000001',
+          outcome: 'SELECTED',
+          confirmation_status: 'PENDING_CONFIRMATION',
+          version: 1,
+          confirmation_window: {
+            state: 'NEAR_DEADLINE',
+            is_open: true,
+            is_near_deadline: true,
+            is_closed: false,
+            remaining_ms: 24 * 3600000,
+            opens_at: '2026-11-20T01:30:00.000Z',
+            closes_at: '2026-11-21T01:30:00.000Z'
+          }
+        };
+      }
+      if(scenario==='selection-confirmed'){
+        return {
+          has_result: true,
+          cycle_id: '10000000-0000-4000-8000-000000000001',
+          outcome: 'SELECTED',
+          confirmation_status: 'CONFIRMED',
+          version: 2,
+          confirmation_window: {
+            state: 'OPEN',
+            is_open: true,
+            is_near_deadline: false,
+            is_closed: false,
+            remaining_ms: 5 * 86400000,
+            opens_at: '2026-11-20T01:30:00.000Z',
+            closes_at: '2026-11-27T09:30:00.000Z'
+          },
+          teams_join_url: 'https://teams.microsoft.com/l/team/tu-cs-coop-69'
+        };
+      }
+      return {
+        has_result: true,
+        cycle_id: '10000000-0000-4000-8000-000000000001',
+        outcome: 'SELECTED',
+        confirmation_status: 'PENDING_CONFIRMATION',
+        version: 1,
+        confirmation_window: {
+          state: 'OPEN',
+          is_open: true,
+          is_near_deadline: false,
+          is_closed: false,
+          remaining_ms: 5 * 86400000,
+          opens_at: '2026-11-20T01:30:00.000Z',
+          closes_at: '2026-11-27T09:30:00.000Z'
+        },
+        teams_join_url: 'https://teams.microsoft.com/l/team/tu-cs-coop-69'
+      };
+    }
+    if(path.includes('/confirm') || path.includes('/waive')){
+      return { success: true };
+    }
+
     const parsed=new URL(path,'https://preview.invalid');path=parsed.pathname;
     if(signal?.aborted)throw new DOMException('Aborted','AbortError');
     if(['expired','forbidden','error'].includes(scenario))throw Object.assign(new Error('สถานการณ์จำลอง: อ่านข้อมูลไม่ได้'),{status:scenario==='expired'?401:scenario==='forbidden'?403:503});

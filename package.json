@@ -18,7 +18,10 @@
     "format:migration-eol": "node scripts/operations/reviewed-migrations.mjs --normalize-eol",
     "test:release": "node --test tests/release-migrations.test.mjs tests/release-migrations-db.test.mjs tests/zip-archive.test.mjs tests/package-v4-candidate.test.mjs",
     "migrate": "node src/db/migrate.js",
-    "test": "npm run test:dataset && npm run test:fixtures && npm run test:api && npm run test:directory-db && npm run test:contract && npm run test:auth && npm run test:authz && npm run test:workflow && npm run test:session && npm run test:profile && npm run test:plan && npm run test:staff && npm run test:review && npm run test:staff-plan && npm run test:submit && npm run test:history && npm run test:advisor && npm run test:v3-t02 && npm run test:v3-t03 && npm run test:lambda && npm run test:runtime-grants && npm run test:frontend && npm run test:migration && npm run test:dal && npm run test:three-role && npm run test:workflow-ui && npm run test:selection && npm run test:v4-build && npm run test:application && npm run test:release && npm run test:committee",
+    "test:tu-auth": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/tu-auth-backend.test.js tests/tu-auth-security.test.js tests/tu-application-client.test.js tests/tu-split-auth.test.js && node --test --test-concurrency=1 tests/tu-student-coordinator-delivery.test.mjs tests/tu-split-auth-db.test.mjs tests/tu-auth-packaging.test.mjs tests/tu-auth-deployment-plan.test.mjs",
+    "package:tu-auth": "node scripts/package-tu-auth.mjs",
+    "test:phase1-schedule": "node --test tests/phase1-schedule-evaluator.test.mjs tests/phase1-schedule-workflow.test.mjs tests/main-alignment-db.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/phase1-schedule-api.test.js tests/main-alignment.test.js",
+    "test": "npm run test:tu-auth && npm run test:dataset && npm run test:fixtures && npm run test:api && npm run test:directory-db && npm run test:contract && npm run test:auth && npm run test:authz && npm run test:workflow && npm run test:session && npm run test:profile && npm run test:plan && npm run test:staff && npm run test:review && npm run test:staff-plan && npm run test:submit && npm run test:history && npm run test:advisor && npm run test:v3-t02 && npm run test:v3-t03 && npm run test:lambda && npm run test:runtime-grants && npm run test:frontend && npm run test:migration && npm run test:dal && npm run test:three-role && npm run test:workflow-ui && npm run test:selection && npm run test:v4-build && npm run test:application && npm run test:release && npm run test:committee",
     "test:api": "jest --runInBand tests/api.test.js tests/directory-api.test.js",
     "test:contract": "jest --runInBand tests/v3-api-contract.test.js",
     "test:auth": "jest --runInBand tests/auth-context.test.js",
@@ -54,7 +57,7 @@
     "test:directory-db": "node --test tests/partner-import-postgres.test.mjs",
     "test:three-role": "node --test tests/three-role-workflow.test.mjs",
     "test:workflow-ui": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/three-role-ui.test.js",
-    "test:selection": "node --test tests/selection-workflow.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/selection-api.test.js tests/selection-ui.test.js",
+    "test:selection": "node --test tests/selection-workflow.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/selection-api.test.js tests/selection-ui.test.js && npm run test:phase1-schedule",
     "build:v4": "node scripts/build-v4.mjs",
     "test:v4-build": "node --test tests/v4-build.test.mjs",
     "dev:db": "docker compose -f compose.dev.yml up -d --wait",
@@ -69,6 +72,7 @@
     "test:coordinator": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/coordinator-domain.test.js tests/coordinator-api.test.js tests/coordinator-ui.test.js && node --test tests/coordinator-workspace-db.test.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-lambda": "3.1152.0",
     "@aws-sdk/client-s3": "3.1161.0",
     "@aws-sdk/client-secrets-manager": "3.1152.0",
     "@aws-sdk/s3-presigned-post": "3.1161.0",

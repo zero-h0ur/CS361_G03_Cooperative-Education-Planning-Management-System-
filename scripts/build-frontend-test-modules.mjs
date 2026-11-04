@@ -10,6 +10,9 @@ await mkdir(outputDirectory, { recursive: true });
 
 await build({
   entryPoints: [
+    resolve(workspace, 'src/frontend/tu-auth-fallback.js'),
+    resolve(workspace, 'src/frontend/student/application-recovery.js'),
+    resolve(workspace, 'src/frontend/student/application-receipt.js'),
     resolve(workspace, 'src/frontend/auth/auth-errors.js'),
     resolve(workspace, 'src/frontend/auth/session-client.js'),
     resolve(workspace, 'src/frontend/auth/auth-storage.js'),

@@ -154,7 +154,7 @@ class SelectionService {
   }
   async studentList(actor){
     roleGuard(actor,['STUDENT']);const db=this.db();await this.active(db,actor,'STUDENT');
-    const rows=(await db.query(`SELECT p.id,p.status,r.name AS cycle_name,a.id AS receipt_id,a.acknowledged_at,
+    const rows=(await db.query(`SELECT p.id,p.cycle_id,p.status,r.name AS cycle_name,a.id AS receipt_id,a.acknowledged_at,
       (SELECT count(*)::int FROM selection_opinions o WHERE o.receipt_id=a.id) AS opinion_count,
       (SELECT ae.notes FROM audit_events ae WHERE ae.plan_id=p.id AND ae.to_state='NEEDS_REVISION' ORDER BY ae.created_at DESC LIMIT 1) AS revision_notes
       FROM plans p JOIN students s ON s.id=p.student_id JOIN rounds r ON r.id=p.cycle_id
@@ -162,12 +162,19 @@ class SelectionService {
       LEFT JOIN selection_receipts a ON a.plan_id=p.id AND a.cohort_id=c.id
       WHERE s.user_id=$1 AND NOT p.legacy_compatibility AND p.status IN ('SUBMITTED','UNDER_REVIEW','NEEDS_REVISION')
       ORDER BY p.created_at DESC,p.id LIMIT 100`,[actor.userId])).rows;
-    return {applications:rows.map(x=>{
+    const phase1=(await db.query(`SELECT a.id,a.cycle_id,r.name AS cycle_name,a.status,review.state,review.reason,
+      review.updated_at AS acknowledged_at FROM phase1_applications a
+      JOIN students s ON s.id=a.student_id JOIN rounds r ON r.id=a.cycle_id
+      LEFT JOIN phase1_reviews review ON review.application_id=a.id
+      WHERE s.user_id=$1 AND a.status IN ('SUBMITTED','NEEDS_REVISION') ORDER BY a.updated_at DESC,a.id LIMIT 100`,[actor.userId])).rows;
+    return {applications:[...phase1.map(x=>({source:'phase1',application_id:x.id,cycle_id:x.cycle_id,cycle_name:x.cycle_name,
+      state:x.status==='NEEDS_REVISION'?'NEEDS_REVISION':x.state==='FORWARDED'?'UNDER_COMMITTEE_REVIEW':'AWAITING_COORDINATOR',
+      acknowledged_at:x.acknowledged_at,revision_notes:x.status==='NEEDS_REVISION'?x.reason:undefined})),...rows.map(x=>{
       const state=stateFor(x.receipt_id,x.opinion_count,x.status);
-      return {plan_id:x.id,cycle_name:x.cycle_name,state,
+      return {plan_id:x.id,cycle_id:x.cycle_id,cycle_name:x.cycle_name,state,
         acknowledged_at:x.acknowledged_at,opinion_count:x.opinion_count,required_opinions:3,announcement_available:false,
         ...(state==='NEEDS_REVISION'&&x.revision_notes?{revision_notes:x.revision_notes}:{})};
-    })};
+    })]};
   }
   async mutate(actor,planId,input,opinion=false){
     const role=opinion?'COMMITTEE':'COORDINATOR';roleGuard(actor,[role]);v.uuid(planId,'plan_id');const body=command(input,opinion);

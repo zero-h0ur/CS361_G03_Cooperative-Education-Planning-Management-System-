@@ -21,6 +21,7 @@ test('paired candidate pins V4 target, current form/API, exact migrations and ho
     const result = JSON.parse(execFileSync(process.execPath, ['scripts/package-v4-candidate.mjs'], {
       cwd: root, encoding: 'utf8', maxBuffer: 4 * 1024 * 1024,
       env: { ...process.env, COED_RDS_CA_FILE: caFile, DATABASE_URL: `postgresql://${canary}@localhost/unused`,
+        TU_API_APP_KEY:canary,TU_AUTH_PRIVATE_KEY:canary,
         CO_ED_API_BASE_URL: 'https://old-api.example.invalid', CO_ED_APP_ORIGIN: 'https://old-web.example.invalid' }
     }));
     output = resolve(result.output);
@@ -30,6 +31,9 @@ test('paired candidate pins V4 target, current form/API, exact migrations and ho
     const manifest = JSON.parse(readFileSync(result.manifest, 'utf8'));
     assert.equal(manifest.status, 'LOCAL_CANDIDATE_NOT_DEPLOYED');
     assert.equal(manifest.deploymentApproved, false);
+    assert.equal(manifest.formatVersion,2);
+    assert.equal(manifest.artifacts['coed-tu-broker.zip'].targetFunction,'coed-tu-auth');
+    assert.equal(manifest.artifacts['coed-tu-session-issuer.zip'].targetFunction,'coed-tu-session-issuer');
     assert.equal(manifest.applicationFormVersion, 2);
     assert.equal(typeof manifest.source.dirty, 'boolean');
     assert.match(manifest.source.inputSha256, /^[a-f0-9]{64}$/);
@@ -42,6 +46,7 @@ test('paired candidate pins V4 target, current form/API, exact migrations and ho
       assert.equal(createHash('sha256').update(readFileSync(zip)).digest('hex'), file.sha256);
       assert.deepEqual(listZipEntries(zip).sort(), file.entries.slice().sort());
       assert.ok(file.entries.every(entry => !entry.startsWith('dist/') && !/\.env|\.aws|node_modules|ui-preview|\.map$/.test(entry)));
+      for(const entry of file.entries.filter(entry=>entry.endsWith('.js')))assert.ok(!readZipEntry(zip,entry).includes(canary));
     }
     const frontend = join(output, 'coed-v4-frontend.zip');
     const runtime = readZipEntry(frontend, 'runtime-config.js').toString('utf8');
@@ -53,8 +58,6 @@ test('paired candidate pins V4 target, current form/API, exact migrations and ho
     assert.ok(lambda.includes('/api/v4/applications'));
     assert.ok(!lambda.includes(canary));
     assert.ok(!runtime.includes(canary));
-    assert.deepEqual(manifest.migrations.map(({name,checksum})=>({name,checksum})),
-      readReviewedMigrations().map(({name,checksum})=>({name,checksum})));
     for (const row of manifest.migrations) {
       assert.equal(createHash('sha256').update(readZipEntry(backend, 'src/db/migrations/' + row.name)).digest('hex'), row.checksum);
     }

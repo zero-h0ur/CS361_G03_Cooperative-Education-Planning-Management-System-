@@ -1,10 +1,46 @@
+let syntheticSchedule = {
+  cycle_id: '10000000-0000-4000-8000-000000000001',
+  cycle_name: 'ภาคการศึกษา 1/2569 — รอบสหกิจศึกษา',
+  version: 1,
+  near_deadline_hours: 48,
+  application_window: {
+    state: 'OPEN',
+    is_open: true,
+    is_near_deadline: false,
+    is_closed: false,
+    remaining_ms: 5 * 86400000,
+    opens_at: '2026-11-01T01:30:00.000Z',
+    closes_at: '2026-11-15T09:30:00.000Z'
+  },
+  confirmation_window: {
+    state: 'CLOSED',
+    is_open: false,
+    is_near_deadline: false,
+    is_closed: true,
+    remaining_ms: 0,
+    opens_at: '2026-10-15T01:30:00.000Z',
+    closes_at: '2026-10-22T09:30:00.000Z'
+  },
+  announced_at: '2026-10-15T01:30:00.000Z'
+};
+
 import {committeePreview} from './committee-fixtures.js';
 // Synthetic presentation only. Never import into production or call an AWS API.
+export const SELECTION_STUDENT_SCENARIOS = Object.freeze({
+  'selection-open': 'ผลคัดเลือก · ผ่านและเปิดยืนยันสิทธิ์ (มีปุ่ม)',
+  'selection-near-deadline': 'ผลคัดเลือก · ใกล้หมดยืนยันสิทธิ์ (< 48 ชม.)',
+  'selection-expired': 'ผลคัดเลือก · หมดเวลายืนยันสิทธิ์ (สละสิทธิ์อัตโนมัติ)',
+  'selection-confirmed': 'ผลคัดเลือก · ยืนยันสิทธิ์แล้ว (เข้า MS Teams)'
+});
+
 export const SELECTION_SCENARIOS = Object.freeze({
   pending: 'รอรับเรื่อง / เริ่มให้ความเห็น',
   revision: 'ส่งกลับให้แก้ไขแล้ว 1 รายการ',
   review: 'บันทึกแล้วหนึ่งความเห็น',
   complete: 'ครบสามความเห็น รอประกาศผล (ไม่ใช่อนุมัติ)',
+  'coord-schedule-open': 'กำหนดการ · ช่วงรับสมัคร (ยังไม่ประกาศผล)',
+  'coord-schedule-near-deadline': 'กำหนดการ · ใกล้หมดยืนยันสิทธิ์ (< 48 ชม.)',
+  'coord-schedule-expired-sweep': 'กำหนดการ · หมดเวลายืนยันสิทธิ์ (รอ Sweep / สละสิทธิ์อัตโนมัติ)',
   empty: 'ยังไม่มีผู้สมัคร',
   loading: 'กำลังโหลด',
   forbidden: 'ถูกถอนสิทธิ์',
@@ -21,6 +57,7 @@ function createSyntheticQueue(coordinator, scenario) {
   return [
     {
       plan_id: '50000000-0000-4000-8000-000000000101',
+      cycle_id: '10000000-0000-4000-8000-000000000001',
       plan_version: 1,
       student_number: '6609610011',
       full_name: 'ณัฐวดี ศิริกุล (นักศึกษาสมมติ)',
@@ -224,6 +261,30 @@ export function selectionPreview(role, scenario) {
         if (scenario === 'expired') throw Object.assign(new Error('Synthetic expired'), { status: 401 });
         if (scenario === 'error') throw new Error('Synthetic unavailable');
 
+        if (/^\/api\/v4\/cycles\/[^/]+\/schedule$/.test(path)) {
+          if (options.method === 'PUT') {
+            syntheticSchedule = { ...syntheticSchedule, ...options.body, version: (syntheticSchedule.version || 1) + 1 };
+            return syntheticSchedule;
+          }
+          return syntheticSchedule;
+        }
+        if (/^\/api\/v4\/cycles\/[^/]+\/announce$/.test(path)) {
+          syntheticSchedule.announced_at = new Date().toISOString();
+          return syntheticSchedule;
+        }
+        if (/^\/api\/v4\/coordinator\/cycles\/[^/]+\/confirmations\/sweep$/.test(path)) {
+          return { expired_count: 1, message: 'ประมวลผลสำเร็จ' };
+        }
+        if (/^\/api\/v4\/coordinator\/cycles\/[^/]+\/confirmations$/.test(path)) {
+          return {
+            summary: { total: 2, confirmed: 1, pending_confirmation: 0, waived: 0, auto_waived: 1 },
+            results: [
+              { student_number: '6609610011', full_name: 'ณัฐวดี ศิริกุล', company_name: 'Agoda', confirmation_status: 'CONFIRMED' },
+              { student_number: '6609610022', full_name: 'กิตติภพ วงศ์สวัสดิ์', company_name: 'Line Man Wongnai', confirmation_status: 'AUTO_WAIVED' }
+            ]
+          };
+        }
+
         if (options.method === 'POST') {
           const match = /^\/api\/v3\/(?:coordinator|committee)\/plans\/([^/]+)\/(acknowledge|return|opinion)$/.exec(path);
           const targetId = match ? match[1] : rows[0].plan_id;
@@ -267,8 +328,8 @@ export function selectionPreview(role, scenario) {
 
         return {
           cohorts: [
-            { department: 'วิทยาการคอมพิวเตอร์', program: 'หลักสูตรปกติ' },
-            { department: 'วิทยาการคอมพิวเตอร์', program: 'หลักสูตรพิเศษ' }
+            { cycle_id: '10000000-0000-4000-8000-000000000001', department: 'วิทยาการคอมพิวเตอร์', program: 'หลักสูตรปกติ' },
+            { cycle_id: '10000000-0000-4000-8000-000000000001', department: 'วิทยาการคอมพิวเตอร์', program: 'หลักสูตรพิเศษ' }
           ],
           applications: visibleRows,
           page: 1,

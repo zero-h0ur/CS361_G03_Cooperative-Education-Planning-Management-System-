@@ -38,7 +38,7 @@ class CommitteeWorkspaceService {
       curriculum: s.payload?.curriculum || null,
       program: /พิเศษ|special/i.test(s.program) ? "special" : "regular"
     }));
-    const phase1=(await db.query(`SELECT a.id,sub.snapshot,sub.application_version,st.program
+    const phase1=(await db.query(`SELECT a.id,sub.snapshot,sub.application_version,sub.snapshot->'official'->>'program' AS program
       FROM phase1_reviews rv JOIN phase1_applications a ON a.id=rv.application_id
       JOIN phase1_submissions sub ON sub.id=rv.submission_id JOIN students st ON st.id=a.student_id
       WHERE rv.cohort_id=ANY($1::uuid[]) AND rv.state='FORWARDED' AND a.status='SUBMITTED'

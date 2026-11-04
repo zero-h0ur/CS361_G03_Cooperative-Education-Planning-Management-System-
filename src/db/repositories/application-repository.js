@@ -30,11 +30,15 @@ class ApplicationRepository {
     return {...row,window};
   }
   async application(db,id,actor,lock=false) {
+    await require('../phase1-delivery').assertDeliverySchema(db);
     const row=(await db.query(`SELECT a.* FROM phase1_applications a JOIN students s ON s.id=a.student_id
       WHERE a.id=$1 AND (($2='STUDENT' AND s.user_id=$3 AND s.id=$4) OR
         ($2='COORDINATOR' AND a.status IN ('SUBMITTED','NEEDS_REVISION') AND EXISTS(SELECT 1 FROM selection_cohorts c
-          WHERE c.cycle_id=a.cycle_id AND c.department=s.department AND c.program=s.program
-          AND c.status='ACTIVE' AND c.coordinator_id=$3))) ${lock?'FOR UPDATE OF a':''}`,
+          JOIN LATERAL(SELECT id,snapshot FROM phase1_submissions ps WHERE ps.application_id=a.id ORDER BY application_version DESC LIMIT 1) latest ON true
+          LEFT JOIN phase1_submission_deliveries d ON d.submission_id=latest.id
+          WHERE c.cycle_id=a.cycle_id AND c.status='ACTIVE' AND c.coordinator_id=$3
+          AND ((d.submission_id IS NOT NULL AND c.id=d.cohort_id AND c.department=d.department AND c.program=d.program)
+            OR (d.submission_id IS NULL AND c.department=latest.snapshot->'official'->>'department' AND c.program=latest.snapshot->'official'->>'program'))))) ${lock?'FOR UPDATE OF a':''}`,
     [id,actor.role,actor.userId,actor.studentId || null])).rows[0];
     if(!row)throw new NotFoundError('ไม่พบใบสมัครที่คุณมีสิทธิ์อ่าน');
     return row;

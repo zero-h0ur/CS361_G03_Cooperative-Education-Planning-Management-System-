@@ -8,6 +8,7 @@ import { runInNewContext } from 'node:vm';
 import { archiveFiles, createZip, listZipEntries, readZipEntry } from './operations/zip-archive.mjs';
 import { readReviewedMigrations } from './operations/reviewed-migrations.mjs';
 import formContract from '../src/shared/application-form.js';
+import {packageTuAuth} from './package-tu-auth.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -84,11 +85,12 @@ const lambdaBytes = readZipEntry(backend, 'src/lambda.js');
 for (const marker of ['/api/v4/application-options', '/api/v4/applications', 'registerApplicationRoutes', 'english_full_name', 'guardian_address']) {
   if (!lambdaBytes.includes(marker)) throw new Error(`Backend lacks current application marker: ${marker}`);
 }
+const tuArtifacts=await packageTuAuth({output,caBytes:readZipEntry(backend,'global-bundle.pem')});
 const after = inputState();
 if (JSON.stringify(after) !== JSON.stringify(before)) throw new Error('Source changed during packaging. Build a new candidate.');
 
 const manifest = {
-  formatVersion: 1,
+  formatVersion: 2,
   status: 'LOCAL_CANDIDATE_NOT_DEPLOYED',
   deploymentApproved: false,
   createdAt: new Date().toISOString(),
@@ -97,12 +99,13 @@ const manifest = {
   source: before,
   target: { account: target.accountId, region: target.region, appId: target.amplifyAppId,
     branch: target.amplifyBranch, function: 'coed-api', appOrigin: target.appOrigin, apiBaseUrl: target.apiBaseUrl },
-  artifacts: {},
+  artifacts: {...tuArtifacts},
   frontendAssets: { 'runtime-config.js': sha256(runtimeBytes), 'assets/authenticated-shell.js': sha256(shellBytes),
     'assets/authenticated-shell.css': sha256(styleBytes) },
   migrations: migrations.map(({ name, checksum }) => ({ name, checksum })),
   caBundleSha256: sha256(readZipEntry(backend, 'global-bundle.pem')),
   blockers: ['Commit/review source and regenerate a clean final release; this is only a local candidate.',
+    'TU broker/issuer are separate targets: approve IAM, private DB role, secrets, qualified aliases and safe smoke before deployment.',
     'Verify live migration history, runtime grants and API integration/alias; retain backup and rollback artifacts.',
     'Verify private document storage and actual authenticated Profile error; no synthetic academic metadata in production.',
     'Obtain separate approval before any upload, deployment, migration or permission change.']

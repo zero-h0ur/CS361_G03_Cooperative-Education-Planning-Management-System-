@@ -31,19 +31,16 @@ if (root) {
       clearTuAuthStorage();
     }
 
-    const isTuAuthActive = () =>
-      (window.sessionStorage?.getItem('co-ed:auth-mode') === 'tu-auth' ||
-        Boolean(window.sessionStorage?.getItem('co-ed:tu-profile') || window.localStorage?.getItem('co-ed:tu-profile'))) &&
-      Boolean(
-        window.sessionStorage?.getItem('co-ed:access-token') ||
-        window.localStorage?.getItem('co-ed:access-token')
-      );
+    // Old persistent tokens are not used. Preserve legacy application text for opt-in recovery.
+    for (const key of ['co-ed:access-token','co-ed:auth-mode','co-ed:tu-profile','co-ed:tu-response']) {
+      window.localStorage?.removeItem(key);
+    }
+    const isTuAuthActive = () => window.sessionStorage?.getItem('co-ed:auth-mode') === 'tu-auth' &&
+      Boolean(window.sessionStorage?.getItem('co-ed:access-token'));
 
     const getAccessToken = async (options) => {
       if (isTuAuthActive()) {
-        const tuToken =
-          window.sessionStorage?.getItem('co-ed:access-token') ||
-          window.localStorage?.getItem('co-ed:access-token');
+        const tuToken = window.sessionStorage?.getItem('co-ed:access-token');
         if (tuToken) return tuToken;
       }
       return authClient.getAccessToken(options);
@@ -67,33 +64,15 @@ if (root) {
       if (!token) {
         throw new Error('ไม่ได้รับ Access Token จากระบบยืนยันตัวตน');
       }
+      clearTuAuthStorage();
       window.sessionStorage?.setItem('co-ed:access-token', token);
-      window.localStorage?.setItem('co-ed:access-token', token);
       window.sessionStorage?.setItem('co-ed:auth-mode', 'tu-auth');
-      if (body?.data?.profile) {
-        const profileJson = JSON.stringify(body.data.profile);
-        window.sessionStorage?.setItem('co-ed:tu-profile', profileJson);
-        window.localStorage?.setItem('co-ed:tu-profile', profileJson);
-      }
-      if (body?.data?.tuResponse) {
-        const tuRespJson = JSON.stringify(body.data.tuResponse);
-        window.sessionStorage?.setItem('co-ed:tu-response', tuRespJson);
-        window.localStorage?.setItem('co-ed:tu-response', tuRespJson);
-      }
+      try {
+        const verified = await tuSessionClient.loadSession();
+        if (verified.role !== 'STUDENT') throw new Error('บัญชีนี้ไม่ใช่บัญชีนักศึกษา');
+      } catch (error) { clearTuAuthStorage(); throw error; }
       window.location.hash = '#/student/profile';
       window.location.reload();
-    };
-
-    const getCachedTuProfile = () => {
-      const cachedRaw =
-        window.sessionStorage?.getItem('co-ed:tu-profile') ||
-        window.localStorage?.getItem('co-ed:tu-profile');
-      if (!cachedRaw) return null;
-      try {
-        return JSON.parse(cachedRaw);
-      } catch {
-        return null;
-      }
     };
 
     const startCognitoLogin = async () => {
@@ -116,6 +95,7 @@ if (root) {
       apiBaseUrl: config.apiBaseUrl,
       getAccessToken
     });
+    const tuSessionClient = createSessionClient({ apiBaseUrl: tuProxyBaseUrl, getAccessToken });
     const baseStudentProfileClient = createStudentProfileClient({
       apiBaseUrl: config.apiBaseUrl,
       getAccessToken
@@ -156,7 +136,6 @@ if (root) {
     } = createTuAuthClients({
       apiBaseUrl: config.apiBaseUrl,
       isTuAuthActive,
-      getCachedTuProfile,
       baseStudentProfileClient,
       baseApplicationClient,
       baseWorkflowClient,
@@ -181,16 +160,7 @@ if (root) {
     if (window.location.hash && window.location.hash.startsWith('#/staff')) {
       window.location.hash = '#/coordinator/applications';
     }
-    const loadSession = async (options) => {
-      if (isTuAuthActive()) {
-        return Object.freeze({ role: 'STUDENT', canReviewPlan: false });
-      }
-      const session = await sessionClient.loadSession(options);
-      if (session?.role === 'STAFF') {
-        return { ...session, role: 'COORDINATOR' };
-      }
-      return session;
-    };
+    const loadSession = (options) => (isTuAuthActive() ? tuSessionClient : sessionClient).loadSession(options);
     const app = createShellApp({
       applicationClient,
       workflowClient,

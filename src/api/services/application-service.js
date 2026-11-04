@@ -4,6 +4,7 @@ const {UnauthorizedError,ForbiddenError,ConflictError,InvalidStateTransitionErro
 const v=require('./application-input');
 const {templates,readiness,effectiveCriteria}=require('./application-policy');
 const {FORM_VERSION,DECLARED_IDENTITY}=require('../../shared/application-form');
+const delivery=require('../../db/phase1-delivery');
 function canonical(value) {
   if(Array.isArray(value))return value.map(canonical);
   if(value && typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]));
@@ -53,7 +54,8 @@ class ApplicationService {
         opens_at:cycle.opens_at,closes_at:effective?.window?.closes_at || cycle.closes_at},
       correction:correction?{...correction,closes_at:effective?.window?.closes_at}:null,
       last_submission:retained?{id:retained.id,checksum:retained.checksum,submitted_at:retained.submitted_at}:null,
-      submitted_at:app.submitted_at,submission};
+      submitted_at:app.submitted_at,submission,
+      delivery_receipt:await delivery.receipt(db,retained?.id)};
   }
   async options(actor) {
     guard(actor,true);const db=this.repository.pool,official=await this.repository.profile(db,actor);
@@ -81,7 +83,11 @@ class ApplicationService {
   async check(db,actor,app) {
     const official=await this.official(db,actor,app),policy=await this.repository.policy(db,app,official);
     const cycle=await this.repository.cycleForApplication(db,app,official,true);
-    return {policy,cycle,result:readiness({app,official,policy,documents:await this.repository.documents(db,app.id),window:cycle.window,roundOpen:cycle.status==='OPEN',allowSynthetic:this.allowSynthetic})};
+    const result=readiness({app,official,policy,documents:await this.repository.documents(db,app.id),window:cycle.window,roundOpen:cycle.status==='OPEN',allowSynthetic:this.allowSynthetic});
+    const receiver=await delivery.destination(db,app,official);
+    result.destination={ready:receiver.ready,department:receiver.department || official.department,program:receiver.program || official.program};
+    if(!receiver.ready){result.can_submit=false;result.blockers.push({field:'destination',code:receiver.code,message:receiver.message});}
+    return {policy,cycle,result};
   }
   async readiness(actor,id) {
     guard(actor,true);v.uuid(id);const db=await this.repository.pool.connect();
@@ -147,17 +153,22 @@ class ApplicationService {
     v.command(input,['expected_policy_id']);if(input.expected_policy_id!==null)v.uuid(input.expected_policy_id,'expected_policy_id');
     return this.mutate(actor,id,input,'APPLICATION_SUBMITTED',async(db,app,official)=>{
       await this.repository.editable(db,app,official);
+      const receiver=await delivery.requireDestination(db,app,official);
       const {policy,cycle,result}=await this.check(db,actor,app);
       if((policy?.id || null)!==input.expected_policy_id)throw new ConflictError('เกณฑ์เปลี่ยน กรุณาตรวจสอบใหม่','POLICY_CHANGED');
       if(!result.can_submit)throw new ValidationError('ใบสมัครยังไม่พร้อมส่ง',result.blockers,'APPLICATION_NOT_READY');
       const documents=await this.repository.documents(db,id);
-      const snapshot={form_version:FORM_VERSION,official,payload:app.payload,policy:safePolicy(policy),documents,
+      const destination={cohort_id:receiver.cohort_id,coordinator_id:receiver.coordinator_id,department:receiver.department,program:receiver.program};
+      const snapshot={form_version:FORM_VERSION,official,payload:app.payload,policy:safePolicy(policy),documents,delivery:destination,
         cycle:{id:cycle.id,name:cycle.name,academic_year:cycle.academic_year,semester:cycle.semester,
           opens_at:cycle.window.opens_at,closes_at:cycle.window.closes_at,window_version:cycle.window.version},
         acknowledgements:{actor_id:actor.userId,policy_id:policy.id,accepted_at:new Date().toISOString()}};
       const submissionId=randomUUID();
       await db.query(`INSERT INTO phase1_submissions(id,application_id,application_version,policy_id,snapshot,checksum,submitted_by)
         VALUES($1,$2,$3,$4,$5,$6,$7)`,[submissionId,id,app.version+1,policy.id,JSON.stringify(snapshot),hash(snapshot),actor.userId]);
+      await db.query(`INSERT INTO phase1_submission_deliveries(submission_id,application_id,application_version,cohort_id,
+        coordinator_id_at_send,department,program,snapshot_checksum) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [submissionId,id,app.version+1,receiver.cohort_id,receiver.coordinator_id,receiver.department,receiver.program,hash(snapshot)]);
       if(app.status==='NEEDS_REVISION')await db.query(`UPDATE phase1_reviews SET submission_id=$2,state='PENDING',reason=NULL,
         version=version+1,actor_id=$3,updated_at=clock_timestamp() WHERE application_id=$1 AND state='RETURNED'`,[id,submissionId,actor.userId]);
       const updated=(await db.query(`UPDATE phase1_applications SET status='SUBMITTED',submitted_at=clock_timestamp(),version=version+1,updated_at=clock_timestamp() WHERE id=$1 RETURNING *`,[id])).rows[0];

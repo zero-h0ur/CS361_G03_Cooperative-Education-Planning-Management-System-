@@ -265,7 +265,7 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
           if(sql.includes('INSERT INTO phase1_events'))throw new Error('Injected submission failure');return c.query(sql,...args);
         }};
       }};
-      await assert.rejects(new ApplicationService({pool:failingPool,documentStore:store,allowSyntheticPolicy:true}).submit(actor,app.id,op));
+      await assert.rejects(new ApplicationService({pool:failingPool,documentStore:store,allowSyntheticPolicy:true}).submit(actor,app.id,op),/Injected submission failure/);
       assert.equal((await service.get(actor,app.id)).status,'DRAFT');
       assert.equal((await q('SELECT count(*)::int AS n FROM phase1_submissions WHERE application_id=$1',[app.id])).rows[0].n,0);
       assert.equal((await q('SELECT count(*)::int AS n FROM phase1_events WHERE operation_id=$1',[op.operation_id])).rows[0].n,0);
@@ -273,6 +273,8 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
     await t.test('expired/unfinished uploads do not attach; finalization racing submission cannot change its document snapshot',async()=>{
       const original=app,newCycle=randomUUID(),racePolicy={...pol,id:randomUUID()};
       await q("INSERT INTO rounds(id,name,academic_year,semester,status,source,visibility,data_status) VALUES($1,'Race test only',2569,1,'OPEN','synthetic test','public','mock')",[newCycle]);
+      await q(`INSERT INTO selection_cohorts(id,cycle_id,department,program,coordinator_id,committee_one,committee_two,committee_three)
+        VALUES($1,$2,'CS','CS',$3,$4,$5,$6)`,[randomUUID(),newCycle,coordinator,...members]);
       await q("INSERT INTO phase1_cycle_windows(cycle_id,opens_at,closes_at) VALUES($1,now()-interval '1 day',now()+interval '1 day')",[newCycle]);
       await q(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data)
         VALUES($1,$2,'66',1,2568,'synthetic race test',true,true,$3)`,[racePolicy.id,newCycle,JSON.stringify(pol.data)]);

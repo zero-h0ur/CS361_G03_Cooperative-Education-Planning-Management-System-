@@ -108,12 +108,12 @@ class Router {
         : rawPathname;
       const method = (request.method || 'GET').toUpperCase();
 
+      if(isTuProxy && !require('../auth/tu-bridge').allowsTuBridge(method,pathname))
+        throw new NotFoundError('Route not found.','ROUTE_NOT_FOUND');
+
       if (isTuProxy && method === 'OPTIONS') {
         response.writeHead(204, {
-          'Access-Control-Allow-Origin':
-            request?.headers?.origin ||
-            request?.headers?.Origin ||
-            'https://main.d1bpmj87vmjb96.amplifyapp.com',
+          'Access-Control-Allow-Origin': process.env.APP_ORIGIN || 'https://main.d1bpmj87vmjb96.amplifyapp.com',
           'Access-Control-Allow-Methods': 'DELETE,GET,OPTIONS,PATCH,POST,PUT',
           'Access-Control-Allow-Headers': 'accept,authorization,content-type',
           'Access-Control-Max-Age': '300'
@@ -148,6 +148,7 @@ class Router {
           pathname,
           url,
           method,
+          authProvider:isTuProxy?'tu':'cognito',
           params: methodMatch.params,
           dal
         });
@@ -161,6 +162,7 @@ class Router {
       await methodMatch.route.handler(request, response, {
         pathname,
         url,
+        authProvider:isTuProxy?'tu':'cognito',
         params: methodMatch.params,
         dal
       });
