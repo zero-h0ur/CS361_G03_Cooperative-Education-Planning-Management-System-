@@ -1,8 +1,8 @@
 # TU production deployment evidence
 
 Date:5November2026, Asia/Bangkok. Scope: approved P0-P6.
-Status: P0-P3 complete; production maintenance active and snapshot available.
-Renewed AWS operator session verified; P4 candidate preparation in progress.
+Status: WAITING_OWNER_SMOKE. P0-P4 complete; verification-only live routing passed.
+Owner/probe temporary capabilities removed. Writes/other API reads remain paused.
 This is not a claim of successful production Login or completed cutover.
 
 ## Local proof
@@ -95,6 +95,50 @@ Keep credentials, token/profile/business data out of this evidence.
   private tool, stored in the dedicated Secret; only its SCRAM verifier was sent
   to PostgreSQL. No credential value was printed or written to local artifacts.
 - No user TU Login, identity repair/relink, historical receipt backfill or
-  application command has been performed. P4/P5 and owner-tool cleanup pending.
+  application command has been performed.
+
+## Actual P4 candidate/IAM and privileged cleanup proof
+
+- Existing signing pair was migrated in memory to the dedicated signing Secret;
+  fingerprint continuity was checked against the API. Broker now has only provider
+  Secret and qualified issuer Invoke access; it has no private key or DB Secret
+  in its new environment. No credential value was written to local artifacts.
+- Created private coed-tu-session-issuer with exact SELECT-only login/signing
+  Secret reads, existing subnet/SG,8second timeout,256MB and reserved concurrency2.
+  Read-only inspection found zero Function URLs and zero event source mappings.
+  No NAT/new endpoint/EC2/RDS/frontend deploy was introduced.
+- Candidate issuer rejected the invalid envelope403. Candidate broker correctly
+  returned maintenance503; API rejected anonymous /me401 and blocked a write503.
+- Controlled role with identity Invoke permission was AccessDenied for issuer
+  unqualified, candidate alias and candidate version1 at2026-11-05T02:35:16+07:00.
+  DryRun only, no function execution. Probe role cleanup verified absent.
+- Both scoped runtime-error alarms were configured without notification actions.
+  They do not detect handled HTTP auth failures; safe-log review remains required.
+- Removed exact task-owned owner function/all its versions, role/inline policy,
+  log group and its two endpoint statements. Cleanup verifies function/role
+  absence; intentional issuer and original endpoint entries remain intact.
+- Verification routing succeeded: coed-api:live->2, coed-tu-auth:live->3,
+  coed-tu-session-issuer:live->2. Broker malformed-body request400 and issuer
+  invalid envelope403 passed before public cutover. Public canonical /me rejects
+  anonymous401; TU-proxy application write remains maintenance503.
+- Retired only task-created coed-tu-auth maintenance version1 after confirming
+  no integration/alias references and clean current broker environment. This
+  removed its inherited old sensitive environment. The static safe503 artifact
+  remains retained. API maintenance version1 remains non-live; no pre-existing
+  historical version was deleted. The owner/probe AWS resources removed above
+  cannot be recovered as-is; recreate only through the reviewed source workflow.
+- Final read-only report: all three functions Active/Successful, routes and CORS
+  unchanged, snapshot available and owner tool removed. Endpoint has its original
+  statement plus the exact intentional issuer Secret statement; no owner grants.
+  Broker/issuer Lambda runtime Errors0 and safe handled5xx categories empty in
+  this observation. This includes maintenance/test traffic and log/metric delay;
+  it is NOT proof that real TU Login works or30minute post-resume monitoring.
+- Fresh owner-run Login->me->own-profile smoke is required before commands are
+  resumed. No real user credentials were requested from chat, reused or tested.
+  No ownerSmoke attestation is recorded. API allows only the exact verification
+  GETs under normal authentication; other reads and writes remain503.
+- Snapshot retention review remains12November2026 at02:05:34 Bangkok, no automatic
+  deletion. No frontend deployment or Git push. Final post-smoke monitoring and
+  next-usage review remain pending.
 
 Use the [operator runbook](../operations/tu-production-operator.md).
