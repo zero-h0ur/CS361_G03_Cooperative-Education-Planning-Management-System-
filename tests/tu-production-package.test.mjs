@@ -5,7 +5,7 @@ import {join,dirname,relative} from 'node:path';
 import {rootCertificates} from 'node:tls';
 import {execFileSync} from 'node:child_process';
 import {packageProduction,OWNER_FILES} from '../scripts/operations/tu-production/package.mjs';
-import {hash,ROOT,addStatement,removeStatement,denyInvoke,OPERATOR,useTestAws,A,arn} from '../scripts/operations/tu-production/common.mjs';
+import {hash,ROOT,addStatement,removeStatement,denyInvoke,invocationPolicyHash,putDeny,OPERATOR,useTestAws,A,arn} from '../scripts/operations/tu-production/common.mjs';
 import {maintain,snapshot} from '../scripts/operations/tu-production/deploy.mjs';
 import {ownerExecution,ownerEndpoint} from '../scripts/operations/tu-production/owner.mjs';
 import {readZipEntry,listZipEntries} from '../scripts/operations/zip-archive.mjs';
@@ -22,6 +22,26 @@ test('owner IAM/endpoint grants are narrow and additive without owner-secret wri
  assert.equal(hash({b:1,a:2}),hash({a:2,b:1}));
  const deny=denyInvoke('coed-tu-owner-upgrade-20261105',[OPERATOR]);
  assert.deepEqual(deny.Statement[0].Condition.ArnNotEquals['aws:PrincipalArn'],[OPERATOR]);
+});
+test('Invoke policy comparison accepts only IAM scalar/list normalization, never broader rights',()=>{
+ const name='coed-tu-owner-upgrade-20261105',expected=denyInvoke(name,[OPERATOR],arn(name)+':1');
+ const stored=structuredClone(expected);
+ stored.Statement[0].Resource=stored.Statement[0].Resource[0];
+ stored.Statement[0].Action=[stored.Statement[0].Action];
+ stored.Statement[0].Condition.ArnNotEquals['aws:PrincipalArn']=OPERATOR;
+ assert.equal(invocationPolicyHash(stored),invocationPolicyHash(expected));
+ for(const mutate of [
+  x=>{x.Statement[0].Condition.ArnNotEquals['aws:PrincipalArn']=[OPERATOR,'arn:aws:iam::130165494095:role/foreign'];},
+  x=>{x.Statement[0].Resource='*';},x=>{x.Statement[0].Effect='Allow';},
+  x=>{delete x.Statement[0].Condition;},x=>{x.Statement.push({...x.Statement[0]});}
+ ]){const drift=structuredClone(stored);mutate(drift);assert.notEqual(invocationPolicyHash(drift),invocationPolicyHash(expected));}
+ const previous=process.env.NODE_ENV;process.env.NODE_ENV='test';
+ const restore=useTestAws(args=>{
+  assert.deepEqual(args,['lambda','get-resource-policy','--resource-arn',arn(name)+':1']);
+  return {Policy:JSON.stringify(stored)};
+ });
+ try{assert.doesNotThrow(()=>putDeny(name,[OPERATOR],'1'));}
+ finally{restore();if(previous===undefined)delete process.env.NODE_ENV;else process.env.NODE_ENV=previous;}
 });
 test('production owner/API/maintenance archives load isolated and reject without credentials',async()=>{
  const {path,state}=await packageProduction(Buffer.from(rootCertificates[0]+'\n'));

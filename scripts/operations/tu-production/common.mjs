@@ -69,15 +69,28 @@ export function denyInvoke(name,principals,resource=arn(name)){
   Action:'lambda:InvokeFunction',Resource:resource===arn(name)?[resource,resource+':*']:[resource],
   Condition:{ArnNotEquals:{'aws:PrincipalArn':principals}}}]};
 }
+// IAM permits scalar/singleton-array forms for these string-list fields. AWS
+// normalizes them on storage. Preserve all other fields, values and statements
+// so an added principal, wildcard, condition or statement still fails closed.
+export function invocationPolicyHash(policy){
+ const value=structuredClone(policy),list=x=>typeof x==='string'?[x]:x;
+ if(Array.isArray(value?.Statement))for(const statement of value.Statement){
+  if(Object.hasOwn(statement,'Resource'))statement.Resource=list(statement.Resource);
+  if(Object.hasOwn(statement,'Action'))statement.Action=list(statement.Action);
+  const condition=statement.Condition?.ArnNotEquals;
+  if(condition && Object.hasOwn(condition,'aws:PrincipalArn'))condition['aws:PrincipalArn']=list(condition['aws:PrincipalArn']);
+ }
+ return hash(value);
+}
 export function putDeny(name,principals,qualifier){
  const resource=arn(name)+(qualifier?':'+qualifier:'');
  // Only a newly owned function with our exact empty/owned policy is handled here.
  let old;try{old=aws(['lambda','get-resource-policy','--resource-arn',resource]);}
  catch(e){if(e.awsCode!=='ResourceNotFoundException')throw e;}
  const policy=denyInvoke(name,principals,resource);
- if(old){fixed(hash(JSON.parse(old.Policy))===hash(policy));return;}
+ if(old){fixed(invocationPolicyHash(JSON.parse(old.Policy))===invocationPolicyHash(policy));return;}
  aws(['lambda','put-resource-policy','--resource-arn',resource,'--policy',JSON.stringify(policy)]);
- const after=aws(['lambda','get-resource-policy','--resource-arn',resource]);fixed(hash(JSON.parse(after.Policy))===hash(policy));
+ const after=aws(['lambda','get-resource-policy','--resource-arn',resource]);fixed(invocationPolicyHash(JSON.parse(after.Policy))===invocationPolicyHash(policy));
 }
 export async function waitActive(name){
  for(let i=0;i<50;i++){
