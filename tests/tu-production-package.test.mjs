@@ -84,8 +84,9 @@ test('production owner/API/maintenance archives load isolated and reject without
    functions['coed-api'].Role='foreign';
    await assert.rejects(maintain(path,state,{sourceCheck:()=>{}}));assert.equal(writes.length,0);
    functions['coed-api'].Role='arn:aws:iam::'+A+':role/coed-v4-api-role';
-   await maintain(path,state,{sourceCheck:()=>{},fetchImpl:async()=>{
+   await maintain(path,state,{sourceCheck:()=>{},fetchImpl:async url=>{
     assert.ok(Object.values(integrations).every(x=>x.endsWith(':1')));
+    assert.ok(!url.endsWith('/api/v3/me') || url.includes('/api/tu-proxy/'));
     return {status:503,json:async()=>({error:{code:'COED_MAINTENANCE'}})};
    }});
    assert.equal(state.maintenance.active,true);assert.ok(!JSON.stringify(state).includes('PRIVATE_CANARY'));

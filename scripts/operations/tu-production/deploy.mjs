@@ -51,7 +51,20 @@ export async function maintain(path,s,{fetchImpl=fetch,sourceCheck=preflightSour
   apiPermission(name,v,'CoedMaintenance'+s.runId.slice(0,8),'arn:aws:execute-api:'+REGION+':'+A+':'+API+'/*/*/*');
   integration(s,id,arn(name)+':'+v);save(path,s);
  }
- for(const p of ['/api/v3/me','/api/v3/auth/tu-status']){
+ return await confirmMaintenance(path,s,{fetchImpl});
+}
+export async function confirmMaintenance(path,s,{fetchImpl=fetch}={}){
+ caller();fixed(s.maintenance?.versions?.['coed-api'] && s.maintenance.versions['coed-tu-auth']);
+ for(const [name,id] of [['coed-api','ip14y62'],['coed-tu-auth','sr47ns9']]){
+  const version=s.maintenance.versions[name];fixed(/^[1-9][0-9]*$/.test(version));
+  const cfg=aws(['lambda','get-function-configuration','--function-name',name,'--qualifier',version]);
+  fixed(cfg.CodeSha256===Buffer.from(s.artifacts.maintenance.sha256,'hex').toString('base64'));
+  const current=aws(['apigatewayv2','get-integration','--api-id',API,'--integration-id',id]);
+  fixed(current.IntegrationUri===arn(name)+':'+version);
+ }
+ // Cognito /api/v3/me rightly rejects anonymous requests at Gateway. Probe the
+ // existing TU bridge without changing its normal Lambda authentication.
+ for(const p of ['/api/tu-proxy/api/v3/me','/api/v3/auth/tu-status']){
   const r=await fetchImpl(API_BASE+p,{redirect:'error',signal:AbortSignal.timeout(10000)});
   fixed(r.status===503 && (await r.json()).error?.code==='COED_MAINTENANCE','MAINTENANCE_HTTP_NOT_CONFIRMED');
  }
@@ -94,6 +107,7 @@ async function main(){
  const s=load(path);caller();
  let result;
  if(mode==='maintain')result=await maintain(path,s);
+ else if(mode==='confirm-maintenance')result=await confirmMaintenance(path,s);
  else if(mode==='snapshot')result=snapshot(path,s);
  else if(mode==='login-secret')result=loginSecret(path,s);
  else if(mode==='owner-deploy')result=await ownerDeploy(path,s);
