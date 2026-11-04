@@ -128,6 +128,7 @@ async function main(){
  else if(mode==='report')result=report(path,s);
  else throw Error('UNKNOWN_OPERATION');
  console.log(JSON.stringify({state:path,...result},null,2));
+ if(result?.ok===false)process.exitCode=1;
 }
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(e=>{
  console.error(JSON.stringify(safeFailure(e)));process.exitCode=1;
