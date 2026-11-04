@@ -173,6 +173,27 @@ export async function resumeAfterOwnerSmoke(path,s){
  s.maintenance.active=false;s.resumedAt=new Date().toISOString();s.status='LIVE_MONITORING';save(path,s);
  return {status:s.status,maintenanceEndedAt:s.resumedAt};
 }
+export function retireTemporaryTuMaintenance(path,s){
+ caller();fixed(s.verificationRouted && s.maintenance?.versions?.[BROKER]);
+ const version=s.maintenance.versions[BROKER];fixed(/^[1-9][0-9]*$/.test(version));
+ const current=aws(['apigatewayv2','get-integration','--api-id',API,'--integration-id','sr47ns9']);
+ fixed(current.IntegrationUri===arn(BROKER)+':live');
+ const aliases=aws(['lambda','list-aliases','--function-name',BROKER]).Aliases || [];
+ fixed(!aliases.some(a=>a.FunctionVersion===version || Object.hasOwn(a.RoutingConfig?.AdditionalVersionWeights || {},version)));
+ const config=aws(['lambda','get-function-configuration','--function-name',BROKER]);
+ fixed(config.CodeSha256===Buffer.from(s.artifacts.broker.sha256,'hex').toString('base64') &&
+  !['TU_AUTH_PRIVATE_KEY','TU_API_APP_KEY','DB_SECRET_ARN','TU_SIGNING_SECRET_ARN'].some(k=>config.Environment?.Variables?.[k]));
+ if(!s.maintenance.retiredTuVersion){
+  const old=aws(['lambda','get-function-configuration','--function-name',BROKER,'--qualifier',version]);
+  fixed(old.CodeSha256===Buffer.from(s.artifacts.maintenance.sha256,'hex').toString('base64'));
+  // Only the exact task-created maintenance version is retired. Its old
+  // environment was inherited before signing migration; never delete history
+  // owned by somebody else or an unqualified function.
+  aws(['lambda','delete-function','--function-name',BROKER,'--qualifier',version]);
+  s.maintenance.retiredTuVersion=version;save(path,s);
+ }
+ return {status:'TASK_TU_MAINTENANCE_VERSION_RETIRED',version,cleanMaintenanceArtifactRetained:true};
+}
 export function report(path,s){
  caller();
  const safeFunctions=[];
@@ -207,5 +228,5 @@ export function report(path,s){
  return {status:s.status,functions:safeFunctions,routesUnchanged:true,corsUnchanged:true,snapshot:s.snapshot,
   ownerToolRemoved:!!s.ownerCleanedAt,runtimeMetrics,monitoringElapsedMinutes:Math.max(0,(end-start)/60000),
   handledAuthHttpFailuresNotIncludedInLambdaErrors:true,ownerSmokeAttested:!!s.ownerSmoke,
-  maintenanceActive:!!s.maintenance.active};
+  maintenanceActive:!!s.maintenance.active,retiredTaskTuMaintenanceVersion:s.maintenance.retiredTuVersion || null};
 }
