@@ -3,10 +3,10 @@ import {createRequire} from 'node:module';
 import {SecretsManagerClient,CreateSecretCommand,GetSecretValueCommand} from '@aws-sdk/client-secrets-manager';
 import {LambdaClient,InvokeCommand} from '@aws-sdk/client-lambda';
 import {buildTuIamPolicies} from '../tu-auth-deployment-plan.mjs';
-import {aws,ROOT,A,REGION,API,PROVIDER,OPERATOR,arn,roleArn,fixed,hash,save,caller,owned,tags,tagList,absent,
+import {aws,ROOT,A,REGION,API,PROVIDER,OPERATOR,arn,roleArn,fixed,hash,save,caller,owned,tags,tagList,absent,cleanSource,
  endpoint,addStatement,setEndpoint,putDeny,waitActive,delay,sdkCredentials} from './common.mjs';
 import {apiPermission,integration,API_BASE} from './deploy.mjs';
-const require=createRequire(import.meta.url),{getTuKeyPair}=require('../../../src/auth/tu-keys.js');
+const require=createRequire(import.meta.url),{getTuKeyPair,getTuPublicKey}=require('../../../src/auth/tu-keys.js');
 const ISSUER='coed-tu-session-issuer',ISSUER_ROLE='coed-tu-session-role',BROKER='coed-tu-auth';
 const fingerprint='948706ef031812b73af8fdc7002a7ee06cfdbc89b431d1720526ae249abc3958';
 function checkMaintenance(s){fixed(s.maintenance?.active===true && s.ownerApplied && s.loginReady,'STRICT_DB_PREREQUISITES_REQUIRED');}
@@ -21,6 +21,22 @@ function validateApiEnv(v){
  fixed(hash(getTuKeyPairPublic(v.TU_AUTH_PUBLIC_KEY))===fingerprint);return v;
 }
 function getTuKeyPairPublic(value){return require('node:crypto').createPublicKey(value.replace(/\\n/g,'\n')).export({format:'der',type:'spki'});}
+export function brokerEnvironment(apiEnv,alias,maintenance){
+ fixed(['candidate','live'].includes(alias) && typeof maintenance==='boolean');
+ fixed(typeof apiEnv.TU_AUTH_PUBLIC_KEY==='string' && apiEnv.TU_AUTH_PUBLIC_KEY.length>0,'BROKER_PUBLIC_KEY_REQUIRED');
+ getTuPublicKey(apiEnv.TU_AUTH_PUBLIC_KEY);
+ fixed(['TU_AUTH_ISSUER','TU_AUTH_CLIENT_ID'].every(k=>typeof apiEnv[k]==='string' && apiEnv[k].length>0));
+ return {NODE_ENV:'production',TU_API_URL:'https://restapi.tu.ac.th/api/v1/auth/Ad/verify',
+  TU_API_SECRET_ARN:PROVIDER,TU_SESSION_FUNCTION_ARN:arn(ISSUER)+':'+alias,
+  TU_AUTH_ISSUER:apiEnv.TU_AUTH_ISSUER,TU_AUTH_CLIENT_ID:apiEnv.TU_AUTH_CLIENT_ID,
+  TU_AUTH_PUBLIC_KEY:apiEnv.TU_AUTH_PUBLIC_KEY,
+  ...(apiEnv.TU_AUTH_KEY_ID?{TU_AUTH_KEY_ID:apiEnv.TU_AUTH_KEY_ID}:{}),TU_LOGIN_MAINTENANCE:String(maintenance)};
+}
+export function assertBrokerReady(response){
+ fixed(response?.statusCode===200,'BROKER_NOT_CONFIGURED');
+ let data;try{data=JSON.parse(response.body).data;}catch{/* fail closed below */}
+ fixed(data?.configured===true && data.mode==='tu_api' && Object.keys(data).length===2,'BROKER_NOT_CONFIGURED');
+}
 async function secretSigning(path,s){
  const c=aws(['lambda','get-function-configuration','--function-name',BROKER]),a=aws(['lambda','get-function-configuration','--function-name','coed-api']);
  fixed([c,a].every(f=>f.CodeSha256===Buffer.from(s.artifacts.maintenance.sha256,'hex').toString('base64')),'MAINTENANCE_CODE_DRIFT');
@@ -74,9 +90,7 @@ export async function stageApplications(path,s){
  await publish(path,s,ISSUER,'candidate');
  aws(['iam','put-role-policy','--role-name','coed-tu-auth-role','--policy-name','CoedTuBrokerRestricted','--policy-document',JSON.stringify(p.broker)]);
  for(const [name,artifact,handler,env,timeout] of [
-  [BROKER,s.artifacts.broker,'src/tu-auth-broker.handler',{NODE_ENV:'production',TU_API_URL:'https://restapi.tu.ac.th/api/v1/auth/Ad/verify',
-   TU_API_SECRET_ARN:PROVIDER,TU_SESSION_FUNCTION_ARN:arn(ISSUER)+':candidate',TU_AUTH_ISSUER:apiEnv.TU_AUTH_ISSUER,
-   TU_AUTH_CLIENT_ID:apiEnv.TU_AUTH_CLIENT_ID,TU_LOGIN_MAINTENANCE:'true'},20],
+  [BROKER,s.artifacts.broker,'src/tu-auth-broker.handler',brokerEnvironment(apiEnv,'candidate',true),20],
   ['coed-api',s.artifacts.api,'src/lambda.handler',{...apiEnv,COED_API_MAINTENANCE:'verify'},15]
  ]){
   fixed(hash(readFileSync(artifact.file))===artifact.sha256);
@@ -117,6 +131,7 @@ async function invoke(name,alias,event){
 }
 export async function candidateChecks(path,s){
  caller();checkMaintenance(s);fixed(s.candidatesReady);
+ assertBrokerReady(await invoke(BROKER,'candidate',{rawPath:'/api/v3/auth/tu-status',httpMethod:'GET'}));
  const issuer=await invoke(ISSUER,'candidate',{});fixed(issuer.ok===false && issuer.error?.status===403);
  const broker=await invoke(BROKER,'candidate',{rawPath:'/api/v3/auth/tu-login',httpMethod:'POST',body:'{}'});
  fixed(broker.statusCode===503 && JSON.parse(broker.body).error?.code==='TU_LOGIN_MAINTENANCE');
@@ -124,11 +139,11 @@ export async function candidateChecks(path,s){
  fixed(api.statusCode===401);
  const blocked=await invoke('coed-api','candidate',{rawPath:'/api/tu-proxy/api/v4/applications',httpMethod:'POST',body:'{}'});
  fixed(blocked.statusCode===503 && JSON.parse(blocked.body).error?.code==='COED_MAINTENANCE');
- s.candidateChecks={invalidEnvelopeRejected:true,brokerMaintenance:true,anonymousMeRejected:true,writesBlocked:true};
+ s.candidateChecks={brokerConfigured:true,invalidEnvelopeRejected:true,brokerMaintenance:true,anonymousMeRejected:true,writesBlocked:true};
  save(path,s);return {status:'CANDIDATE_CHECKS_PASSED',...s.candidateChecks};
 }
 export async function routeVerification(path,s){
- caller();checkMaintenance(s);fixed(s.candidateChecks?.writesBlocked && s.iamNegative?.passed && !s.verificationRouted);
+ caller();checkMaintenance(s);fixed(s.candidateChecks?.writesBlocked && s.candidateChecks.brokerConfigured && s.iamNegative?.passed && !s.verificationRouted);
  const issuer=aws(['lambda','get-function-configuration','--function-name',ISSUER]);
  aws(['lambda','update-function-configuration','--function-name',ISSUER,'--revision-id',issuer.RevisionId,
   '--environment',JSON.stringify({Variables:{...issuer.Environment.Variables,TU_SESSION_FUNCTION_ARN:arn(ISSUER)+':live'}})]);
@@ -140,6 +155,7 @@ export async function routeVerification(path,s){
  aws(['lambda','update-function-configuration','--function-name',BROKER,'--revision-id',broker.RevisionId,
   '--environment',JSON.stringify({Variables:{...broker.Environment.Variables,TU_LOGIN_MAINTENANCE:'false',TU_SESSION_FUNCTION_ARN:arn(ISSUER)+':live'}})]);
  await publish(path,s,BROKER,'live');
+ assertBrokerReady(await invoke(BROKER,'live',{rawPath:'/api/v3/auth/tu-status',httpMethod:'GET'}));
  const malformed=await invoke(BROKER,'live',{rawPath:'/api/v3/auth/tu-login',httpMethod:'POST',body:'{}'});fixed(malformed.statusCode===400);
  const invalid=await invoke(ISSUER,'live',{});fixed(invalid.ok===false && invalid.error?.status===403);
  await publish(path,s,'coed-api','live');
@@ -153,6 +169,60 @@ export async function routeVerification(path,s){
  fixed(b.status===503 && (await b.json()).error?.code==='COED_MAINTENANCE');
  s.verificationRouted=true;s.status='WAITING_OWNER_SMOKE';save(path,s);
  return {status:s.status,apiReadOnly:true,noStudentPasswordNeededInChat:true};
+}
+// Configuration-only forward repair for the failed owner smoke. No key/Secret,
+// code, issuer, database, IAM, network or Gateway mutation is permitted here.
+export async function repairBrokerPublicKey(path,s,{invokeImpl=invoke,fetchImpl=fetch}={}){
+ caller();checkMaintenance(s);
+ fixed(s.verificationRouted && s.status==='WAITING_OWNER_SMOKE' && !s.ownerSmoke);
+ const source=cleanSource();fixed(!source.dirty,'COMMITTED_SOURCE_CHANGED');
+ const api=aws(['lambda','get-function-configuration','--function-name','coed-api','--qualifier','live']);
+ fixed(api.Version===s.versions['coed-api'].live && api.Environment?.Variables?.COED_API_MAINTENANCE==='verify' &&
+  api.CodeSha256===Buffer.from(s.artifacts.api.sha256,'hex').toString('base64'),'API_VERIFICATION_DRIFT');
+ const desired=brokerEnvironment(validateApiEnv(api.Environment.Variables),'live',false);
+ const missingPublic={...desired};delete missingPublic.TU_AUTH_PUBLIC_KEY;
+ const current=aws(['lambda','get-function-configuration','--function-name',BROKER]);
+ const live=aws(['lambda','get-function-configuration','--function-name',BROKER,'--qualifier','live']);
+ const alias=aws(['lambda','get-alias','--function-name',BROKER,'--name','live']);
+ fixed(alias.FunctionVersion===s.versions[BROKER].live && !Object.keys(alias.RoutingConfig?.AdditionalVersionWeights || {}).length);
+ for(const config of [current,live]){
+  fixed(config.CodeSha256===Buffer.from(s.artifacts.broker.sha256,'hex').toString('base64') &&
+   config.Handler==='src/tu-auth-broker.handler' && config.Role===roleArn('coed-tu-auth-role') && !config.VpcConfig?.VpcId);
+  fixed([hash(missingPublic),hash(desired)].includes(hash(config.Environment?.Variables)),'BROKER_ENVIRONMENT_DRIFT');
+ }
+ for(const [id,name] of [['ip14y62','coed-api'],['sr47ns9',BROKER]])
+  fixed(aws(['apigatewayv2','get-integration','--api-id',API,'--integration-id',id]).IntegrationUri===arn(name)+':live');
+ s.brokerPublicKeyRepair ||= {startedAt:new Date().toISOString(),originalVersion:alias.FunctionVersion,source:source.head};save(path,s);
+ if(hash(current.Environment.Variables)!==hash(desired)){
+  aws(['lambda','update-function-configuration','--function-name',BROKER,'--revision-id',current.RevisionId,
+   '--environment',JSON.stringify({Variables:desired})]);await waitActive(BROKER);
+ }
+ if(!s.brokerPublicKeyRepair.candidateVersion){
+  s.brokerPublicKeyRepair.candidateVersion=await publish(path,s,BROKER,'candidate');save(path,s);
+ }
+ const candidate=aws(['lambda','get-function-configuration','--function-name',BROKER,'--qualifier','candidate']);
+ fixed(candidate.Version===s.brokerPublicKeyRepair.candidateVersion && hash(candidate.Environment.Variables)===hash(desired) &&
+  candidate.CodeSha256===Buffer.from(s.artifacts.broker.sha256,'hex').toString('base64'));
+ assertBrokerReady(await invokeImpl(BROKER,'candidate',{rawPath:'/api/v3/auth/tu-status',httpMethod:'GET'}));
+ const malformed=await invokeImpl(BROKER,'candidate',{rawPath:'/api/v3/auth/tu-login',httpMethod:'POST',body:'{}'});
+ fixed(malformed.statusCode===400);
+ const old=aws(['lambda','get-alias','--function-name',BROKER,'--name','live']);
+ fixed(old.FunctionVersion===s.versions[BROKER].live && !Object.keys(old.RoutingConfig?.AdditionalVersionWeights || {}).length);
+ if(old.FunctionVersion!==candidate.Version){
+  aws(['lambda','update-alias','--function-name',BROKER,'--name','live','--function-version',candidate.Version,'--revision-id',old.RevisionId]);
+  s.versions[BROKER].live=candidate.Version;save(path,s);
+ }
+ assertBrokerReady(await invokeImpl(BROKER,'live',{rawPath:'/api/v3/auth/tu-status',httpMethod:'GET'}));
+ const status=await fetchImpl(API_BASE+'/api/v3/auth/tu-status',{redirect:'error',signal:AbortSignal.timeout(10000)});
+ assertBrokerReady({statusCode:status.status,body:JSON.stringify(await status.json())});
+ const blocked=await fetchImpl(API_BASE+'/api/tu-proxy/api/v4/applications',{method:'POST',headers:{'Content-Type':'application/json'},
+  body:'{}',redirect:'error',signal:AbortSignal.timeout(10000)});
+ fixed(blocked.status===503 && (await blocked.json()).error?.code==='COED_MAINTENANCE');
+ fixed(hash(aws(['apigatewayv2','get-routes','--api-id',API]).Items)===hash(s.baseline.routes),'GATEWAY_ROUTES_DRIFT');
+ fixed(hash(aws(['apigatewayv2','get-api','--api-id',API]).CorsConfiguration)===hash(s.baseline.apiConfig.CorsConfiguration),'CORS_DRIFT');
+ s.brokerPublicKeyRepair={...s.brokerPublicKeyRepair,verifiedAt:new Date().toISOString(),publicKeyFingerprint:fingerprint,
+  configured:true,writesBlocked:true,realLoginVerified:false};save(path,s);
+ return {status:s.status,brokerVersion:candidate.Version,brokerConfigured:true,writesBlocked:true,freshOwnerSmokeRequired:true};
 }
 export async function resumeAfterOwnerSmoke(path,s){
  caller();checkMaintenance(s);
@@ -194,6 +264,22 @@ export function retireTemporaryTuMaintenance(path,s){
  }
  return {status:'TASK_TU_MAINTENANCE_VERSION_RETIRED',version,cleanMaintenanceArtifactRetained:true};
 }
+export function handledFailureCategories(messages){
+ const categories={};
+ for(const text of messages || []){
+  if(typeof text!=='string')continue;
+  // Lambda Text format adds timestamp/requestId/level before console.log JSON.
+  // Return only allowlisted codes, never the prefix, requestId or raw payload.
+  const offset=text.indexOf('{');if(offset<0)continue;
+  try{const row=JSON.parse(text.slice(offset).trim());
+   if(Number.isInteger(row.status) && row.status>=500 &&
+    ['request','provider','invoke','identity','signing'].includes(row.stage) &&
+    Object.hasOwn(require('../../../src/auth/tu-safe-response.js').ERRORS,row.code))
+     categories[row.code]=(categories[row.code] || 0)+1;
+  }catch{/* Ignore platform/unstructured lines without echoing them. */}
+ }
+ return categories;
+}
 export function report(path,s){
  caller();
  const safeFunctions=[];
@@ -213,15 +299,9 @@ export function report(path,s){
    '--dimensions','Name=FunctionName,Value='+name,'--start-time',new Date(start).toISOString(),'--end-time',new Date(end).toISOString(),
    '--period','60','--statistics','Sum']).Datapoints || [];
   const messages=aws(['logs','filter-log-events','--log-group-name','/aws/lambda/'+name,
-   '--start-time',String(start),'--end-time',String(end),'--filter-pattern','{ $.status >= 500 }',
+   '--start-time',String(start),'--end-time',String(end),
    '--query','events[].message']);
-  const categories={};
-  for(const text of messages || []){
-   try{const row=JSON.parse(text);
-    if(Number.isInteger(row.status) && row.status>=500 && /^[A-Z][A-Z0-9_]{1,80}$/.test(row.code || ''))
-      categories[row.code]=(categories[row.code] || 0)+1;
-   }catch{/* Ignore platform log lines without echoing them. */}
-  }
+  const categories=handledFailureCategories(messages);
   runtimeMetrics.push({name,runtimeErrors:errors.reduce((n,p)=>n+(p.Sum || 0),0),handled5xxCategories:categories});
  }
  s.lastReportAt=new Date(end).toISOString();save(path,s);

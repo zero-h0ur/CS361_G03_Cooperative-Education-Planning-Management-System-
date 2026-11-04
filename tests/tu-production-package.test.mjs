@@ -4,10 +4,12 @@ import {readFileSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {join,dirname,relative} from 'node:path';
 import {rootCertificates} from 'node:tls';
 import {execFileSync} from 'node:child_process';
+import {generateKeyPairSync} from 'node:crypto';
 import {packageProduction,OWNER_FILES} from '../scripts/operations/tu-production/package.mjs';
 import {hash,ROOT,addStatement,removeStatement,denyInvoke,invocationPolicyHash,putDeny,OPERATOR,useTestAws,A,arn} from '../scripts/operations/tu-production/common.mjs';
 import {maintain,snapshot} from '../scripts/operations/tu-production/deploy.mjs';
 import {ownerExecution,ownerEndpoint} from '../scripts/operations/tu-production/owner.mjs';
+import {brokerEnvironment,assertBrokerReady} from '../scripts/operations/tu-production/application.mjs';
 import {readZipEntry,listZipEntries} from '../scripts/operations/zip-archive.mjs';
 test('owner IAM/endpoint grants are narrow and additive without owner-secret write capability',()=>{
  const s={loginSecret:'arn:aws:secretsmanager:ap-southeast-2:130165494095:secret:coed/v4/postgres/tu-login-Abc123'};
@@ -55,14 +57,18 @@ test('production owner/API/maintenance archives load isolated and reject without
    assert.ok(!artifact.entries.some(x=>/(^|\/)(\.env|\.aws|tests|tmp)\b|\.map$/.test(x)));
    const extracted=join(dir,'extracted-'+kind);mkdirSync(extracted);
    for(const entry of artifact.entries){mkdirSync(dirname(join(extracted,entry)),{recursive:true});writeFileSync(join(extracted,entry),readZipEntry(artifact.file,entry));}
-   if(!['owner','api','maintenance'].includes(kind))continue;
+   if(!['owner','api','maintenance','broker'].includes(kind))continue;
    const code=kind==='owner'?
     "import('./scripts/operations/tu-owner/handler.mjs').then(async m=>console.log(JSON.stringify(await m.handler({sql:'NO_SQL_CONSOLE'}))));":
+    kind==='broker'?"require('./src/tu-auth-broker.js').handler({rawPath:'/api/v3/auth/tu-status',httpMethod:'GET'}).then(r=>console.log(JSON.stringify(r)));":
     "require('./src/lambda.js').handler({rawPath:'/api/v3/me',httpMethod:'GET'}).then(r=>console.log(JSON.stringify({status:r.statusCode,code:JSON.parse(r.body).error.code})));";
+   const brokerEnv=kind==='broker'?brokerEnvironment({TU_AUTH_PUBLIC_KEY:generateKeyPairSync('rsa',{modulusLength:2048}).publicKey.export({format:'pem',type:'spki'}),
+    TU_AUTH_ISSUER:'urn:synthetic:tu',TU_AUTH_CLIENT_ID:'synthetic-api'},'candidate',true):{};
    const out=execFileSync(process.execPath,['-e',code],{cwd:extracted,encoding:'utf8',
-    env:{PATH:process.env.PATH,NODE_ENV:'production',COED_API_MAINTENANCE:'all'}}).trim().split(/\r?\n/);
+    env:{PATH:process.env.PATH,NODE_ENV:'production',COED_API_MAINTENANCE:'all',...brokerEnv}}).trim().split(/\r?\n/);
    const value=JSON.parse(out.at(-1));
    if(kind==='owner'){assert.equal(value.ok,false);assert.equal(value.error.code,'OWNER_REQUEST_DENIED');}
+   else if(kind==='broker')assert.doesNotThrow(()=>assertBrokerReady(value));
    else assert.deepEqual(value,{status:503,code:'COED_MAINTENANCE'});
   }
   // No AWS network here: exercise actual checkpoint/routing control code with

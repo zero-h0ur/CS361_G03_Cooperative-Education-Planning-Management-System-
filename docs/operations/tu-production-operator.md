@@ -17,6 +17,11 @@ task-owned disposable server. It creates only synthetic fixture tables/role,
 tests actual SCRAM login/SELECT-only denial and cleans them. A skipped DB test is
 not equivalent to this proof.
 
+Candidate checks must include GET TU status returning configured=true, not just
+negative login/envelope tests. Broker needs TU_AUTH_PUBLIC_KEY (public verifier),
+never private signing/DB capabilities. The shared broker environment builder
+copies only that public key and approved broker settings from the checked API.
+
 Build with:
 
     node scripts/operations/tu-production/deploy.mjs build
@@ -105,6 +110,19 @@ relink, token, profile or identifier output/file. Share only the resulting statu
 and safe error code. A missing/disabled/ambiguous canonical link stops rollout;
 do not bypass it, invent another student or use passwords from old chat.
 
+If the owner smoke reports TU_SIGNING_UNAVAILABLE at broker stage=request and
+inspection proves only TU_AUTH_PUBLIC_KEY was omitted, the bounded configuration
+repair is:
+
+    node scripts/operations/tu-production/deploy.mjs repair-broker-public-key $taskState --approved-p0-p6
+
+It requires committed clean controller source, pinned API/broker code, the same
+public-key fingerprint, existing live integrations and verification maintenance.
+Only broker environment and its candidate/live aliases change. It verifies
+configured status in the candidate before moving live, then checks public status
+and continued write503. It does not change Secrets/IAM/DB/network/API code, test
+any Student credentials or attest success. A new owner smoke is still required.
+
 Only after a fresh owner report of OWNER_SMOKE_PASSED:
 
     $env:COED_OWNER_SMOKE_ATTESTED = 'true'
@@ -118,6 +136,9 @@ usage period. The two Lambda Errors alarms cover runtime failures, not handled
 HTTP auth503s; those require safe broker/issuer JSON log review alongside latency,
 throttling and DB connections. No notifications or new public destinations are
 configured. Do not describe absence of Lambda Errors as proof all Logins succeed.
+Safe handled-failure collection parses both raw JSON and Lambda Text-prefixed
+console JSON in memory, returning only known error-code counts; JSON-only server
+filters must not silently exclude prefixed Text logs.
 
 ## Stop and cleanup
 

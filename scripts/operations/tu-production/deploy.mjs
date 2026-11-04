@@ -3,7 +3,7 @@ import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {packageProduction} from './package.mjs';
 import {ownerDeploy,ownerActivate,ownerInvoke,ownerCleanup} from './owner.mjs';
-import {stageApplications,candidateChecks,routeVerification,resumeAfterOwnerSmoke,retireTemporaryTuMaintenance,report} from './application.mjs';
+import {stageApplications,candidateChecks,routeVerification,repairBrokerPublicKey,resumeAfterOwnerSmoke,retireTemporaryTuMaintenance,report} from './application.mjs';
 import {negativeIam,alarms,cleanupProbe} from './probe.mjs';
 import {aws,A,REGION,API,PROVIDER,arn,fixed,hash,load,save,caller,preflightSource,safeConfig,
  waitActive,tagList,owned,absent,safeFailure} from './common.mjs';
@@ -123,6 +123,7 @@ async function main(){
  else if(mode==='probe-cleanup')result=cleanupProbe(path,s);
  else if(mode==='alarms')result=alarms(path,s);
  else if(mode==='route-verification')result=await routeVerification(path,s);
+ else if(mode==='repair-broker-public-key')result=await repairBrokerPublicKey(path,s);
  else if(mode==='retire-tu-maintenance')result=retireTemporaryTuMaintenance(path,s);
  else if(mode==='resume-after-owner-smoke')result=await resumeAfterOwnerSmoke(path,s);
  else if(mode==='report')result=report(path,s);
