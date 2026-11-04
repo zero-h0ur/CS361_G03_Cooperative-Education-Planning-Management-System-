@@ -1,4 +1,5 @@
 const { createRequestHandler } = require('./api/app');
+const { maintenanceResponse } = require('./maintenance');
 
 function buildRequestUrl(event = {}) {
   const rawPath = typeof event.rawPath === 'string'
@@ -15,6 +16,8 @@ function createLambdaHandler({ dal, ...options } = {}) {
   const requestHandler = createRequestHandler(dal, options);
 
   return async function lambdaHandler(event = {}) {
+    const maintenance=maintenanceResponse(event);
+    if(maintenance)return maintenance;
     const method = event.requestContext?.http?.method || event.httpMethod || 'GET';
     const request = {
       method,

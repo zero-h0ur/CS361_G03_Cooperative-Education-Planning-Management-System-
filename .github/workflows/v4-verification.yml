@@ -58,6 +58,8 @@ jobs:
           JS
       - name: Check JavaScript syntax
         run: npm run lint
+      - name: Verify observed-schema tooling and immutable source contracts without AWS
+        run: npm run test:observed-upgrade:unit
       - name: Verify published documentation links without network access
         shell: bash
         run: |
@@ -103,3 +105,48 @@ jobs:
             docs-verification.log
           if-no-files-found: warn
           retention-days: 14
+
+  observed-schema-upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: coed_present_test
+        ports:
+          - 55440:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d coed_present_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      PRESENT_SCHEMA_DISPOSABLE: 'true'
+      PRESENT_SCHEMA_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55440/coed_present_test
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55440/coed_unused
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verify observed upgrade preservation, rollback and Student-to-Coordinator HTTP flow
+        run: npm run test:observed-upgrade
+      - name: Prepare empty disposable owner-login fixture database
+        run: |
+          node --input-type=module - <<'JS'
+          import pg from 'pg';
+          const client=new pg.Client({connectionString:process.env.PRESENT_SCHEMA_TEST_DATABASE_URL});
+          await client.connect();
+          await client.query('CREATE DATABASE coed');
+          await client.end();
+          JS
+      - name: Verify production tooling offline and SELECT-only credential on disposable PostgreSQL
+        env:
+          OWNER_TOOL_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55440/coed
+        run: npm run test:production-tooling
