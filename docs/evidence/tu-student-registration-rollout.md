@@ -8,8 +8,9 @@ rows and migration history. No Student account, identity link, academic profile,
 application or mock record was created by the operator. Genuine account creation
 requires a fresh TU verification and the owner's first-login form.
 
-Deployment is **verification-only, awaiting genuine owner acceptance**, not a
-claim that a real Login or application submission succeeded.
+Deployment remains **verification-only**. The owner has now reported successful
+TU Login and seeing their own profile. This is owner-reported UI acceptance, not
+an independently executed CLI smoke or a successful application submission.
 
 | Resource | Live result |
 | --- | --- |
@@ -87,12 +88,21 @@ Live public checks used **no credentials and made no database writes**:
 
 ## Remaining acceptance
 
-The owner must refresh the live app, genuinely Login privately, confirm the two
-self-reported fields and verify their own profile. Do not reuse historical chat
-passwords or accept a configuration status as successful Login. After account
-creation, the existing hidden-input owner smoke can verify Login → `/me` → own
-profile without printing identity data. A passing result and a separately
-reviewed maintenance-resume step are still required before business writes open.
+On November5,2026, the owner answered: “เข้าได้และเห็นโปรไฟล์ตัวเองแล้ว”.
+No credentials or personal-profile screenshots were requested or received in this
+acceptance step. A subsequent read-only AWS check confirmed API3, broker5 and
+issuer3 active/updated successfully, with API maintenance still `verify`. No AWS
+configuration, database record or permission was changed in this acceptance turn.
+
+The Q&A transcript and finalized outcome are stored locally under ignored
+`tmp/grill-me/session-01a03e5c-406b-7eb3-900f-f6180e4b0bb5-20261105-132653.md`
+and `tmp/grill-me/outcome-01a03e5c-406b-7eb3-900f-f6180e4b0bb5-20261105-132653.md`.
+
+The existing hidden-input owner smoke can independently verify Login → `/me` →
+own profile without printing identity data. It has not been rerun by the operator
+or reported as passed. Do not reuse historical chat passwords. A passing smoke
+and a separately reviewed maintenance-resume step remain required before business
+writes open. The owner's UI success report does not authorize resuming writes.
 Missing confirmed curriculum/canonical scope can still block Phase1 submission;
 registration is not academic verification or admission approval.
 
