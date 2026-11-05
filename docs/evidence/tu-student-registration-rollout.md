@@ -14,8 +14,10 @@ first-registration form, but confirming it returned503. The confirmed missing
 issuer public-key configuration is now corrected; live configuration/negative
 checks passed. The subsequent409 issuer mismatch has also been corrected by
 forward020 after a successful live rollback-only trial. Post-catalog verification
-and independent temporary-capability cleanup passed. Completed registration,
-Student workspace access and an independent owner smoke are **not yet verified**.
+and independent temporary-capability cleanup passed. The owner subsequently
+confirmed successful first-registration and Student workspace navigation. This
+is **owner-reported UI acceptance**, not independent CLI smoke or successful
+application access/submission. Application routes remain maintenance-blocked.
 
 | Resource | Live result |
 | --- | --- |
@@ -290,3 +292,34 @@ from before the interruption are expired. Real-owner completion and optional
 hidden-input Login -> `/me` -> own-profile smoke remain pending. No stored chat
 credential was reused, no positive production proof/account was fabricated and
 no business write resume or push was performed.
+
+### Owner confirms registration; remaining application503 is maintenance
+
+After fresh Login/form confirmation, the owner explicitly reported successful
+registration and entering Student. Unlike the earlier ambiguous TU identity-card
+report, this answer specifically confirms completion and Student navigation.
+No password, token or personal-profile screenshot was requested or received.
+
+The owner also reported Google Fonts `ERR_CONNECTION_CLOSED` and503 from GET
+`/api/tu-proxy/api/v4/application-options` and `/api/tu-proxy/api/v4/applications`.
+Read-only verification confirmed API3 still has maintenance `verify`; both exact
+paths return503 `COED_MAINTENANCE`, Retry-After120. The source gate permits only
+session/profile GETs in this mode, before routing/authentication, so even those
+application **reads** are intentionally blocked. Five local gate checks reproduced
+the two blocked GETs, two allowed profile/session paths and a blocked write.
+This is not another registration/issuer failure and is not evidence of a DB500.
+
+The CSS has an external Google Fonts import and system-font fallbacks. The
+owner's connection-closure report establishes a failed font fetch, not whether
+Google, a proxy, network filter or the browser caused it. No claim is made that
+the exact user's network path was independently tested. It can affect typography;
+it is separate from TU authentication and the maintenance response.
+
+No AWS setting, database record, UI/font file or maintenance gate was changed in
+this acceptance/diagnostic turn. A separate reviewed read-only application mode
+with honest disabled write controls is a possible next step; it must not silently
+enable account writes, uploads/submission or fabricate verified academic data.
+Self-hosting reviewed font assets can remove that runtime external dependency,
+but has not been implemented here. Independent owner CLI smoke and any reviewed
+business resume remain separate. The finalized acceptance transcript/outcome are
+under ignored `tmp/grill-me`, basename ending `20261105-172031`.

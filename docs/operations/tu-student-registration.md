@@ -183,5 +183,15 @@ The task checkpoint is `tmp/tu-production/production-xg3NUI/state.json`, status
 `SCHEMA020_APPLIED_CLEANUP_VERIFIED`. Temporary capabilities are removed and were
 independently checked absent. Do **not** rerun prepare/apply from the example
 sequence for this completed run. Read the checkpoint and rollout evidence first.
-API3/broker5/issuer4 and verify-only maintenance are unchanged. Genuine Student
-registration completion is awaiting the owner's fresh Login/form confirmation.
+API3/broker5/issuer4 and verify-only maintenance are unchanged. The owner later
+confirmed successful registration/form completion and Student navigation; this
+is UI acceptance, not independent CLI smoke or application-submission acceptance.
+
+In `verify` mode even GET application-options/applications returns503
+`COED_MAINTENANCE`; only reviewed session/profile reads pass the gate. Do not
+diagnose those known maintenance responses as a new TU Login failure or switch
+the mode to `off` merely to remove Console errors. Review read/write scope and
+remaining academic/storage/delivery readiness before changing the gate. Google
+Fonts connection failures are a separate external asset issue with CSS fallbacks,
+not an authentication result. See the updated rollout evidence for the confirmed
+post-registration diagnostics and remaining boundaries.
