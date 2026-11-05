@@ -58,6 +58,8 @@ jobs:
           JS
       - name: Check JavaScript syntax
         run: npm run lint
+      - name: Verify read-only browse allowlist and disabled Student actions
+        run: npm run test:read-only-browse
       - name: Verify observed-schema tooling and immutable source contracts without AWS
         run: npm run test:observed-upgrade:unit
       - name: Verify published documentation links without network access

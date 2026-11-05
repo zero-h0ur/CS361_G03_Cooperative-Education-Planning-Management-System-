@@ -21,6 +21,7 @@
     "test:observed-upgrade": "node scripts/operations/test-present-schema.mjs",
     "test:production-tooling": "node --test --test-concurrency=1 tests/tu-production-tooling.test.mjs tests/tu-production-package.test.mjs tests/tu-production-readiness.test.mjs tests/tu-production-smoke.test.mjs tests/tu-owner-login-db.test.mjs",
     "test:tu-identity-diagnostic": "node --test --test-concurrency=1 tests/tu-identity-diagnostic.test.mjs tests/tu-identity-diagnostic-db.test.mjs",
+    "test:read-only-browse": "node --test tests/read-only-browse.test.mjs tests/read-only-browse-operations.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/read-only-browse-ui.test.js",
     "migrate": "node src/db/migrate.js",
     "test:tu-auth": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/tu-auth-backend.test.js tests/tu-auth-security.test.js tests/tu-application-client.test.js tests/tu-split-auth.test.js && node --test --test-concurrency=1 tests/tu-student-coordinator-delivery.test.mjs tests/tu-split-auth-db.test.mjs tests/tu-auth-packaging.test.mjs tests/tu-auth-deployment-plan.test.mjs",
     "package:tu-auth": "node scripts/package-tu-auth.mjs",

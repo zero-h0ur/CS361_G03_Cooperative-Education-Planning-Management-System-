@@ -5,6 +5,7 @@ const v=require('./application-input');
 const {templates,readiness,effectiveCriteria}=require('./application-policy');
 const {FORM_VERSION,DECLARED_IDENTITY}=require('../../shared/application-form');
 const delivery=require('../../db/phase1-delivery');
+const {applicationAccess}=require('../../shared/application-access');
 function canonical(value) {
   if(Array.isArray(value))return value.map(canonical);
   if(value && typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]));
@@ -35,6 +36,7 @@ class ApplicationService {
     return this.repository.profile(db,{studentId:app.student_id,userId:user.user_id},lock);
   }
   async detail(db,actor,app) {
+    const access=applicationAccess(process.env.COED_API_MAINTENANCE);
     const retained=(await db.query('SELECT id,policy_id,snapshot,checksum,submitted_at FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC LIMIT 1',[app.id])).rows[0] || null;
     // Coordinator sees the last submitted snapshot, never the student's unsent correction.
     const submission=app.status==='SUBMITTED' || actor.role==='COORDINATOR'?retained:null;
@@ -49,7 +51,7 @@ class ApplicationService {
     return {id:app.id,student_id:app.student_id,cycle_id:app.cycle_id,status:app.status,version:app.version,
       payload:submission?.snapshot.payload || app.payload,form_version:submission ? submission.snapshot.form_version || 1 : FORM_VERSION,
       official:submission?.snapshot.official || official,policy:submission?.snapshot.policy || safePolicy(policy),documents,
-      cycle_name:submission?.snapshot.cycle?.name || cycle.name,availability:{can_edit:Boolean(actor.role==='STUDENT' &&
+      access,cycle_name:submission?.snapshot.cycle?.name || cycle.name,availability:{can_edit:Boolean(!access.read_only && actor.role==='STUDENT' &&
         (app.status==='DRAFT' && cycle.status==='OPEN' && cycle.window_open || app.status==='NEEDS_REVISION' && effective?.status==='OPEN' && effective.window?.is_open)),
         opens_at:cycle.opens_at,closes_at:effective?.window?.closes_at || cycle.closes_at},
       correction:correction?{...correction,closes_at:effective?.window?.closes_at}:null,
@@ -63,16 +65,19 @@ class ApplicationService {
       FROM rounds r LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id WHERE r.visibility='public' OR EXISTS
       (SELECT 1 FROM selection_cohorts c WHERE c.cycle_id=r.id AND c.status='ACTIVE' AND c.department=$1 AND c.program=$2)
       ORDER BY r.academic_year DESC,r.semester DESC NULLS LAST,r.id LIMIT 100`,[official.department,official.program])).rows;
-    return {official,cycles,criteria:templates(),storage_configured:Boolean(this.store || process.env.CO_ED_APPLICATION_STORAGE)};
+    return {official,cycles,criteria:templates(),storage_configured:Boolean(this.store || process.env.CO_ED_APPLICATION_STORAGE),
+      access:applicationAccess(process.env.COED_API_MAINTENANCE)};
   }
   async list(actor) {
     guard(actor,true);const db=this.repository.pool;await this.repository.profile(db,actor);
-    return (await db.query(`SELECT a.id,a.cycle_id,a.status,a.version,a.submitted_at,a.updated_at,rv.reason AS correction_reason,
+    const rows=(await db.query(`SELECT a.id,a.cycle_id,a.status,a.version,a.submitted_at,a.updated_at,rv.reason AS correction_reason,
       CASE WHEN a.status='NEEDS_REVISION' THEN jsonb_build_object('can_edit',r.status='OPEN' AND rv.state='RETURNED'
         AND clock_timestamp()>=w.opens_at AND clock_timestamp()<COALESCE(s.review_closes_at,w.closes_at)) ELSE NULL END AS availability
       FROM phase1_applications a JOIN rounds r ON r.id=a.cycle_id LEFT JOIN phase1_reviews rv ON rv.application_id=a.id
       LEFT JOIN phase1_cycle_windows w ON w.cycle_id=a.cycle_id LEFT JOIN coordinator_round_schedules s ON s.cycle_id=a.cycle_id
       WHERE a.student_id=$1 ORDER BY a.created_at DESC,a.id LIMIT 100`,[actor.studentId])).rows;
+    const access=applicationAccess(process.env.COED_API_MAINTENANCE);
+    return rows.map(row=>({...row,access,...(access.read_only?{availability:{...row.availability,can_edit:false}}:{})}));
   }
   async get(actor,id) {
     guard(actor);v.uuid(id);const db=await this.repository.pool.connect();
@@ -97,6 +102,8 @@ class ApplicationService {
   }
   async mutate(actor,id,input,action,work,{create=false}={}) {
     guard(actor,true);if(id)v.uuid(id);v.uuid(input.operation_id,'operation_id');
+    if(applicationAccess(process.env.COED_API_MAINTENANCE).read_only)
+      throw new ServiceUnavailableError('ระบบเปิดให้อ่านข้อมูลเท่านั้น','COED_MAINTENANCE');
     const db=await this.repository.pool.connect();
     try {
       await db.query('BEGIN');await this.repository.active(db,actor,true);

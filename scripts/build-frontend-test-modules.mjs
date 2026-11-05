@@ -20,6 +20,7 @@ await build({
     resolve(workspace, 'src/frontend/public-navbar.js'),
     resolve(workspace, 'src/frontend/directory-client.js'),
     resolve(workspace, 'src/frontend/student/profile-client.js'),
+    resolve(workspace, 'src/frontend/student/profile-view.js'),
     resolve(workspace, 'src/frontend/student/application-client.js'),
     resolve(workspace, 'src/frontend/student/application-view.js'),
     resolve(workspace, 'src/frontend/student/application-editor-view.js'),

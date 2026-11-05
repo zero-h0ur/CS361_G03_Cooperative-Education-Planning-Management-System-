@@ -16,6 +16,7 @@ import schedules from '../src/api/services/phase1-schedule-service.js';
 import form from '../src/shared/application-form.js';
 import splitIssuer from '../src/tu-session-issuer.js';
 import splitBroker from '../src/auth/tu-broker-service.js';
+import lambda from '../src/lambda.js';
 import {createObservedFixture} from './helpers/present-schema-fixture.mjs';
 import {upgradeObservedSchema} from '../scripts/operations/present-schema-upgrade.mjs';
 import {PROFILE} from '../scripts/operations/present-schema-baseline.mjs';
@@ -118,6 +119,32 @@ test('TU Student to Cognito Coordinator: real HTTP, isolated PostgreSQL and leas
     const session=await request('/api/tu-proxy/api/v3/me',{token});assert.equal(session.studentId,sid);assert.equal(session.role,'STUDENT');
     const cmd=version=>({operation_id:id(),expected_version:version});
     let app=await request(proxy,{method:'POST',token,body:{operation_id:id(),cycle_id:cycle}});
+    await t.test('browse uses the actual TU owner and SELECT-only reads while denying every write before execution',async()=>{
+      const previous=process.env.COED_API_MAINTENANCE;
+      const readApi=lambda.createLambdaHandler({applicationService:service,
+        authOptions:{pool:runtime,tokenValidator:validator,identityResolver:new auth.IdentityResolver({pool:runtime})}});
+      const invoke=async(path,{method='GET',bearer=token,body}={})=>readApi({rawPath:path,requestContext:{http:{method}},
+        headers:bearer?{authorization:'Bearer '+bearer}:{},body:body?JSON.stringify(body):undefined});
+      const before=(await db.query('SELECT * FROM phase1_applications ORDER BY id')).rows;
+      const operations=(await db.query('SELECT * FROM phase1_operations ORDER BY operation_id')).rows;
+      try{
+        const otherToken=(await login.login({studentId:'9900000002',password:'synthetic'})).accessToken;
+        process.env.COED_API_MAINTENANCE='browse';
+        for(const path of ['/api/tu-proxy/api/v4/application-options',proxy,proxy+'/'+app.id]){
+          const result=await invoke(path);assert.equal(result.statusCode,200);
+          const data=JSON.parse(result.body).data;
+          if(Array.isArray(data)){assert.equal(data.length,1);assert.equal(data[0].id,app.id);assert.equal(data[0].availability.can_edit,false);}
+          else assert.equal(data.access.read_only,true);
+          assert.equal((await invoke(path,{bearer:null})).statusCode,401);
+        }
+        assert.equal((await invoke(proxy+'/'+app.id,{bearer:otherToken})).statusCode,404);
+        for(const [path,method] of [[proxy,'POST'],[proxy+'/'+app.id,'PATCH'],[proxy+'/'+app.id+'/submit','POST'],
+          [proxy+'/'+app.id+'/uploads','POST'],[proxy+'/'+app.id+'/readiness','GET']])
+          assert.equal((await invoke(path,{method,body:{operation_id:id(),cycle_id:cycle}})).statusCode,503);
+        assert.deepEqual((await db.query('SELECT * FROM phase1_applications ORDER BY id')).rows,before);
+        assert.deepEqual((await db.query('SELECT * FROM phase1_operations ORDER BY operation_id')).rows,operations);
+      }finally{if(previous===undefined)delete process.env.COED_API_MAINTENANCE;else process.env.COED_API_MAINTENANCE=previous;}
+    });
     const payload={curriculum:'66',gpax:'3.12',declared_group_gpa:'2.8',gpax_reporting_term:'2/2568',name_prefix:'Mx',thai_full_name:'นักศึกษาสมมติ',english_full_name:'Synthetic Student',institutional_email:'test@example.invalid',contact_email:'contact@example.invalid',contact_address:'Synthetic address',contact_phone:'0000000000',major_group:'CIS',guardian_name:'Synthetic parent',guardian_relationship:'Parent',guardian_phone:'0000000000',guardian_address:'Synthetic address',interested_position_codes:['FRONTEND'],skills_detail:'Free text\nTesting',selected_courses:{alternative:'CS213'},course_attempts:form.GROUPS['66'].map(g=>({code:g[0],attempt:1,points:'3'})),additional_studies:{CS180:'ENROLLED',CS262:'STUDIED'},acknowledgements:Object.fromEntries(form.ACKNOWLEDGEMENTS.map(k=>[k,true]))};
     app=await request(`${proxy}/${app.id}`,{method:'PATCH',token,body:{...cmd(app.version),expected_policy_id:policy,payload}});
     const pdf=Buffer.from('%PDF-1.4\n1 0 obj <<>> endobj\n%%EOF\n'),png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64');

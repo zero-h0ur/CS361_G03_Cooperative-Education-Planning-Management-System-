@@ -3,6 +3,8 @@ import form from '../../shared/application-form.js';
 import {createWorkspaceIcon} from '../ui/workspace-presentation.js';
 import {renderStudentPageHeader,formatStudentDate} from './workspace-components.js';
 import {assertCommittedDelivery,hasCommittedDelivery} from './application-receipt.js';
+import accessMessages from '../../shared/application-access.js';
+const {READ_ONLY_MESSAGE}=accessMessages;
 const {GROUPS,EXTRAS,GRADES,MAJORS,POSITIONS,EMAIL}=form;
 const STEPS=[['identity','ข้อมูลผู้สมัคร'],['academic','ผลการเรียน'],['interests','ความสนใจและคำรับรอง'],['documents','เอกสารแนบ'],['guardian','ผู้ติดต่อฉุกเฉิน'],['review','ตรวจทานและส่ง']];
 const copy=v=>JSON.parse(JSON.stringify(v));
@@ -14,7 +16,8 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
   const root=node('div','application-editor student-editor');root.dataset.studentPage='true';let app=application,draft=copy(app.payload || {}),dirty=false,busy=false,result=null;
   let activeStep=app.status==='SUBMITTED'?5:0,message='',errors=[],confirming=false,hasError=false;
   const selectedFiles=new Map(),attempts=new Map();
-  const readOnly=()=>!['DRAFT','NEEDS_REVISION'].includes(app.status) || app.availability?.can_edit===false || app.status==='NEEDS_REVISION' && app.availability?.can_edit!==true;
+  const maintenanceReadOnly=()=>app.access?.read_only===true;
+  const readOnly=()=>maintenanceReadOnly() || !['DRAFT','NEEDS_REVISION'].includes(app.status) || app.availability?.can_edit===false || app.status==='NEEDS_REVISION' && app.availability?.can_edit!==true;
   const canLeave=()=>!(dirty || busy || selectedFiles.size) || window.confirm(busy?'กำลังทำรายการ ผลอาจถูกบันทึกแล้ว ต้องการออกจากหน้านี้หรือไม่?':'ยังมีข้อมูลหรือไฟล์ที่ไม่ได้บันทึก ต้องการออกจากหน้านี้และทิ้งข้อมูลที่กรอกหรือไม่?');
   setLeaveGuard?.(canLeave);
   const beforeUnload=e=>{if(dirty || busy || selectedFiles.size){e.preventDefault();e.returnValue='';}};
@@ -120,7 +123,7 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
   function header(){
     const back=button('← ใบสมัครทั้งหมด',onBack);back.disabled=busy;back.className='student-editor-back';
     const meta=node('div','student-page-header__meta');
-    const state=node('span','student-editor-state',app.status==='SUBMITTED'?'ส่งแล้ว · อ่านอย่างเดียว':readOnly()?'รอบปิด / หมดเวลา · อ่านอย่างเดียว':app.status==='NEEDS_REVISION'?'ส่งกลับแก้ไข':'ฉบับร่าง');
+    const state=node('span','student-editor-state',maintenanceReadOnly()?'โหมดอ่านอย่างเดียว':app.status==='SUBMITTED'?'ส่งแล้ว · อ่านอย่างเดียว':readOnly()?'รอบปิด / หมดเวลา · อ่านอย่างเดียว':app.status==='NEEDS_REVISION'?'ส่งกลับแก้ไข':'ฉบับร่าง');
     const saved=node('span','student-editor-save-state',dirty?'มีข้อมูลที่ยังไม่ได้บันทึก':'ข้อมูลตรงกับฉบับที่บันทึกแล้ว');saved.dataset.saveState='';saved.setAttribute('role','status');meta.append(state,saved);
     const closes=formatStudentDate(app.availability?.closes_at,{time:true});
     if(closes)meta.append(node('span','',`${app.status==='NEEDS_REVISION'?'แก้ไขและส่งซ้ำได้ถึง':'ปิดรับ'} ${closes} (เวลาไทย)`));
@@ -199,7 +202,11 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
     const s=card('application-documents','เอกสารประกอบใบสมัคร','เอกสารบังคับ 4 ประเภท อย่างละ 1 ไฟล์ เปลี่ยนได้ขณะเป็น Draft โดยไฟล์เดิมยังอยู่จนกว่าไฟล์ใหม่บันทึกสำเร็จ');if(app.preview)s.append(node('p','application-warning','Local Preview: เอกสารและการอัปโหลดเป็นข้อมูลจำลอง ไม่ได้ส่งหรือเก็บไฟล์จริง'));const grid=node('div','application-grid'),student=app.official.student_number || 'รหัสนักศึกษา';
     for(const kind of ['photo','transcript','resume','conduct']){const label=FILE_KINDS[kind],c=node('section','application-file');c.id='application-documents-'+kind;c.dataset.field='documents.'+kind;c.tabIndex=-1;const doc=app.documents.find(x=>x.kind===kind),selected=selectedFiles.get(kind),filename=kind==='resume'?`CV-${student}.pdf`:kind==='photo'?`${student}.jpg`:kind==='conduct'?`conduct-${student}.pdf`:`${student}.pdf`;
       c.append(node('h3','',label+' *'),node('p','application-help',kind==='photo'?'JPG / PNG · ไม่เกิน 5 MiB':'PDF · ไม่เกิน 10 MiB'),node('p','application-help','ชื่อไฟล์แนะนำ: '+filename),node('p','application-file-state',doc?`บันทึกแล้ว: ${doc.filename} (${(doc.byte_size/1024).toFixed(1)} KiB)`:'ยังไม่ได้แนบไฟล์'));if(kind==='transcript')c.append(node('p','application-help','แสดงผลการศึกษาตั้งแต่ภาคแรกจนถึงภาคล่าสุด รวมไว้ใน PDF เดียว'));
-      if(doc)c.append(button('ดาวน์โหลด '+label,()=>run(async()=>{const blob=await client.download(app.id,doc.id,{signal});if(signal?.aborted)return;const url=URL.createObjectURL(blob),a=node('a');a.href=url;a.download=doc.filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);message='ดาวน์โหลดเอกสารแล้ว';})));
+      if(doc){
+        const download=button('ดาวน์โหลด '+label,()=>run(async()=>{const blob=await client.download(app.id,doc.id,{signal});if(signal?.aborted)return;const url=URL.createObjectURL(blob),a=node('a');a.href=url;a.download=doc.filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);message='ดาวน์โหลดเอกสารแล้ว';}));
+        download.disabled=app.access?.can_download===false;c.append(download);
+        if(download.disabled)c.append(node('p','application-help','แสดงข้อมูลไฟล์ที่แนบไว้ แต่ยังไม่เปิดดาวน์โหลดเอกสารในโหมดนี้'));
+      }
       if(!readOnly()){const l=node('label','',doc?'เลือกไฟล์ใหม่แทน '+label:'เลือกไฟล์ '+label),input=node('input','application-file-input');input.type='file';input.id='file-'+kind;l.htmlFor=input.id;input.accept=kind==='photo'?'.jpg,.jpeg,.png':'application/pdf';input.disabled=busy;
         input.addEventListener('change',()=>{const file=input.files?.[0];if(!file)return;try{validateApplicationFile(kind,file);selectedFiles.set(kind,file);result=null;confirming=false;message=`เลือก ${file.name} แล้ว กรุณากดอัปโหลด`;errors=[];hasError=false;}catch(e){message=e.message;hasError=true;errors=[{field:'documents.'+kind,message:e.message}];}render();root.querySelector('[data-feedback]')?.focus({preventScroll:true});});c.append(l,input);if(selected)c.append(node('p','application-help','เลือกไว้: '+selected.name+' (ยังไม่ได้บันทึก)'));
         const upload=button('อัปโหลด '+label,()=>run(async()=>{const file=selectedFiles.get(kind);if(!file)return;const op=operation('file-'+kind,{expected_version:app.version,filename:file.name,size:file.size,modified:file.lastModified}),complete=operation('complete-'+kind,{upload_operation:op.operation_id});let updated;
@@ -247,8 +254,8 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
   function render(){
     root.replaceChildren();root.setAttribute('aria-busy',String(busy));root.append(header());
     const body=node('div','student-editor-body student-page-content'),main=node('div','student-editor-main');body.append(stepRail(),main);main.append(feedback());
-    if(app.status==='NEEDS_REVISION')main.append(node('p','application-warning',`ส่งกลับแก้ไข: ${app.correction?.reason || 'กรุณาตรวจสอบข้อมูลตามที่ผู้ประสานงานแจ้ง'}${readOnly()?' · หมดช่วงแก้ไขแล้ว กรุณาติดต่อผู้ประสานงาน':''}`));
-    if(readOnly())main.append(node('p','application-notice',app.status==='SUBMITTED'?'ข้อมูลและเอกสารถูกล็อกไว้ตามฉบับที่ส่ง การส่งใบสมัครยังไม่ใช่การได้รับคัดเลือกเข้าแผน':app.status==='NEEDS_REVISION'?'หมดช่วงแก้ไข ฉบับที่ส่งก่อนหน้ายังเก็บไว้ครบถ้วน':'ใบสมัครนี้ยังไม่ได้ส่ง แต่รอบไม่เปิดให้แก้ไขแล้ว ข้อมูลที่บันทึกยังดูและดาวน์โหลดได้'));
+    if(app.status==='NEEDS_REVISION')main.append(node('p','application-warning',`ส่งกลับแก้ไข: ${app.correction?.reason || 'กรุณาตรวจสอบข้อมูลตามที่ผู้ประสานงานแจ้ง'}${readOnly()&&!maintenanceReadOnly()?' · หมดช่วงแก้ไขแล้ว กรุณาติดต่อผู้ประสานงาน':''}`));
+    if(readOnly()){const notice=node('p','application-notice',maintenanceReadOnly()?READ_ONLY_MESSAGE:app.status==='SUBMITTED'?'ข้อมูลและเอกสารถูกล็อกไว้ตามฉบับที่ส่ง การส่งใบสมัครยังไม่ใช่การได้รับคัดเลือกเข้าแผน':app.status==='NEEDS_REVISION'?'หมดช่วงแก้ไข ฉบับที่ส่งก่อนหน้ายังเก็บไว้ครบถ้วน':'ใบสมัครนี้ยังไม่ได้ส่ง แต่รอบไม่เปิดให้แก้ไขแล้ว ข้อมูลที่บันทึกยังดูและดาวน์โหลดได้');notice.setAttribute('role','status');main.append(notice);}
     const panels=[identity(),academic(),interests(),documents(),guardian(),review()];panels.forEach((panel,index)=>{panel.classList.add('application-step');panel.hidden=index!==activeStep;panel.dataset.step=String(index+1);main.append(panel);});
     const reload=button('โหลดข้อมูลล่าสุด',async()=>{if((dirty || selectedFiles.size) && !window.confirm('การโหลดใหม่จะทิ้งข้อมูลและไฟล์ที่เลือกแต่ยังไม่ได้บันทึก ต้องการโหลดฉบับล่าสุดหรือไม่?'))return;await run(async()=>{const fresh=await client.get(app.id,{signal});if(signal?.aborted)return;app=fresh;draft=copy(fresh.payload);dirty=false;result=null;errors=[];selectedFiles.clear();message='โหลดข้อมูลล่าสุดแล้ว';attempts.clear();});});reload.disabled=busy;reload.classList.add('student-editor-reload');main.append(reload);root.append(body,footer());if(busy)for(const b of root.querySelectorAll('button'))b.disabled=true;
   }
