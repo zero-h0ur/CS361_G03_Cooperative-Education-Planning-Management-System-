@@ -9,7 +9,7 @@ import {once} from 'node:events';
 import {SecretsManagerClient} from '@aws-sdk/client-secrets-manager';
 import {T,FUNCTION_ARN,bindTarget,validate,COUNTS,BOOLS,reason,safeFlags,safeResult} from '../scripts/operations/tu-identity-diagnostic/contract.mjs';
 import {createDiagnostic,loginPassword,readLoginPassword,secretFailure,SECRET_HTTP,SECRET_DEADLINE_MS} from '../scripts/operations/tu-identity-diagnostic/handler.mjs';
-import {packageDiagnostic,executionPolicy,endpointGrant,cleanup} from '../scripts/operations/tu-identity-diagnostic/operator.mjs';
+import {packageDiagnostic,executionPolicy,endpointGrant,cleanup,ENDPOINT_GRACE_MS,endpointWaitMs,waitForEndpointPropagation} from '../scripts/operations/tu-identity-diagnostic/operator.mjs';
 import {addStatement,removeStatement,ROOT,useTestAws,OPERATOR,roleArn,hash} from '../scripts/operations/tu-production/common.mjs';
 import {listZipEntries,readZipEntry} from '../scripts/operations/zip-archive.mjs';
 const subject='9900000001',now=Date.now(),salt='a'.repeat(64),run='b'.repeat(32);
@@ -84,6 +84,36 @@ test('Secret SDK failures use fixed categories only, never raw errors or a DB co
    connect:()=>assert.fail('Invalid Secret must not reach DB'),logger:()=>{}});
   assert.equal((await handler(event,context)).code,'DIAG_SECRET_INVALID');
  }
+});
+test('Secret denial layers inspect known phrases only and never return raw AWS policy messages',async()=>{
+ for(const [phrase,code] of [['no VPC endpoint policy allows','DIAG_SECRET_ENDPOINT_DENIED'],
+  ['explicit deny in a service control policy','DIAG_SECRET_SCP_DENIED'],
+  ['no permissions boundary allows','DIAG_SECRET_BOUNDARY_DENIED'],
+  ['explicit deny in a resource-based policy','DIAG_SECRET_RESOURCE_DENIED'],
+  ['no identity-based policy allows','DIAG_SECRET_IDENTITY_DENIED']]){
+  const logs=[],error=Object.assign(Error('PRIVATE_CANARY '+subject+' '+phrase),{name:'AccessDeniedException'});
+  const handler=createDiagnostic({env,clock:()=>now,secrets:{send:async()=>{throw error;}},
+   connect:()=>assert.fail('Denied Secret must not reach DB'),logger:x=>logs.push(x)});
+  const result=await handler(event,context);assert.deepEqual(result,{contract:T.contract,ok:false,code});
+  assert.equal(secretFailure(error),code);
+  for(const value of ['PRIVATE_CANARY',subject,phrase])assert.ok(!JSON.stringify([result,logs]).includes(value));
+ }
+ assert.equal(secretFailure(Error('no VPC endpoint policy allows')),'DIAG_SECRET_UNAVAILABLE');
+});
+test('endpoint readiness waits a fixed bounded propagation grace, supports interruption and rejects expired/malformed state',async()=>{
+ assert.equal(ENDPOINT_GRACE_MS,300000);
+ const state={owned:{endpoint:true},endpointUpdatedAt:new Date(now).toISOString(),
+  endpointReadyAt:new Date(now+ENDPOINT_GRACE_MS).toISOString(),expiresAt:new Date(now+1800000).toISOString()};
+ assert.equal(endpointWaitMs(state,now),300000);assert.equal(endpointWaitMs(state,now+300000),0);
+ for(const change of [{owned:{endpoint:false}},{endpointUpdatedAt:'invalid'},
+  {endpointReadyAt:new Date(now+1).toISOString()},{expiresAt:new Date(now).toISOString()}])
+  assert.throws(()=>endpointWaitMs({...state,...change},now));
+ let time=now;const sleeps=[],progress=[];
+ await waitForEndpointPropagation(state,{clock:()=>time,wait:async ms=>{sleeps.push(ms);time+=ms;},progress:x=>progress.push(x)});
+ assert.equal(time,now+300000);assert.equal(sleeps.length,10);assert.ok(sleeps.every(ms=>ms<=30000));
+ assert.equal(progress[0].remainingSeconds,300);assert.equal(progress.at(-1).remainingSeconds,30);
+ await assert.rejects(waitForEndpointPropagation(state,{clock:()=>now,interrupted:()=>true}),e=>e.safeCode==='DIAG_INTERRUPTED');
+ await assert.rejects(waitForEndpointPropagation(state,{clock:()=>now+1800000}),e=>e.safeCode==='DIAG_ENDPOINT_READINESS_INVALID');
 });
 test('real Secret SDK transport stays one-attempt and distinguishes denial, malformed JSON and bounded timeouts locally',async()=>{
  assert.deepEqual(SECRET_HTTP,{connectionTimeout:1000,requestTimeout:2500,throwOnRequestTimeout:true});

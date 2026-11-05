@@ -15,6 +15,7 @@ import {aws,ROOT,API,OPERATOR,caller,fixed,hash,load as loadParent,statePath,cle
  waitActive,safeConfig,sdkCredentials,delay,safeFailure,invocationPolicyHash} from '../tu-production/common.mjs';
 const parentPath='tmp/tu-production/production-ehWrZm/state.json';
 const group='/aws/lambda/'+T.name,policyName='CoedIdentityReadonlyOnly';
+export const ENDPOINT_GRACE_MS=300000;
 const tags=s=>({coedTask:T.tag,runId:s.runId});
 const tagList=s=>Object.entries(tags(s)).map(([Key,Value])=>({Key,Value}));
 function owned(actual,s){fixed(actual?.coedTask===T.tag && actual.runId===s.runId,'DIAG_OWNERSHIP_MISMATCH');}
@@ -86,6 +87,20 @@ function configuration(s){
 }
 function environment(s,enabled){return {NODE_ENV:'production',DIAG_ENABLED:String(enabled),DIAG_RUN_ID:s.runId,
  DIAG_EXPIRES_AT:s.expiresAt,DIAG_LOGIN_SECRET_ARN:T.secret,DIAG_TARGET_DIGEST:s.targetDigest,DIAG_SALT:s.salt};}
+export function endpointWaitMs(s,now){
+ const updated=Date.parse(s.endpointUpdatedAt),ready=Date.parse(s.endpointReadyAt),expires=Date.parse(s.expiresAt);
+ fixed(s.owned.endpoint===true && Number.isFinite(updated) && Number.isFinite(ready) && Number.isFinite(expires) &&
+  ready-updated===ENDPOINT_GRACE_MS && updated<=now && ready<expires && expires>now,'DIAG_ENDPOINT_READINESS_INVALID');
+ return Math.max(0,ready-now);
+}
+export async function waitForEndpointPropagation(s,{clock=Date.now,wait=delay,interrupted=()=>false,
+ progress=x=>console.log(JSON.stringify(x))}={}){
+ for(;;){
+  fixed(!interrupted(),'DIAG_INTERRUPTED');const remaining=endpointWaitMs(s,clock());if(!remaining)return;
+  progress({status:'WAITING_ENDPOINT_POLICY_PROPAGATION',remainingSeconds:Math.ceil(remaining/1000)});
+  await wait(Math.min(30000,remaining));
+ }
+}
 export async function deploy(path,s){
  fixed(s.status==='LOCAL_ONLY' && /^[a-f0-9]{64}$/.test(s.targetDigest || '') && /^[a-f0-9]{64}$/.test(s.salt || ''));
  const source=cleanSource();fixed(!source.dirty && hash(source)===hash(s.source),'DIAG_COMMITTED_SOURCE_REQUIRED');
@@ -97,7 +112,9 @@ export async function deploy(path,s){
  aws(['iam','put-role-policy','--role-name',T.role,'--policy-name',policyName,'--policy-document',JSON.stringify(executionPolicy())]);
  aws(['logs','create-log-group','--log-group-name',group,'--tags',JSON.stringify(tags(s))]);s.owned.logs=true;save(path,s);
  aws(['logs','put-retention-policy','--log-group-name',group,'--retention-in-days','1']);
- setEndpoint(s.endpointBefore,addStatement(s.endpointBefore,endpointGrant()));s.owned.endpoint=true;save(path,s);
+ setEndpoint(s.endpointBefore,addStatement(s.endpointBefore,endpointGrant()));s.owned.endpoint=true;
+ const endpointUpdated=Date.now();s.endpointUpdatedAt=new Date(endpointUpdated).toISOString();
+ s.endpointReadyAt=new Date(endpointUpdated+ENDPOINT_GRACE_MS).toISOString();save(path,s);
  fixed(hash(readFileSync(s.zip))===s.zipSha256,'DIAG_ARCHIVE_DRIFT');
  for(let i=0;i<8;i++){
   try{aws(['lambda','create-function','--function-name',T.name,'--runtime','nodejs22.x','--role',roleArn(T.role),'--handler','handler.handler',
@@ -121,6 +138,7 @@ export async function deploy(path,s){
 export async function invoke(path,s,subject){
  caller();fixed(s.status==='READY_FOR_SINGLE_TARGET' && s.invocations<3 && Date.parse(s.expiresAt)>Date.now() &&
   bindTarget(subject,s.salt)===s.targetDigest,'DIAG_INVOCATION_DENIED');
+ fixed(endpointWaitMs(s,Date.now())===0,'DIAG_ENDPOINT_NOT_READY');
  configuration(s);s.invocations++;save(path,s);
  const lambda=new LambdaClient({region:T.region,credentials:sdkCredentials(),maxAttempts:1,
   requestHandler:{connectionTimeout:1000,requestTimeout:12000,throwOnRequestTimeout:true}});
@@ -202,7 +220,8 @@ async function main(){
  console.log(JSON.stringify({status:'PREPARING_READONLY_DIAGNOSTIC',state:path}));
  let value,error;
  try{fixed(!interrupted,'DIAG_INTERRUPTED');await deploy(path,s);fixed(!interrupted,'DIAG_INTERRUPTED');
-  console.log(JSON.stringify({status:'PRIVATE_DIAGNOSTIC_READY',version:s.version}));value=await invoke(path,s,subject);}
+  console.log(JSON.stringify({status:'PRIVATE_DIAGNOSTIC_READY',version:s.version}));
+  await waitForEndpointPropagation(s,{interrupted:()=>interrupted});value=await invoke(path,s,subject);}
  catch(e){error=safeFailure(e);}
  finally{
   if(s.creationStarted){

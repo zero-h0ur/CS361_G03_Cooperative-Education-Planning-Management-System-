@@ -37,7 +37,7 @@ There is no successful owner-smoke attestation; writes remain paused.
 ## Validation
 
 - Combined diagnostic unit/package/privacy/IAM/cleanup and actual disposable
-  PostgreSQL suite after hardening:19passed,0failed,0skipped. Includes real column-level SELECT
+  PostgreSQL suite after propagation-readiness hardening:21passed,0failed,0skipped. Includes real column-level SELECT
   role/read-only transaction, Cognito-only/missing/revoked/ambiguous links,
   disabled/wrong-role accounts, incomplete/Unicode-padded profiles, ownership
   mismatch and invalid version. Old synthetic rows compared before/after lookup.
@@ -91,10 +91,34 @@ permission was widened. Do not infer UNLINKED_IDENTITY from this tool failure.
 
 ## Pending live proof
 
-User must rerun the updated [interactive operator](../operations/tu-identity-readonly-diagnostic.md)
-from the reviewed committed worktree, entering only their own10digit target
-Student ID in the hidden prompt. Prior raw input was not retained and must not
-be reconstructed from chat. New N1 resources/N2 lookup/N3 cleanup will be a new
+### Second attempt and bounded propagation readiness
+
+The user ran production-N27S5b from clean aaa0ee9; private version2 returned
+DIAG_SECRET_DENIED. Cleanup was verified at2026-11-05 09:11:55 Bangkok with all
+owned flags false and unchanged baselines, no database query/write. This narrows
+the failure to authorization/decryption, not the target's canonical account.
+Metadata confirms aws/secretsmanager encryption and a non-deleted login Secret;
+no Secret value was read locally. Sanitized CloudTrail lookup did not identify
+the denying layer; no permissions were broadened based on this absence.
+
+AWS documents endpoint-policy changes may take a few minutes. The controller
+previously invoked shortly after a new grant; propagation is a hypothesis, not a
+confirmed cause. It now records a fixed5minute grace before one Invoke, reports
+progress each<=30seconds, rejects expired/malformed readiness and cleans up on
+interruption. It also maps known denial-policy phrases to fixed categories,
+without retaining/logging raw SDK text. Exact IAM/endpoint grants are unchanged.
+
+The latest user explicitly authorizes the agent to test the one newly supplied
+Student ID. This supersedes the earlier user-only input requirement for that
+one target; identifier remains in hidden input/memory/private Invoke, not these
+documents, source, arguments, checkpoint or logs. No password/legacy credential
+reuse or identity repair is authorized. Fresh live result remains pending.
+
+The updated [interactive operator](../operations/tu-identity-readonly-diagnostic.md)
+will be run from the reviewed committed worktree using only the freshly
+authorized target through its hidden prompt. Prior raw input was not retained;
+the current explicit authorization is not a grant to reuse historical passwords.
+New N1 resources/N2 lookup/N3 cleanup will be a new
 bounded run; the previous run's cleanup is already verified. No confirmed account
 cause or successful Login is claimed. Repair/provisioning/relink and write resume
 remain separately gated. No push or frontend deploy.

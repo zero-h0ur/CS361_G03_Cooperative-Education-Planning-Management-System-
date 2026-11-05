@@ -8,7 +8,16 @@ export const SECRET_HTTP=Object.freeze({connectionTimeout:1000,requestTimeout:25
 export function secretFailure(error){
  const types=[error?.name,error?.code];
  const matches=names=>types.some(value=>names.includes(value));
- if(matches(['AccessDenied','AccessDeniedException','DecryptionFailure','DecryptionFailureException']))return 'DIAG_SECRET_DENIED';
+ if(matches(['AccessDenied','AccessDeniedException'])){
+  // Inspect known AWS phrases in memory only. Never return/log the raw message.
+  const message=typeof error?.message==='string'?error.message.toLowerCase():'';
+  for(const [phrase,code] of [
+   ['vpc endpoint policy','DIAG_SECRET_ENDPOINT_DENIED'],['service control policy','DIAG_SECRET_SCP_DENIED'],
+   ['permissions boundary','DIAG_SECRET_BOUNDARY_DENIED'],['resource-based policy','DIAG_SECRET_RESOURCE_DENIED'],
+   ['identity-based policy','DIAG_SECRET_IDENTITY_DENIED']])if(message.includes(phrase))return code;
+  return 'DIAG_SECRET_DENIED';
+ }
+ if(matches(['DecryptionFailure','DecryptionFailureException']))return 'DIAG_SECRET_DENIED';
  if(matches(['AbortError','TimeoutError','RequestTimeout','RequestTimeoutException','ETIMEDOUT','ESOCKETTIMEDOUT']))return 'DIAG_SECRET_TIMEOUT';
  if(matches(['ResourceNotFoundException']))return 'DIAG_SECRET_NOT_FOUND';
  if(matches(['CredentialsProviderError','ExpiredTokenException','UnrecognizedClientException','InvalidClientTokenId','InvalidSignatureException']))

@@ -3,7 +3,10 @@
 This operator is approved only for N0-N5, account130165494095/Sydney, while the
 parent rollout is WAITING_OWNER_SMOKE. It cannot provision/relink/enable accounts,
 fix profiles, issue a JWT, or resume writes. It does not call TU or request a
-password. Do not use a Student ID from historical chat.
+password. Do not use a Student ID from historical chat without a fresh explicit
+target authorization. The owner has now explicitly authorized the agent to run
+the one newly supplied target; this does not authorize account repair or Login
+without real TU verification. Raw target must stay out of source/argv/state/logs.
 
 ## Before execution
 
@@ -58,7 +61,14 @@ calls the normal issuer, fabricates TU proof or signs a token.
 
 ## Result and cleanup
 
-Let the command finish. Creation, query and cleanup may take a few minutes. The
+Let the command finish. The controller records the endpoint grant update and
+waits a fixed5minutes before its single Invoke, reporting safe progress each
+<=30seconds. A read-back policy is not proof of data-plane propagation; AWS says
+updates can take a few minutes ([AWS PrivateLink](https://docs.aws.amazon.com/vpc/latest/privatelink/interface-endpoints.html)).
+This grace is a readiness precaution, not a guaranteed propagation bound or
+permission expansion. Invoke fails closed if grace/expiry metadata is invalid
+or not ready; interruption during waiting still enters finally cleanup.
+Creation, query and cleanup may therefore take several minutes. The
 finally block removes only the owned function/all its versions, role/inline
 policy, log group and endpoint Sid, and compares unchanged application, Gateway
 and endpoint baselines. On failure it still attempts independent cleanup parts.
@@ -74,6 +84,8 @@ only the following fixed categories, never raw SDK messages or credential data:
 | Code | Meaning and boundary |
 | --- | --- |
 | DIAG_SECRET_DENIED | Secret read/decryption rejected; review exact policy, do not widen rights automatically. |
+| DIAG_SECRET_ENDPOINT_DENIED / DIAG_SECRET_IDENTITY_DENIED | Known AWS denial text identifies endpoint or identity policy; no raw message is retained. |
+| DIAG_SECRET_SCP_DENIED / DIAG_SECRET_BOUNDARY_DENIED / DIAG_SECRET_RESOURCE_DENIED | Known AWS denial text identifies organization, boundary or resource policy; stop for separate review rather than removing restrictions. |
 | DIAG_SECRET_TIMEOUT | Bounded request/abort deadline; not proof of an IAM or database problem. |
 | DIAG_SECRET_NETWORK | Known DNS/socket failure; no claim that a service received the request. |
 | DIAG_SECRET_NOT_FOUND | Requested Secret not found; do not substitute another Secret. |
@@ -84,7 +96,9 @@ only the following fixed categories, never raw SDK messages or credential data:
 The Secret client uses one attempt,1000ms connection/2500ms request and3000ms
 hard-abort budgets. Lambda remains10seconds; IAM, target binding and SELECT-only
 scope are unchanged. See [AWS SDK HTTP configuration](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/node-configuring-maxsockets.html).
-No retry is performed automatically. If a run fails, let cleanup finish and share
+No retry is performed automatically. A denial message can name one policy layer
+without proving all other layers allow; a successful read is still required.
+If a run fails, let cleanup finish and share
 only its final JSON. Rerun only after review, with fresh hidden input; do not
 paste a Student ID, TU password, national ID, Secret value or JWT into chat.
 
