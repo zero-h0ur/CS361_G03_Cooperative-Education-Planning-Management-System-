@@ -90,7 +90,8 @@ export async function upgradeRegistration({client,expectedDatabase,expectedSchem
   await client.query(adapted);await capabilities(client);
   const postCatalog=await registrationCatalog(client),postHash=registrationCatalogHash(postCatalog,expectedSchema);
   if(postHash!==POST_SHA256){const e=Error('REGISTRATION_POSTCONDITION');e.safeCode=e.message;
-   e.safeMetadata={postCatalogSha256:postHash,sections:Object.fromEntries(Object.entries(normalizedRegistrationCatalog(postCatalog,expectedSchema)).map(([k,v])=>[k,sha256(JSON.stringify(v))]))};throw e;}
+   e.safeMetadata={postCatalogSha256:postHash,sections:Object.fromEntries(Object.entries(normalizedRegistrationCatalog(postCatalog,expectedSchema)).map(([k,v])=>[k,sha256(JSON.stringify(v))])),
+    newTableAcl:postCatalog.table_acl.filter(r=>['tu_student_registrations','tu_registration_receipts'].includes(r.table_name))};throw e;}
   if(await fingerprint(client,expectedSchema,names)!==preserved)fail('REGISTRATION_PRESERVATION_FAILED');
   await client.query('INSERT INTO schema_migrations(version,checksum) VALUES($1,$2)',[VERSION,SQL_SHA256]);
   await client.query(mode==='apply'?'COMMIT':'ROLLBACK');began=false;
