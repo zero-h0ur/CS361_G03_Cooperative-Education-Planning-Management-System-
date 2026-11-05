@@ -26,8 +26,8 @@ export function renderApplicationWorkspace({client,applicationId,signal,onNaviga
     const label=node('label','','รอบรับสมัคร'),select=node('select','application-input');
     select.id='application-cycle';label.htmlFor=select.id;select.append(new Option('เลือกรอบรับสมัคร',''));
     for(const cycle of options.cycles.filter(c=>c.status==='OPEN'&&!list.some(a=>a.cycle_id===c.id))) {
-      const unavailable=cycle.opens_at&&Date.now()<Date.parse(cycle.opens_at)||cycle.closes_at&&Date.now()>=Date.parse(cycle.closes_at);
-      const option=new Option(cycle.name+(unavailable?' · ไม่อยู่ในช่วงรับสมัคร':''),cycle.id);
+      const unavailable=cycle.intake?!cycle.intake.is_open:cycle.opens_at&&Date.now()<Date.parse(cycle.opens_at)||cycle.closes_at&&Date.now()>=Date.parse(cycle.closes_at);
+      const option=new Option(cycle.name+(unavailable?' · ไม่อยู่ในช่วงรับสมัคร':cycle.intake?.mode==='MANUAL_OPEN'?' · เปิดรับจนกว่าจะสั่งปิด':''),cycle.id);
       option.disabled=Boolean(unavailable);select.append(option);
     }
     const message=node('p','student-record-description');message.setAttribute('role','status');

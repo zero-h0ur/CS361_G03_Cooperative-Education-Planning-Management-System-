@@ -128,6 +128,7 @@ export function renderApplicationEditor({client,application,signal,onSessionExpi
     const saved=node('span','student-editor-save-state',dirty?'มีข้อมูลที่ยังไม่ได้บันทึก':'ข้อมูลตรงกับฉบับที่บันทึกแล้ว');saved.dataset.saveState='';saved.setAttribute('role','status');meta.append(state,saved);
     const closes=formatStudentDate(app.availability?.closes_at,{time:true});
     if(closes)meta.append(node('span','',`${app.status==='NEEDS_REVISION'?'แก้ไขและส่งซ้ำได้ถึง':'ปิดรับ'} ${closes} (เวลาไทย)`));
+    if(app.status==='DRAFT' && app.availability?.intake?.mode==='MANUAL_OPEN')meta.append(node('span','','เปิดรับจนกว่าจะสั่งปิด'));
     return renderStudentPageHeader({title:'สมัครเข้าแผนสหกิจศึกษา',description:app.cycle_name||'ใบสมัครเข้าแผนสหกิจศึกษา',back,meta});
   }
   function stepRail(){

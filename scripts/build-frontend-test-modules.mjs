@@ -40,6 +40,7 @@ await build({
     resolve(workspace, 'src/frontend/committee/workspace.js'),
     resolve(workspace, 'src/frontend/committee/ranking.js'),
     resolve(workspace, 'src/frontend/coordinator/workspace.js'),
+    resolve(workspace, 'src/frontend/coordinator/intake-controls.js'),
     resolve(workspace, 'src/frontend/coordinator/detail.js'),
     resolve(workspace, 'src/frontend/staff/staff-client.js'),
     resolve(workspace, 'src/frontend/staff/staff-route-state.js'),
