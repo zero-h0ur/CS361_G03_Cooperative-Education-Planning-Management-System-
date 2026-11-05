@@ -96,7 +96,7 @@ class CoordinatorWorkspaceService {
     if(!row)throw new NotFoundError('ไม่พบใบสมัครที่คุณมีสิทธิ์ตรวจ');
     const history=(await db.query('SELECT id,application_version,submitted_at,checksum FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC',[id])).rows;
     const reviews=(await db.query("SELECT action,result,created_at FROM coordinator_operations WHERE resource_id=$1 AND action IN ('return','forward') ORDER BY created_at",[id])).rows;
-    return {...this.present(row,true),submission_history:history,review_history:reviews};
+    return {...this.present(row,true),access:intake.access(actor,row.cycle_id),submission_history:history,review_history:reviews};
   }
   async command(actor,id,body,action,work) {
     if(process.env.COED_API_MAINTENANCE && process.env.COED_API_MAINTENANCE!=='off')throw new ServiceUnavailableError('ยังไม่เปิดการทำรายการพิจารณา','COED_MAINTENANCE');

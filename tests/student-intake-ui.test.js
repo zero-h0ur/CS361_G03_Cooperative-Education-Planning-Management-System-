@@ -2,6 +2,7 @@
 const {renderApplicationEditor}=require('../tmp/frontend-test-modules/student/application-editor-view.cjs');
 const {createApplicationPreview,APPLICATION_PREVIEW_ID:ID}=require('../tmp/frontend-test-modules/application-preview-fixtures.cjs');
 const {applicationAccess}=require('../src/shared/application-access');
+const {documentsPanel}=require('../tmp/frontend-test-modules/coordinator/detail.cjs');
 const flush=()=>new Promise(r=>setTimeout(r,0));
 const button=(root,text)=>[...root.querySelectorAll('button')].find(b=>b.textContent===text);
 let controller;
@@ -28,4 +29,10 @@ test.each(['intake-draft','intake-upload','intake-pilot'])('%s explains capabili
   expect(confirmation.textContent).toContain('ส่งข้อมูลที่นักศึกษาแจ้งพร้อมหลักฐานเข้าคิวรอตรวจสอบ');
   expect(confirmation.textContent).not.toContain('ยืนยันใช้เกณฑ์');
  }
+});
+test('Coordinator document buttons explain and enforce the draft-stage download restriction',()=>{
+ const download=jest.fn(),root=documentsPanel({access:{can_download:false},documents:[{id:ID,kind:'resume',filename:'synthetic.pdf'}]},download);
+ document.body.append(root);const buttons=[...root.querySelectorAll('button')];
+ expect(buttons.every(b=>b.disabled)).toBe(true);buttons.forEach(b=>b.click());expect(download).not.toHaveBeenCalled();
+ expect(root.textContent).toContain('ช่วงทดลองนี้ยังไม่เปิดดาวน์โหลดเอกสาร');
 });

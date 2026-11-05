@@ -53,9 +53,9 @@ export function documentsPanel(record,onDownload) {
     const name=el('td','',title),meta=el('td'),status=el('td'),action=el('td');meta.append(el('strong','',doc?.filename || '—'));
     if(doc)meta.append(el('small','coord-muted',`${doc.content_type || ''}${doc.byte_size?' · '+Math.ceil(doc.byte_size/1024)+' KB':''}`));
     status.append(badge(doc?'FORWARDED':'RETURNED',doc?'แนบแล้ว':'ยังไม่แนบ'));
-    const open=button('เปิดดู',()=>onDownload?.(doc),{icon:'file'});open.disabled=!doc || !onDownload;open.setAttribute('aria-label',`เปิดดู ${title}`);action.append(open);
+    const open=button('เปิดดู',()=>onDownload?.(doc),{icon:'file'});open.disabled=!doc || !onDownload || record.access?.can_download===false;open.setAttribute('aria-label',`เปิดดู ${title}`);action.append(open);
     [name,meta,status,action].forEach((td,i)=>td.dataset.label=['เอกสาร','ไฟล์แนบ','สถานะ','ดำเนินการ'][i]);tr.append(name,meta,status,action);docs.body.append(tr);
-  }root.append(docs.table,note('แนบไฟล์ครบ ไม่ได้หมายถึงเอกสารผ่านการตรวจสอบ'));return root;
+  }root.append(docs.table,note(record.access?.can_download===false?'ช่วงทดลองนี้ยังไม่เปิดดาวน์โหลดเอกสาร':'แนบไฟล์ครบ ไม่ได้หมายถึงเอกสารผ่านการตรวจสอบ'));return root;
 }
 export function skillsPanel(record) {
   const p=record.payload || {},root=el('div','coord-skills'),positions=el('section');positions.append(el('h3','','งานและทักษะของนักศึกษา'),el('p','coord-muted','ข้อมูลที่นักศึกษาระบุในใบสมัคร'),el('h3','','ตำแหน่งงานที่สนใจ'));
@@ -107,6 +107,6 @@ export function renderDetail(record,{activeTab='summary',onTab,onReturn,onForwar
   }activate(activeTab);root.append(tablist,panels);
   const footer=el('footer','coord-detail-actions');
   if(record.can_review && onReturn && onForward){footer.append(button('ส่งกลับแก้ไข',onReturn,{icon:'return'}),button('รับเรื่องและส่งต่อกรรมการ',onForward,{primary:true,icon:'arrow'}),el('small','coord-action-note','การรับเรื่องยังไม่ใช่การประกาศผลคัดเลือก'));}
-  else footer.append(note(record.state==='RETURNED'?'รอนักศึกษาแก้ไขและส่งฉบับใหม่ ข้อมูลด้านบนเป็นฉบับที่ส่งล่าสุด':record.state==='FORWARDED'?'ส่งให้กรรมการแล้ว ติดตามข้อมูลได้ที่ “ติดตามการพิจารณา”':'รอบนี้ไม่เปิดให้ทำรายการ ตรวจสอบกำหนดการหรือโหลดข้อมูลล่าสุด'));
+  else footer.append(note(record.access?.read_only?'ช่วงทดลองนี้เปิดให้อ่านใบสมัครเท่านั้น ยังไม่เปิดรับเรื่อง ส่งกลับ หรือส่งต่อกรรมการ':record.state==='RETURNED'?'รอนักศึกษาแก้ไขและส่งฉบับใหม่ ข้อมูลด้านบนเป็นฉบับที่ส่งล่าสุด':record.state==='FORWARDED'?'ส่งให้กรรมการแล้ว ติดตามข้อมูลได้ที่ “ติดตามการพิจารณา”':'รอบนี้ไม่เปิดให้ทำรายการ ตรวจสอบกำหนดการหรือโหลดข้อมูลล่าสุด'));
   root.append(footer);return root;
 }
