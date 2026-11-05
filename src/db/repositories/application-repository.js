@@ -58,7 +58,7 @@ class ApplicationRepository {
   async editable(db,app,official) {
     if(!['DRAFT','NEEDS_REVISION'].includes(app.status))throw new InvalidStateTransitionError('ใบสมัครที่ส่งแล้วแก้ไขไม่ได้');
     const cycle=await this.cycleForApplication(db,app,official,true);
-    if(cycle.status!=='OPEN' || (cycle.window && !cycle.window.is_open))throw new InvalidStateTransitionError('รอบสมัครนี้ไม่เปิดให้แก้ไขแล้ว');
+    if(cycle.status!=='OPEN' || (cycle.window && !cycle.window.is_open) || require('../phase1-intake').pendingAcademic(official) && !cycle.window)throw new InvalidStateTransitionError('รอบสมัครนี้ไม่เปิดให้แก้ไขหรือยังไม่มีกำหนดการ');
     return cycle;
   }
   async cycleForApplication(db,app,official,lock=false) {

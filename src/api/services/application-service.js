@@ -46,7 +46,7 @@ class ApplicationService {
     const policy=submission?submission.snapshot.policy:await this.repository.policy(db,app,official);
     const documents=submission?.snapshot.documents || await this.repository.documents(db,app.id);
     const cycle=(await db.query(`SELECT r.name,r.status,w.opens_at,w.closes_at,
-      (w.cycle_id IS NULL OR (clock_timestamp()>=w.opens_at AND clock_timestamp()<w.closes_at)) AS window_open
+      (clock_timestamp()>=w.opens_at AND clock_timestamp()<w.closes_at) AS window_open,w.cycle_id AS scheduled_cycle
       FROM rounds r LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id WHERE r.id=$1`,[app.cycle_id])).rows[0];
     const effective=app.status==='NEEDS_REVISION'?await this.repository.cycleForApplication(db,app,official):null;
     const correction=app.status==='NEEDS_REVISION'?(await db.query('SELECT reason,version FROM phase1_reviews WHERE application_id=$1 AND state=\'RETURNED\'',[app.id])).rows[0]:null;
@@ -55,7 +55,7 @@ class ApplicationService {
       official:submission?.snapshot.official || official,policy:safePolicy(policy),documents,
       assessment:submission?.snapshot.assessment || null,
       access,cycle_name:submission?.snapshot.cycle?.name || cycle.name,availability:{can_edit:Boolean(!access.read_only && actor.role==='STUDENT' &&
-        (app.status==='DRAFT' && cycle.status==='OPEN' && cycle.window_open || app.status==='NEEDS_REVISION' && effective?.status==='OPEN' && effective.window?.is_open)),
+        (app.status==='DRAFT' && cycle.status==='OPEN' && (cycle.window_open || !intake.pendingAcademic(official) && !cycle.scheduled_cycle) || app.status==='NEEDS_REVISION' && effective?.status==='OPEN' && effective.window?.is_open)),
         opens_at:cycle.opens_at,closes_at:effective?.window?.closes_at || cycle.closes_at},
       correction:correction?{...correction,closes_at:effective?.window?.closes_at}:null,
       last_submission:retained?{id:retained.id,checksum:retained.checksum,submitted_at:retained.submitted_at}:null,
@@ -146,7 +146,7 @@ class ApplicationService {
     v.command(input,['cycle_id'],false);v.uuid(input.cycle_id,'cycle_id');
     return this.mutate(actor,null,input,'APPLICATION_CREATED',async(db,_app,official)=>{
       const cycle=await this.repository.cycle(db,input.cycle_id,official,true);
-      if(cycle.status!=='OPEN' || (cycle.window && !cycle.window.is_open))throw new InvalidStateTransitionError('รอบสมัครไม่เปิด');
+      if(cycle.status!=='OPEN' || (cycle.window && !cycle.window.is_open) || intake.pendingAcademic(official) && !cycle.window)throw new InvalidStateTransitionError('รอบสมัครไม่เปิดหรือยังไม่มีกำหนดการ');
       const app=(await db.query(`INSERT INTO phase1_applications(id,student_id,cycle_id) VALUES($1,$2,$3) RETURNING *`,[randomUUID(),actor.studentId,input.cycle_id])).rows[0];
       return this.detail(db,actor,app);
     },{create:true});

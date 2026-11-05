@@ -75,6 +75,9 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
    assert.equal((await service.options(actor)).cycles[0].id,cycle);
    await assert.rejects(runtime.query('UPDATE phase1_intake_routes SET active=false'),e=>e.code==='42501');
    await assert.rejects(runtime.query("UPDATE selection_cohorts SET created_at=clock_timestamp() WHERE id=$1",[cohort]),e=>e.code==='42501');
+   await owner.query('DELETE FROM phase1_cycle_windows WHERE cycle_id=$1',[cycle]);
+   try{await assert.rejects(service.create(actor,{operation_id:id(),cycle_id:cycle}),e=>e.statusCode===422);}
+   finally{await owner.query("INSERT INTO phase1_cycle_windows(cycle_id,opens_at,closes_at) VALUES($1,now()-interval '1 day',now()+interval '1 day')",[cycle]);}
   });
   await t.test('Draft saves partial data, does not certify academics and is scoped before business writes',async()=>{
    const op={operation_id:id(),cycle_id:cycle};app=await service.create(actor,op);assert.equal((await service.create(actor,op)).id,app.id);
@@ -181,6 +184,14 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
       VALUES($1,$2,$3,NULL,$4,$5,$6,$7)`,[id(),app.id,app.version+1,snapshot,'a'.repeat(64),actor.userId,contract]),e=>e.code==='23514');
    }
    assert.deepEqual((await owner.query('SELECT * FROM schema_migrations ORDER BY version')).rows,history);
+  });
+  await t.test('compatible browse fallback retains pending evidence and closes all writes and staff reads',async()=>{
+   process.env.COED_API_MAINTENANCE='browse';
+   const retained=await service.get(actor,app.id);
+   assert.equal(retained.access.read_only,true);assert.equal(retained.policy,null);
+   assert.equal(retained.submission.checksum,app.submission.checksum);assert.equal(retained.documents.length,4);
+   await assert.rejects(service.submit(actor,app.id,{...command(),expected_policy_id:null}),e=>e.code==='COED_MAINTENANCE');
+   await assert.rejects(staff.detail({isAuthenticated:true,userId:coord,role:'COORDINATOR',accountStatus:'ACTIVE'},app.id),e=>e.code==='COED_MAINTENANCE');
   });
  }finally{
   restore('COED_API_MAINTENANCE',oldMode);restore('COED_INTAKE_PILOT',oldPilot);restore('TU_ONBOARDING_ENABLED',oldOnboarding);
