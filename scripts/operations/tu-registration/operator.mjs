@@ -167,6 +167,15 @@ export function refreshReleaseSource(s,candidate){
 }
 export async function activate(s){
  caller();guardSource(s);checkMaintenance();fixed(s.status==='RELEASE_STAGED_NOT_ROUTED');
+ // Exact permission for the new route; old login/status permissions deliberately
+ // do not cover it. Never replace those with an auth/* wildcard.
+ const sid='CoedRegistration019POST'+s.runId.slice(0,8),sourceArn=`arn:aws:execute-api:${REGION}:${A}:${API}/*/POST/api/v3/auth/tu-register`;
+ const policy=JSON.parse(aws(['lambda','get-policy','--function-name','coed-tu-auth','--qualifier','live']).Policy);
+ const existing=policy.Statement.find(x=>x.Sid===sid);
+ if(existing)fixed(existing.Condition?.ArnLike?.['AWS:SourceArn']===sourceArn&&existing.Condition.StringEquals?.['AWS:SourceAccount']===A,'REGISTRATION_PERMISSION_DRIFT');
+ else aws(['lambda','add-permission','--function-name','coed-tu-auth','--qualifier','live','--statement-id',sid,'--principal','apigateway.amazonaws.com',
+  '--action','lambda:InvokeFunction','--source-arn',sourceArn,'--source-account',A]);
+ s.registrationInvokePermission={sid,sourceArn};save(s.path,s);
  // No credential or signed proof is fabricated. The existing exact live alias
  // resource/IAM boundaries stay in place; use revision-guarded alias updates.
  for(const name of ['coed-tu-session-issuer','coed-api','coed-tu-auth']){
