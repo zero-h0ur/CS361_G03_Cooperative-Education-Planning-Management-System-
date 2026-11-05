@@ -192,3 +192,43 @@ only Student workspace success or a fixed error code. Their old ticket expires
 after five minutes. The admission-year field means year of entering university,
 not birth year. **Genuine completion remains pending**; negative checks alone do
 not prove registration/session/database success. No global write resume is implied.
+
+## Subsequent409 and approved O8 forward020
+
+The owner subsequently reported409 on genuine first-registration confirmation.
+Read-only Lambda metadata showed issuer4/broker5 `TU_REGISTRATION_CONFLICT`.
+Existing RDS PostgreSQL error metadata identified `Registration rejected` in
+`complete_tu_registration`, line10, before any account insert. No raw SQL parameter,
+identity, credential or profile values were returned by the diagnostic.
+
+The actual configured issuer is account-scoped, while019 hard-coded the default
+issuer in both `complete_tu_registration` and `guard_tu_registration_profile`.
+This was a migration/configuration defect, not proof of duplicate identity or an
+incorrect password. Earlier tests used the default issuer and missed the mismatch.
+Fixing only the first routine would still fail the deferred provenance guard.
+
+The owner explicitly approved O8: fixed forward020, production-shaped local tests,
+temporary private owner trial/apply tooling with cleanup, no old-row repair,
+standing privilege expansion, new Secret, global write resume or push. The plan
+and approval transcript/outcome remain local under `docs/plans` and ignored
+`tmp/grill-me` respectively. No production mutation has occurred at this checkpoint.
+
+Local validation for020:
+
+- Disposable PostgreSQL16:10 checks passed,0 skipped. Includes exact old failure,
+  inventory, rollback-only trial, atomic apply/replay, unchanged019 history and
+  no account created by the migration.
+- Full real-database synthetic owner flow uses the account-scoped issuer and a
+  non-default client: registration ticket, private issuer completion, normal
+  SELECT-only session, broker validation, API `/me` and exact own profile.
+- Wrong/default issuer, invalid status/overrides, exact idempotency/conflicting
+  retry, races, disabled/revoked identities, audit rollback, direct-write denials,
+  legacy completeness and schema-drift rejection remain covered.
+- Unit/configuration/owner safety regressions:21 passed,0 skipped. Temporary
+  execution policy reads only the existing RDS owner Secret and cannot rotate it
+  or read provider/signing Secrets; request contract has no SQL/account mode.
+- Initial database test started before the disposable server was ready; after
+  checking `pg_isready`, the same test passed. No production connection was used.
+
+Production trial/apply and real-owner acceptance are still pending. The020 source
+checksum is `3ea3a1fc31ea7a839fff1d8fb94d3d8732d26042edc9dd4a03dbc62610082790`.

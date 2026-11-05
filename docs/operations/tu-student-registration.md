@@ -123,3 +123,56 @@ from4 back to3 after checking the current alias, code hash and checkpoint
 database. This rollback would restore the known registration503, so use only
 for an observed regression and keep genuine accounts/data intact. See the
 [rollout evidence](../evidence/tu-student-registration-rollout.md).
+
+## Forward020: configured issuer alignment
+
+The next real-owner confirmation exposed409:019 used the default TU issuer in
+both registration routines, while the deployed token issuer is account-scoped.
+Do not change the configured issuer/client, relink accounts, replay019 or treat
+this error as proof of a duplicate account. Forward020 changes only the exact
+issuer literal in the registration function and its deferred provenance guard.
+
+O8 was explicitly approved on November5,2026. Reviewed files:
+
+- [Fixed020 SQL](../../src/db/upgrades/020_tu_registration_issuer_alignment.sql)
+- [Atomic baseline/preservation guard](../../scripts/operations/tu-registration-issuer-upgrade.mjs)
+- [Expiring fixed owner handler](../../scripts/operations/tu-registration-issuer/handler.mjs)
+- [Checkpointed020 controller](../../scripts/operations/tu-registration-issuer/operator.mjs)
+
+After local tests and commit, package with the public RDS CA bundle in
+`COED_RDS_CA_FILE`. Run the new controller sequentially, not the old019 controller:
+
+```text
+node scripts/operations/tu-registration-issuer/operator.mjs package unused --approved-o8
+node scripts/operations/tu-registration-issuer/operator.mjs prepare <state-path> --approved-o8
+node scripts/operations/tu-registration-issuer/operator.mjs trial-enable <state-path> --approved-o8
+node scripts/operations/tu-registration-issuer/operator.mjs inventory <state-path> --approved-o8
+node scripts/operations/tu-registration-issuer/operator.mjs trial <state-path> --approved-o8
+node scripts/operations/tu-registration-issuer/operator.mjs apply-enable <state-path> --approved-o8
+node scripts/operations/tu-registration-issuer/operator.mjs apply <state-path> --approved-o8
+node scripts/operations/tu-registration-issuer/operator.mjs inventory <state-path> --approved-o8
+node scripts/operations/tu-registration-issuer/operator.mjs cleanup <state-path> --approved-o8
+```
+
+Inspect each result before continuing. Do not rerun `prepare`, use arbitrary SQL,
+or run two state writers concurrently. On a failure clean the exact temporary
+capabilities; cleanup does not depend on source cleanliness or a successful trial.
+The tool has one-hour expiry, qualified/operator-only Invoke, existing private
+network placement, reads only the existing RDS owner Secret, and cannot register
+an account or rotate/read provider/signing credentials. No new standing Secret,
+NAT or service is created; only temporary usage is added.
+
+The guard verifies the exact019 catalog/history, existing table-row fingerprints,
+both routine OIDs/signatures/owners/ACLs and role graph. It compares the entire
+resulting catalog against the sole approved two-literal substitution, and appends
+020's checksum only after all checks pass in the same transaction. The temporary
+postgres function-owner membership is revoked before commit. Inventory/replay
+uses rollback-only transactions. Prior migrations and business rows stay intact.
+
+Keep API3/broker5/issuer4 and verification-only business maintenance unchanged.
+Trial/apply failures before commit roll back automatically. After a post-commit
+regression, pause only new onboarding with the existing broker flag, preserve
+020/history/accounts, and review a forward correction. Do not restore an old
+snapshot over live data or delete migration history. Actual Student acceptance
+still needs fresh owner Login and confirmation; local/negative gates alone do
+not establish success.
