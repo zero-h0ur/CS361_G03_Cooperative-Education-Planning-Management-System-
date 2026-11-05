@@ -31,7 +31,7 @@ class ApplicationRepository {
     if(!row)throw new NotFoundError('ไม่พบรอบที่คุณมีสิทธิ์สมัคร');
     const window=(await db.query(`SELECT *,clock_timestamp()>=opens_at AND clock_timestamp()<closes_at AS is_open
       FROM phase1_cycle_windows WHERE cycle_id=$1`,[id])).rows[0] || null;
-    return {...row,window};
+    return {...row,window:await require('../intake-control').effective(db,id,window)};
   }
   async application(db,id,actor,lock=false) {
     await require('../phase1-delivery').assertDeliverySchema(db);
@@ -64,13 +64,13 @@ class ApplicationRepository {
   async cycleForApplication(db,app,official,lock=false) {
     const cycle=await this.cycle(db,app.cycle_id,official,lock);
     if(app.status!=='NEEDS_REVISION')return cycle;
-    const window=(await db.query(`SELECT w.opens_at,COALESCE(s.review_closes_at,w.closes_at) AS closes_at,w.version,
+    const window=(await db.query(`SELECT w.opens_at,COALESCE(s.review_closes_at,w.closes_at) AS closes_at,w.version,rv.version AS return_version,
       clock_timestamp()>=w.opens_at AND clock_timestamp()<COALESCE(s.review_closes_at,w.closes_at) AS is_open
       FROM phase1_reviews rv JOIN selection_cohorts c ON c.id=rv.cohort_id AND c.status='ACTIVE'
       JOIN phase1_cycle_windows w ON w.cycle_id=c.cycle_id LEFT JOIN coordinator_round_schedules s ON s.cycle_id=c.cycle_id
       WHERE rv.application_id=$1 AND rv.state='RETURNED' AND c.cycle_id=$2`,[app.id,app.cycle_id])).rows[0];
     // A correction never creates an exception without a recorded return and a stored deadline.
-    return {...cycle,window:window || {is_open:false}};
+    return {...cycle,window:{...(window || {is_open:false}),...(cycle.window?.intake?{intake:cycle.window.intake,exception:'RETURNED'}:{})}};
   }
 }
 module.exports={ApplicationRepository};

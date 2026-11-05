@@ -189,7 +189,9 @@ class CoordinatorWorkspaceService {
       w.confirmation_opens_at AS window_confirmation_opens_at,w.confirmation_closes_at AS window_confirmation_closes_at FROM rounds r
       LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id LEFT JOIN coordinator_round_schedules s ON s.cycle_id=r.id WHERE r.id=$1`,[id])).rows[0];
     Object.assign(row,confirmationWindow({confirmation_opens_at:row.window_confirmation_opens_at,confirmation_closes_at:row.window_confirmation_closes_at},row));
-    return {cycle_id:id,cycle_name:scope.cohorts[0].cycle_name,...row,version:row.version || 0,window_version:row.window_version || 0,can_edit:scope.can_edit};
+    const intake=await require('../../db/intake-control').effective(db,id,null);
+    return {cycle_id:id,cycle_name:scope.cohorts[0].cycle_name,...row,version:row.version || 0,window_version:row.window_version || 0,
+      intake:intake?.intake || null,can_edit:!intake && scope.can_edit && (!process.env.COED_API_MAINTENANCE || process.env.COED_API_MAINTENANCE==='off')};
   }
   async saveSchedule(actor,id,body) {
     v.fields(body,['operation_id','expected_version','expected_window_version','opens_at','closes_at','review_opens_at','review_closes_at','confirmation_opens_at','confirmation_closes_at']);

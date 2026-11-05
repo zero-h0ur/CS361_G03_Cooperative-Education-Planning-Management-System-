@@ -100,12 +100,16 @@ class Phase1ScheduleService {
     const currentNow = this.now();
     const nearHours = round.near_deadline_hours || DEFAULT_NEAR_DEADLINE_HOURS;
 
-    const applicationWindow = evaluateWindow({
+    let applicationWindow = evaluateWindow({
       now: currentNow,
       opensAt: round.opens_at,
       closesAt: round.closes_at,
       nearDeadlineHours: nearHours
     });
+    const controlled=await require('../../db/intake-control').effective(db,cycleId,null);
+    if(controlled){const state=controlled.intake;applicationWindow={state:state.is_open?'OPEN':state.reason==='UPCOMING'?'UPCOMING':'CLOSED',
+      is_open:state.is_open,is_closed:!state.is_open,is_upcoming:state.reason==='UPCOMING',is_unscheduled:state.reason==='UNCONFIGURED',
+      is_near_deadline:false,remaining_ms:null,opens_at:state.opens_at,closes_at:state.closes_at,intake:state};}
 
     const confirmationWindow = evaluateWindow({
       now: currentNow,

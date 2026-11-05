@@ -16,6 +16,8 @@ const INTAKE_UPLOAD=new RegExp('^'+STUDENT_APP+'/'+UUID+'/uploads(?:/'+UUID+'/co
 const INTAKE_SUBMIT=new RegExp('^'+STUDENT_APP+'/'+UUID+'/submit$','i');
 const INTAKE_DOWNLOAD=new RegExp('^/api/(?:tu-proxy/api/)?v4/applications/'+UUID+'/documents/'+UUID+'/download$','i');
 const COORDINATOR_READ=new RegExp('^/api/v4/coordinator/(?:options|applications(?:/'+UUID+')?)$','i');
+const COORDINATOR_INTAKE=new RegExp('^/api/v4/coordinator/intake/'+UUID+'$','i');
+const COORDINATOR_SCHEDULE=new RegExp('^/api/v4/coordinator/schedules/'+UUID+'$','i');
 const COORDINATOR_FILTERS=new Set(['cycle_id','search','state','curriculum','program_type','sort','page','pageSize']);
 function noQuery(event){return !event.rawQueryString && !Object.keys(event.queryStringParameters || {}).length;}
 function publicQuery(event){
@@ -35,6 +37,7 @@ function maintenanceResponse(event={},mode=process.env.COED_API_MAINTENANCE){
   if(method==='GET' && (mode==='verify' || mode==='browse' || intake) &&
     (READ_PATHS.has(path) && noQuery(event) || (mode==='browse' || intake) && browseRead(event,path)))return null;
   if(intake){
+    if(noQuery(event) && ((method==='GET'||method==='POST') && COORDINATOR_INTAKE.test(path) || method==='GET' && COORDINATOR_SCHEDULE.test(path)))return null;
     if(noQuery(event) && (method==='GET' && (INTAKE_READY.test(path) || COORDINATOR_READ.test(path)) ||
       method==='POST' && path===STUDENT_APP || method==='PATCH' && INTAKE_APP.test(path) ||
       mode!=='intake-draft' && method==='POST' && (INTAKE_UPLOAD.test(path) || INTAKE_DOWNLOAD.test(path)) ||

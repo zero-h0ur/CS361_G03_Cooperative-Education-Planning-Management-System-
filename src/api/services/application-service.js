@@ -7,6 +7,7 @@ const {FORM_VERSION,DECLARED_IDENTITY}=require('../../shared/application-form');
 const delivery=require('../../db/phase1-delivery');
 const {INTAKE_MODES,pilotScope}=require('../../shared/application-access');
 const intake=require('../../db/phase1-intake');
+const intakeControl=require('../../db/intake-control');
 const {applicationBudget}=require('../../db/application-budget');
 function canonical(value) {
   if(Array.isArray(value))return value.map(canonical);
@@ -49,14 +50,15 @@ class ApplicationService {
       (clock_timestamp()>=w.opens_at AND clock_timestamp()<w.closes_at) AS window_open,w.cycle_id AS scheduled_cycle
       FROM rounds r LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id WHERE r.id=$1`,[app.cycle_id])).rows[0];
     const effective=app.status==='NEEDS_REVISION'?await this.repository.cycleForApplication(db,app,official):null;
+    const window=effective?.window || await intakeControl.effective(db,app.cycle_id,cycle.scheduled_cycle?{opens_at:cycle.opens_at,closes_at:cycle.closes_at,is_open:cycle.window_open}:null);
     const correction=app.status==='NEEDS_REVISION'?(await db.query('SELECT reason,version FROM phase1_reviews WHERE application_id=$1 AND state=\'RETURNED\'',[app.id])).rows[0]:null;
     return {id:app.id,student_id:app.student_id,cycle_id:app.cycle_id,status:app.status,version:app.version,
       payload:submission?.snapshot.payload || app.payload,form_version:submission ? submission.snapshot.form_version || 1 : FORM_VERSION,
       official:submission?.snapshot.official || official,policy:safePolicy(policy),documents,
       assessment:submission?.snapshot.assessment || null,
       access,cycle_name:submission?.snapshot.cycle?.name || cycle.name,availability:{can_edit:Boolean(!access.read_only && actor.role==='STUDENT' &&
-        (app.status==='DRAFT' && cycle.status==='OPEN' && (cycle.window_open || !intake.pendingAcademic(official) && !cycle.scheduled_cycle) || app.status==='NEEDS_REVISION' && effective?.status==='OPEN' && effective.window?.is_open)),
-        opens_at:cycle.opens_at,closes_at:effective?.window?.closes_at || cycle.closes_at},
+        (app.status==='DRAFT' && cycle.status==='OPEN' && (window?.is_open || !intake.pendingAcademic(official) && !window) || app.status==='NEEDS_REVISION' && effective?.status==='OPEN' && window?.is_open)),
+        opens_at:window?.opens_at,closes_at:window?.closes_at,...(window?.intake?{intake:window.intake,exception:window.exception || null}:{})},
       correction:correction?{...correction,closes_at:effective?.window?.closes_at}:null,
       last_submission:retained?{id:retained.id,checksum:retained.checksum,submitted_at:retained.submitted_at}:null,
       submitted_at:app.submitted_at,submission,
@@ -72,18 +74,27 @@ class ApplicationService {
     if(INTAKE_MODES.includes(process.env.COED_API_MAINTENANCE)){
       const pilot=pilotScope(process.env.COED_INTAKE_PILOT);cycles=cycles.filter(c=>pilot && c.id===pilot.cycle_id);
     }
+    cycles=await Promise.all(cycles.map(async c=>{const window=await intakeControl.effective(db,c.id,null);return window?{...c,opens_at:window.opens_at,closes_at:window.closes_at,intake:window.intake}:c;}));
     return {official,cycles,criteria:templates(),storage_configured:Boolean(this.store || process.env.CO_ED_APPLICATION_STORAGE),
       access:intake.access(actor),pending_academic_submission:intake.pendingAcademic(official)};
   }
   async list(actor) {
-    guard(actor,true);const db=this.repository.pool;await this.repository.profile(db,actor);
+    guard(actor,true);const db=this.repository.pool,official=await this.repository.profile(db,actor);
     const rows=(await db.query(`SELECT a.id,a.cycle_id,a.status,a.version,a.submitted_at,a.updated_at,rv.reason AS correction_reason,
       CASE WHEN a.status='NEEDS_REVISION' THEN jsonb_build_object('can_edit',r.status='OPEN' AND rv.state='RETURNED'
         AND clock_timestamp()>=w.opens_at AND clock_timestamp()<COALESCE(s.review_closes_at,w.closes_at)) ELSE NULL END AS availability
       FROM phase1_applications a JOIN rounds r ON r.id=a.cycle_id LEFT JOIN phase1_reviews rv ON rv.application_id=a.id
       LEFT JOIN phase1_cycle_windows w ON w.cycle_id=a.cycle_id LEFT JOIN coordinator_round_schedules s ON s.cycle_id=a.cycle_id
       WHERE a.student_id=$1 ORDER BY a.created_at DESC,a.id LIMIT 100`,[actor.studentId])).rows;
-    return rows.map(row=>{const access=intake.access(actor,row.cycle_id);return {...row,access,...(access.read_only?{availability:{...row.availability,can_edit:false}}:{})};});
+    return Promise.all(rows.map(async row=>{const access=intake.access(actor,row.cycle_id);
+      let availability=row.availability;
+      if(['DRAFT','NEEDS_REVISION'].includes(row.status)){
+        try{const cycle=await this.repository.cycleForApplication(db,row,official),window=cycle.window;
+          availability={can_edit:Boolean(cycle.status==='OPEN' && (window?.is_open || !intake.pendingAcademic(official) && !window)),
+            opens_at:window?.opens_at,closes_at:window?.closes_at,...(window?.intake?{intake:window.intake,exception:window.exception || null}:{})};
+        }catch(error){if(error.statusCode!==404)throw error;availability={can_edit:false};}
+      }
+      return {...row,availability:{...availability,...(access.read_only?{can_edit:false}:{})},access};}));
   }
   async get(actor,id) {
     guard(actor);v.uuid(id);const db=await this.repository.pool.connect();
@@ -180,6 +191,7 @@ class ApplicationService {
       const snapshot={form_version:FORM_VERSION,...(pending?{contract_version:2,intake:{route_id:receiver.route_id,route_version:receiver.route_version},
         assessment:{eligibility:result.eligibility,group_gpa:result.group_gpa,review_required:true,review_flags:result.review_flags,source:'STUDENT_DECLARED'},
         declared_academic:{curriculum:app.payload.curriculum,major_group:app.payload.major_group,entry_year:official.registration.entry_year,program_type:official.registration.program_type,source:'STUDENT_DECLARED'}}:{}),
+        ...(cycle.window.intake?{intake_control:{...cycle.window.intake,exception:cycle.window.exception || null,return_version:cycle.window.return_version || null}}:{}),
         official,payload:app.payload,policy:safePolicy(policy),documents,delivery:destination,
         cycle:{id:cycle.id,name:cycle.name,academic_year:cycle.academic_year,semester:cycle.semester,
           opens_at:cycle.window.opens_at,closes_at:cycle.window.closes_at,window_version:cycle.window.version},
