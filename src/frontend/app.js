@@ -71,7 +71,7 @@ if (root) {
       window.sessionStorage?.setItem('co-ed:access-token', token);
       window.sessionStorage?.setItem('co-ed:auth-mode', 'tu-auth');
       try {
-        const verified = await tuSessionClient.loadSession();
+        const verified = await tuSessionClient.loadSession({requireOwner:true});
         if (verified.role !== 'STUDENT' || verified.user?.id!==data.user?.id || verified.studentId!==data.user?.studentId) throw new Error('ยังยืนยันเจ้าของบัญชีไม่ได้ กรุณาเข้าสู่ระบบใหม่');
       } catch (error) { clearTuAuthStorage(); throw error; }
       window.location.hash = '#/student/profile';

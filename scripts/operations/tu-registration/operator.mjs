@@ -159,6 +159,12 @@ export async function stage(s){
  }
  s.status='RELEASE_STAGED_NOT_ROUTED';save(s.path,s);return report(s);
 }
+export function refreshReleaseSource(s,candidate){
+ fixed(s.task==='registration019'&&s.applied&&s.credentialReady&&s.ownerCleanupVerified&&!s.versions&&s.sqlSha256===candidate.sqlSha256,'RELEASE_REFRESH_SCOPE');
+ fixed(!cleanSource().dirty&&candidate.source.head===cleanSource().head,'COMMITTED_SOURCE_REQUIRED');
+ s.releaseSourceHistory=[...(s.releaseSourceHistory||[]),{source:s.source,artifacts:s.artifacts}];
+ s.source=candidate.source;s.artifacts=candidate.artifacts;save(s.path,s);return report(s);
+}
 export async function activate(s){
  caller();guardSource(s);checkMaintenance();fixed(s.status==='RELEASE_STAGED_NOT_ROUTED');
  // No credential or signed proof is fabricated. The existing exact live alias

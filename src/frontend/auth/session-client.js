@@ -19,7 +19,7 @@ function buildMeEndpoint(apiBaseUrl, currentOrigin) {
   }
 }
 
-async function parseSuccessResponse(response) {
+async function parseSuccessResponse(response,requireOwner=false) {
   let payload;
 
   try {
@@ -37,6 +37,11 @@ async function parseSuccessResponse(response) {
   // whether review controls are rendered (#77); the backend re-checks every command.
   // Identity/profile/scope fields belong to downstream features.
   const canReviewPlan = role === 'STAFF' && payload?.data?.capabilities?.canReviewPlan === true;
+  if(requireOwner){
+    const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
+    if(role!=='STUDENT'||!uuid.test(payload.data.user?.id)||!uuid.test(payload.data.studentId))throw new AuthShellError(AUTH_ERROR_CODES.INVALID_RESPONSE);
+    return Object.freeze({role,canReviewPlan,user:Object.freeze({id:payload.data.user.id}),studentId:payload.data.studentId});
+  }
   return Object.freeze({ role, canReviewPlan });
 }
 
@@ -65,7 +70,7 @@ export function createSessionClient({
   const endpoint = buildMeEndpoint(apiBaseUrl, currentOrigin);
 
   return Object.freeze({
-    async loadSession({ signal } = {}) {
+    async loadSession({ signal,requireOwner=false } = {}) {
       const accessToken = await getAccessToken();
       let response;
 
@@ -94,7 +99,7 @@ export function createSessionClient({
         throw mapFailureStatus(response.status);
       }
 
-      return parseSuccessResponse(response);
+      return parseSuccessResponse(response,requireOwner);
     }
   });
 }
