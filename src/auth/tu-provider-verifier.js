@@ -67,12 +67,19 @@ class TuProviderVerifier {
     if(response.status===400 && payload?.message==='Could not read the request body!')throw new ServiceUnavailableError('ระบบทะเบียนไม่สามารถอ่านคำขอยืนยันตัวตน กรุณาติดต่อผู้ดูแล','TU_API_REQUEST_REJECTED');
     if(!response.ok || payload?.status!==true || payload.type!=='student' || (Object.hasOwn(payload,'username') && payload.username!==studentId))
       throw new UnauthorizedError('ไม่สามารถยืนยันตัวตนได้ กรุณาตรวจสอบบัญชีและรหัสผ่าน','INVALID_CREDENTIALS');
-    const proof=Object.freeze({issuer:this.issuer,subject:studentId,verifiedAt:this.clock()});proofs.set(proof,this);return proof;
+    const proof=Object.freeze({issuer:this.issuer,subject:studentId,verifiedAt:this.clock()});
+    const fields=['displayname_th','displayname_en','email','faculty','department','tu_status','statusid'];
+    const profile=Object.fromEntries(fields.map(k=>[k,typeof payload[k]==='string' && payload[k].length<=500?payload[k]:null]));
+    proofs.set(proof,{owner:this,profile:Object.freeze(profile)});return proof;
   }
   assertVerifiedProof(proof){
-    if(proofs.get(proof)!==this || proof.issuer!==this.issuer || !/^\d{10}$/.test(proof.subject) || this.clock()<proof.verifiedAt || this.clock()-proof.verifiedAt>300000)
+    if(proofs.get(proof)?.owner!==this || proof.issuer!==this.issuer || !/^\d{10}$/.test(proof.subject) || this.clock()<proof.verifiedAt || this.clock()-proof.verifiedAt>300000)
       throw new ForbiddenError('ต้องยืนยันตัวตน TU ใหม่','TU_PROOF_REQUIRED');
     return proof;
+  }
+  registrationIdentity(proof){
+    this.assertVerifiedProof(proof);
+    return require('./tu-registration-contract').fromProvider(proofs.get(proof).profile,proof.subject);
   }
 }
 module.exports={TuProviderVerifier,validateTuLogin,DEFAULT_TU_API_URL,TU_API_URLS,SECRET_ARN};

@@ -22,6 +22,7 @@ class TuSessionService {
         AND NOT EXISTS(SELECT 1 FROM external_identity_links other WHERE other.user_id=u.id AND other.status='ACTIVE' AND other.id<>l.id)`,
     [identity.studentId,identity.userId,subject,this.issuer])).rows[0];
     if(!profile || profile.student_number!==subject)throw new ForbiddenError('บัญชียังไม่พร้อมใช้งาน กรุณาติดต่อผู้ดูแล','TU_LINK_REQUIRED');
+    if(identity.onboarding)profile.onboarding=require('./tu-registration-contract').metadata(identity.onboarding,profile);
     const keys=await getKeys(),now=Math.floor(this.clock()/1000),expiresIn=900;
     const accessToken=signTuJwt({sub:subject,iss:this.issuer,client_id:this.clientId,token_use:'access',scope:'coed-api/access',iat:now,nbf:now,exp:now+expiresIn},{privateKey:keys.privateKey,kid:this.kid});
     return {accessToken,tokenType:'Bearer',expiresIn,mode:'tu_api',user:{id:identity.userId,role:'STUDENT',studentId:profile.id},profile};

@@ -4,6 +4,11 @@ const ERRORS=Object.freeze({
   INVALID_CREDENTIALS:[401,'ไม่สามารถยืนยันตัวตนได้ กรุณาตรวจสอบบัญชีและรหัสผ่าน'],
   TU_ACCOUNT_UNAVAILABLE:[403,'บัญชียังไม่พร้อมใช้งาน กรุณาติดต่อผู้ดูแล'],
   TU_ATTESTATION_REJECTED:[403,'Access denied.'],
+  TU_REGISTRATION_REJECTED:[403,'กรุณาเข้าสู่ระบบด้วย TU ใหม่ ลิงก์ลงทะเบียนอาจหมดอายุ'],
+  TU_REGISTRATION_STATUS:[403,'สถานะจาก TU ไม่ใช่ปกติ กรุณาติดต่อผู้ประสานงาน'],
+  TU_REGISTRATION_PROFILE:[403,'ข้อมูลจาก TU ยังไม่ครบ กรุณาติดต่อผู้ประสานงาน'],
+  TU_REGISTRATION_CONFLICT:[409,'บัญชีมีการเปลี่ยนแปลง กรุณาเข้าสู่ระบบใหม่ หรือติดต่อผู้ประสานงาน'],
+  TU_REGISTRATION_UNAVAILABLE:[503,'ระบบลงทะเบียนยังไม่พร้อม กรุณาลองใหม่'],
   TU_LOGIN_RATE_LIMIT:[429,'กรุณารอสักครู่แล้วลองเข้าสู่ระบบใหม่'],
   TU_API_RATE_LIMIT:[429,'ระบบมหาวิทยาลัยจำกัดจำนวนคำขอ กรุณารอสักครู่'],
   TU_AUTH_UNAVAILABLE:[503,'ระบบยืนยันตัวตนยังตั้งค่าไม่ครบ'],
@@ -17,7 +22,7 @@ const ERRORS=Object.freeze({
   NOT_FOUND:[404,'Not found.'],METHOD_NOT_ALLOWED:[405,'Method not allowed.']
 });
 function safeError(error){
-  const code=error?.statusCode===403 && error?.code!=='TU_ATTESTATION_REJECTED'?'TU_ACCOUNT_UNAVAILABLE':
+  const code=error?.statusCode===403 && error?.code!=='TU_ATTESTATION_REJECTED' && !/^TU_REGISTRATION_/.test(error?.code || '')?'TU_ACCOUNT_UNAVAILABLE':
     Object.hasOwn(ERRORS,error?.code)?error.code:'TU_SESSION_UNAVAILABLE';
   return {code,status:ERRORS[code][0],message:ERRORS[code][1]};
 }

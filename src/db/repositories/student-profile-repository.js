@@ -70,7 +70,12 @@ class StudentProfileRepository {
     `;
 
     const result = await this.query(query, [studentId, userId]);
-    return result?.rows?.[0] || null;
+    const profile=result?.rows?.[0] || null;
+    if(profile && process.env.TU_ONBOARDING_ENABLED==='true') {
+      const onboarding=await require('../../auth/tu-registration-profile').loadRegistrationProfile(this.getDbPool(),studentId,userId,profile);
+      if(onboarding)profile.onboarding=onboarding;
+    }
+    return profile;
   }
 
   /**

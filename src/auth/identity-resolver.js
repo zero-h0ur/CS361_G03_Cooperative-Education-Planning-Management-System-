@@ -183,8 +183,12 @@ class IdentityResolver {
     }
 
     // 7. Student role completeness and ownership link check per Issue #51
+    let onboarding;
     if (record.role === 'STUDENT') {
-      if (!record.student_id || !hasCompleteStudentProfile(record)) {
+      if (record.student_id && !hasCompleteStudentProfile(record) && process.env.TU_ONBOARDING_ENABLED==='true') {
+        onboarding=await require('./tu-registration-profile').loadRegistrationProfile(pool,record.student_id,record.user_id,record);
+      }
+      if (!record.student_id || (!hasCompleteStudentProfile(record) && !onboarding)) {
         throw createForbidden(
           'Student account provisioning is incomplete.',
           'INCOMPLETE_PROVISIONING'
@@ -207,7 +211,8 @@ class IdentityResolver {
       program: record.program || null,
       major: record.major || null,
       academicYear: record.academic_year || null,
-      enrollmentStatus: record.enrollment_status || null
+      enrollmentStatus: record.enrollment_status || null,
+      ...(onboarding?{onboarding}:{})
     };
   }
 }
