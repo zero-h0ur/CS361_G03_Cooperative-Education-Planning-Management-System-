@@ -116,7 +116,7 @@ export function invokeOwner(s,mode){
  const file=join(dirname(s.path),'owner019-result-'+(++s.ownerInvocations)+'.json');fixed(!existsSync(file));save(s.path,s);
  const response=aws(['lambda','invoke','--function-name',arn(T.name)+':'+s.ownerVersion,'--invocation-type','RequestResponse','--log-type','None',
   '--cli-binary-format','raw-in-base64-out','--payload',JSON.stringify({contract:T.contract,runId:s.runId,mode}),'--cli-read-timeout','110',file],{timeout:115000});
- fixed(response.StatusCode===200&&!response.FunctionError&&response.ExecutedVersion===s.ownerVersion&&lstatSync(file).size<5000);
+ fixed(response.StatusCode===200&&!response.FunctionError&&response.ExecutedVersion===s.ownerVersion&&lstatSync(file).size<16000);
  const result=JSON.parse(readFileSync(file,'utf8'));fixed(result.contract===T.contract);s.ownerResult=result;
  if(result.ok){if(mode==='trial'){fixed(result.result.preservationVerified);s.trialPassed=true;s.status='OWNER_TRIAL_PASSED';}
   if(mode==='apply'){fixed(result.result.applied||result.result.idempotentReplay);s.applied=true;s.status='SCHEMA019_APPLIED';}
