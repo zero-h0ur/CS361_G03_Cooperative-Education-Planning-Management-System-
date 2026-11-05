@@ -10,14 +10,16 @@ requires a fresh TU verification and the owner's first-login form.
 
 Deployment remains **verification-only**. A subsequent owner clarification
 supersedes the earlier UI acceptance interpretation: TU verification reaches the
-first-registration form, but confirming it returns503. Completed registration,
-Student workspace access and an independent owner smoke are **not yet verified**.
+first-registration form, but confirming it returned503. The confirmed missing
+issuer public-key configuration is now corrected; live configuration/negative
+checks passed. Completed registration, Student workspace access and an independent
+owner smoke are **not yet verified**.
 
 | Resource | Live result |
 | --- | --- |
 | API Lambda | `coed-api:live` → version3 |
 | External TU broker | `coed-tu-auth:live` → version5 |
-| Private issuer | `coed-tu-session-issuer:live` → version3 |
+| Private issuer | `coed-tu-session-issuer:live` → version4 (configuration-only follow-up; initially3) |
 | New HTTP route | `POST /api/v3/auth/tu-register`, existing broker integration |
 | Frontend | Amplify job29 `SUCCEED`; published JS exactly matches packaged bytes |
 | Runtime capability | Separate registration Secret and EXECUTE-only role; login role remains SELECT-only |
@@ -155,3 +157,38 @@ the unchanged code and revision-guard its live alias. Keep API/broker/frontend,
 database/IAM/Secrets and verify-only maintenance unchanged. Roll back only that
 alias if necessary; do not replay019 or rerun the owner migration tool. Genuine
 registration completion still requires a fresh owner Login and UI confirmation.
+
+### Configuration-only hotfix completed
+
+Source commit `45a663d` contains the environment guard and regression tests. A
+preflight pinned API3/broker5/issuer3 code hashes, verified issuer `$LATEST`
+matched live3, matched broker/API verification configuration and the reviewed
+public-key fingerprint, and verified the existing private Invoke restriction.
+Only `TU_AUTH_PUBLIC_KEY` and `TU_AUTH_KEY_ID` were added to the existing issuer
+environment. Revision guards were used for the configuration and alias updates.
+
+Issuer version4 was published with **unchanged executable code**, SHA256/base64:
+`QlOfuYdpBjVhuOEIpQYeXZljVSfjH7HQwF590fvuV28=`. Live now points to4; version3 is
+retained as the exact alias-only rollback target. API3, broker5, frontend job29,
+SQL019, database contents, IAM/endpoint policies, Secrets and business maintenance
+were not changed by the operator. No new standing service or permission was added.
+Checkpoint details are under `registrationKeyHotfix` in the existing ignored
+`production-o9DZU6/state.json`; it records only hashes/versions and safe metadata.
+
+Post-change checks passed:
+
+- Direct IAM-only issuer4 **completion** request with an intentionally invalid
+  ticket returns403 `TU_REGISTRATION_REJECTED`, not signing503, with no session or
+  database write. This exercises the missing-key path the public broker's own
+  early invalid-ticket rejection would otherwise hide. No genuine proof was
+  fabricated and no credentials/signing Secret were read by the operator.
+- The seven public status/invalid-input/anonymous/maintenance checks in the table
+  above passed again unchanged. Unauthorized access still fails closed.
+- Live metadata confirms issuer4 has the reviewed public-key fingerprint and the
+  same code hash; API3/broker5 remain unchanged, API maintenance remains `verify`.
+
+The owner was asked to freshly Login and confirm the two-field form, then report
+only Student workspace success or a fixed error code. Their old ticket expires
+after five minutes. The admission-year field means year of entering university,
+not birth year. **Genuine completion remains pending**; negative checks alone do
+not prove registration/session/database success. No global write resume is implied.

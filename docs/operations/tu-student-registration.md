@@ -113,3 +113,13 @@ year, and confirm the form. Student navigation is expected only after server
 registration/session and canonical `/me` owner validation succeed. Independent
 hidden-input Login smoke may then verify `/me` and own profile. Keep success
 pending until genuine completion is observed; do not reuse chat passwords.
+
+November5 follow-up: live issuer4 corrects the missing public verification
+configuration from issuer3 with identical executable code. Only the issuer's
+public key/key ID changed; API3/broker5 and verify-only maintenance did not.
+The precise hotfix rollback is revision-guarding `coed-tu-session-issuer:live`
+from4 back to3 after checking the current alias, code hash and checkpoint
+`registrationKeyHotfix`. Do not use this incident to replay019 or restore the
+database. This rollback would restore the known registration503, so use only
+for an observed regression and keep genuine accounts/data intact. See the
+[rollout evidence](../evidence/tu-student-registration-rollout.md).
