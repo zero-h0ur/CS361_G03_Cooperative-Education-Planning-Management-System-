@@ -65,9 +65,12 @@ async function invoke(version,event){
   fixed(r.StatusCode===200 && !r.FunctionError && r.ExecutedVersion===version,'NUMERIC_VERSION_INVOKE_FAILED');
   return JSON.parse(Buffer.from(r.Payload).toString());
 }
-async function publicCall(event){const method=event.requestContext.http.method;
-  const r=await fetch(BASE+event.rawPath+(event.rawQueryString?'?'+event.rawQueryString:''),{method,body:event.body,
-    headers:event.body?{'Content-Type':'application/json'}:{},redirect:'error',signal:AbortSignal.timeout(15000)});
+export function publicRequest(event){const method=event.requestContext.http.method;
+  const body=method==='GET'||method==='HEAD'?undefined:event.body;
+  return {method,body,headers:body?{'Content-Type':'application/json'}:{},redirect:'error'};
+}
+async function publicCall(event){
+  const r=await fetch(BASE+event.rawPath+(event.rawQueryString?'?'+event.rawQueryString:''),{...publicRequest(event),signal:AbortSignal.timeout(15000)});
   return {statusCode:r.status,body:await r.text()};}
 export async function prepare(candidate){
   caller();fixed(!git(['status','--porcelain']),'SOURCE_NOT_CLEAN');

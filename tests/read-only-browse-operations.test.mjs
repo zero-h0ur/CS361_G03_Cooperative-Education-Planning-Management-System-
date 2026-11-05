@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {resolve,join} from 'node:path';
-import {approvedEnvironment,probe,within} from '../scripts/operations/read-only-browse.mjs';
+import {approvedEnvironment,probe,within,publicRequest} from '../scripts/operations/read-only-browse.mjs';
 const id='11111111-1111-4111-8111-111111111111';
 function transport(change=()=>null){const calls=[];return {calls,call:async event=>{
   calls.push(event);const replaced=change(event);if(replaced)return replaced;
@@ -15,6 +15,14 @@ test('only verify -> browse changes; all unrelated configuration remains identic
   const old={COED_API_MAINTENANCE:'verify',TU_ONBOARDING_ENABLED:'true',OTHER:'synthetic-only'};
   assert.deepEqual(approvedEnvironment(old),{...old,COED_API_MAINTENANCE:'browse'});assert.equal(old.COED_API_MAINTENANCE,'verify');
   for(const mode of ['off','browse',undefined])assert.throws(()=>approvedEnvironment({...old,COED_API_MAINTENANCE:mode}));
+});
+test('actual Fetch Request construction omits synthetic bodies on GET/HEAD and retains POST validation bodies',()=>{
+  for(const method of ['GET','HEAD']){
+    const init=publicRequest({requestContext:{http:{method}},body:'{}'});
+    assert.equal(init.body,undefined);assert.doesNotThrow(()=>new Request('https://example.invalid',init));
+  }
+  const init=publicRequest({requestContext:{http:{method:'POST'}},body:'{}'});
+  assert.equal(init.body,'{}');assert.equal(init.headers['Content-Type'],'application/json');
 });
 test('numeric/public smoke requires real nonempty public reads and denied anonymous/private/write requests',async()=>{
   const t=transport(),result=await probe(t.call);assert.equal(result.writesBlocked,true);assert.equal(result.ownerPositivePending,true);
