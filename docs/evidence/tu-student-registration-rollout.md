@@ -8,9 +8,10 @@ rows and migration history. No Student account, identity link, academic profile,
 application or mock record was created by the operator. Genuine account creation
 requires a fresh TU verification and the owner's first-login form.
 
-Deployment remains **verification-only**. The owner has now reported successful
-TU Login and seeing their own profile. This is owner-reported UI acceptance, not
-an independently executed CLI smoke or a successful application submission.
+Deployment remains **verification-only**. A subsequent owner clarification
+supersedes the earlier UI acceptance interpretation: TU verification reaches the
+first-registration form, but confirming it returns503. Completed registration,
+Student workspace access and an independent owner smoke are **not yet verified**.
 
 | Resource | Live result |
 | --- | --- |
@@ -111,3 +112,46 @@ point. No new snapshot was created and no restore was attempted. Routine rollbac
 is to pause registration and restore the recorded Lambda aliases while retaining
 019 and genuine accounts, never to drop tables or overwrite live business data.
 See the [runbook](../operations/tu-student-registration.md).
+
+## Follow-up: first-registration confirmation503
+
+The owner supplied a failing `POST /api/v3/auth/tu-register` with the fixed message
+indicating incomplete authentication configuration. The preceding acceptance
+report above is retained as history, but must not be used as successful
+registration or Student workspace evidence. No identity values, credentials,
+registration ticket or screenshot are copied into this report.
+
+Local production-shaped reproduction confirms that an issuer without
+`TU_AUTH_PUBLIC_KEY` throws503 `TU_SIGNING_UNAVAILABLE` **before** opening the
+provisioning database connection. The original issuer deployment only needed a
+private signing Secret for Login;019 staging inherited this environment without
+adding the public key now needed by registration completion. Existing unit tests
+injected a public key into the service and did not exercise the ambient production
+configuration path.
+
+The staging controller now assembles the issuer environment from the existing
+verifier's public key, matching issuer/client/key ID and rejecting a conflicting
+existing key. It validates this before any staging mutation, preserves all other
+issuer fields and adds no Secret permissions. New regression tests exercise the
+old503, valid completion without an injected service key, wrong-key rejection
+before provisioning, idempotent environment assembly and invalid/mismatched
+configuration. Only synthetic identities and generated local test keys are used.
+
+Local checks so far:15 Node environment/operations tests,64 registration/split
+Auth Jest tests and59 onboarding/session/profile Jest tests passed,0 skipped.
+Syntax lint passed299 modules; documentation checks passed. The first frontend
+test build was blocked by sandbox directory access; rerunning the same build and
+tests outside that filesystem restriction passed. After the owner refreshed the
+expired AWS session, read-only inspection confirmed issuer3 lacks the public key.
+Broker5 and API3 have the same reviewed RSA public-key fingerprint. Recent issuer3
+logs contain `TU_SIGNING_UNAVAILABLE`, stage `identity`, status503, with matching
+broker5 errors. This confirms the missing verification configuration, rather than
+a browser-navigation defect. No AWS resource, permission, database row, live alias
+or maintenance flag has been changed at this pre-hotfix checkpoint.
+
+The approved narrow next step is to verify the cause, then restore the existing
+matching **public** verification configuration on the private issuer only, publish
+the unchanged code and revision-guard its live alias. Keep API/broker/frontend,
+database/IAM/Secrets and verify-only maintenance unchanged. Roll back only that
+alias if necessary; do not replay019 or rerun the owner migration tool. Genuine
+registration completion still requires a fresh owner Login and UI confirmation.

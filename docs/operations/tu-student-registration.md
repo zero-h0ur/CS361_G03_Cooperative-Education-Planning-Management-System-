@@ -32,6 +32,7 @@ Reviewed source:
 - [Owner-only trial/apply gate](../../scripts/operations/tu-registration-upgrade.mjs)
 - [Fixed temporary handler](../../scripts/operations/tu-registration/handler.mjs)
 - [Checkpointed operator](../../scripts/operations/tu-registration/operator.mjs)
+- [Issuer verification environment guard](../../scripts/operations/tu-registration/environment.mjs)
 
 The operator packages committed clean source. `prepare` checks exact live versions,
 maintenance, integrations, role/Secret absence and the existing encrypted approved
@@ -82,3 +83,33 @@ proof, owner mismatch, replay/races, audit rollback, role capabilities, migratio
 trial/apply/replay and actual SELECT-only session → `/me` → own profile on a
 disposable PostgreSQL database. Production acceptance requires separate live
 evidence; local pass is not a claim that a real Login succeeded.
+
+## First-registration confirmation returns503
+
+Distinguish reaching the immutable TU identity form from completing registration.
+Do not navigate to Student, invent a profile or mark acceptance passed while
+`POST /api/v3/auth/tu-register` fails. Read only fixed error code/stage/status/
+Lambda-version fields and configuration metadata; never copy raw credentials,
+registration tickets, provider profiles, complete environments or Secret values.
+
+`TU_SIGNING_UNAVAILABLE` can occur before the provisioning connection is opened
+when the issuer lacks `TU_AUTH_PUBLIC_KEY`. The broker has its own public key,
+so its successful TU verification/registration-begin path does not prove issuer
+completion readiness. Check the issuer's published **live** version rather than
+only `$LATEST`. Match RSA public-key fingerprints, issuer, client ID and key ID
+against the existing broker/API. Never copy private keys or add Secret access to
+work around a missing public verification setting.
+
+For a confirmed configuration-only defect, preserve every existing issuer value
+and all other resources; publish the same issuer code with the matching public
+verification configuration, then revision-guard only its live alias. Record the
+old/new versions and hashes, verify maintenance stays `verify`, and retain an
+alias-only rollback. This does not require a new migration or owner tool. Do not
+rerun the historical deployment controller against already-applied019.
+
+After configuration checks, the owner must freshly Login (registration tickets
+expire after five minutes), enter the actual admission year rather than birth
+year, and confirm the form. Student navigation is expected only after server
+registration/session and canonical `/me` owner validation succeed. Independent
+hidden-input Login smoke may then verify `/me` and own profile. Keep success
+pending until genuine completion is observed; do not reuse chat passwords.

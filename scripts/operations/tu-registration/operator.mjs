@@ -7,6 +7,7 @@ import {execFileSync} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import {build} from 'esbuild';
 import {T} from './handler.mjs';
+import {issuerRegistrationEnvironment} from './environment.mjs';
 import {readRegistrationSql,SQL_SHA256} from '../tu-registration-upgrade.mjs';
 import {packageTuAuth,publicCa} from '../../package-tu-auth.mjs';
 import {archiveFiles,createZip} from '../zip-archive.mjs';
@@ -141,6 +142,14 @@ export function cleanup(s){
 }
 export async function stage(s){
  caller();guardSource(s);checkMaintenance();fixed(s.credentialReady&&s.ownerCleanupVerified&&!s.versions);
+ // Completion verifies a registration ticket before connecting to the DB. The
+ // older issuer could sign login sessions without a public-key environment;
+ // inheriting it unchanged silently breaks only first-registration completion.
+ // Validate the complete issuer environment before any IAM/code mutation.
+ const verifier=aws(['lambda','get-function-configuration','--function-name','coed-tu-auth','--qualifier','live']);
+ fixed(verifier.Version===BASE['coed-tu-auth'].version&&verifier.CodeSha256===BASE['coed-tu-auth'].hash,'LIVE_BASELINE_DRIFT');
+ const currentIssuer=aws(['lambda','get-function-configuration','--function-name','coed-tu-session-issuer']);
+ const issuerEnv=issuerRegistrationEnvironment(currentIssuer.Environment?.Variables,verifier.Environment?.Variables,s.registrationSecret);
  const statement={Sid:'CoedRegistration019IssuerRead',Effect:'Allow',Principal:'*',Action:'secretsmanager:GetSecretValue',Resource:s.registrationSecret,Condition:{ArnEquals:{'aws:PrincipalArn':roleArn('coed-tu-session-role')}}};
  fixed(!aws(['iam','list-role-policies','--role-name','coed-tu-session-role']).PolicyNames.includes('CoedTuRegistration019Read'),'EXISTING_REGISTRATION_POLICY');
  aws(['iam','put-role-policy','--role-name','coed-tu-session-role','--policy-name','CoedTuRegistration019Read','--policy-document',JSON.stringify({Version:'2012-10-17',Statement:[{Effect:'Allow',Action:'secretsmanager:GetSecretValue',Resource:s.registrationSecret}]})]);
@@ -148,8 +157,8 @@ export async function stage(s){
  s.versions={};save(s.path,s);
  for(const [name,key,timeout] of [['coed-tu-session-issuer','issuer',20],['coed-api','api',15],['coed-tu-auth','broker',28]]){
   const c=aws(['lambda','get-function-configuration','--function-name',name]),b=BASE[name];fixed(c.CodeSha256===b.hash,'LATEST_CODE_DRIFT');
-  const v={...c.Environment.Variables,TU_ONBOARDING_ENABLED:'true'};
-  if(key==='issuer'){fixed(v.DB_USER==='coed_tu_login'&&v.TU_SESSION_FUNCTION_ARN===arn(name)+':live');v.TU_REGISTRATION_DB_SECRET_ARN=s.registrationSecret;}
+  const v=key==='issuer'?issuerRegistrationEnvironment(c.Environment?.Variables,verifier.Environment?.Variables,s.registrationSecret):{...c.Environment.Variables,TU_ONBOARDING_ENABLED:'true'};
+  if(key==='issuer'){fixed(v.TU_SESSION_FUNCTION_ARN===arn(name)+':live'&&hash(v)===hash(issuerEnv),'ISSUER_ENVIRONMENT_DRIFT');}
   if(key==='api')fixed(v.COED_API_MAINTENANCE==='verify');
   fixed(hash(readFileSync(s.artifacts[key].file))===s.artifacts[key].sha256);
   aws(['lambda','update-function-code','--function-name',name,'--revision-id',c.RevisionId,'--zip-file','fileb://'+s.artifacts[key].file]);
