@@ -70,7 +70,7 @@ export function createHandler({env=process.env,clock=Date.now,connect=connection
    let result=await upgrade({client:guarded,expectedDatabase:T.database,mode:mode==='apply'?'apply':'trial',maintenanceApproved:true});
    if(mode==='credential'){if(!result.idempotentReplay)fail('REGISTRATION_OWNER_APPLY_REQUIRED');result=await provision(c,sm,env);}
    return {contract:T.contract,ok:true,mode,result};
-  }catch(e){code=e.safeCode||'REGISTRATION_OWNER_OPERATION_FAILED';return {contract:T.contract,ok:false,error:{code,...(e.sqlState?{sqlState:e.sqlState}:{})}};}
+  }catch(e){code=e.safeCode||'REGISTRATION_OWNER_OPERATION_FAILED';return {contract:T.contract,ok:false,error:{code,...(e.sqlState?{sqlState:e.sqlState}:{}),...(e.safeMetadata?{metadata:e.safeMetadata}:{})}};}
   finally{if(c){await c.query('ROLLBACK').catch(()=>{});await c.end().catch(()=>{});}sm?.destroy?.();logger(JSON.stringify({mode:mode||'rejected',code,version:context.functionVersion||'unpublished'}));}
  };
 }

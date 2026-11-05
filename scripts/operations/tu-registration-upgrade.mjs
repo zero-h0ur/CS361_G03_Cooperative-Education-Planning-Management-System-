@@ -20,7 +20,13 @@ export async function registrationCatalog(client){
  }
  return reader.assertSafeCatalog(result);
 }
-export const registrationCatalogHash=(value,schema='public')=>sha256(JSON.stringify(normalizedCatalog(value,schema)).replaceAll(schema,'__schema__'));
+export function registrationCatalogHash(value,schema='public'){
+ const normalized=normalizedCatalog(value,schema);
+ // PostgreSQL retains optional identifier quotes in proconfig. Fixture schemas
+ // and public must represent the same fixed, trusted search_path semantically.
+ for(const r of normalized.routines)if(r.settings)r.settings=r.settings.map(s=>s.replaceAll('"'+schema+'"','__schema__').replaceAll(schema,'__schema__'));
+ return sha256(JSON.stringify(normalized).replaceAll(schema,'__schema__'));
+}
 async function capabilities(client){
  const roles=(await client.query(`SELECT rolname,rolcanlogin,rolsuper,rolinherit,rolcreatedb,rolcreaterole,rolreplication,rolbypassrls,
   EXISTS(SELECT 1 FROM pg_auth_members WHERE member=r.oid OR roleid=r.oid) AS memberships,
@@ -76,11 +82,13 @@ export async function upgradeRegistration({client,expectedDatabase,expectedSchem
   if(expectedSchema!=='public' && (process.env.NODE_ENV!=='test'||!expectedDatabase.endsWith('_test')||!/^present_[a-f0-9]+$/.test(expectedSchema)))fail('REGISTRATION_OWNER_TARGET_REQUIRED');
   const adapted=expectedSchema==='public'?sql:sql.replaceAll('public.',identifier(expectedSchema)+'.').replaceAll('SCHEMA public','SCHEMA '+identifier(expectedSchema)).replaceAll('pg_catalog,public','pg_catalog,'+identifier(expectedSchema));
   await client.query(adapted);await capabilities(client);
-  if(registrationCatalogHash(await registrationCatalog(client),expectedSchema)!==POST_SHA256)fail('REGISTRATION_POSTCONDITION');
+  const postCatalog=await registrationCatalog(client),postHash=registrationCatalogHash(postCatalog,expectedSchema);
+  if(postHash!==POST_SHA256){const e=Error('REGISTRATION_POSTCONDITION');e.safeCode=e.message;
+   e.safeMetadata={postCatalogSha256:postHash,sections:Object.fromEntries(Object.entries(normalizedCatalog(postCatalog,expectedSchema)).map(([k,v])=>[k,sha256(JSON.stringify(v).replaceAll(expectedSchema,'__schema__'))]))};throw e;}
   if(await fingerprint(client,expectedSchema,names)!==preserved)fail('REGISTRATION_PRESERVATION_FAILED');
   await client.query('INSERT INTO schema_migrations(version,checksum) VALUES($1,$2)',[VERSION,SQL_SHA256]);
   await client.query(mode==='apply'?'COMMIT':'ROLLBACK');began=false;
   return {applied:mode==='apply',idempotentReplay:false,preservationVerified:true,version:VERSION,sqlSha256:SQL_SHA256,postCatalogSha256:POST_SHA256};
  }catch(e){if(began)await client.query('ROLLBACK').catch(()=>{});const error=Error(e.safeCode||'REGISTRATION_UPGRADE_FAILED');error.safeCode=error.message;
-  if(/^[A-Z0-9]{5}$/.test(e.code||''))error.sqlState=e.code;throw error;}
+  if(/^[A-Z0-9]{5}$/.test(e.code||''))error.sqlState=e.code;if(e.safeMetadata)error.safeMetadata=e.safeMetadata;throw error;}
 }

@@ -99,6 +99,16 @@ export async function activateOwner(s,trial=false){
  const ready=await waitActive(T.name),v=aws(['lambda','publish-version','--function-name',T.name,'--revision-id',ready.RevisionId,'--code-sha256',ready.CodeSha256]).Version;
  fixed(/^[1-9][0-9]*$/.test(v));putDeny(T.name,[OPERATOR],v);s.ownerVersion=v;save(s.path,s);return report(s);
 }
+export async function refreshOwner(s,candidate){
+ caller();checkMaintenance();fixed(s.task==='registration019'&&!s.applied&&!s.trialPassed&&s.owned.ownerFunction&&s.sqlSha256===candidate.sqlSha256,'OWNER_REFRESH_SCOPE');
+ fixed(!cleanSource().dirty&&candidate.source.head===cleanSource().head,'COMMITTED_SOURCE_REQUIRED');
+ const c=ownerConfig(s);fixed(hash(readFileSync(candidate.artifacts.owner.file))===candidate.artifacts.owner.sha256);
+ s.ownerRefresh={oldSource:s.source,oldOwner:s.artifacts.owner,newSource:candidate.source,newOwner:candidate.artifacts.owner};save(s.path,s);
+ aws(['lambda','put-function-concurrency','--function-name',T.name,'--reserved-concurrent-executions','0']);
+ aws(['lambda','update-function-code','--function-name',T.name,'--revision-id',c.RevisionId,'--zip-file','fileb://'+candidate.artifacts.owner.file]);
+ await waitActive(T.name);s.source=candidate.source;s.artifacts=candidate.artifacts;s.ownerVersion=null;save(s.path,s);
+ aws(['lambda','put-function-concurrency','--function-name',T.name,'--reserved-concurrent-executions','1']);return report(s);
+}
 export function invokeOwner(s,mode){
  caller();guardSource(s);checkMaintenance();fixed(['trial','apply','credential'].includes(mode)&&s.ownerVersion&&s.ownerInvocations<12&&Date.parse(s.expiresAt)>Date.now());ownerConfig(s);
  if(mode!=='trial')fixed(s.trialPassed);if(mode==='credential')fixed(s.applied);
