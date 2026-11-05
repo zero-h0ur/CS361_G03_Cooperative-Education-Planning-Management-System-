@@ -24,7 +24,15 @@ function registerApplicationRoutes(router,protect,options={}) {
         return;
       }
       const body=method==='GET'?null:await parseJsonBody(req);
-      sendSuccess(res,await handle(ctx.authContext,ctx.params || [],body),200,null,{'Cache-Control':'no-store'});
+      const result=await handle(ctx.authContext,ctx.params || [],body);
+      // Private local byte targets must return through the same authenticated bridge.
+      // Never rewrite S3 targets or allow browser credentials onto arbitrary hosts.
+      if(ctx.authProvider==='tu')for(const key of ['upload','download']) {
+        const target=result?.[key];
+        if(target?.auth_required===true && target.url?.startsWith('/api/v4/applications/'))
+          result[key]={...target,url:'/api/tu-proxy'+target.url};
+      }
+      sendSuccess(res,result,200,null,{'Cache-Control':'no-store'});
     }});
   const root='/api/v4/applications';
   reg('GET','/api/v4/application-options',true,a=>service.options(a));

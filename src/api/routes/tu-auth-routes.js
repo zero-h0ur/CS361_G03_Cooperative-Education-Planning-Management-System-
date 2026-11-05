@@ -1,7 +1,7 @@
 /**
  * TU Authentication Routes for CO-ED V3/V4.
  * Provides public login endpoint POST /api/v3/auth/tu-login and GET /api/v3/auth/tu-status.
- * Supports Hybrid mode (Real TU API when configured, else Local DB fallback).
+ * Server-verified TU only; no offline/local authentication fallback.
  */
 
 const { parseJsonBody, assertAllowedQueryParameters } = require('../router');
@@ -25,13 +25,9 @@ function registerTuAuthRoutes(router, options = {}) {
   // 1. POST /api/v3/auth/tu-login
   router.post(TU_LOGIN_PATH, async (request, response) => {
     const body = await parseJsonBody(request);
-    const result = await tuAuthService.login({
-      studentId: body?.studentId,
-      password: body?.password,
-      tuResponse: body?.tuResponse || null
-    });
+    const result = await tuAuthService.login(body);
 
-    sendSuccess(response, result, 200);
+    sendSuccess(response, result, 200, null, {'Cache-Control':'no-store'});
   });
 
   // 2. GET /api/v3/auth/tu-status
@@ -43,10 +39,8 @@ function registerTuAuthRoutes(router, options = {}) {
     sendSuccess(
       response,
       {
-        configured: true,
-        mode: tuAuthService.isRealApiConfigured() ? 'tu_api' : 'local_fallback',
-        tuApiUrl: tuAuthService.tuApiUrl,
-        hasAppKey: tuAuthService.isRealApiConfigured()
+        configured: tuAuthService.isRealApiConfigured(),
+        mode: 'tu_api'
       },
       200
     );

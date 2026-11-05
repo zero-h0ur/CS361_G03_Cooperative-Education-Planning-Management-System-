@@ -99,6 +99,15 @@ export function sanitizeStudentProfile(data) {
     const value = data[field];
     sanitized[field] = value === undefined ? null : value;
   }
+  if(data.onboarding){
+    const o=data.onboarding,i=o.identity;
+    if(!i||i.subject!==data.student_number||i.nameTh!==data.full_name||i.email!==data.institutional_email||i.tuStatus!=='ปกติ'||
+      !['faculty','department'].every(k=>typeof i[k]==='string'&&i[k].length>0&&i[k].length<=500)||
+      !['regular','special'].includes(o.program_type)||!Number.isInteger(o.entry_year)||o.entry_year<2500||o.entry_year>2700||
+      o.study_source!=='self_reported'||o.academic_verification!=='pending')throw new StudentProfileError(STUDENT_PROFILE_ERROR_CODES.INVALID_RESPONSE);
+    sanitized.onboarding=Object.freeze({identity:Object.freeze({subject:i.subject,nameTh:i.nameTh,email:i.email,faculty:i.faculty,department:i.department,tuStatus:i.tuStatus}),
+      program_type:o.program_type,entry_year:o.entry_year,study_source:'self_reported',academic_verification:'pending'});
+  }
 
   return Object.freeze(sanitized);
 }

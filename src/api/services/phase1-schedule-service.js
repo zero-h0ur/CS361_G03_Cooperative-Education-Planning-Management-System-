@@ -1,5 +1,7 @@
 const { randomUUID, createHash } = require('node:crypto');
 const { getPool } = require('../../db/connection');
+const v = require('./workflow-input');
+const {syncCoordinatorConfirmation,confirmationWindow:reconcileConfirmation}=require('./phase1-schedule-compat');
 const {
   UnauthorizedError,
   ForbiddenError,
@@ -36,6 +38,11 @@ class Phase1ScheduleService {
   constructor(options = {}) {
     this.injectedPool = options.pool || null;
     this.injectedNow = options.now || null;
+    this.teamsJoinUrl=null;
+    try {
+      const link=new URL(options.teamsJoinUrl ?? process.env.PHASE1_TEAMS_JOIN_URL);
+      if(link.protocol==='https:' && link.hostname==='teams.microsoft.com' && !link.username && !link.password)this.teamsJoinUrl=link.href;
+    } catch { /* Unconfigured is not a fictitious group link. */ }
   }
 
   get pool() {
@@ -58,13 +65,14 @@ class Phase1ScheduleService {
     }
     const res = await client.query('SELECT role, account_status FROM users WHERE id = $1', [actor.userId]);
     const user = res.rows[0];
-    if (!user || user.account_status !== 'ACTIVE' || !allowedRoles.includes(user.role)) {
+    if (!user || user.account_status !== 'ACTIVE' || user.role!==actor.role || !allowedRoles.includes(user.role)) {
       throw new ForbiddenError('ไม่มีสิทธิ์ทำรายการนี้');
     }
     return user;
   }
 
   async getSchedule(cycleId, actor) {
+    v.uuid(cycleId,'cycle_id');
     const db = this.pool;
     if (actor) {
       await this.verifyActiveRole(db, actor, ['STUDENT', 'COORDINATOR', 'COMMITTEE', 'STAFF', 'ADMIN']);
@@ -73,9 +81,11 @@ class Phase1ScheduleService {
     const roundRes = await db.query(
       `SELECT r.id, r.name, r.academic_year, r.semester, r.status,
               w.opens_at, w.closes_at, w.confirmation_opens_at, w.confirmation_closes_at,
-              w.announced_at, w.announced_by, w.near_deadline_hours, w.version, w.updated_at
+              w.announced_at, w.announced_by, w.near_deadline_hours, w.version, w.updated_at,
+              s.confirmation_opens_at AS legacy_confirmation_opens_at,s.confirmation_closes_at AS legacy_confirmation_closes_at
        FROM rounds r
        LEFT JOIN phase1_cycle_windows w ON w.cycle_id = r.id
+       LEFT JOIN coordinator_round_schedules s ON s.cycle_id=r.id
        WHERE r.id = $1`,
       [cycleId]
     );
@@ -84,6 +94,8 @@ class Phase1ScheduleService {
     if (!round) {
       throw new NotFoundError('ไม่พบรอบการรับสมัครที่ระบุ');
     }
+    Object.assign(round,reconcileConfirmation(round,{confirmation_opens_at:round.legacy_confirmation_opens_at,
+      confirmation_closes_at:round.legacy_confirmation_closes_at}));
 
     const currentNow = this.now();
     const nearHours = round.near_deadline_hours || DEFAULT_NEAR_DEADLINE_HOURS;
@@ -138,12 +150,14 @@ class Phase1ScheduleService {
     try {
       await client.query('BEGIN');
       await this.verifyActiveRole(client, actor, ['COORDINATOR']);
+      await this.requireCoordinatorCycle(client,actor,cycleId);
 
       if (!input || typeof input !== 'object') {
         throw new ValidationError('ข้อมูลไม่ถูกต้อง');
       }
 
       const { operation_id, expected_version, near_deadline_hours } = input;
+      v.uuid(operation_id,'operation_id');
       if (!operation_id || typeof operation_id !== 'string') {
         throw new ValidationError('กรุณาระบุ operation_id');
       }
@@ -182,9 +196,10 @@ class Phase1ScheduleService {
       }
 
       // Advisory lock for cycle schedule
-      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`phase1:schedule:${cycleId}`]);
+      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`phase1:cycle:${cycleId}`]);
 
       const reqHash = hashPayload({
+        actorId:actor.userId,action:'schedule',
         cycleId,
         opensAt,
         closesAt,
@@ -217,6 +232,11 @@ class Phase1ScheduleService {
       let newVersion = 1;
       const currentNow = this.now();
 
+      if (cur && cur.version !== expected_version) {
+        throw new ConflictError('ข้อมูลกำหนดการเปลี่ยนแล้ว กรุณาโหลดล่าสุด','STALE_RECORD_CONFLICT');
+      }
+      await syncCoordinatorConfirmation(client,cycleId,{opens_at:opensAt,closes_at:closesAt,
+        confirmation_opens_at:confirmationOpensAt,confirmation_closes_at:confirmationClosesAt},actor.userId);
       if (cur) {
         if (cur.version !== expected_version) {
           throw new ConflictError('ข้อมูลกำหนดการถูกเปลี่ยนแปลงโดยผู้อื่นแล้ว กรุณารีเฟรช', 'STALE_RECORD_CONFLICT');
@@ -304,12 +324,14 @@ class Phase1ScheduleService {
     try {
       await client.query('BEGIN');
       await this.verifyActiveRole(client, actor, ['COORDINATOR']);
+      await this.requireCoordinatorCycle(client,actor,cycleId);
 
       if (!input || typeof input !== 'object') {
         throw new ValidationError('ข้อมูลไม่ถูกต้อง');
       }
 
       const { operation_id, expected_version } = input;
+      v.uuid(operation_id,'operation_id');
       if (!operation_id || typeof operation_id !== 'string') {
         throw new ValidationError('กรุณาระบุ operation_id');
       }
@@ -328,21 +350,19 @@ class Phase1ScheduleService {
         throw new ValidationError('วันสิ้นสุดยืนยันสิทธิ์ต้องอยู่ในอนาคต');
       }
 
-      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`phase1:announce:${cycleId}`]);
+      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`phase1:cycle:${cycleId}`]);
 
       const curRes = await client.query('SELECT * FROM phase1_cycle_windows WHERE cycle_id = $1 FOR UPDATE', [cycleId]);
       const cur = curRes.rows[0];
       if (!cur) {
         throw new ValidationError('กรุณากำหนดช่วงเวลารับสมัครก่อนประกาศผล');
       }
-      if (cur.version !== expected_version) {
-        throw new ConflictError('ข้อมูลกำหนดการเปลี่ยนไปแล้ว กรุณารีเฟรชก่อนประกาศผล', 'STALE_RECORD_CONFLICT');
-      }
       if (new Date(confirmationClosesAt) <= new Date(cur.closes_at)) {
         throw new ValidationError('วันสิ้นสุดยืนยันสิทธิ์ต้องอยู่หลังวันปิดรับสมัคร');
       }
 
       const reqHash = hashPayload({
+        actorId:actor.userId,action:'announce',
         cycleId,
         confirmationOpensAt,
         confirmationClosesAt,
@@ -363,6 +383,9 @@ class Phase1ScheduleService {
         throw new ConflictError('Operation ID นี้ถูกใช้กับการประกาศผลอื่นแล้ว', 'IDEMPOTENCY_KEY_REUSED');
       }
 
+      if(cur.version!==expected_version)throw new ConflictError('กำหนดการเปลี่ยนแล้ว กรุณาโหลดล่าสุด','STALE_RECORD_CONFLICT');
+      await syncCoordinatorConfirmation(client,cycleId,{opens_at:cur.opens_at,closes_at:cur.closes_at,
+        confirmation_opens_at:confirmationOpensAt,confirmation_closes_at:confirmationClosesAt},actor.userId);
       const newVersion = cur.version + 1;
       await client.query(
         `UPDATE phase1_cycle_windows
@@ -450,6 +473,7 @@ class Phase1ScheduleService {
   }
 
   async getStudentDecision(actor, cycleId) {
+    v.uuid(cycleId,'cycle_id');
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -461,7 +485,7 @@ class Phase1ScheduleService {
         throw new ForbiddenError('ไม่พบข้อมูลนักศึกษาของคุณ');
       }
 
-      const winRes = await client.query('SELECT * FROM phase1_cycle_windows WHERE cycle_id = $1', [cycleId]);
+      const winRes = await client.query('SELECT * FROM phase1_cycle_windows WHERE cycle_id = $1 FOR SHARE', [cycleId]);
       const win = winRes.rows[0];
 
       const resRes = await client.query(
@@ -491,15 +515,16 @@ class Phase1ScheduleService {
           await client.query(
             `UPDATE phase1_selection_results
              SET confirmation_status = 'AUTO_WAIVED',
-                 auto_waived_at = $3,
-                 updated_at = $3,
+                 auto_waived_at = $2,
+                 updated_at = $2,
                  version = version + 1
              WHERE id = $1 AND confirmation_status = 'PENDING_CONFIRMATION'`,
-            [dec.id, currentNow, currentNow]
+            [dec.id, currentNow]
           );
 
           dec.confirmation_status = 'AUTO_WAIVED';
           dec.auto_waived_at = currentNow;
+          dec.version += 1;
 
           // Record auto-waived event
           await client.query(
@@ -557,7 +582,7 @@ class Phase1ScheduleService {
         version: dec.version,
         confirmation_window: confWindow,
         teams_join_url: (dec.confirmation_status === 'CONFIRMED' || dec.confirmation_status === 'TEAM_JOINED')
-          ? 'https://teams.microsoft.com/l/team/tu-cs-coop-69'
+          ? this.teamsJoinUrl
           : null
       };
     } catch (err) {
@@ -569,6 +594,7 @@ class Phase1ScheduleService {
   }
 
   async respondConfirmation(actor, cycleId, input, actionType) {
+    v.uuid(cycleId,'cycle_id');
     const isConfirm = actionType === 'CONFIRM';
     const client = await this.pool.connect();
     try {
@@ -580,6 +606,7 @@ class Phase1ScheduleService {
       }
 
       const { operation_id, expected_version, reason } = input;
+      v.uuid(operation_id,'operation_id');
       if (!operation_id || typeof operation_id !== 'string') {
         throw new ValidationError('กรุณาระบุ operation_id');
       }
@@ -618,7 +645,7 @@ class Phase1ScheduleService {
         throw new ConflictError('Operation ID นี้ถูกใช้กับการยืนยันสิทธิ์รายการอื่นแล้ว', 'IDEMPOTENCY_KEY_REUSED');
       }
 
-      const winRes = await client.query('SELECT * FROM phase1_cycle_windows WHERE cycle_id = $1', [cycleId]);
+      const winRes = await client.query('SELECT * FROM phase1_cycle_windows WHERE cycle_id = $1 FOR SHARE', [cycleId]);
       const win = winRes.rows[0];
       if (!win || !win.announced_at) {
         throw new InvalidStateTransitionError('ยังไม่ประกาศผลการคัดเลือก');
@@ -677,7 +704,7 @@ class Phase1ScheduleService {
           );
         }
         await client.query('COMMIT');
-        throw new InvalidStateTransitionError('คุณไม่ได้ยืนยันสิทธิ์ในระยะเวลาที่กำหนด (ระบบสละสิทธิโดยอัตโนมัติ)');
+        throw new InvalidStateTransitionError('คุณไม่ได้ยืนยันสิทธิ์ในระยะเวลาที่กำหนด (ระบบสละสิทธิโดยอัตโนมัติ)','CONFIRMATION_WINDOW_EXPIRED');
       }
 
       if (dec.confirmation_status !== 'PENDING_CONFIRMATION') {
@@ -706,7 +733,7 @@ class Phase1ScheduleService {
         confirmation_status: newStatus,
         responded_at: currentNow.toISOString(),
         version: newVersion,
-        teams_join_url: isConfirm ? 'https://teams.microsoft.com/l/team/tu-cs-coop-69' : null
+        teams_join_url: isConfirm ? this.teamsJoinUrl : null
       };
 
       await client.query(
@@ -726,11 +753,12 @@ class Phase1ScheduleService {
 
       // Notification to Coordinator
       const coordRes = await client.query(
-        `SELECT coordinator_id FROM selection_cohorts
-         WHERE cycle_id = $1 AND status = 'ACTIVE' LIMIT 1`,
-        [cycleId]
+        `SELECT DISTINCT c.coordinator_id FROM selection_cohorts c JOIN students s
+         ON s.department=c.department AND s.program=c.program
+         WHERE c.cycle_id=$1 AND c.status='ACTIVE' AND s.id=$2`,
+        [cycleId,student.id]
       );
-      if (coordRes.rows[0]) {
+      for (const coordinator of coordRes.rows) {
         const notifMsg = isConfirm
           ? `นักศึกษาได้ยืนยันสิทธิ์เข้าแผนสหกิจศึกษาแล้ว`
           : `นักศึกษาได้ขอสละสิทธิ์เข้าแผนสหกิจศึกษา`;
@@ -742,7 +770,7 @@ class Phase1ScheduleService {
           [
             randomUUID(),
             cycleId,
-            coordRes.rows[0].coordinator_id,
+            coordinator.coordinator_id,
             `notif:conf_received:${cycleId}:${student.id}:${newStatus}`,
             'การยืนยันสิทธิ์นักศึกษา',
             notifMsg,
@@ -767,6 +795,7 @@ class Phase1ScheduleService {
       await client.query('BEGIN');
       if (actor) {
         await this.verifyActiveRole(client, actor, ['COORDINATOR', 'ADMIN', 'SYSTEM']);
+        if(actor.role==='COORDINATOR')await this.requireCoordinatorCycle(client,actor,cycleId);
       }
 
       const winRes = await client.query('SELECT * FROM phase1_cycle_windows WHERE cycle_id = $1', [cycleId]);
@@ -849,6 +878,7 @@ class Phase1ScheduleService {
 
   async listConfirmations(actor, cycleId, filters = {}) {
     await this.verifyActiveRole(this.pool, actor, ['COORDINATOR', 'ADMIN']);
+    if(actor.role==='COORDINATOR')await this.requireCoordinatorCycle(this.pool,actor,cycleId,false);
 
     // Run batch sweep first to ensure 100% current state
     await this.processExpiredConfirmations(actor, cycleId);
@@ -910,10 +940,12 @@ class Phase1ScheduleService {
   }
 
   async confirmTeamJoined(actor, cycleId, studentId, input = {}) {
+    v.uuid(studentId,'student_id');
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
       await this.verifyActiveRole(client, actor, ['COORDINATOR']);
+      await this.requireCoordinatorCycle(client,actor,cycleId);
 
       const currentNow = this.now();
       const res = await client.query(
@@ -963,7 +995,7 @@ class Phase1ScheduleService {
       FROM phase1_notifications
       WHERE recipient_user_id = $1
     `;
-    if (unread_only) {
+    if (unread_only===true || unread_only==='true') {
       sql += ' AND read_at IS NULL';
     }
     params.push(Math.min(100, Math.max(1, Number(limit) || 50)));
@@ -974,6 +1006,7 @@ class Phase1ScheduleService {
   }
 
   async markNotificationRead(actor, notificationId) {
+    v.uuid(notificationId,'notification_id');
     await this.verifyActiveRole(this.pool, actor, ['STUDENT', 'COORDINATOR', 'COMMITTEE', 'STAFF']);
     const currentNow = this.now();
     const res = await this.pool.query(
@@ -987,6 +1020,13 @@ class Phase1ScheduleService {
       throw new NotFoundError('ไม่พบการแจ้งเตือนนี้');
     }
     return { id: notificationId, read_at: currentNow.toISOString() };
+  }
+  async requireCoordinatorCycle(db,actor,cycleId,lock=true) {
+    v.uuid(cycleId,'cycle_id');
+    const rows=(await db.query(`SELECT c.coordinator_id FROM selection_cohorts c
+      WHERE c.cycle_id=$1 AND c.status='ACTIVE' ORDER BY c.id ${lock?'FOR SHARE OF c':''}`,[cycleId])).rows;
+    if(!rows.length || rows.some(row=>row.coordinator_id!==actor.userId))
+      throw new ForbiddenError('ต้องได้รับมอบหมายทั้งรอบก่อนทำรายการ');
   }
 }
 

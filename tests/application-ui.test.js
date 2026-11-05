@@ -54,6 +54,26 @@ test('Draft save precedes readiness, confirmation is explicit and submitted data
   expect(root.querySelector('input[type=file]')).toBeNull();expect(button(root,'บันทึกฉบับร่าง')).toBeUndefined();
   expect(root.textContent).toContain('ยังไม่ใช่การได้รับคัดเลือก');
 });
+test('production editor refuses a SUBMITTED result without matching committed delivery proof and retains fields',async()=>{
+  const client=createApplicationPreview({scenario:'application-ready'}),application=await client.get(ID);delete application.preview;
+  client.submit=jest.fn(async()=>({...application,status:'SUBMITTED',version:2}));
+  const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);
+  const original=application.payload.contact_address;
+  button(root,'ตรวจความพร้อม').click();await flush();await flush();
+  button(root,'ส่งใบสมัคร').click();button(root,'ยืนยันส่งและล็อกข้อมูล').click();await flush();await flush();
+  expect(root.querySelector('[role=alert]').textContent).toContain('ยังยืนยันผลส่งเข้าคิวไม่ได้');
+  expect(root.textContent).not.toContain('ส่งใบสมัครสำเร็จ');expect(root.querySelector('#application-contact_address').value).toBe(original);
+  expect(root.querySelector('#application-contact_address').readOnly).toBe(false);
+});
+test('submitted editor displays only a matching server-backed queue receipt with a clear non-selection meaning',async()=>{
+  const client=createApplicationPreview({scenario:'application-submitted'}),application=await client.get(ID);delete application.preview;
+  application.submission={id:'14100000-0000-4000-8000-000000000090'};
+  application.delivery_receipt={status:'QUEUED_FOR_COORDINATOR',application_id:application.id,submission_id:application.submission.id,
+    application_version:application.version,cycle_id:application.cycle_id,cycle_name:'รอบสมมติ',department:'CS',program:'ภาคปกติ',submitted_at:'2026-11-04T00:00:00Z'};
+  const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);
+  const proof=root.querySelector('[aria-label="หลักฐานส่งเข้าคิว"]');expect(proof.textContent).toContain(application.submission.id);
+  expect(proof.textContent).toContain('ยังไม่ใช่การรับเรื่องหรือผลคัดเลือก');expect(button(root,'ยืนยันส่งและล็อกข้อมูล')).toBeUndefined();
+});
 test('oversized/disguised file stays unselected, prior saved document is preserved',async()=>{
   const {root,client}=await editor('application-ready'),old=(await client.get(ID)).documents;
   const input=root.querySelector('#file-resume');

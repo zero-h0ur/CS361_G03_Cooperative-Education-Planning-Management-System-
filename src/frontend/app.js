@@ -31,29 +31,26 @@ if (root) {
       clearTuAuthStorage();
     }
 
-    const isTuAuthActive = () =>
-      (window.sessionStorage?.getItem('co-ed:auth-mode') === 'tu-auth' ||
-        Boolean(window.sessionStorage?.getItem('co-ed:tu-profile') || window.localStorage?.getItem('co-ed:tu-profile'))) &&
-      Boolean(
-        window.sessionStorage?.getItem('co-ed:access-token') ||
-        window.localStorage?.getItem('co-ed:access-token')
-      );
+    // Old persistent tokens are not used. Preserve legacy application text for opt-in recovery.
+    for (const key of ['co-ed:access-token','co-ed:auth-mode','co-ed:tu-profile','co-ed:tu-response']) {
+      window.localStorage?.removeItem(key);
+    }
+    const isTuAuthActive = () => window.sessionStorage?.getItem('co-ed:auth-mode') === 'tu-auth' &&
+      Boolean(window.sessionStorage?.getItem('co-ed:access-token'));
 
     const getAccessToken = async (options) => {
       if (isTuAuthActive()) {
-        const tuToken =
-          window.sessionStorage?.getItem('co-ed:access-token') ||
-          window.localStorage?.getItem('co-ed:access-token');
+        const tuToken = window.sessionStorage?.getItem('co-ed:access-token');
         if (tuToken) return tuToken;
       }
       return authClient.getAccessToken(options);
     };
 
-    const startTuAuthLogin = async ({ studentId, password }) => {
-      const res = await fetch(`${config.apiBaseUrl}/api/v3/auth/tu-login`, {
+    const requestTuAuth = async (path,input) => {
+      const res = await fetch(`${config.apiBaseUrl}/api/v3/auth/${path}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId, password })
+        body: JSON.stringify(input),redirect:'error',signal:AbortSignal.timeout(28000)
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -63,38 +60,29 @@ if (root) {
           'ไม่สามารถเข้าสู่ระบบได้ กรุณาตรวจสอบรหัสนักศึกษาและรหัสผ่าน'
         );
       }
-      const token = body?.data?.accessToken;
+      return body?.data;
+    };
+    const activateTuSession = async (data) => {
+      const token = data?.accessToken;
       if (!token) {
         throw new Error('ไม่ได้รับ Access Token จากระบบยืนยันตัวตน');
       }
+      clearTuAuthStorage();
       window.sessionStorage?.setItem('co-ed:access-token', token);
-      window.localStorage?.setItem('co-ed:access-token', token);
       window.sessionStorage?.setItem('co-ed:auth-mode', 'tu-auth');
-      if (body?.data?.profile) {
-        const profileJson = JSON.stringify(body.data.profile);
-        window.sessionStorage?.setItem('co-ed:tu-profile', profileJson);
-        window.localStorage?.setItem('co-ed:tu-profile', profileJson);
-      }
-      if (body?.data?.tuResponse) {
-        const tuRespJson = JSON.stringify(body.data.tuResponse);
-        window.sessionStorage?.setItem('co-ed:tu-response', tuRespJson);
-        window.localStorage?.setItem('co-ed:tu-response', tuRespJson);
-      }
+      try {
+        const verified = await tuSessionClient.loadSession({requireOwner:true});
+        if (verified.role !== 'STUDENT' || verified.user?.id!==data.user?.id || verified.studentId!==data.user?.studentId) throw new Error('ยังยืนยันเจ้าของบัญชีไม่ได้ กรุณาเข้าสู่ระบบใหม่');
+      } catch (error) { clearTuAuthStorage(); throw error; }
       window.location.hash = '#/student/profile';
       window.location.reload();
     };
-
-    const getCachedTuProfile = () => {
-      const cachedRaw =
-        window.sessionStorage?.getItem('co-ed:tu-profile') ||
-        window.localStorage?.getItem('co-ed:tu-profile');
-      if (!cachedRaw) return null;
-      try {
-        return JSON.parse(cachedRaw);
-      } catch {
-        return null;
-      }
+    const startTuAuthLogin=async input=>{
+      const data=await requestTuAuth('tu-login',input);
+      if(data?.contract==='coed-tu-registration-v1') {clearTuAuthStorage();return data;}
+      await activateTuSession(data);
     };
+    const completeTuRegistration=async input=>activateTuSession(await requestTuAuth('tu-register',input));
 
     const startCognitoLogin = async () => {
       clearTuAuthStorage();
@@ -116,6 +104,7 @@ if (root) {
       apiBaseUrl: config.apiBaseUrl,
       getAccessToken
     });
+    const tuSessionClient = createSessionClient({ apiBaseUrl: tuProxyBaseUrl, getAccessToken });
     const baseStudentProfileClient = createStudentProfileClient({
       apiBaseUrl: config.apiBaseUrl,
       getAccessToken
@@ -156,7 +145,6 @@ if (root) {
     } = createTuAuthClients({
       apiBaseUrl: config.apiBaseUrl,
       isTuAuthActive,
-      getCachedTuProfile,
       baseStudentProfileClient,
       baseApplicationClient,
       baseWorkflowClient,
@@ -181,16 +169,7 @@ if (root) {
     if (window.location.hash && window.location.hash.startsWith('#/staff')) {
       window.location.hash = '#/coordinator/applications';
     }
-    const loadSession = async (options) => {
-      if (isTuAuthActive()) {
-        return Object.freeze({ role: 'STUDENT', canReviewPlan: false });
-      }
-      const session = await sessionClient.loadSession(options);
-      if (session?.role === 'STAFF') {
-        return { ...session, role: 'COORDINATOR' };
-      }
-      return session;
-    };
+    const loadSession = (options) => (isTuAuthActive() ? tuSessionClient : sessionClient).loadSession(options);
     const app = createShellApp({
       applicationClient,
       workflowClient,
@@ -200,6 +179,7 @@ if (root) {
       restartLogin: startCognitoLogin,
       logout,
       startTuAuthLogin,
+      completeTuRegistration,
       invalidateLocalSession,
       location: window.location,
       eventTarget: window,

@@ -110,6 +110,7 @@ function toStudentSelfProfile(row = {}) {
     const val = row[field];
     serialized[field] = val instanceof Date ? val.toISOString() : val !== undefined ? val : null;
   }
+  if(row.onboarding)serialized.onboarding=require('../../auth/tu-registration-contract').metadata(row.onboarding,row);
   return Object.freeze(serialized);
 }
 

@@ -4,6 +4,8 @@ const {hash}=require('./application-service');
 const v=require('./workflow-input');
 const {ValidationError,ForbiddenError,NotFoundError,ConflictError,InvalidStateTransitionError}=require('../errors');
 const domain=require('./coordinator-domain');
+const {assertDeliverySchema}=require('../../db/phase1-delivery');
+const {confirmationWindow}=require('./phase1-schedule-compat');
 
 const panelKey=c=>[c.cycle_id,c.department,c.committee_one,c.committee_two,c.committee_three].join(':');
 const track=value=>/พิเศษ|special|\bACS\b/i.test(value || '')?'special':/ปกติ|normal|regular|\bCIS\b/i.test(value || '')?'regular':'unknown';
@@ -26,6 +28,7 @@ class CoordinatorWorkspaceService {
   }
   async rows(db,actor,filters={}) {
     const scope=await this.scope(db,actor,filters.cycle_id);
+    await assertDeliverySchema(db);
     if(!scope.length)return [];
     // All matching rows are scoped before filtering/counting/pagination. No page-local filtering.
     return (await db.query(`SELECT a.id,a.student_id,a.cycle_id,a.status,a.version AS application_version,
@@ -35,11 +38,14 @@ class CoordinatorWorkspaceService {
       cw.state AS committee_state,cw.version AS committee_version,
       clock_timestamp()<COALESCE(sched.review_closes_at,win.closes_at) AS review_open
       FROM phase1_applications a JOIN students st ON st.id=a.student_id
-      JOIN selection_cohorts c ON c.cycle_id=a.cycle_id AND c.department=st.department AND c.program=st.program
+      JOIN LATERAL(SELECT * FROM phase1_submissions s WHERE s.application_id=a.id ORDER BY s.application_version DESC LIMIT 1) sub ON true
+      LEFT JOIN phase1_submission_deliveries delivery ON delivery.submission_id=sub.id
+      JOIN selection_cohorts c ON c.cycle_id=a.cycle_id AND
+        ((delivery.submission_id IS NOT NULL AND c.id=delivery.cohort_id AND c.department=delivery.department AND c.program=delivery.program)
+        OR (delivery.submission_id IS NULL AND c.department=sub.snapshot->'official'->>'department' AND c.program=sub.snapshot->'official'->>'program'))
       JOIN rounds r ON r.id=a.cycle_id
       LEFT JOIN phase1_cycle_windows win ON win.cycle_id=a.cycle_id
       LEFT JOIN coordinator_round_schedules sched ON sched.cycle_id=a.cycle_id
-      JOIN LATERAL(SELECT * FROM phase1_submissions s WHERE s.application_id=a.id ORDER BY s.application_version DESC LIMIT 1) sub ON true
       LEFT JOIN phase1_reviews rv ON rv.application_id=a.id
       LEFT JOIN selection_cohorts canonical ON canonical.id=(SELECT min(cc.id::text)::uuid FROM selection_cohorts cc
         WHERE cc.status='ACTIVE' AND cc.cycle_id=c.cycle_id AND cc.department=c.department
@@ -116,8 +122,8 @@ class CoordinatorWorkspaceService {
       const app=(await db.query('SELECT * FROM phase1_applications WHERE id=$1 FOR UPDATE',[id])).rows[0];
       if(!app)throw new NotFoundError();
       const cohorts=await this.scope(db,actor,app.cycle_id,true);
-      const student=(await db.query('SELECT department,program FROM students WHERE id=$1',[app.student_id])).rows[0];
-      const cohort=cohorts.find(c=>c.department===student?.department && c.program===student?.program);
+      const scoped=(await this.rows(db,actor,{cycle_id:app.cycle_id})).find(row=>row.id===id);
+      const cohort=cohorts.find(c=>c.id===scoped?.cohort_id);
       if(!cohort)throw new ForbiddenError();if(replay)return;
       await db.query("SELECT pg_advisory_xact_lock(hashtextextended('phase1:cycle:' || $1::text,0))",[app.cycle_id]);
       const latest=(await db.query('SELECT id FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC LIMIT 1',[id])).rows[0];
@@ -173,8 +179,10 @@ class CoordinatorWorkspaceService {
   async getSchedule(actor,id) {
     v.uuid(id,'cycle_id');const db=this.db();const scope=await this.scheduleScope(db,actor,id);
     const row=(await db.query(`SELECT w.opens_at,w.closes_at,w.version AS window_version,s.review_opens_at,s.review_closes_at,
-      s.confirmation_opens_at,s.confirmation_closes_at,s.version,s.updated_at FROM rounds r
+      s.confirmation_opens_at,s.confirmation_closes_at,s.version,s.updated_at,
+      w.confirmation_opens_at AS window_confirmation_opens_at,w.confirmation_closes_at AS window_confirmation_closes_at FROM rounds r
       LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id LEFT JOIN coordinator_round_schedules s ON s.cycle_id=r.id WHERE r.id=$1`,[id])).rows[0];
+    Object.assign(row,confirmationWindow({confirmation_opens_at:row.window_confirmation_opens_at,confirmation_closes_at:row.window_confirmation_closes_at},row));
     return {cycle_id:id,cycle_name:scope.cohorts[0].cycle_name,...row,version:row.version || 0,window_version:row.window_version || 0,can_edit:scope.can_edit};
   }
   async saveSchedule(actor,id,body) {
@@ -188,8 +196,11 @@ class CoordinatorWorkspaceService {
       const prior=(await db.query('SELECT version FROM coordinator_round_schedules WHERE cycle_id=$1 FOR UPDATE',[id])).rows[0];
       const window=(await db.query('SELECT version FROM phase1_cycle_windows WHERE cycle_id=$1 FOR UPDATE',[id])).rows[0];
       if(body.expected_version!==(prior?.version || 0)||body.expected_window_version!==(window?.version || 0))throw new ConflictError('กำหนดการเปลี่ยนแล้ว กรุณาโหลดล่าสุดก่อนบันทึก');
-      await db.query(`INSERT INTO phase1_cycle_windows(cycle_id,opens_at,closes_at) VALUES($1,$2,$3)
-        ON CONFLICT(cycle_id) DO UPDATE SET opens_at=EXCLUDED.opens_at,closes_at=EXCLUDED.closes_at,version=phase1_cycle_windows.version+1`,[id,value.opens_at,value.closes_at]);
+      await db.query(`INSERT INTO phase1_cycle_windows(cycle_id,opens_at,closes_at,confirmation_opens_at,confirmation_closes_at,updated_by)
+        VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(cycle_id) DO UPDATE SET opens_at=EXCLUDED.opens_at,closes_at=EXCLUDED.closes_at,
+        confirmation_opens_at=EXCLUDED.confirmation_opens_at,confirmation_closes_at=EXCLUDED.confirmation_closes_at,
+        updated_by=EXCLUDED.updated_by,updated_at=clock_timestamp(),version=phase1_cycle_windows.version+1`,
+      [id,value.opens_at,value.closes_at,value.confirmation_opens_at,value.confirmation_closes_at,actor.userId]);
       await db.query(`INSERT INTO coordinator_round_schedules(cycle_id,review_opens_at,review_closes_at,confirmation_opens_at,confirmation_closes_at,version,updated_by)
         VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(cycle_id) DO UPDATE SET review_opens_at=EXCLUDED.review_opens_at,
         review_closes_at=EXCLUDED.review_closes_at,confirmation_opens_at=EXCLUDED.confirmation_opens_at,

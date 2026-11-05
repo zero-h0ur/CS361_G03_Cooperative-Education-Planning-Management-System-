@@ -1,0 +1,125 @@
+# One-target TU identity diagnostic
+
+This operator is approved only for N0-N5, account130165494095/Sydney, while the
+parent rollout is WAITING_OWNER_SMOKE. It cannot provision/relink/enable accounts,
+fix profiles, issue a JWT, or resume writes. It does not call TU or request a
+password. Do not use a Student ID from historical chat without a fresh explicit
+target authorization. The owner has now explicitly authorized the agent to run
+the one newly supplied target; this does not authorize account repair or Login
+without real TU verification. Raw target must stay out of source/argv/state/logs.
+
+## Before execution
+
+Run the reviewed local tests, including actual disposable PostgreSQL with
+NODE_ENV=test, PRESENT_SCHEMA_DISPOSABLE=true and IDENTITY_DIAG_TEST_DATABASE_URL
+pointing only to the verified task-owned127.0.0.1:55440/coed or127.0.0.1:15440/coed.
+The latter is the fixed fallback when Windows reserves the old55440 port; never
+change OS reservations or repurpose another container/database. The DB test requires an empty
+public schema and absent coed_tu_login role, creates synthetic fixtures only and
+removes them. A skipped DB test is not equivalent to this validation.
+
+    npm.cmd run test:tu-identity-diagnostic
+    node scripts/operations/tu-identity-diagnostic/operator.mjs preflight
+
+Preflight is read-only and checks the existing parent checkpoint, exact live
+versions/code/TU issuer, verification-only maintenance, Gateway/CORS, absent
+diagnostic resource names/endpoint Sid and existing login Secret metadata. It
+does not read a Secret value, query RDS or create any AWS resource.
+
+## Owner selects the target locally
+
+From a clean committed worktree, run:
+
+    node scripts/operations/tu-identity-diagnostic/operator.mjs run --approved-n0-n5
+
+Enter only the10digit Student ID at the hidden prompt. No password, token or
+credentials in arguments or chat. The operator processes the ID only in memory
+and transmits it in the direct private Invoke payload, never in CLI arguments,
+stdout, ZIP, state or logs. State stores a per-operation salted digest for target
+binding; this is pseudonymous metadata, not a claim of irreversible anonymization.
+
+The script builds a hash-pinned two-entry ZIP, then creates the exact task-tagged
+private Lambda/role/log group and one additive endpoint grant. The role can read
+only the existing dedicated SELECT-only login Secret and write its own logs; it
+has necessary ENI control-plane rights with code-source Deny. No owner, signing,
+app or provider Secret access. No Gateway/URL/event source, new DB/endpoint/Secret,
+NAT/EC2 or shared-role modification. Node22/256MB/timeout10/concurrency1.
+
+Only a numeric published version with correct run ID, bound target, account,
+region, fixed database/Secret and expiry<=30minutes may query. The operator
+checkpoint caps invocations at3 and the default workflow invokes once, without
+retry; a warm-handler counter adds a local guard but is not a durable global
+counter across cold starts. Operator IAM permits no other caller. No extra
+persistent store is introduced for counting.
+
+The private tool uses one client as coed_tu_login, requires an explicit read-only
+transaction and exact session user/database, and performs only one fixed
+parameterized lookup of already-granted columns in users/students/identity links.
+Statement timeout2seconds, lock500ms. It returns only capped counts, booleans and
+a finite reason code. It rolls back/closes the transaction; never runs DML/DDL,
+calls the normal issuer, fabricates TU proof or signs a token.
+
+## Result and cleanup
+
+Let the command finish. The controller records the endpoint grant update and
+waits a fixed5minutes before its single Invoke, reporting safe progress each
+<=30seconds. A read-back policy is not proof of data-plane propagation; AWS says
+updates can take a few minutes ([AWS PrivateLink](https://docs.aws.amazon.com/vpc/latest/privatelink/interface-endpoints.html)).
+This grace is a readiness precaution, not a guaranteed propagation bound or
+permission expansion. Invoke fails closed if grace/expiry metadata is invalid
+or not ready; interruption during waiting still enters finally cleanup.
+Creation, query and cleanup may therefore take several minutes. The
+finally block removes only the owned function/all its versions, role/inline
+policy, log group and endpoint Sid, and compares unchanged application, Gateway
+and endpoint baselines. On failure it still attempts independent cleanup parts.
+Unexpected ownership/policy changes are not overwritten/deleted.
+
+Share only the final JSON result (reason/flags, cleanupVerified and state path).
+It contains no Student ID/name/email/token/password/profile. A completed
+diagnostic is not a successful Login or authority to repair anything.
+
+Secret-read failures occur before any database connection. The operator accepts
+only the following fixed categories, never raw SDK messages or credential data:
+
+| Code | Meaning and boundary |
+| --- | --- |
+| DIAG_SECRET_DENIED | Secret read/decryption rejected; review exact policy, do not widen rights automatically. |
+| DIAG_SECRET_ENDPOINT_DENIED / DIAG_SECRET_IDENTITY_DENIED | Known AWS denial text identifies endpoint or identity policy; no raw message is retained. |
+| DIAG_SECRET_SCP_DENIED / DIAG_SECRET_BOUNDARY_DENIED / DIAG_SECRET_RESOURCE_DENIED | Known AWS denial text identifies organization, boundary or resource policy; stop for separate review rather than removing restrictions. |
+| DIAG_SECRET_TIMEOUT | Bounded request/abort deadline; not proof of an IAM or database problem. |
+| DIAG_SECRET_NETWORK | Known DNS/socket failure; no claim that a service received the request. |
+| DIAG_SECRET_NOT_FOUND | Requested Secret not found; do not substitute another Secret. |
+| DIAG_SECRET_CREDENTIALS_UNAVAILABLE | Diagnostic SDK credentials/signature unavailable or rejected; not the student's TU password. |
+| DIAG_SECRET_INVALID | Secret response/JSON/connection fields fail the fixed contract. |
+| DIAG_SECRET_UNAVAILABLE | Other unmapped Secret-read failure; no account conclusion. |
+
+The Secret client uses one attempt,1000ms connection/2500ms request and3000ms
+hard-abort budgets. Lambda remains10seconds; IAM, target binding and SELECT-only
+scope are unchanged. See [AWS SDK HTTP configuration](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/node-configuring-maxsockets.html).
+No retry is performed automatically. A denial message can name one policy layer
+without proving all other layers allow; a successful read is still required.
+If a run fails, let cleanup finish and share
+only its final JSON. Rerun only after review, with fresh hidden input; do not
+paste a Student ID, TU password, national ID, Secret value or JWT into chat.
+
+If cleanupVerified=false, the command is interrupted/killed, or a permission/
+session failure prevents cleanup, keep the printed state path and report it.
+Do not rerun with another target or delete shared resources. The operator can
+retry exact owned cleanup without the Student ID:
+
+    node scripts/operations/tu-identity-diagnostic/operator.mjs cleanup <exact-state.json-path> --approved-n0-n5
+
+Expiry is not deletion. Cleanup must be verified. Never use broad recursive
+deletion or remove shared ENIs/SGs/network, parent rollout artifacts, login role,
+existing Secrets, snapshots or original endpoint grants.
+
+## Follow-up boundaries
+
+UNLINKED_IDENTITY with a matching student/Cognito link is evidence for planning a
+verified migration, not permission to do it. Disabled/revoked/ambiguous records
+are explicit stops. Preserve all application/history data. Ask for separate
+ownership-verified repair scope if needed, and require a new successful owner
+Login->me->own-profile smoke before ending verification maintenance.
+
+Only normal Lambda/Secrets reads/log usage is incurred. No new paid resource type,
+standing diagnostic capability, notification destination or Git push is added.

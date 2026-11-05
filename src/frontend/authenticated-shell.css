@@ -3,6 +3,39 @@
 @import './student/workspace.css';
 @import './coordinator/workspace.css';
 
+.tu-onboarding { --registration-success: #166534; --registration-verified: #f0fdf4; --registration-border: #aeb7c3; color: var(--shell-ink); width: min(100%, 740px); margin-inline: auto; font-size: 1rem; line-height: 1.65; }
+.tu-onboarding h2 { margin: 0; font-size: clamp(1.5rem, 4vw, 2rem); }
+.tu-onboarding__intro { color: var(--shell-muted); margin: 4px 0 24px; }
+.tu-onboarding__verified { background: var(--registration-verified); border: 1px solid var(--registration-border); border-left: 4px solid var(--registration-success); border-radius: 12px; padding: 20px 24px; }
+.tu-onboarding__verified h3 { margin: 4px 0 16px; font-size: 1.25rem; overflow-wrap: anywhere; }
+.tu-onboarding__eyebrow { color: var(--registration-success); font-size: .875rem; font-weight: 600; margin: 0; }
+.tu-onboarding__identity { margin: 0; display: grid; gap: 8px; }
+.tu-onboarding__identity > div { display: grid; grid-template-columns: 150px minmax(0,1fr); gap: 12px; }
+.tu-onboarding__identity dt { color: var(--shell-muted); }
+.tu-onboarding__identity dd { margin: 0; overflow-wrap: anywhere; }
+.tu-onboarding__hint { color: var(--shell-muted); font-size: .875rem; line-height: 1.7; }
+.tu-onboarding__form { margin-top: 24px; }
+.tu-onboarding fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.tu-onboarding legend { font-size: 1.125rem; font-weight: 600; }
+.tu-onboarding__field { display: grid; gap: 8px; margin-top: 16px; }
+.tu-onboarding label { font-weight: 500; }
+.tu-onboarding input,.tu-onboarding select { box-sizing: border-box; min-height: 48px; width: 100%; border: 1px solid var(--registration-border); border-radius: 8px; padding: 10px 12px; font: inherit; color: var(--shell-ink); background: var(--shell-surface); }
+.tu-onboarding :is(input,select,button,a):focus-visible { outline: 3px solid var(--shell-focus); outline-offset: 3px; }
+.tu-onboarding [aria-invalid=true] { border: 2px solid var(--shell-primary); }
+.tu-onboarding__field-error { margin: 0; color: var(--shell-primary-dark); font-size: .875rem; }
+.tu-onboarding__field-error:empty { display: none; }
+.tu-onboarding__errors { background: var(--shell-soft); border: 1px solid var(--shell-primary); padding: 16px; margin-bottom: 20px; border-radius: 8px; }
+.tu-onboarding__errors a { color: var(--shell-primary-dark); display: block; padding-block: 4px; text-decoration: underline; }
+.tu-onboarding__status { overflow-wrap: anywhere; }
+.tu-onboarding__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.tu-onboarding button { min-height: 48px; cursor: pointer; }
+.tu-onboarding button:disabled { cursor: wait; opacity: .6; }
+@media (max-width: 560px) {
+ .tu-onboarding__verified { padding: 16px; }
+ .tu-onboarding__identity > div { grid-template-columns: 1fr; gap: 0; }
+ .tu-onboarding__actions { flex-direction: column; }
+}
+
 :root {
   --workflow-border: #b9bec7;
   color: #0f172a;

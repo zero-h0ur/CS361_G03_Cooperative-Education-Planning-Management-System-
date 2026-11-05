@@ -6,6 +6,8 @@
 
 const crypto = require('node:crypto');
 const { UnauthorizedError } = require('../api/errors');
+const {tuConfig} = require('./tu-config');
+const {getTuPublicKey} = require('./tu-public-key');
 
 const DEFAULT_REQUIRED_SCOPE = 'coed-api/access';
 const ALLOWED_ALGORITHMS = new Set(['RS256']);
@@ -138,15 +140,12 @@ class TokenValidator {
       process.env.AUTH_ISSUER ??
       process.env.COGNITO_ISSUER ??
       null;
-    this.explicitClientId =
-      options.expectedClientId !== undefined || options.expectedAudience !== undefined;
     this.expectedClientId =
       options.expectedClientId ??
       options.expectedAudience ??
       process.env.AUTH_AUDIENCE ??
       process.env.COGNITO_CLIENT_ID ??
-      process.env.TU_AUTH_CLIENT_ID ??
-      'coed-api';
+      null;
     this.requiredScope = options.requiredScope === undefined
       ? DEFAULT_REQUIRED_SCOPE
       : options.requiredScope;
@@ -154,23 +153,12 @@ class TokenValidator {
     this.publicKey = options.publicKey || null;
     this.keyResolver = options.keyResolver || null;
 
-    const allowed = new Set();
-    if (isNonEmptyExactString(this.expectedIssuer)) {
-      allowed.add(this.expectedIssuer);
-    }
-    if (Array.isArray(options.allowedIssuers)) {
-      for (const iss of options.allowedIssuers) {
-        if (isNonEmptyExactString(iss)) allowed.add(iss);
-      }
-    } else if (options.allowedIssuers instanceof Set) {
-      for (const iss of options.allowedIssuers) {
-        if (isNonEmptyExactString(iss)) allowed.add(iss);
-      }
-    } else if (options.allowTuAuth !== false) {
-      if (process.env.TU_AUTH_ISSUER) allowed.add(process.env.TU_AUTH_ISSUER);
-      allowed.add('https://tu.ac.th');
-    }
-    this.allowedIssuers = allowed;
+    const tu=tuConfig();
+    this.allowTuAuth=options.allowTuAuth!==false;
+    this.tuIssuer=options.tuIssuer || tu.issuer;
+    this.tuClientId=options.tuClientId || tu.clientId;
+    this.tuKeyId=options.tuKeyId || tu.kid;
+    this.tuPublicKey=options.tuPublicKey || null;
   }
 
   /**
@@ -180,7 +168,10 @@ class TokenValidator {
    * @param {number} [nowSeconds]
    * @param {Array<string>} [authorizerScopes] Optional scopes array from API Gateway JWT authorizer
    */
-  validateClaims(payload, nowSeconds = Math.floor(Date.now() / 1000), authorizerScopes = null) {
+  validateClaims(payload, nowSeconds = Math.floor(Date.now() / 1000), authorizerScopes = null, provider = 'cognito') {
+    const expectedIssuer=provider==='tu' && this.allowTuAuth ? this.tuIssuer : this.expectedIssuer;
+    const expectedClientId=provider==='tu' && this.allowTuAuth ? this.tuClientId : this.expectedClientId;
+    if(provider==='tu' && !this.allowTuAuth)throw createUnauthorized('Provider not allowed.','INVALID_ISSUER');
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
       throw createUnauthorized('Invalid token payload.', 'INVALID_PAYLOAD');
     }
@@ -194,7 +185,7 @@ class TokenValidator {
     if (!isNonEmptyExactString(payload.iss)) {
       throw createUnauthorized('Token is missing a valid issuer claim.', 'INVALID_ISSUER');
     }
-    const isIssuerValid = this.allowedIssuers.has(payload.iss) || (typeof payload.iss === 'string' && payload.iss.startsWith('urn:coed:tu-auth'));
+    const isIssuerValid = isNonEmptyExactString(expectedIssuer) && payload.iss===expectedIssuer;
     if (!isIssuerValid) {
       throw createUnauthorized('Token issuer mismatch.', 'INVALID_ISSUER');
     }
@@ -225,7 +216,7 @@ class TokenValidator {
     }
 
     // 6. Client ID / Audience (client_id or aud) must match expectedClientId
-    if (!isNonEmptyExactString(this.expectedClientId)) {
+    if (!isNonEmptyExactString(expectedClientId)) {
       throw createUnauthorized('Token audience configuration is missing.', 'INVALID_AUDIENCE');
     }
 
@@ -234,22 +225,8 @@ class TokenValidator {
       ? payload.aud.filter(isNonEmptyExactString)
       : (isNonEmptyExactString(payload.aud) ? [payload.aud] : []);
 
-    const isTuIssuer =
-      payload.iss === 'https://tu.ac.th' ||
-      (process.env.TU_AUTH_ISSUER && payload.iss === process.env.TU_AUTH_ISSUER) ||
-      (typeof payload.iss === 'string' && payload.iss.startsWith('urn:coed:tu-auth'));
-
-    const allowedTuClientIds = new Set(['coed-api', 'coed-tu-api']);
-    if (isNonEmptyExactString(process.env.TU_AUTH_CLIENT_ID)) {
-      allowedTuClientIds.add(process.env.TU_AUTH_CLIENT_ID.trim());
-    }
-
-    const matchesClientId =
-      clientIdClaim === this.expectedClientId ||
-      (!this.explicitClientId && isTuIssuer && (allowedTuClientIds.has(clientIdClaim) || clientIdClaim === 'coed-api'));
-    const matchesAud =
-      audCandidates.includes(this.expectedClientId) ||
-      (!this.explicitClientId && isTuIssuer && audCandidates.some((a) => allowedTuClientIds.has(a) || a === 'coed-api'));
+    const matchesClientId=clientIdClaim===expectedClientId;
+    const matchesAud=audCandidates.includes(expectedClientId);
 
     if (clientIdClaim !== null) {
       if (!matchesClientId) {
@@ -274,7 +251,7 @@ class TokenValidator {
     return {
       subject: payload.sub,
       issuer: payload.iss,
-      clientId: clientIdClaim || this.expectedClientId,
+      clientId: clientIdClaim || expectedClientId,
       scopes,
       expiresAt: exp
     };
@@ -292,17 +269,16 @@ class TokenValidator {
       throw createUnauthorized('Token signature is missing.', 'INVALID_SIGNATURE');
     }
 
-    let key = this.keyResolver
-      ? await this.keyResolver(jwt.header)
-      : this.publicKey;
-
-    if (!key && jwt.header?.kid === 'tu-key-1') {
-      try {
-        const { getTuKeyPair } = require('./tu-keys');
-        key = getTuKeyPair().publicKey;
-      } catch {
-        key = null;
+    let key;
+    if(this.allowTuAuth && jwt.payload.iss===this.tuIssuer) {
+      if(jwt.header.kid!==this.tuKeyId)throw createUnauthorized('Unknown TU key.','INVALID_SIGNATURE');
+      try {key=getTuPublicKey(this.tuPublicKey || undefined);} catch {
+        throw createUnauthorized('TU verification key unavailable.','MISSING_VERIFICATION_KEY');
       }
+    } else {
+      if(jwt.header.kid===this.tuKeyId || jwt.payload.iss!==this.expectedIssuer)
+        throw createUnauthorized('Issuer/key mismatch.','INVALID_ISSUER');
+      key=this.keyResolver ? await this.keyResolver(jwt.header) : this.publicKey;
     }
 
     if (!key) {
@@ -338,7 +314,7 @@ class TokenValidator {
   async validateToken(rawToken, nowSeconds) {
     const jwt = parseJwt(rawToken);
     await this.verifySignature(jwt);
-    return this.validateClaims(jwt.payload, nowSeconds);
+    return this.validateClaims(jwt.payload, nowSeconds, null, jwt.payload.iss===this.tuIssuer?'tu':'cognito');
   }
 }
 

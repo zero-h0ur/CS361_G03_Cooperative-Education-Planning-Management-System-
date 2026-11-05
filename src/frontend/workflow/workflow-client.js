@@ -4,8 +4,11 @@ export function createWorkflowClient({apiBaseUrl,getAccessToken,fetchImpl=global
   const base=new URL(apiBaseUrl,currentOrigin);
   return Object.freeze({
     async request(path,{method='GET',body,signal}={}) {
-      if (!/^\/api\/(?:v3\/|v4\/coordinator\/)/.test(path)) throw new Error('Unsupported API path.');
       const relative=new URL(path,'https://local.invalid');
+      const id='[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}';
+      const phase1=new RegExp(`^/api/v4/(?:cycles/${id}/(?:schedule|selection-decision|confirm|waive|announce)|notifications(?:/${id}/read)?)$`,'i');
+      if (!path.startsWith('/api/') || relative.origin!=='https://local.invalid' || relative.hash ||
+        !(/^\/api\/(?:v3\/|v4\/coordinator\/)/.test(relative.pathname) || phase1.test(relative.pathname))) throw new Error('Unsupported API path.');
       const endpoint=new URL(base.href); endpoint.pathname=`${base.pathname.replace(/\/$/,'')}${relative.pathname}`;
       endpoint.search=relative.search; endpoint.hash='';
       const token=await getAccessToken();

@@ -11,6 +11,10 @@
 /tmp/release-trust/
 /tmp/student-ui-browser/
 /tmp/student-workspace-pg-20261102/
+/tmp/tu-*-verification.log
+/tmp/tu-delivery-regression.log
+/tmp/main-alignment/
+/tmp/tu-production/
 
 # macOS system files
 .DS_Store

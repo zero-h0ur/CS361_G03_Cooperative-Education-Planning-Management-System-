@@ -390,8 +390,6 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
     root.append(intro, filter, feedback, content, pager);
   }
 
-  
-
   let currentSchedule = null;
   let scheduleEditing = false;
   let announcing = false;
@@ -1845,13 +1843,17 @@ export function renderSelectionWorkspace({ client, role, signal, onSessionExpire
 
 function renderTeamsBox(parent, url) {
   const box = el('div', 'student-teams-box');
+  let link;
+  try {link=new URL(url);if(link.protocol!=='https:' || link.hostname!=='teams.microsoft.com' || link.username || link.password)throw Error();}
+  catch {box.append(el('p','shell-muted','ยังไม่มีลิงก์กลุ่ม MS Teams กรุณาติดต่อผู้ประสานงาน'));parent.append(box);return;}
   box.append(
     el('strong', null, 'ขั้นตอนถัดไป: เข้าร่วมกลุ่ม MS Teams สำหรับผู้ปฏิบัติงานสหกิจศึกษา'),
     el('p', 'shell-muted', 'กรุณากดเข้าร่วมกลุ่มเพื่อรับข้อมูลการปฐมนิเทศและการเตรียมตัวปฏิบัติงาน'),
     el('a', 'shell-button shell-button--primary student-teams-link', 'เข้าร่วมกลุ่ม MS Teams')
   );
-  box.querySelector('a').href = url || 'https://teams.microsoft.com';
+  box.querySelector('a').href = link.href;
   box.querySelector('a').target = '_blank';
+  box.querySelector('a').rel = 'noopener noreferrer';
   parent.append(box);
 }
 
@@ -1866,7 +1868,7 @@ export function renderStudentSelectionStatus({ client, signal, onSessionExpired,
       root.replaceChildren();
       root.append(
         el('h2', null, 'สถานะการคัดเลือกของคุณ'),
-        el('p', 'shell-muted', 'ครบสามความเห็นไม่ใช่ผลผ่าน/ไม่ผ่าน ระบบยังรอประกาศผล')
+        el('p', 'shell-muted', data.applications.some(row=>row.source==='phase1')?'การส่งต่อกรรมการไม่ใช่ผลคัดเลือก โปรดรอผลที่ประกาศอย่างเป็นทางการ':'ครบสามความเห็นไม่ใช่ผลผ่าน/ไม่ผ่าน ระบบยังรอประกาศผล')
       );
       if (!data.applications.length) root.append(el('p', null, 'ยังไม่มีแผนที่ส่งเข้ารอบการคัดเลือกนี้'));
       for (const row of data.applications) {
@@ -1874,7 +1876,7 @@ export function renderStudentSelectionStatus({ client, signal, onSessionExpired,
         card.append(
           el('h3', null, row.cycle_name),
           el('p', null, LABELS[row.state] || 'ยังไม่พร้อม'),
-          el('p', null, `บันทึกความเห็นแล้ว ${row.opinion_count} / 3 คน`)
+          el('p', null, row.source==='phase1'?'พิจารณาโดยการจัดลำดับและมติที่ประชุม':`บันทึกความเห็นแล้ว ${row.opinion_count} / 3 คน`)
         );
         if (row.state === 'NEEDS_REVISION') {
           const revNotice = el('div', 'coordinator-revision-banner');
@@ -1883,7 +1885,7 @@ export function renderStudentSelectionStatus({ client, signal, onSessionExpired,
             el('p', 'coordinator-revision-notes', row.revision_notes || 'กรุณาตรวจสอบข้อมูลและเอกสารประกอบใบสมัคร แล้วกดส่งแผนใหม่อีกครั้ง'),
             el('a', 'shell-button shell-button--secondary', 'ไปที่หน้าจัดการแผนสหกิจศึกษาเพื่อแก้ไขและยื่นใหม่')
           );
-          revNotice.querySelector('a').href = '#/student/plan';
+          revNotice.querySelector('a').href = row.source==='phase1'?`#/student/application/${row.application_id}`:'#/student/plan';
           card.append(revNotice);
         }
 
@@ -1912,6 +1914,7 @@ export function renderStudentSelectionStatus({ client, signal, onSessionExpired,
                 }
 
                 const statusMessage = el('p', 'student-decision-status');
+                statusMessage.setAttribute('role','status');
                 const actions = el('div', 'student-decision-actions');
 
                 if (decision.confirmation_status === 'PENDING_CONFIRMATION') {
@@ -1919,21 +1922,23 @@ export function renderStudentSelectionStatus({ client, signal, onSessionExpired,
                     statusMessage.textContent = 'สถานะ: ได้รับคัดเลือกแล้ว กรุณากดยืนยันสิทธิ์หรือสละสิทธิ์ภายในเวลาที่กำหนด';
 
                     const confirmBtn = el('button', 'shell-button student-confirm-btn', 'ยืนยันสิทธิ์');
+                    let sending=false;
+                    const pending=value=>{sending=value;for(const button of actions.querySelectorAll('button'))button.disabled=value;};
                     confirmBtn.type = 'button';
                     confirmBtn.addEventListener('click', async () => {
-                      confirmBtn.disabled = true;
+                      if(sending)return;pending(true);
                       try {
-                        await client.request(`/api/v4/cycles/${row.cycle_id}/confirm`, {
+                        const confirmed=await client.request(`/api/v4/cycles/${row.cycle_id}/confirm`, {
                           method: 'POST',
                           body: { operation_id: globalThis.crypto.randomUUID(), expected_version: decision.version },
                           signal
                         });
                         statusMessage.textContent = 'ยืนยันสิทธิ์แล้ว';
                         actions.replaceChildren();
-                        renderTeamsBox(decisionBox, decision.teams_join_url);
+                        renderTeamsBox(decisionBox, confirmed.teams_join_url);
                       } catch (err) {
-                        confirmBtn.disabled = false;
-                        if (err.status === 422 || err.message?.includes('EXPIRED') || err.message?.includes('สละสิทธิ')) {
+                        pending(false);
+                        if (err.code === 'CONFIRMATION_WINDOW_EXPIRED') {
                           statusMessage.textContent = 'คุณไม่ได้ยืนยันสิทธิ์ในระยะเวลาที่กำหนด (ระบบสละสิทธิโดยอัตโนมัติ)';
                           actions.replaceChildren();
                         } else {
@@ -1945,7 +1950,7 @@ export function renderStudentSelectionStatus({ client, signal, onSessionExpired,
                     const waiveBtn = el('button', 'shell-button shell-button--secondary student-waive-btn', 'สละสิทธิ์');
                     waiveBtn.type = 'button';
                     waiveBtn.addEventListener('click', async () => {
-                      waiveBtn.disabled = true;
+                      if(sending)return;pending(true);
                       try {
                         await client.request(`/api/v4/cycles/${row.cycle_id}/waive`, {
                           method: 'POST',
@@ -1955,14 +1960,16 @@ export function renderStudentSelectionStatus({ client, signal, onSessionExpired,
                         statusMessage.textContent = 'คุณได้ทำการสละสิทธิ์ในรอบการรับสมัครนี้เรียบร้อยแล้ว';
                         actions.replaceChildren();
                       } catch (err) {
-                        waiveBtn.disabled = false;
+                        pending(false);
                         statusMessage.textContent = err.message || 'ทำรายการไม่สำเร็จ กรุณาลองใหม่';
                       }
                     });
 
                     actions.append(confirmBtn, waiveBtn);
-                  } else {
+                  } else if (confWindow.is_closed) {
                     statusMessage.textContent = 'คุณไม่ได้ยืนยันสิทธิ์ในระยะเวลาที่กำหนด (ระบบสละสิทธิโดยอัตโนมัติ)';
+                  } else {
+                    statusMessage.textContent = 'ยังไม่ถึงช่วงเวลายืนยันสิทธิ์ กรุณากลับมาตามกำหนดการ';
                   }
                 } else if (decision.confirmation_status === 'CONFIRMED' || decision.confirmation_status === 'TEAM_JOINED') {
                   statusMessage.textContent = decision.confirmation_status === 'TEAM_JOINED'
@@ -1984,8 +1991,12 @@ export function renderStudentSelectionStatus({ client, signal, onSessionExpired,
               }
               card.append(decisionBox);
             }
-          } catch {
-            // Ignore if decision not available
+          } catch (error) {
+            if(signal?.aborted || error.name==='AbortError')return;
+            if(error.status===401){onSessionExpired?.();return;}
+            if(error.status===403){onAccessDenied?.('ไม่มีสิทธิ์ดูผลการคัดเลือก');return;}
+            const failure=el('p','shell-muted','โหลดผลการคัดเลือกไม่สำเร็จ กรุณารีเฟรชเพื่อลองอีกครั้ง');
+            failure.setAttribute('role','alert');card.append(failure);
           }
         }
 

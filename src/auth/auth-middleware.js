@@ -15,18 +15,6 @@ function hasAuthorizationHeader(request) {
   return typeof header === 'string' && header.trim().length > 0;
 }
 
-function isTuBearerToken(rawToken) {
-  if (typeof rawToken !== 'string') return false;
-  const parts = rawToken.trim().split('.');
-  if (parts.length !== 3) return false;
-  try {
-    const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
-    return header?.kid === 'tu-key-1' && header?.alg === 'RS256';
-  } catch {
-    return false;
-  }
-}
-
 function freezeAttachedContext(request) {
   if (!request || typeof request !== 'object') return;
   for (const sym of Object.getOwnPropertySymbols(request)) {
@@ -65,12 +53,9 @@ function createAuthMiddleware(options = {}) {
         ? authorizerJwt.scopes
         : null;
 
-      // 2. Otherwise extract Bearer token from Authorization header (when fallback is enabled or token is a TU Auth RS256 token)
-      const candidateBearer = !authorizerClaims ? extractBearerToken(request) : null;
-      const rawToken =
-        candidateBearer && (allowBearerFallback || isTuBearerToken(candidateBearer))
-          ? candidateBearer
-          : null;
+      const tuBridge=context.authProvider==='tu';
+      if(tuBridge && authorizerClaims)throw new UnauthorizedError();
+      const rawToken=(allowBearerFallback || tuBridge)?extractBearerToken(request):null;
       const hasAuthHeader = hasAuthorizationHeader(request);
 
       if (!authorizerClaims && !rawToken) {
@@ -98,12 +83,15 @@ function createAuthMiddleware(options = {}) {
         ? tokenValidator.validateClaims(authorizerClaims, undefined, authorizerScopes)
         : await tokenValidator.validateToken(rawToken);
 
+      if(tuBridge !== (validatedClaims.issuer===tokenValidator.tuIssuer))
+        throw new UnauthorizedError();
       // 4. Resolve internal User, Role, and Student context from RDS
       const identity = await identityResolver.resolveIdentity(
         validatedClaims.issuer,
         validatedClaims.subject
       );
 
+      if(tuBridge && identity.role!=='STUDENT')throw new ForbiddenError();
       // 5. Attach immutable trusted identity context (omits sensitive iss/sub per #50/#51)
       const trustedUser = Object.freeze({
         id: identity.userId,

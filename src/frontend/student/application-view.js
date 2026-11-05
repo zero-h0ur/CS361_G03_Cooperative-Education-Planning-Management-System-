@@ -2,6 +2,7 @@ import {renderApplicationEditor} from './application-editor-view.js';
 import {studentElement as node,renderStudentPageHeader,formatStudentDate} from './workspace-components.js';
 import {applicationCycleLabel,applicationEditState,latestApplication,renderApplicationFeature} from './application-presentation.js';
 import {createWorkspaceIcon} from '../ui/workspace-presentation.js';
+import {renderDraftRecovery} from './application-recovery.js';
 export {node};
 export function button(text,action,secondary=false) {
   const b=node('button',`shell-button${secondary?' shell-button--secondary':''}`,text);
@@ -81,6 +82,10 @@ export function renderApplicationWorkspace({client,applicationId,signal,onNaviga
       const content=node('div','student-page-content'),toolbar=node('div','student-list-toolbar');
       toolbar.append(node('h2','student-section-title',`ใบสมัครของคุณ · ${list.length} รายการ`));
       if(options)toolbar.append(cyclePicker(options,list));content.append(toolbar);
+      if(options && !options.preview) {
+        const recovery=renderDraftRecovery({client,official:options.official,cycles:options.cycles,list,signal,onNavigate});
+        if(recovery)content.append(recovery);
+      }
       if(!options)content.append(node('p','application-warning','โหลดข้อมูลรอบสมัครไม่สำเร็จ แต่ยังเปิดใบสมัครเดิมได้'),button('ลองโหลดรอบสมัครอีกครั้ง',load,true));
       if(!list.length) {
         const empty=node('section','student-empty-state');empty.append(createWorkspaceIcon('document'),node('h3','','ยังไม่มีใบสมัคร'),

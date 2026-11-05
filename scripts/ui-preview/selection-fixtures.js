@@ -261,7 +261,6 @@ export function selectionPreview(role, scenario) {
         if (scenario === 'expired') throw Object.assign(new Error('Synthetic expired'), { status: 401 });
         if (scenario === 'error') throw new Error('Synthetic unavailable');
 
-        
         if (/^\/api\/v4\/cycles\/[^/]+\/schedule$/.test(path)) {
           if (options.method === 'PUT') {
             syntheticSchedule = { ...syntheticSchedule, ...options.body, version: (syntheticSchedule.version || 1) + 1 };

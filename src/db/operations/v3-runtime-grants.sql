@@ -59,12 +59,40 @@ GRANT UPDATE(review_opens_at,review_closes_at,confirmation_opens_at,confirmation
   ON public.coordinator_round_schedules TO coed_app;
 -- Scoped, versioned Coordinator schedule commands own these timestamps.
 GRANT INSERT ON public.phase1_cycle_windows TO coed_app;
-GRANT UPDATE(opens_at,closes_at,version) ON public.phase1_cycle_windows TO coed_app;
+GRANT UPDATE(opens_at,closes_at,confirmation_opens_at,confirmation_closes_at,announced_at,announced_by,
+  near_deadline_hours,updated_at,updated_by,version) ON public.phase1_cycle_windows TO coed_app;
+REVOKE ALL PRIVILEGES ON public.phase1_selection_results, public.phase1_schedule_events, public.phase1_notifications FROM coed_app;
+GRANT SELECT ON public.phase1_selection_results, public.phase1_schedule_events, public.phase1_notifications TO coed_app;
+-- Results are provisioned by a separately approved decision command/operator,
+-- never by the web runtime. Runtime may announce and update response state only.
+GRANT UPDATE(confirmation_status,announced_at,responded_at,auto_waived_at,team_joined_at,response_notes,version,updated_at)
+  ON public.phase1_selection_results TO coed_app;
+GRANT INSERT ON public.phase1_schedule_events, public.phase1_notifications TO coed_app;
+GRANT UPDATE(read_at) ON public.phase1_notifications TO coed_app;
+
+REVOKE ALL PRIVILEGES ON public.phase1_submission_deliveries, public.tu_identity_link_events FROM coed_app;
+GRANT SELECT ON public.phase1_submission_deliveries TO coed_app;
+GRANT INSERT(submission_id,application_id,application_version,cohort_id,coordinator_id_at_send,department,program,snapshot_checksum)
+  ON public.phase1_submission_deliveries TO coed_app;
 
 DO $acl$
 BEGIN
+  IF EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+    WHERE n.nspname='public' AND p.proname='upsert_tu_student_identity'
+      AND has_function_privilege('coed_app',p.oid,'EXECUTE')) THEN
+    RAISE EXCEPTION 'Retired TU provisioning remains executable; review inherited grants before release.';
+  END IF;
   IF has_table_privilege('coed_app','public.audit_events','DELETE')
+     OR has_table_privilege('coed_app','public.phase1_submission_deliveries','UPDATE,DELETE,TRUNCATE')
+     OR has_any_column_privilege('coed_app','public.phase1_submission_deliveries','UPDATE')
+     OR has_column_privilege('coed_app','public.phase1_submission_deliveries','provenance','INSERT')
+     OR has_table_privilege('coed_app','public.tu_identity_link_events','INSERT,UPDATE,DELETE,TRUNCATE')
      OR has_table_privilege('coed_app','public.audit_events','UPDATE')
+     OR has_table_privilege('coed_app','public.phase1_selection_results','INSERT,DELETE,TRUNCATE')
+     OR has_column_privilege('coed_app','public.phase1_selection_results','outcome','UPDATE')
+     OR has_table_privilege('coed_app','public.phase1_schedule_events','UPDATE,DELETE,TRUNCATE')
+     OR has_table_privilege('coed_app','public.phase1_notifications','DELETE,TRUNCATE')
+     OR has_column_privilege('coed_app','public.phase1_notifications','recipient_user_id','UPDATE')
      OR has_table_privilege('coed_app','public.audit_events','TRUNCATE')
      OR has_table_privilege('coed_app','public.plan_operations','DELETE')
      OR has_table_privilege('coed_app','public.plan_operations','UPDATE')

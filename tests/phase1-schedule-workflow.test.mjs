@@ -211,8 +211,7 @@ function mockDb(initialData = {}) {
 
       // Selection cohorts query
       if (sql.includes('FROM selection_cohorts')) {
-        const c = tables.selection_cohorts.find(x => x.cycle_id === params[0] && x.status === 'ACTIVE');
-        return { rows: c ? [c] : [] };
+        return {rows:tables.selection_cohorts.filter(x=>x.cycle_id===params[0] && x.status==='ACTIVE')};
       }
 
       return { rows: [] };
@@ -234,6 +233,7 @@ test('Schedule: Coordinator updates application and confirmation windows with st
   const coordId = randomUUID();
   const db = mockDb({
     users: [{ id: coordId, role: 'COORDINATOR', account_status: 'ACTIVE' }],
+    cohorts:[{cycle_id:cycleId,coordinator_id:coordId,status:'ACTIVE'}],
     rounds: [{ id: cycleId, name: 'สหกิจศึกษา รอบ 1/69', academic_year: 2569, semester: 1, status: 'OPEN' }],
     windows: [{
       cycle_id: cycleId,
@@ -311,6 +311,7 @@ test('Announcement & Decision: Coordinator announces results and student views t
       { id: studentUserId, role: 'STUDENT', account_status: 'ACTIVE' }
     ],
     students: [{ id: studentId, user_id: studentUserId, full_name: 'สมชาย ใจดี' }],
+    cohorts:[{cycle_id:cycleId,coordinator_id:coordId,status:'ACTIVE'}],
     rounds: [{ id: cycleId, name: 'สหกิจศึกษา รอบ 1/69', status: 'OPEN' }],
     windows: [{
       cycle_id: cycleId,
@@ -330,7 +331,7 @@ test('Announcement & Decision: Coordinator announces results and student views t
   });
 
   let simulatedClock = new Date('2026-06-25T03:00:00.000Z');
-  const service = new Phase1ScheduleService({ pool: db.pool, now: () => simulatedClock });
+  const service = new Phase1ScheduleService({ pool: db.pool, now: () => simulatedClock,teamsJoinUrl:'https://teams.microsoft.com/l/team/synthetic-only' });
 
   const coordActor = { isAuthenticated: true, userId: coordId, role: 'COORDINATOR' };
   const studentActor = { isAuthenticated: true, userId: studentUserId, role: 'STUDENT' };
@@ -400,7 +401,7 @@ test('Confirmation Boundary & Cutoff: Before opening, during window, exactly at 
   });
 
   let simulatedClock = new Date(opensMs - 1000); // 1s before opening
-  const service = new Phase1ScheduleService({ pool: db.pool, now: () => simulatedClock });
+  const service = new Phase1ScheduleService({ pool: db.pool, now: () => simulatedClock,teamsJoinUrl:'https://teams.microsoft.com/l/team/synthetic-only' });
   const studentActor = { isAuthenticated: true, userId: studentUserId, role: 'STUDENT' };
 
   // 1. Confirming before confirmation opens -> Rejected
@@ -471,6 +472,7 @@ test('Batch Sweep & Lazy Evaluation: Overdue confirmations are automatically wai
       { id: student1Id, user_id: user1, full_name: 'นักศึกษา 1' },
       { id: student2Id, user_id: user2, full_name: 'นักศึกษา 2' }
     ],
+    cohorts:[{cycle_id:cycleId,coordinator_id:coordId,status:'ACTIVE'}],
     rounds: [{ id: cycleId, name: 'รอบ 1/69', status: 'OPEN' }],
     windows: [{
       cycle_id: cycleId,

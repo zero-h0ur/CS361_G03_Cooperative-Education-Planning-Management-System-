@@ -477,7 +477,7 @@ test('Student views announcement, confirms participation within deadline, and re
     }
     if (path === `/api/v4/cycles/${cycleId}/confirm`) {
       decisionData.confirmation_status = 'CONFIRMED';
-      return { success: true };
+      return { success: true,teams_join_url:decisionData.teams_join_url };
     }
     return {};
   });
@@ -607,6 +607,7 @@ test('Concurrent/late confirmation rejected with 422 displays auto-waived notice
     if (path === `/api/v4/cycles/${cycleId}/confirm`) {
       const err = new Error('หมดเวลายืนยันสิทธิ์แล้ว ระบบได้ทำการสละสิทธิ์โดยอัตโนมัติ');
       err.status = 422;
+      err.code = 'CONFIRMATION_WINDOW_EXPIRED';
       throw err;
     }
     return {};

@@ -624,6 +624,7 @@ export function createShellApp({
   restartLogin,
   logout,
   startTuAuthLogin = null,
+  completeTuRegistration = null,
   invalidateLocalSession = async () => {},
   location,
   eventTarget,
@@ -715,7 +716,13 @@ export function createShellApp({
         safelyRememberReturnRoute(storage, location.hash);
         if (typeof startTuAuthLogin === 'function') {
           try {
-            await startTuAuthLogin({ studentId, password });
+            const registration=await startTuAuthLogin({ studentId, password });
+            if(registration?.contract==='coed-tu-registration-v1' && typeof completeTuRegistration==='function'){
+              abortRouteWork();routeController=new AbortController();
+              const {renderTuOnboarding}=await import('./auth/tu-onboarding-view.js');
+              renderState(root,{eyebrow:'CO-ED · บัญชีนักศึกษา',title:'ลงทะเบียนครั้งแรก',description:'ยืนยันข้อมูลก่อนเข้าใช้งาน',tone:'neutral',
+                bodyNode:renderTuOnboarding({registration,onSubmit:completeTuRegistration,onCancel:()=>renderSignIn({rememberRoute:false}),signal:routeController.signal}),actions:[]});
+            }
           } catch (error) {
             showFeedback(
               error?.message || 'ไม่สามารถยืนยันตัวตนได้ในขณะนี้ กรุณาตรวจสอบรหัสนักศึกษาและรหัสผ่านอีกครั้ง',
