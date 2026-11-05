@@ -197,4 +197,16 @@ categories; it does not prove or repair the403 cause. Fresh hidden-target lookup
 and then successful owner smoke remain pending. No write resume or frontend
 deployment. See [diagnostic evidence](tu-identity-readonly-diagnostic.md).
 
+Subsequently, agent-run production-7rkUnZ/version3 after a fixed5minute endpoint
+propagation grace completed a real SELECT-only PostgreSQL lookup for the one
+freshly authorized target. UNLINKED_IDENTITY,0exact TU links and0matching student
+profiles were confirmed; no existing account/profile was chosen or altered.
+Secret read succeeded without changing the exact IAM/endpoint scope. Earlier
+denials are consistent with propagation delay, not independently proven to have
+that historical cause. Cleanup verified at2026-11-05 09:31:13 Bangkok, all owned
+flags false, frozen application/Gateway/endpoint baselines unchanged. Post-run
+read-only preflight also passed. No password/provider test, JWT or successful
+Login->me->own-profile occurred; ownerSmoke is absent and maintenance still
+verification-only. Separate verified onboarding/provisioning approval is needed.
+
 Use the [operator runbook](../operations/tu-production-operator.md).

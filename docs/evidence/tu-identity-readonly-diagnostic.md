@@ -1,9 +1,9 @@
 # TU identity read-only diagnostic evidence
 
 Date:5November2026, Asia/Bangkok. User explicitly approved N0-N5.
-Status: First live attempt failed before DB connection/query; temporary-resource
-cleanup verified. Diagnostic error reporting hardened locally and tested; a fresh
-hidden-target run is still required to establish the account condition.
+Status: Agent-run fixed read completed for the one freshly authorized target.
+UNLINKED_IDENTITY confirmed:0TU links and0matching student profiles. Temporary
+resource cleanup verified; no account/business-row writes or successful Login.
 
 ## Confirmed incident boundary
 
@@ -89,7 +89,7 @@ resource policy, and the existing Secrets endpoint is available/private-DNS
 enabled. No Secret value was read locally, no credential was rotated, and no
 permission was widened. Do not infer UNLINKED_IDENTITY from this tool failure.
 
-## Pending live proof
+## Live diagnostic history and remaining Login proof
 
 ### Second attempt and bounded propagation readiness
 
@@ -112,13 +112,50 @@ The latest user explicitly authorizes the agent to test the one newly supplied
 Student ID. This supersedes the earlier user-only input requirement for that
 one target; identifier remains in hidden input/memory/private Invoke, not these
 documents, source, arguments, checkpoint or logs. No password/legacy credential
-reuse or identity repair is authorized. Fresh live result remains pending.
+reuse or identity repair is authorized. The next subsection records the live
+result obtained under that explicit target authorization.
 
-The updated [interactive operator](../operations/tu-identity-readonly-diagnostic.md)
-will be run from the reviewed committed worktree using only the freshly
-authorized target through its hidden prompt. Prior raw input was not retained;
-the current explicit authorization is not a grant to reuse historical passwords.
-New N1 resources/N2 lookup/N3 cleanup will be a new
-bounded run; the previous run's cleanup is already verified. No confirmed account
-cause or successful Login is claimed. Repair/provisioning/relink and write resume
-remain separately gated. No push or frontend deploy.
+### Agent-run fixed read and confirmed account condition
+
+From clean local commit777eec5, the agent ran the reviewed operator with the
+freshly authorized target through hidden stdin. State:
+`tmp/tu-production/production-7rkUnZ/state.json`; published version3, one Invoke.
+No password, provider call, JWT, fabricated TU proof or account repair was used.
+
+The endpoint grant was updated at2026-11-05 09:25:00 Bangkok and the fixed grace
+ended09:30:00. During the wait, read-only checks confirmed the exact reviewed
+execution policy and endpoint grant, expected role ARN and no permissions
+boundary. No additional right, wildcard resource, KMS grant or new Secret was
+introduced. After the grace the same scoped Secret read and real PostgreSQL
+read-only transaction succeeded. This is consistent with propagation delay in
+the earlier runs; it does not independently prove the historical denial layer.
+
+The fixed snapshot returned ok=true, reason=UNLINKED_IDENTITY, tu_links=0,
+matching_students=0, candidate_users=0 and canonical_students=0. No active link
+was found among this target's candidates. False account/profile flags here are
+the consequence of absent canonical records, NOT evidence that an account was
+disabled, a student failed eligibility, or another person's identity should be
+chosen. Existing users under unrelated keys were not searched or matched by
+name/email. The exact current TU issuer/subject has no link, and no student row
+has the selected student_number. This is enough for the existing strict issuer
+to reject this target before session issuance.
+
+The final operator result was IDENTITY_DIAGNOSTIC_COMPLETE, cleanupVerified=true,
+noDatabaseWrites=true. All owned flags are false; function/versions, role/policy,
+log group and the exact additive endpoint grant were removed and application/
+Gateway/endpoint baselines verified unchanged. The target raw value was not
+written to source, argv, artifact, checkpoint, logs or this evidence.
+
+This is a completed identity diagnostic, NOT successful TU Login->me->own-profile.
+There is still no owner-smoke attestation. Maintenance remains verification-only.
+No provisioning/relink/profile repair, public deployment, write resume or push.
+The next separate decision is verified new-student onboarding/provisioning versus
+administrator-reviewed single-account provisioning. Neither is authorized by
+the current SELECT-only scope, and neither may fabricate required profile data.
+
+The [interactive operator](../operations/tu-identity-readonly-diagnostic.md) is now
+complete for the authorized target; do not rerun repeatedly or treat the missing
+link as permission to create one. Any provisioning/onboarding implementation must
+have a separately approved scope, fresh genuine TU verification, trusted required
+student fields and preserved existing data. Successful owner smoke is still
+required before any write resume. No historical password reuse or Git push.
