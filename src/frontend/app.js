@@ -46,11 +46,11 @@ if (root) {
       return authClient.getAccessToken(options);
     };
 
-    const startTuAuthLogin = async ({ studentId, password }) => {
-      const res = await fetch(`${config.apiBaseUrl}/api/v3/auth/tu-login`, {
+    const requestTuAuth = async (path,input) => {
+      const res = await fetch(`${config.apiBaseUrl}/api/v3/auth/${path}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId, password })
+        body: JSON.stringify(input),redirect:'error',signal:AbortSignal.timeout(28000)
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -60,7 +60,10 @@ if (root) {
           'ไม่สามารถเข้าสู่ระบบได้ กรุณาตรวจสอบรหัสนักศึกษาและรหัสผ่าน'
         );
       }
-      const token = body?.data?.accessToken;
+      return body?.data;
+    };
+    const activateTuSession = async (data) => {
+      const token = data?.accessToken;
       if (!token) {
         throw new Error('ไม่ได้รับ Access Token จากระบบยืนยันตัวตน');
       }
@@ -69,11 +72,17 @@ if (root) {
       window.sessionStorage?.setItem('co-ed:auth-mode', 'tu-auth');
       try {
         const verified = await tuSessionClient.loadSession();
-        if (verified.role !== 'STUDENT') throw new Error('บัญชีนี้ไม่ใช่บัญชีนักศึกษา');
+        if (verified.role !== 'STUDENT' || verified.user?.id!==data.user?.id || verified.studentId!==data.user?.studentId) throw new Error('ยังยืนยันเจ้าของบัญชีไม่ได้ กรุณาเข้าสู่ระบบใหม่');
       } catch (error) { clearTuAuthStorage(); throw error; }
       window.location.hash = '#/student/profile';
       window.location.reload();
     };
+    const startTuAuthLogin=async input=>{
+      const data=await requestTuAuth('tu-login',input);
+      if(data?.contract==='coed-tu-registration-v1') {clearTuAuthStorage();return data;}
+      await activateTuSession(data);
+    };
+    const completeTuRegistration=async input=>activateTuSession(await requestTuAuth('tu-register',input));
 
     const startCognitoLogin = async () => {
       clearTuAuthStorage();
@@ -170,6 +179,7 @@ if (root) {
       restartLogin: startCognitoLogin,
       logout,
       startTuAuthLogin,
+      completeTuRegistration,
       invalidateLocalSession,
       location: window.location,
       eventTarget: window,

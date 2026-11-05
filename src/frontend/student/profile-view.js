@@ -49,6 +49,15 @@ export function renderStudentProfile({profileClient,applicationClient,workflowCl
     identity.replaceChildren(person,rows([['รหัสนักศึกษา',profile.student_number],['หลักสูตร',options?.official?.curriculum?`หลักสูตร ${options.official.curriculum}`:profile.program],['กลุ่มวิชาเอก',profile.major]]));
   }
   function renderOfficial() {
+    if(profile.onboarding){
+      const o=profile.onboarding;
+      official.replaceChildren(renderStudentCard('ข้อมูลยืนยันตัวตนจาก TU',{icon:'lock'}).firstChild,
+        rows([['คณะ',o.identity.faculty],['สาขาจาก TU',o.identity.department],['สถานะจาก TU',o.identity.tuStatus],['อีเมลมหาวิทยาลัย',profile.institutional_email]]),
+        el('h3','','ข้อมูลที่คุณกรอกเอง · รอตรวจสอบ'),
+        rows([['ภาคการศึกษา',o.program_type==='regular'?'ภาคปกติ':'ภาคพิเศษ'],['ปีที่เข้าศึกษา',o.entry_year]]),
+        el('p','student-info-note','ข้อมูลหลักสูตรและขอบเขตการศึกษายังรอมหาวิทยาลัยยืนยัน การเข้าใช้งานไม่ใช่การผ่านคุณสมบัติสมัคร'));
+      return;
+    }
     official.replaceChildren(renderStudentCard('ข้อมูลจากมหาวิทยาลัย',{icon:'lock'}).firstChild,
       el('p','student-record-description','อ่านอย่างเดียว · ใช้ตรวจสอบตัวตนและข้อมูลการศึกษา'),
       rows([['ภาควิชา',profile.department],['หลักสูตร / สาขา',profile.program],['ปีที่เข้าศึกษา',options?.official?.entry_year],['อีเมลมหาวิทยาลัย',profile.institutional_email]]),
