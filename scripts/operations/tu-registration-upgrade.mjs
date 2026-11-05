@@ -4,7 +4,7 @@ import reader from './tu-preflight/catalog.js';
 import {identifier,sha256,captureCatalog,catalogHash,normalizedCatalog} from './present-schema-baseline.mjs';
 import {verifyRecordedHistory,AFTER_CATALOG_SHA256} from './present-schema-upgrade.mjs';
 export const VERSION='019_tu_student_registration.sql';
-export const SQL_SHA256='30b9028755dbfafa89619cbe04ecf27333b4af80673f251824baa832497a8443';
+export const SQL_SHA256='321f90ece54cca0d98f137b50813ca0dea4ba58f36b6166f0088475eae655f85';
 export const POST_SHA256='ea3ff238c1c10aaa5d32253b894c0541246ef1e04c775effffcd15ad1d0889d1';
 const fail=code=>{const e=Error(code);e.safeCode=code;throw e;};
 export function readRegistrationSql(){
@@ -47,6 +47,11 @@ async function capabilities(client){
     OR has_table_privilege('coed_tu_login',c.oid,'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
     OR has_any_column_privilege('coed_tu_login',c.oid,'INSERT,UPDATE,REFERENCES'))`)).rows[0];
  if(bad.n!==0)fail('REGISTRATION_ROLE_CAPABILITY');
+ const app=(await client.query(`SELECT count(*)::int n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+  WHERE n.nspname=current_schema() AND c.relname IN ('tu_student_registrations','tu_registration_receipts')
+  AND (has_table_privilege('coed_app',c.oid,'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+   OR has_any_column_privilege('coed_app',c.oid,'INSERT,UPDATE,REFERENCES'))`)).rows[0];
+ if(app.n!==0)fail('REGISTRATION_ROLE_CAPABILITY');
  const callable=(await client.query(`SELECT p.proname AS name FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
   WHERE n.nspname=current_schema() AND p.prorettype<>'trigger'::regtype AND
   (p.prosecdef OR NOT EXISTS(SELECT 1 FROM pg_depend d WHERE d.classid='pg_proc'::regclass AND d.objid=p.oid AND d.deptype='e'))

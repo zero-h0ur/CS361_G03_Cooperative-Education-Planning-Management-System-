@@ -99,15 +99,16 @@ export async function activateOwner(s,trial=false){
  const ready=await waitActive(T.name),v=aws(['lambda','publish-version','--function-name',T.name,'--revision-id',ready.RevisionId,'--code-sha256',ready.CodeSha256]).Version;
  fixed(/^[1-9][0-9]*$/.test(v));putDeny(T.name,[OPERATOR],v);s.ownerVersion=v;save(s.path,s);return report(s);
 }
-export async function refreshOwner(s,candidate){
- caller();checkMaintenance();fixed(s.task==='registration019'&&!s.applied&&!s.trialPassed&&s.owned.ownerFunction&&s.sqlSha256===candidate.sqlSha256,'OWNER_REFRESH_SCOPE');
+export async function refreshOwner(s,candidate,{reviewedSqlChange=false}={}){
+ caller();checkMaintenance();fixed(s.task==='registration019'&&!s.applied&&!s.trialPassed&&s.owned.ownerFunction,'OWNER_REFRESH_SCOPE');
+ fixed(s.sqlSha256===candidate.sqlSha256 || (reviewedSqlChange===true&&s.ownerResult?.ok===false&&s.ownerResult.error?.code==='REGISTRATION_POSTCONDITION'),'OWNER_SQL_CHANGE_REVIEW_REQUIRED');
  fixed(!cleanSource().dirty&&candidate.source.head===cleanSource().head,'COMMITTED_SOURCE_REQUIRED');
  ownerConfig(s);fixed(hash(readFileSync(candidate.artifacts.owner.file))===candidate.artifacts.owner.sha256);
- s.ownerRefresh={oldSource:s.source,oldOwner:s.artifacts.owner,newSource:candidate.source,newOwner:candidate.artifacts.owner};save(s.path,s);
+ s.ownerRefresh={oldSource:s.source,oldOwner:s.artifacts.owner,oldSqlSha256:s.sqlSha256,newSource:candidate.source,newOwner:candidate.artifacts.owner,newSqlSha256:candidate.sqlSha256};save(s.path,s);
  aws(['lambda','put-function-concurrency','--function-name',T.name,'--reserved-concurrent-executions','0']);
  const c=ownerConfig(s); // Concurrency updates can advance Lambda's revision.
  aws(['lambda','update-function-code','--function-name',T.name,'--revision-id',c.RevisionId,'--zip-file','fileb://'+candidate.artifacts.owner.file]);
- await waitActive(T.name);s.source=candidate.source;s.artifacts=candidate.artifacts;s.ownerVersion=null;save(s.path,s);
+ await waitActive(T.name);s.source=candidate.source;s.artifacts=candidate.artifacts;s.sqlSha256=candidate.sqlSha256;s.ownerVersion=null;save(s.path,s);
  aws(['lambda','put-function-concurrency','--function-name',T.name,'--reserved-concurrent-executions','1']);return report(s);
 }
 export function invokeOwner(s,mode){

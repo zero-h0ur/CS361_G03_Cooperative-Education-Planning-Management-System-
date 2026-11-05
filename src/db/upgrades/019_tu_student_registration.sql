@@ -57,6 +57,11 @@ CREATE TABLE public.tu_registration_receipts (
  student_id UUID NOT NULL REFERENCES public.students(id), user_id UUID NOT NULL REFERENCES public.users(id),
  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
+-- Production has default CRUD grants to coed_app. Remove those ONLY from these
+-- newly created tables, then grant the reviewed read columns below. Do not alter
+-- global/default grants or any existing table permissions.
+REVOKE ALL ON public.tu_student_registrations,public.tu_registration_receipts
+ FROM PUBLIC,coed_app,coed_tu_login,coed_tu_registration;
 CREATE TRIGGER tu_registrations_immutable BEFORE UPDATE OR DELETE ON public.tu_student_registrations
  FOR EACH ROW EXECUTE FUNCTION public.reject_immutable_row_mutation();
 CREATE TRIGGER tu_registration_receipts_immutable BEFORE UPDATE OR DELETE ON public.tu_registration_receipts

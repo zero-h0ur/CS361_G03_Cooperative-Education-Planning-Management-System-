@@ -24,6 +24,9 @@ test('real disposable PostgreSQL: observed018 registration, atomicity, concurren
   const login=readFileSync(new URL('../scripts/operations/tu-login-role.sql',import.meta.url),'utf8')
    .replaceAll('public.',q+'.').replaceAll('SCHEMA public','SCHEMA '+q).replaceAll("'public'","'"+schema+"'");
   await pool.query(login);
+  // Actual RDS default ACL discovered by rollback-only trial;019 must neutralize
+  // it on the two new tables, never by changing global/default permissions.
+  await pool.query('ALTER DEFAULT PRIVILEGES IN SCHEMA '+q+' GRANT SELECT,INSERT,UPDATE,DELETE ON TABLES TO coed_app');
   const history=(await pool.query('SELECT * FROM schema_migrations ORDER BY version')).rows;
   const upgrade=async mode=>{const c=await pool.connect();try{return await upgradeRegistration({client:c,expectedDatabase:'coed_registration_test',expectedSchema:schema,mode,maintenanceApproved:true});}finally{c.release();}};
   await t.test('owner trial rolls back DDL/roles/history; apply preserves history and verifies replay',async()=>{
