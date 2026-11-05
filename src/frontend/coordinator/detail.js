@@ -90,6 +90,8 @@ export function renderDetail(record,{activeTab='summary',onTab,onReturn,onForwar
     body.prepend(note('ฉบับที่ส่งเมื่อ '+date(record.submitted_at,true)+' · ไม่แสดงการแก้ไขที่ยังไม่ได้ส่ง'));dialog(host,'ใบสมัครฉบับที่ส่ง',body,{signal});
   },{icon:'file'}));root.append(header);
   if(record.reason)root.append(note('ส่งกลับแก้ไข: '+record.reason));
+  if(record.academic_source==='STUDENT_DECLARED')root.append(note('หลักสูตร กลุ่มวิชา และผลการเรียนเป็นข้อมูลที่นักศึกษาแจ้ง · รอตรวจหลักฐาน ไม่ใช่ข้อมูลการศึกษาที่ TU ยืนยัน'));
+  if(record.assessment?.review_required)root.append(note('ผลตรวจคุณสมบัติ: รอตรวจสอบ ไม่ใช่ผ่านคุณสมบัติ · ช่วงทดลองนี้เปิดให้อ่านใบสมัครและเอกสารเท่านั้น'));
   const tablist=el('div','coord-tabs');tablist.setAttribute('role','tablist');tablist.setAttribute('aria-label','รายละเอียดใบสมัคร');
   const panels=el('div','coord-panels'),prefix='coord-'+crypto.randomUUID();
   const content={summary:()=>summaryPanel(record),grades:()=>gradesPanel(record,{onAll:()=>dialog(host,'ผลการเรียนทั้งหมด',gradesPanel(record,{all:true}),{signal})}),

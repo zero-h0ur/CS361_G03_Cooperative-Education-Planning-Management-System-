@@ -11,9 +11,10 @@ function scaled(value) {
   if (!/^\d+(?:\.\d{1,4})?$/.test(s)) return null;
   const [a,b='']=s.split('.');return BigInt(a)*10000n+BigInt(b.padEnd(4,'0'));
 }
-function readiness({app,official,policy,documents=[],window,roundOpen,allowSynthetic=false}) {
-  const p=app.payload || {}, blockers=[];
+function readiness({app,official,policy,documents=[],window,roundOpen,allowSynthetic=false,allowPendingAcademic=false}) {
+  const p=app.payload || {}, blockers=[],review_flags=[];
   const add=(field,code,message)=>blockers.push({field,code,message});
+  const pending=(field,code,message)=>(allowPendingAcademic?review_flags:blockers).push({field,code,message});
   const curr=official?.curriculum || p.curriculum;
   if (!roundOpen) add('cycle_id','CYCLE_CLOSED','รอบนี้ปิดรับสมัครแล้ว');
   if (!window) add('cycle_id','SCHEDULE_PENDING','รอยืนยันกำหนดการของรอบสมัคร');
@@ -21,8 +22,10 @@ function readiness({app,official,policy,documents=[],window,roundOpen,allowSynth
   const data=policy?.data;
   const configured=policy?.verified && policy.source_year===BASELINE.source_year && (!policy.synthetic || allowSynthetic) && data && GROUPS[curr]
     && ['LATEST','HIGHEST','SELECTED'].includes(data.repeat_rule) && data.alternative_rule==='STUDENT_SELECTED';
-  if (!configured) add('curriculum','POLICY_PENDING','รอยืนยันข้อมูลเกณฑ์');
-  if (!official?.academic_verified) add('curriculum','IDENTITY_PENDING','รอยืนยันหลักสูตรและปีที่เข้าศึกษา');
+  if (!configured) pending('curriculum','POLICY_PENDING','รอยืนยันข้อมูลเกณฑ์');
+  if (!official?.academic_verified) pending('curriculum','IDENTITY_PENDING','รอยืนยันหลักสูตรและปีที่เข้าศึกษา');
+  if(allowPendingAcademic && !GROUPS[curr])add('curriculum','REQUIRED','กรุณาเลือกหลักสูตรตาม Transcript');
+  if(allowPendingAcademic && official?.registration?.entry_year>BASELINE.entry_year_max)add('entry_year','ENTRY_YEAR','รอบ 1/69 รับนักศึกษารหัส 67 ลงไป');
   if (p.curriculum && official?.curriculum && p.curriculum!==official.curriculum) add('curriculum','CURRICULUM_MISMATCH','หลักสูตรที่เลือกไม่ตรงข้อมูลที่ยืนยัน');
   if (official?.academic_verified && official.entry_year>BASELINE.entry_year_max) add('curriculum','ENTRY_YEAR','รอบ 1/69 รับนักศึกษารหัส 67 ลงไป');
   for (const field of DECLARED_IDENTITY) {
@@ -53,8 +56,14 @@ function readiness({app,official,policy,documents=[],window,roundOpen,allowSynth
       if (!group.includes(code)) {add('selected_courses','COURSE_CHOICE','กรุณาเลือกวิชาทางเลือกที่นำมาคำนวณ');valid=false;continue;}
     }
     const credits=scaled(data?.credits?.[code]);
-    if (credits===null || credits<=0n || credits>990000n) {if (configured) add('course_attempts','CREDITS_PENDING',`รอยืนยันหน่วยกิต ${code}`);valid=false;}
+    if (credits===null || credits<=0n || credits>990000n) {if (configured) pending('course_attempts','CREDITS_PENDING',`รอยืนยันหน่วยกิต ${code}`);valid=false;}
+    if(allowPendingAcademic && (p.course_attempts || []).some(x=>x.code===code && x.points===null))add('course_attempts','COURSE_REQUIRED',`กรุณากรอกเกรดทุกครั้งที่เรียน ${code}`);
     let attempts=(p.course_attempts || []).filter(x=>x.code===code && x.points!==null);
+    if(allowPendingAcademic && attempts.length>1 && (!configured || data.repeat_rule==='SELECTED')){
+      pending('course_attempts','RETAKE_REVIEW','รอตรวจผลการเรียนซ้ำตามหลักฐาน');valid=false;
+      if(attempts.some(x=>scaled(x.points)===null || scaled(x.points)>40000n))add('course_attempts','INVALID_GRADE','เกรดต้องอยู่ระหว่าง 0 ถึง 4');
+      continue;
+    }
     if (attempts.length>1 && configured) {
       if (data.repeat_rule==='LATEST') attempts=[attempts.reduce((a,b)=>a.attempt>b.attempt?a:b)];
       else if (data.repeat_rule==='HIGHEST') attempts=[attempts.reduce((a,b)=>scaled(a.points)>scaled(b.points)?a:b)];
@@ -70,6 +79,6 @@ function readiness({app,official,policy,documents=[],window,roundOpen,allowSynth
   for (const group of EXTRA[curr] || []) if (!group.some(code=>['ENROLLED','STUDIED'].includes(p.additional_studies?.[code]))) add('additional_studies','ADDITIONAL_REQUIRED',`ต้องกำลังศึกษาหรือเคยศึกษา ${group.join(' หรือ ')}`);
   for (const kind of ['resume','transcript','conduct','photo']) if (!documents.some(d=>d.kind===kind)) add(`documents.${kind}`,'DOCUMENT_REQUIRED','กรุณาแนบไฟล์ที่ผ่านการบันทึกแล้ว');
   for (const name of ACKNOWLEDGEMENTS) if (p.acknowledgements?.[name]!==true) add(`acknowledgements.${name}`,'ACK_REQUIRED','กรุณาตรวจสอบและรับรองเงื่อนไขข้อนี้ด้วยตนเอง');
-  return {can_submit:['DRAFT','NEEDS_REVISION'].includes(app.status) && blockers.length===0,eligibility:!configured || !official?.academic_verified || !valid?'UNKNOWN':blockers.length?'FAIL':'PASS',group_gpa:groupGpa,blockers,preliminary:true};
+  return {can_submit:['DRAFT','NEEDS_REVISION'].includes(app.status) && blockers.length===0,eligibility:!configured || !official?.academic_verified || !valid?'UNKNOWN':blockers.length?'FAIL':'PASS',group_gpa:groupGpa,blockers,review_flags,preliminary:true};
 }
 module.exports={GROUPS,EXTRA,BASELINE,effectiveCriteria,templates,scaled,readiness};

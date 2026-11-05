@@ -6,13 +6,16 @@ class ApplicationRepository {
   async profile(db,actor,lock=false) {
     if(lock)await db.query("SELECT pg_advisory_xact_lock(hashtextextended('phase1:profile:' || $1::text,0))",[actor.studentId]);
     const row=(await db.query(`SELECT s.id AS student_id,s.student_number,s.full_name,s.institutional_email,
-      s.department,s.program,s.major,s.academic_year FROM students s JOIN users u ON u.id=s.user_id
+      s.department,s.program,s.major,s.academic_year,to_jsonb(s)->>'identity_source' AS identity_source FROM students s JOIN users u ON u.id=s.user_id
       WHERE s.id=$1 AND s.user_id=$2 AND u.role='STUDENT' AND u.account_status='ACTIVE'
       ${lock?'FOR SHARE OF u,s':''}`,[actor.studentId,actor.userId])).rows[0];
     if(!row)throw new ForbiddenError();
     const verified=(await db.query(`SELECT curriculum,entry_year,institution,source,verified_by,verified_at
       FROM phase1_academic_profiles WHERE student_id=$1`,[row.student_id])).rows[0];
-    return {...row,...verified,academic_verified:Boolean(verified)};
+    const registration=row.identity_source==='TU_ONBOARDING'?(await db.query(`SELECT program_type,entry_year,study_source,
+      identity->>'faculty' AS faculty,identity->>'department' AS department FROM tu_student_registrations
+      WHERE student_id=$1 AND user_id=$2`,[row.student_id,actor.userId])).rows[0]:null;
+    return {...row,...verified,academic_verified:Boolean(verified),...(registration?{registration}: {})};
   }
   async active(db,actor,lock=false) {
     const user=(await db.query(`SELECT role FROM users WHERE id=$1 AND account_status='ACTIVE' ${lock?'FOR SHARE':''}`,[actor.userId])).rows[0];
@@ -20,10 +23,11 @@ class ApplicationRepository {
   }
   async cycle(db,id,profile,lock=false) {
     if(lock)await db.query("SELECT pg_advisory_xact_lock(hashtextextended('phase1:cycle:' || $1::text,0))",[id]);
+    const intakeCycles=await require('../phase1-intake').visibleCycles(db,profile);
     const row=(await db.query(`SELECT r.id,r.name,r.status,r.academic_year,r.semester FROM rounds r
       WHERE r.id=$1 AND (r.visibility='public' OR EXISTS(SELECT 1 FROM selection_cohorts c
-      WHERE c.cycle_id=r.id AND c.status='ACTIVE' AND c.department=$2 AND c.program=$3))`,
-    [id,profile.department,profile.program])).rows[0];
+      WHERE c.cycle_id=r.id AND c.status='ACTIVE' AND c.department=$2 AND c.program=$3) OR r.id=ANY($4::uuid[]))`,
+    [id,profile.department,profile.program,intakeCycles])).rows[0];
     if(!row)throw new NotFoundError('ไม่พบรอบที่คุณมีสิทธิ์สมัคร');
     const window=(await db.query(`SELECT *,clock_timestamp()>=opens_at AND clock_timestamp()<closes_at AS is_open
       FROM phase1_cycle_windows WHERE cycle_id=$1`,[id])).rows[0] || null;

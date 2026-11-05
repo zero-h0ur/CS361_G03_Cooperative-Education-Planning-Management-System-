@@ -83,7 +83,7 @@ export function renderApplicationWorkspace({client,applicationId,signal,onNaviga
       const options=optionResult.status==='fulfilled'?optionResult.value:null,list=listResult.value;
       const content=node('div','student-page-content'),toolbar=node('div','student-list-toolbar');
       toolbar.append(node('h2','student-section-title',`ใบสมัครของคุณ · ${list.length} รายการ`));
-      const readOnly=options?.access?.read_only===true;
+      const readOnly=options?.access?.read_only===true || options?.access?.can_create===false;
       if(options && !readOnly)toolbar.append(cyclePicker(options,list));content.append(toolbar);
       if(readOnly){const notice=node('p','application-notice',READ_ONLY_MESSAGE);notice.setAttribute('role','status');content.append(notice);}
       if(options && !options.preview && !readOnly) {
