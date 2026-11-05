@@ -21,6 +21,7 @@ import lambda from '../src/lambda.js';
 import {readPendingIntakeSql} from '../scripts/operations/student-intake-contract.mjs';
 import {readIntakeControlsSql} from '../scripts/operations/intake-controls-contract.mjs';
 import controls from '../src/api/services/intake-control-service.js';
+import c7 from '../scripts/operations/intake-controls-owner/reader.js';
 const url=process.env.STUDENT_INTAKE_TEST_DATABASE_URL;
 test('pending TU identity: actual019/020 database, real files, pilot gates and immutable Coordinator delivery',{skip:!url&&!process.env.CI},async t=>{
  const u=new URL(url);assert.equal(u.hostname,'127.0.0.1');assert.equal(u.pathname,'/coed_intake_test');assert.equal(process.env.NODE_ENV,'test');assert.equal(process.env.INTAKE_DISPOSABLE,'true');
@@ -109,7 +110,8 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
    await assert.rejects(runtime.query('DELETE FROM phase1_intake_control_events'),e=>e.code==='42501');
    await assert.rejects(runtime.query(`INSERT INTO phase1_intake_control_events(cycle_id,operation_id,actor_id,previous_state,next_state) VALUES($1,$2,$3,'{}','{}')`,[cycle,id(),coord]),e=>e.code==='42501');
    assert.equal((await service.options(actor)).cycles[0].intake.mode,'MANUAL_OPEN');
-   await owner.query("UPDATE phase1_cycle_windows SET closes_at=clock_timestamp()-interval '1 hour',opens_at=clock_timestamp()-interval '1 day' WHERE cycle_id=$1",[cycle]);
+   // A manual pilot does not need invented legacy/review/confirmation dates.
+   await owner.query('DELETE FROM phase1_cycle_windows WHERE cycle_id=$1',[cycle]);
   });
   await t.test('partial assignment cannot control the whole round; required missing control fails closed, not legacy-open',async()=>{
    const outsider=id(),otherCohort=id();await owner.query("INSERT INTO users(id,role) VALUES($1,'COORDINATOR')",[outsider]);
@@ -150,6 +152,15 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
     const ticket=await service.beginUpload(actor,app.id,{...command(),kind,filename:kind+(kind==='photo'?'.png':'.pdf'),content_type:kind==='photo'?'image/png':'application/pdf',byte_size:bytes.length,checksum:createHash('sha256').update(bytes).digest('hex')});
     await service.localContent(actor,app.id,ticket.ticket_id,bytes);
     if(kind==='resume'){await change('CLOSED');await assert.rejects(service.completeUpload(actor,app.id,ticket.ticket_id,command()),e=>e.statusCode===422);await change('MANUAL_OPEN');}
+    if(kind==='photo'){
+     let started,release;const reading=new Promise(r=>{started=r;}),resume=new Promise(r=>{release=r;}),original=store.readStaging;
+     store.readStaging=async(...args)=>{started();await resume;return original.apply(store,args);};
+     try{const finishing=service.completeUpload(actor,app.id,ticket.ticket_id,command());await reading;
+      const closing=change('CLOSED');await new Promise(r=>setTimeout(r,40));assert.equal((await controller.get(coordinator,cycle)).control.mode,'MANUAL_OPEN');
+      release();app=await finishing;await closing;assert.equal(app.documents.length,4);assert.equal((await service.get(actor,app.id)).availability.can_edit,false);
+     }finally{release();store.readStaging=original;}
+     await change('MANUAL_OPEN');continue;
+    }
     app=await service.completeUpload(actor,app.id,ticket.ticket_id,command());
    }
    const ready=await service.readiness(actor,app.id);assert.equal(ready.can_submit,true,JSON.stringify(ready));assert.equal(ready.eligibility,'UNKNOWN');assert.equal(ready.group_gpa,null);assert.equal(ready.destination.ready,true);
@@ -189,7 +200,13 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
    await owner.query('DROP TRIGGER reject_intake_audit ON phase1_events;DROP FUNCTION reject_intake_audit()');
   });
   await t.test('retry/racing identical Submit commits one unknown assessment and exact Coordinator receipt',async()=>{
-   const op={...command(),expected_policy_id:null};const results=await Promise.all([service.submit(actor,app.id,op),service.submit(actor,app.id,op)]);app=results[0];
+   let started,release;const staged=new Promise(r=>{started=r;}),resume=new Promise(r=>{release=r;}),original=service.detail;
+   service.detail=async function(db,who,record){if(record.status==='SUBMITTED'){started();await resume;}return original.call(this,db,who,record);};
+   const op={...command(),expected_policy_id:null};let results;
+   try{const submitting=Promise.all([service.submit(actor,app.id,op),service.submit(actor,app.id,op)]);await staged;
+    const closing=change('CLOSED');await new Promise(r=>setTimeout(r,40));assert.equal((await controller.get(coordinator,cycle)).control.mode,'MANUAL_OPEN');
+    release();results=await submitting;await closing;app=results[0];
+   }finally{release();service.detail=original;}
    assert.equal(app.status,'SUBMITTED');assert.equal(app.policy,null);assert.equal(app.assessment.eligibility,'UNKNOWN');assert.equal(app.submission.snapshot.contract_version,2);
    assert.equal(app.submission.snapshot.intake_control.mode,'MANUAL_OPEN');assert.equal(app.submission.snapshot.intake_control.closes_at,null);
    assert.equal(results[1].submission.id,app.submission.id);assert.equal(app.delivery_receipt.submission_id,app.submission.id);
@@ -199,6 +216,8 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
    const detail=await staff.detail(co,app.id);assert.equal(detail.submission_id,app.submission.id);assert.equal(detail.checksum,app.submission.checksum);assert.equal(detail.can_review,false);assert.equal(detail.documents.length,4);
    await assert.rejects(staff.list({...co,userId:id()}),e=>e.code==='COED_MAINTENANCE');
    await assert.rejects(service.save(actor,app.id,{...command(),expected_policy_id:null,payload:{skills_detail:'tamper'}}),e=>e.statusCode===422);
+   assert.equal((await controller.get(coordinator,cycle)).control.mode,'CLOSED');assert.equal((await service.get(actor,app.id)).submission.checksum,app.submission.checksum);
+   await change('MANUAL_OPEN');
   });
   await t.test('later policy publication cannot replace explicit null submitted policy; new pending record cannot be forwarded',async()=>{
    await owner.query(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data)
@@ -266,6 +285,7 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
     {credits:Object.fromEntries(form.GROUPS['66'].flat().map(c=>[c,'3'])),repeat_rule:'LATEST',alternative_rule:'STUDENT_SELECTED'}]);
    await owner.query(`INSERT INTO coordinator_round_schedules(cycle_id,review_opens_at,review_closes_at,confirmation_opens_at,confirmation_closes_at,version,updated_by)
     VALUES($1,now()-interval '1 hour',now()+interval '1 hour',now()+interval '2 hours',now()+interval '3 hours',1,$2)`,[cycle,coord]);
+   await owner.query("INSERT INTO phase1_cycle_windows(cycle_id,opens_at,closes_at) VALUES($1,now()-interval '1 day',now()-interval '2 hours')",[cycle]);
    const student={...actor,userId:uid,studentId:sid},canonicalService=new applications.ApplicationService({pool:runtime,allowSyntheticPolicy:true,documentStore:store});
    try{process.env.COED_API_MAINTENANCE='off';
     let draft=await canonicalService.create(student,{operation_id:id(),cycle_id:cycle});
@@ -287,6 +307,15 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
     await change('MANUAL_OPEN');draft=await canonicalService.get(student,draft.id);assert.equal(draft.availability.can_edit,false);
     await assert.rejects(canonicalService.save(student,draft.id,{operation_id:id(),expected_version:draft.version,expected_policy_id:policyId,payload:{skills_detail:'late'}}),e=>e.statusCode===422);
    }finally{restore('COED_API_MAINTENANCE',oldMode);restore('COED_INTAKE_PILOT',oldPilot);}
+  });
+  await t.test('C7 owner inventory is fixed SELECT-only, resolves only the given owner and emits no profile/credential values',async()=>{
+   const c=await owner.connect(),adapt=sql=>sql.replaceAll('public.',q+'.').replaceAll("'public'","'"+schema+"'");
+   try{await c.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    const result=await c7.inspect({query:(sql,args)=>c.query(adapt(sql),args)},{studentNumber:identity.subject,coordinatorSubject:id()});
+    assert.equal(result.student[0].user_id,actor.userId);assert.equal(result.student[0].tu_link_active,true);assert.deepEqual(result.coordinator,[]);assert.equal(result.noDatabaseWrites,true);
+    const json=JSON.stringify(result);assert.ok(!json.includes(identity.subject));assert.ok(!json.includes(identity.email));assert.ok(!json.includes(identity.nameTh));
+    await assert.rejects(c.query('UPDATE users SET role=role WHERE false'),e=>e.code==='25006');
+   }finally{await c.query('ROLLBACK');c.release();}
   });
   await t.test('compatible browse fallback retains pending evidence and closes all writes and staff reads',async()=>{
    process.env.COED_API_MAINTENANCE='browse';

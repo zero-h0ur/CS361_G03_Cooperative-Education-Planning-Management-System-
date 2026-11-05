@@ -2,6 +2,11 @@
 
 ## Approval boundary
 
+The fixed48hour plan below is **superseded for the next rollout** by
+[Coordinator intake controls](coordinator-intake-controls-rollout.md). The user
+now wants scheduled or manual-until-closed opening, still limited to the same
+pilot audience. Do not execute the old T+48hours metadata proposal.
+
 L1-L6 + A0 only were approved November5,2026. Local implementation commit
 `286c64c` builds on A0 tool commit `9e92bf6`. Nothing in this document authorizes
 push, production SQL/data publication, main-service deployment or intake activation.
@@ -32,13 +37,13 @@ There were no published Phase1 policies. A linked Coordinator in a mock cohort
 is not evidence of a real assignment. Do not extend mock dates, choose its owner,
 infer regular/special from CS/ACS or publish sample academic data.
 
-Owner subsequently selected an **isolated test round for48hours**, not real intake
-or an indefinite opening. It will be limited to this Student and the privately
+Owner initially selected an **isolated test round for48hours**, later replaced
+by Coordinator-controlled scheduled/manual opening. It is limited to this Student and the privately
 specified Cognito Coordinator. Do not persist the supplied account password or
 use TU login for that Coordinator. This decision does not approve deployment.
-Proposed test window: activation timestamp T to T+48hours (Asia/Bangkok display,
-explicit UTC storage); writes close by the stored deadline, reads retain evidence.
-Exact T must be captured and approved in the cutover checkpoint, not guessed now.
+The earlier T-to-T+48hours metadata is no longer proposed. Provision the new
+intake control CLOSED; the verified assigned Coordinator chooses explicit dates
+or MANUAL_OPEN. Missing dates alone must never imply an open round.
 
 Before A1 approval verify test round/year/semester labeling, timezone-
 explicit activation/open/close dates, pilot Student identity, assigned Cognito Coordinator,
@@ -158,10 +163,13 @@ API Lambda timeout: **15s to28s**, still below Gateway30s. SQL/storage work has 
 SQL statements at most3s and locks1s; pool acquisition default2s. Test aborted/slow
 storage and rollback. This config change is not applied by merging code.
 
-Return/forward, Committee/ranking, schedules, selection/confirmation, contact
+Return/forward, Committee/ranking, full legacy schedule saves, selection/confirmation, contact
 updates and legacy Plans stay closed. Do not set maintenance=off. Pilot widening
 is not implemented by this three-UUID contract and requires A4 design/approval.
 There is no new standing Lambda/Secret/bucket/NAT or permanent AWS IAM expansion.
+The new proposal admits only protected GET/POST `/api/v4/coordinator/intake/:id`
+and GET `/api/v4/coordinator/schedules/:id` within intake stages. Active role,
+whole-round assignment and exact pilot scope are rechecked in the service.
 
 ## Cost and private-file boundary
 

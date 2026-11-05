@@ -3,7 +3,7 @@ import form from '../../src/shared/application-form.js';
 const copy=value=>JSON.parse(JSON.stringify(value));
 const uuid=n=>'16500000-0000-4000-8000-'+String(n).padStart(12,'0');
 export const COORDINATOR_SCENARIOS=Object.freeze({pending:'ตรวจใบสมัคร · 3 สถานะ',ranking:'ติดตามผล · เรียงเกรดทั้งสองภาค',revision:'ใบสมัครที่ส่งกลับแก้ไข',complete:'กรรมการยืนยันรายชื่อแล้ว',
-  'missing-data':'ข้อมูล / เอกสารไม่ครบ','long-text':'ชื่อและทักษะยาว','failed-command':'บันทึกล้มเหลว · เก็บข้อมูลเดิม',conflict:'ข้อมูลเปลี่ยนระหว่างใช้งาน','readonly-schedule':'กำหนดการอ่านอย่างเดียว',empty:'ยังไม่มีใบสมัคร',loading:'กำลังโหลด',error:'โหลดไม่สำเร็จ',forbidden:'ถูกถอนสิทธิ์',expired:'Session หมดอายุ'});
+  'missing-data':'ข้อมูล / เอกสารไม่ครบ','long-text':'ชื่อและทักษะยาว','failed-command':'บันทึกล้มเหลว · เก็บข้อมูลเดิม',conflict:'ข้อมูลเปลี่ยนระหว่างใช้งาน','readonly-schedule':'กำหนดการอ่านอย่างเดียว','intake-controls':'เปิด/ปิดรับสมัคร · ข้อมูลจำลอง',empty:'ยังไม่มีใบสมัคร',loading:'กำลังโหลด',error:'โหลดไม่สำเร็จ',forbidden:'ถูกถอนสิทธิ์',expired:'Session หมดอายุ'});
 export function coordinatorPreview(scenario='pending') {
   const cycle=uuid(100),receipts=new Map(),members=[uuid(201),uuid(202),uuid(203)];
   let applications=Array.from({length:scenario==='ranking'?6:3},(_,i)=>{
@@ -27,6 +27,8 @@ export function coordinatorPreview(scenario='pending') {
   if(scenario==='long-text'){applications[0].full_name=applications[0].official.full_name='นักศึกษาข้อมูลชื่อยาวสำหรับทดสอบการตัดบรรทัดบนโทรศัพท์มือถือ';applications[0].payload.skills_detail='คำตอบปลายเปิดที่นักศึกษากรอกไว้ตามต้นฉบับ\n'.repeat(100);}
   let schedule={cycle_id:cycle,cycle_name:'ปีการศึกษา 2569 · รอบที่ 1 (ข้อมูลสมมติ)',version:1,window_version:1,can_edit:scenario!=='readonly-schedule',
     opens_at:'2026-11-02T02:00:00Z',closes_at:'2026-11-20T09:30:00Z',review_opens_at:'2026-11-23T02:00:00Z',review_closes_at:'2026-11-27T09:30:00Z',confirmation_opens_at:'2026-12-01T02:00:00Z',confirmation_closes_at:'2026-12-07T09:30:00Z'};
+  let intake={cycle_id:cycle,cycle_name:schedule.cycle_name,can_control:true,control:{mode:'CLOSED',version:1,is_open:false,reason:'CLOSED',opens_at:null,closes_at:null},history:[]};
+  if(scenario==='intake-controls'){schedule.can_edit=false;schedule.intake=intake.control;}
   const meeting={cycle_id:cycle,department:'วิทยาการคอมพิวเตอร์',members,version:1,state:scenario==='complete'?{proposal:{normal:2,special:1,reason:'จำนวนรับสมมติจากมติที่ประชุม',status:'accepted'},finalized:true,selected:applications.map(a=>a.id)}:{proposal:null,finalized:false,selected:[]}};
   function failure(options){if(scenario==='loading')return new Promise(()=>{});if(scenario==='error')throw new Error('จำลองโหลดข้อมูลไม่สำเร็จ');if(scenario==='expired')throw Object.assign(new Error('Session หมดอายุ (จำลอง)'),{status:401});if(scenario==='forbidden')throw Object.assign(new Error('ถูกถอนสิทธิ์ (จำลอง)'),{status:403});
     if(options.method==='POST' && ['failed-command','conflict'].includes(scenario))throw Object.assign(new Error('จำลองการบันทึกล้มเหลว ข้อมูลที่กรอกยังอยู่'),{status:scenario==='conflict'?409:503});}
@@ -35,6 +37,16 @@ export function coordinatorPreview(scenario='pending') {
       const fault=failure(options);if(fault)return fault;
       const u=new URL(path,'https://preview.invalid'),body=options.body || {},last=u.pathname.split('/').at(-1);
       if(u.pathname.endsWith('/options'))return {cycles:[{id:cycle,name:schedule.cycle_name,status:'OPEN'}]};
+      if(scenario==='intake-controls' && u.pathname.includes('/intake/')){
+        if(options.method==='POST'){
+          if(receipts.has(body.operation_id))return copy(receipts.get(body.operation_id));
+          if(body.expected_version!==intake.control.version)throw Object.assign(new Error('สถานะเปลี่ยนแล้ว (จำลอง)'),{status:409});
+          const previous=intake.control,now=new Date().toISOString(),scheduled=body.mode==='SCHEDULED';
+          intake={...intake,control:{mode:body.mode,version:previous.version+1,opens_at:scheduled?body.opens_at:body.mode==='MANUAL_OPEN'?now:null,closes_at:scheduled?body.closes_at:null,
+            is_open:body.mode==='MANUAL_OPEN'||scheduled&&Date.parse(body.opens_at)<=Date.now()&&Date.now()<Date.parse(body.closes_at)},
+            history:[{created_at:now,previous_mode:previous.mode,mode:body.mode,version:previous.version+1},...intake.history]};receipts.set(body.operation_id,copy(intake));
+        }return copy(intake);
+      }
       if(u.pathname.includes('/schedules/')){
         if(options.method==='POST'){
           if(receipts.has(body.operation_id))return copy(receipts.get(body.operation_id));
