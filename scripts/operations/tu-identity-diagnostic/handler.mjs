@@ -3,10 +3,35 @@ import {readFileSync} from 'node:fs';
 import {SecretsManagerClient,GetSecretValueCommand} from '@aws-sdk/client-secrets-manager';
 import {T,validate,reason,safeResult,denied} from './contract.mjs';
 import {inspectIdentity} from './query.mjs';
+export const SECRET_DEADLINE_MS=3000;
+export const SECRET_HTTP=Object.freeze({connectionTimeout:1000,requestTimeout:2500,throwOnRequestTimeout:true});
+export function secretFailure(error){
+ const types=[error?.name,error?.code];
+ const matches=names=>types.some(value=>names.includes(value));
+ if(matches(['AccessDenied','AccessDeniedException','DecryptionFailure','DecryptionFailureException']))return 'DIAG_SECRET_DENIED';
+ if(matches(['AbortError','TimeoutError','RequestTimeout','RequestTimeoutException','ETIMEDOUT','ESOCKETTIMEDOUT']))return 'DIAG_SECRET_TIMEOUT';
+ if(matches(['ResourceNotFoundException']))return 'DIAG_SECRET_NOT_FOUND';
+ if(matches(['CredentialsProviderError','ExpiredTokenException','UnrecognizedClientException','InvalidClientTokenId','InvalidSignatureException']))
+  return 'DIAG_SECRET_CREDENTIALS_UNAVAILABLE';
+ if(matches(['ENOTFOUND','EAI_AGAIN','ECONNREFUSED','ECONNRESET','EPIPE','ENETUNREACH','EHOSTUNREACH']))return 'DIAG_SECRET_NETWORK';
+ return 'DIAG_SECRET_UNAVAILABLE';
+}
 export function loginPassword(value){
  if(value?.engine!=='postgres' || value.host!==T.host || value.dbname!==T.database || value.port!==5432 ||
   value.username!==T.user || typeof value.password!=='string' || !/^[A-Za-z0-9_-]{64}$/.test(value.password))throw denied('DIAG_SECRET_INVALID');
  return value.password;
+}
+export async function readLoginPassword(sm){
+ let response;
+ try{response=await sm.send(new GetSecretValueCommand({SecretId:T.secret,VersionStage:'AWSCURRENT'}),
+  {abortSignal:AbortSignal.timeout(SECRET_DEADLINE_MS)});
+ }catch(error){throw denied(secretFailure(error));}
+ let value;
+ try{
+  if(typeof response?.SecretString!=='string' || response.SecretString.length>8192)throw Error();
+  value=JSON.parse(response.SecretString);
+ }catch{throw denied('DIAG_SECRET_INVALID');}
+ return loginPassword(value);
 }
 export function createDiagnostic({env=process.env,clock=Date.now,secrets,connect,inspect=inspectIdentity,logger=x=>console.log(x)}={}){
  let invocations=0;
@@ -15,13 +40,9 @@ export function createDiagnostic({env=process.env,clock=Date.now,secrets,connect
   try{
    const subject=validate(event,context,env,clock());
    if(++invocations>3)throw denied('DIAG_LIMIT');
-   const sm=secrets || new SecretsManagerClient({region:T.region,maxAttempts:1,
-    requestHandler:{connectionTimeout:800,requestTimeout:1500,throwOnRequestTimeout:true}});
-   let value;
-   try{const r=await sm.send(new GetSecretValueCommand({SecretId:T.secret,VersionStage:'AWSCURRENT'}),{abortSignal:AbortSignal.timeout(2000)});
-    if(typeof r.SecretString!=='string' || r.SecretString.length>8192)throw Error();value=JSON.parse(r.SecretString);
-   }catch{throw denied('DIAG_SECRET_UNAVAILABLE');}
-   const password=loginPassword(value);
+   const sm=secrets || new SecretsManagerClient({region:T.region,maxAttempts:1,requestHandler:SECRET_HTTP});
+   let password;
+   try{password=await readLoginPassword(sm);}finally{if(!secrets)sm.destroy();}
    client=connect?connect(password):new pg.Client({host:T.host,port:5432,database:T.database,user:T.user,password,
     ssl:{rejectUnauthorized:true,ca:readFileSync(new URL('./global-bundle.pem',import.meta.url),'utf8')},
     connectionTimeoutMillis:1200,query_timeout:2200,application_name:'coed_identity_readonly',

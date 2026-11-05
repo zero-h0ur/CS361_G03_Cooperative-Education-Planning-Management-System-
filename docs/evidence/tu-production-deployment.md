@@ -180,4 +180,21 @@ Keep credentials, token/profile/business data out of this evidence.
   one candidate maintenance event. Runtime Errors0 still does not imply Login
   success. No post-repair user credential test or write resume is recorded.
 
+## Separate identity diagnostic checkpoint
+
+The owner subsequently reported valid-attempt403 TU_ACCOUNT_UNAVAILABLE versus
+intentional wrong-password401 INVALID_CREDENTIALS. Safe broker4/issuer2 stages
+confirm accepted TU verification reaches the canonical identity check. This is
+not a successful application Login or owner attestation.
+
+Under separate N0-N5 approval, the user's hidden-target diagnostic run
+production-ux5UIQ invoked private version1 once but failed reading the dedicated
+SELECT-only login Secret (DIAG_SECRET_UNAVAILABLE) before a database query. Its
+finally cleanup was verified at2026-11-05 04:09:55 Bangkok: no temporary function,
+role/log group/endpoint grant remains; application/Gateway/endpoint baselines
+unchanged and no database writes. Local tooling now classifies safe Secret error
+categories; it does not prove or repair the403 cause. Fresh hidden-target lookup
+and then successful owner smoke remain pending. No write resume or frontend
+deployment. See [diagnostic evidence](tu-identity-readonly-diagnostic.md).
+
 Use the [operator runbook](../operations/tu-production-operator.md).

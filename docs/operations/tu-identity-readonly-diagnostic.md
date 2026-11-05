@@ -9,7 +9,9 @@ password. Do not use a Student ID from historical chat.
 
 Run the reviewed local tests, including actual disposable PostgreSQL with
 NODE_ENV=test, PRESENT_SCHEMA_DISPOSABLE=true and IDENTITY_DIAG_TEST_DATABASE_URL
-pointing only to the task-owned127.0.0.1:55440/coed. The DB test requires an empty
+pointing only to the verified task-owned127.0.0.1:55440/coed or127.0.0.1:15440/coed.
+The latter is the fixed fallback when Windows reserves the old55440 port; never
+change OS reservations or repurpose another container/database. The DB test requires an empty
 public schema and absent coed_tu_login role, creates synthetic fixtures only and
 removes them. A skipped DB test is not equivalent to this validation.
 
@@ -65,6 +67,26 @@ Unexpected ownership/policy changes are not overwritten/deleted.
 Share only the final JSON result (reason/flags, cleanupVerified and state path).
 It contains no Student ID/name/email/token/password/profile. A completed
 diagnostic is not a successful Login or authority to repair anything.
+
+Secret-read failures occur before any database connection. The operator accepts
+only the following fixed categories, never raw SDK messages or credential data:
+
+| Code | Meaning and boundary |
+| --- | --- |
+| DIAG_SECRET_DENIED | Secret read/decryption rejected; review exact policy, do not widen rights automatically. |
+| DIAG_SECRET_TIMEOUT | Bounded request/abort deadline; not proof of an IAM or database problem. |
+| DIAG_SECRET_NETWORK | Known DNS/socket failure; no claim that a service received the request. |
+| DIAG_SECRET_NOT_FOUND | Requested Secret not found; do not substitute another Secret. |
+| DIAG_SECRET_CREDENTIALS_UNAVAILABLE | Diagnostic SDK credentials/signature unavailable or rejected; not the student's TU password. |
+| DIAG_SECRET_INVALID | Secret response/JSON/connection fields fail the fixed contract. |
+| DIAG_SECRET_UNAVAILABLE | Other unmapped Secret-read failure; no account conclusion. |
+
+The Secret client uses one attempt,1000ms connection/2500ms request and3000ms
+hard-abort budgets. Lambda remains10seconds; IAM, target binding and SELECT-only
+scope are unchanged. See [AWS SDK HTTP configuration](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/node-configuring-maxsockets.html).
+No retry is performed automatically. If a run fails, let cleanup finish and share
+only its final JSON. Rerun only after review, with fresh hidden input; do not
+paste a Student ID, TU password, national ID, Secret value or JWT into chat.
 
 If cleanupVerified=false, the command is interrupted/killed, or a permission/
 session failure prevents cleanup, keep the printed state path and report it.

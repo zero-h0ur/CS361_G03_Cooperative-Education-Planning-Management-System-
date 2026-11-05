@@ -1,9 +1,9 @@
 # TU identity read-only diagnostic evidence
 
 Date:5November2026, Asia/Bangkok. User explicitly approved N0-N5.
-Status: N0 local implementation/tests complete; read-only AWS preflight passed.
-Awaiting the user's hidden target input before N1-N4 live inspection/cleanup.
-No diagnostic AWS resource, endpoint grant or production row change yet.
+Status: First live attempt failed before DB connection/query; temporary-resource
+cleanup verified. Diagnostic error reporting hardened locally and tested; a fresh
+hidden-target run is still required to establish the account condition.
 
 ## Confirmed incident boundary
 
@@ -37,7 +37,7 @@ There is no successful owner-smoke attestation; writes remain paused.
 ## Validation
 
 - Combined diagnostic unit/package/privacy/IAM/cleanup and actual disposable
-  PostgreSQL suite:17passed,0failed,0skipped. Includes real column-level SELECT
+  PostgreSQL suite after hardening:19passed,0failed,0skipped. Includes real column-level SELECT
   role/read-only transaction, Cognito-only/missing/revoked/ambiguous links,
   disabled/wrong-role accounts, incomplete/Unicode-padded profiles, ownership
   mismatch and invalid version. Old synthetic rows compared before/after lookup.
@@ -45,17 +45,56 @@ There is no successful owner-smoke attestation; writes remain paused.
   DB access. CLI rejects command-line target/credential arguments without echo.
 - Mocked cleanup verifies exact owned removal, no deletion of foreign resources,
   and continued endpoint/log cleanup after a function-deletion failure.
-- Syntax lint285modules passed; docs9passed,55reachable documents/197local links
+- Secret failures now distinguish fixed permission, timeout, missing-secret,
+  credential-provider, network and invalid-value codes; unknown errors remain
+  generic. No raw SDK message, subject, credential or SDK metadata is returned.
+  A loopback-only real AWS SDK client with synthetic credentials tests denial,
+  malformed Secret JSON, request timeout and hard abort; each failure has one
+  request only. Failure stops before any DB connection. Secret HTTP deadlines
+  are1000/2500ms with a3000ms abort, maxAttempts1, still Lambda timeout10seconds.
+  This timeout adjustment is not evidence of the original failure's cause.
+- Syntax lint285modules passed; docs9passed,56reachable documents/199local links
   with0failures. No browser/UI change or auth bypass.
 - AWS read-only preflight passed: expected caller/parent versions/maintenance,
   routes/CORS/integrations, absent diagnostic names/Sid and dedicated login Secret
   metadata. No Secret value or production business row was read in preflight.
+- Repeated read-only AWS preflight after the failed attempt passed. It verifies
+  no diagnostic names/Sid remain and the application/maintenance/routes match
+  the frozen parent checkpoint. No AWS writes were performed during hardening.
+- Initial DB rerun could not connect to the old stopped disposable container:
+  Windows reserves55345-55444, including55440. A separate task-labelled,
+  auto-remove PostgreSQL16 container on127.0.0.1:15440 ran the complete suite.
+  Test cleanup left0public tables and0coed_tu_login roles; old container/data were
+  left intact. The new exact auto-remove test container was stopped and its
+  absence verified after validation. This was a local test-environment issue,
+  not production evidence.
+
+## First live attempt
+
+The user ran the interactive operator and supplied the target locally. State:
+`tmp/tu-production/production-ux5UIQ/state.json`. Published private version1 was
+invoked once and returned DIAG_SECRET_UNAVAILABLE. The original catch merged SDK
+transport/authorization errors and malformed Secret values, so it cannot identify
+the exact category retrospectively. No DB connection or identity query followed.
+
+The original process completed cleanup at2026-11-05 04:09:55 Asia/Bangkok:
+status=CLEANED_UP, cleanup.verified=true, failedParts=[], all owned flags=false.
+Owned Lambda/versions, role/policy, log group and the one endpoint grant were
+removed; application/Gateway/endpoint baselines were verified unchanged.
+No database writes or account repair occurred.
+
+Sanitized CloudTrail lookups for that role/time found no GetSecretValue event;
+absence is not proof of a specific failure. The dedicated login Secret has no
+resource policy, and the existing Secrets endpoint is available/private-DNS
+enabled. No Secret value was read locally, no credential was rotated, and no
+permission was widened. Do not infer UNLINKED_IDENTITY from this tool failure.
 
 ## Pending live proof
 
-User must run the [interactive operator](../operations/tu-identity-readonly-diagnostic.md)
-and enter only their target Student ID in the hidden prompt. Only then are N1
-temporary resources created, N2 fixed read run and N3 cleanup verified. Do not
-claim a confirmed account cause, completed live diagnostic/cleanup or successful
-Login until that safe result is received and checked. Repair/provisioning/relink
-and write resume remain separately gated. No push or frontend deploy.
+User must rerun the updated [interactive operator](../operations/tu-identity-readonly-diagnostic.md)
+from the reviewed committed worktree, entering only their own10digit target
+Student ID in the hidden prompt. Prior raw input was not retained and must not
+be reconstructed from chat. New N1 resources/N2 lookup/N3 cleanup will be a new
+bounded run; the previous run's cleanup is already verified. No confirmed account
+cause or successful Login is claimed. Repair/provisioning/relink and write resume
+remain separately gated. No push or frontend deploy.

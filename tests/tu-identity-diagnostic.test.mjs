@@ -4,8 +4,11 @@ import {readFileSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {dirname,join} from 'node:path';
 import {rootCertificates} from 'node:tls';
 import {execFileSync} from 'node:child_process';
+import {createServer} from 'node:http';
+import {once} from 'node:events';
+import {SecretsManagerClient} from '@aws-sdk/client-secrets-manager';
 import {T,FUNCTION_ARN,bindTarget,validate,COUNTS,BOOLS,reason,safeFlags,safeResult} from '../scripts/operations/tu-identity-diagnostic/contract.mjs';
-import {createDiagnostic,loginPassword} from '../scripts/operations/tu-identity-diagnostic/handler.mjs';
+import {createDiagnostic,loginPassword,readLoginPassword,secretFailure,SECRET_HTTP,SECRET_DEADLINE_MS} from '../scripts/operations/tu-identity-diagnostic/handler.mjs';
 import {packageDiagnostic,executionPolicy,endpointGrant,cleanup} from '../scripts/operations/tu-identity-diagnostic/operator.mjs';
 import {addStatement,removeStatement,ROOT,useTestAws,OPERATOR,roleArn,hash} from '../scripts/operations/tu-production/common.mjs';
 import {listZipEntries,readZipEntry} from '../scripts/operations/zip-archive.mjs';
@@ -59,6 +62,59 @@ test('raw SQL/SDK errors never become personal output and clients close on query
  inspect:async()=>{throw Error('PRIVATE_CANARY '+subject);},logger:x=>logs.push(x)});
  const result=await handler(event,context);assert.equal(result.code,'DIAG_QUERY_FAILED');assert.equal(closed,true);
  assert.ok(!JSON.stringify([result,logs]).includes('PRIVATE_CANARY'));assert.ok(!JSON.stringify([result,logs]).includes(subject));
+});
+test('Secret SDK failures use fixed categories only, never raw errors or a DB connection',async()=>{
+ for(const [name,code] of [
+  ['AccessDeniedException','DIAG_SECRET_DENIED'],['DecryptionFailure','DIAG_SECRET_DENIED'],
+  ['AbortError','DIAG_SECRET_TIMEOUT'],['TimeoutError','DIAG_SECRET_TIMEOUT'],['ETIMEDOUT','DIAG_SECRET_TIMEOUT'],
+  ['ResourceNotFoundException','DIAG_SECRET_NOT_FOUND'],['CredentialsProviderError','DIAG_SECRET_CREDENTIALS_UNAVAILABLE'],
+  ['ExpiredTokenException','DIAG_SECRET_CREDENTIALS_UNAVAILABLE'],['ENOTFOUND','DIAG_SECRET_NETWORK'],
+  ['ECONNREFUSED','DIAG_SECRET_NETWORK'],['ECONNRESET','DIAG_SECRET_NETWORK'],['UnrecognizedPrivateError','DIAG_SECRET_UNAVAILABLE']]){
+  const error=Object.assign(Error('PRIVATE_CANARY '+subject),{name,code:name,safeCode:'DIAG_SECRET_INVALID'}),logs=[];
+  assert.equal(secretFailure(error),code);
+  const handler=createDiagnostic({env,clock:()=>now,secrets:{send:async()=>{throw error;}},
+   connect:()=>assert.fail('Secret failure must not reach DB'),logger:x=>logs.push(x)});
+  const result=await handler(event,context);
+  assert.deepEqual(safeResult(result),{contract:T.contract,ok:false,code});
+  for(const value of ['PRIVATE_CANARY',subject,'UnrecognizedPrivateError'])assert.ok(!JSON.stringify([result,logs]).includes(value));
+ }
+ for(const invalid of [{},{SecretString:'not JSON PRIVATE_CANARY'},{SecretString:'x'.repeat(8193)},
+  {SecretString:'null'},{SecretString:'{}'},{SecretString:'{"password":"PRIVATE_CANARY"}'}]){
+  const handler=createDiagnostic({env,clock:()=>now,secrets:{send:async()=>invalid},
+   connect:()=>assert.fail('Invalid Secret must not reach DB'),logger:()=>{}});
+  assert.equal((await handler(event,context)).code,'DIAG_SECRET_INVALID');
+ }
+});
+test('real Secret SDK transport stays one-attempt and distinguishes denial, malformed JSON and bounded timeouts locally',async()=>{
+ assert.deepEqual(SECRET_HTTP,{connectionTimeout:1000,requestTimeout:2500,throwOnRequestTimeout:true});
+ assert.equal(SECRET_DEADLINE_MS,3000);
+ const secret={engine:'postgres',host:T.host,dbname:T.database,port:5432,username:T.user,password:'p'.repeat(64)};
+ let mode='ok',requests=0;
+ const server=createServer(async(req,res)=>{
+  requests++;let body='';for await(const chunk of req)body+=chunk;
+  assert.deepEqual(JSON.parse(body),{SecretId:T.secret,VersionStage:'AWSCURRENT'});
+  assert.equal(req.headers['x-amz-target'],'secretsmanager.GetSecretValue');
+  if(mode==='timeout')return;
+  res.setHeader('Content-Type','application/x-amz-json-1.1');
+  if(mode==='denied'){res.statusCode=400;res.end(JSON.stringify({__type:'AccessDeniedException',message:'PRIVATE_CANARY '+subject}));}
+  else if(mode==='invalid')res.end(JSON.stringify({SecretString:'invalid PRIVATE_CANARY'}));
+  else res.end(JSON.stringify({SecretString:JSON.stringify(secret)}));
+ });
+ server.listen(0,'127.0.0.1');await once(server,'listening');
+ const sdk=requestHandler=>new SecretsManagerClient({region:T.region,endpoint:'http://127.0.0.1:'+server.address().port,
+  credentials:{accessKeyId:'synthetic-local',secretAccessKey:'synthetic-local-only'},maxAttempts:1,requestHandler});
+ const client=sdk(SECRET_HTTP),short=sdk({...SECRET_HTTP,requestTimeout:50}),abort=sdk({...SECRET_HTTP,requestTimeout:10000});
+ try{
+  assert.equal(await readLoginPassword(client),secret.password);
+  mode='denied';let before=requests;
+  await assert.rejects(readLoginPassword(client),e=>e.safeCode==='DIAG_SECRET_DENIED' && !String(e).includes('PRIVATE_CANARY'));
+  assert.equal(requests-before,1);
+  mode='invalid';await assert.rejects(readLoginPassword(client),e=>e.safeCode==='DIAG_SECRET_INVALID');
+  mode='timeout';before=requests;
+  await assert.rejects(readLoginPassword(short),e=>e.safeCode==='DIAG_SECRET_TIMEOUT');assert.equal(requests-before,1);
+  before=requests;
+  await assert.rejects(readLoginPassword(abort),e=>e.safeCode==='DIAG_SECRET_TIMEOUT');assert.equal(requests-before,1);
+ }finally{client.destroy();short.destroy();abort.destroy();server.closeAllConnections();await new Promise(r=>server.close(r));}
 });
 test('diagnostic IAM/endpoint is additive and has no owner/signing/provider/write capability',()=>{
  const p=executionPolicy();assert.deepEqual(p.Statement[0],{Effect:'Allow',Action:'secretsmanager:GetSecretValue',Resource:T.secret});

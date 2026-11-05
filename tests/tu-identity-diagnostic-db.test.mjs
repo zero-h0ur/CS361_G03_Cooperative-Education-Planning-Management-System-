@@ -7,7 +7,7 @@ import {T,reason} from '../scripts/operations/tu-identity-diagnostic/contract.mj
 const url=process.env.IDENTITY_DIAG_TEST_DATABASE_URL;
 test('identity diagnostic actual PostgreSQL: target-only flags, every denial branch, SELECT-only and preserved rows',
  {skip:!url && !process.env.CI},async t=>{
- const u=new URL(url);assert.equal(u.hostname,'127.0.0.1');assert.equal(u.port,'55440');assert.equal(u.pathname,'/coed');
+ const u=new URL(url);assert.equal(u.hostname,'127.0.0.1');assert.ok(['55440','15440'].includes(u.port));assert.equal(u.pathname,'/coed');
  assert.equal(process.env.NODE_ENV,'test');assert.equal(process.env.PRESENT_SCHEMA_DISPOSABLE,'true');
  const owner=new pg.Client({connectionString:url});await owner.connect();let login;
  assert.equal((await owner.query("SELECT count(*)::int AS n FROM pg_tables WHERE schemaname='public'")).rows[0].n,0);
@@ -30,7 +30,7 @@ test('identity diagnostic actual PostgreSQL: target-only flags, every denial bra
   await owner.query('CREATE TABLE public.students(id text,user_id text,student_number text,full_name text,preferred_name text,institutional_email text,department text,program text,major text,academic_year int,enrollment_status text,version int,contact_email text,contact_phone text,contact_address text)');
   await owner.query(readFileSync(new URL('../scripts/operations/tu-login-role.sql',import.meta.url),'utf8'));
   await owner.query("ALTER ROLE coed_tu_login LOGIN PASSWORD 'synthetic-diag-local-only'");
-  login=new pg.Client({host:'127.0.0.1',port:55440,database:'coed',user:T.user,password:'synthetic-diag-local-only'});await login.connect();
+  login=new pg.Client({host:'127.0.0.1',port:Number(u.port),database:'coed',user:T.user,password:'synthetic-diag-local-only'});await login.connect();
   await t.test('unprovisioned target and existing Cognito-only student remain unlinked',async()=>{
    let f=await inspect('UNLINKED_IDENTITY');assert.equal(f.matching_students,0);
    await user();await student();await link(cognito,'SYNTHETIC_COGNITO_SUB');

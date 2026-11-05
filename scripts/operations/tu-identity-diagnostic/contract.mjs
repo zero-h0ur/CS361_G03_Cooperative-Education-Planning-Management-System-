@@ -59,6 +59,8 @@ export function safeResult(value){
   REASONS.includes(value.reason) && reason(value.flags)===value.reason)return {...value,flags:safeFlags(value.flags)};
  if(exact(value,['contract','ok','code']) && value.contract===T.contract && value.ok===false &&
   ['DIAG_REQUEST_DENIED','DIAG_TARGET_INVALID','DIAG_TARGET_DENIED','DIAG_EXPIRED','DIAG_LIMIT',
-   'DIAG_SECRET_UNAVAILABLE','DIAG_SECRET_INVALID','DIAG_CONNECTION_INVALID','DIAG_RESULT_INVALID','DIAG_QUERY_FAILED'].includes(value.code))return value;
+   'DIAG_SECRET_UNAVAILABLE','DIAG_SECRET_INVALID','DIAG_SECRET_DENIED','DIAG_SECRET_TIMEOUT','DIAG_SECRET_NOT_FOUND',
+   'DIAG_SECRET_CREDENTIALS_UNAVAILABLE','DIAG_SECRET_NETWORK',
+   'DIAG_CONNECTION_INVALID','DIAG_RESULT_INVALID','DIAG_QUERY_FAILED'].includes(value.code))return value;
  throw denied('DIAG_RESULT_INVALID');
 }
