@@ -66,3 +66,7 @@ results. A failed read is a stop, not permission to widen Secret/database grants
 Live schema changes, approved real cycle/recipient routing, pilot activation and
 paired main-service deployment require a subsequent exact SQL/cost/rollback
 proposal. A completed diagnostic is not a successful Student submission.
+
+The completed A0 result and the separately gated SQL/service proposal are in
+[Student intake rollout](student-application-intake-rollout.md). Local commands,
+evidence and limits are in [verification](student-intake-verification.md).
