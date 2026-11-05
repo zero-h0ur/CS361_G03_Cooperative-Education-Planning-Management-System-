@@ -41,6 +41,7 @@ class IntakeControlService{
   }
   async present(db,cycle,row){
     const state=evaluateIntake(row,row?.server_time?.toISOString?.() || row?.server_time);
+    if(cycle.status!=='OPEN'){state.is_open=false;state.reason='ROUND_CLOSED';}
     return {cycle_id:cycle.id,cycle_name:cycle.name,control:state,can_control:cycle.can_control && Boolean(row),
       reason:!cycle.can_control?'SCOPE_OR_ROUND':!row?'UNCONFIGURED':null,
       history:row?(await db.query(`SELECT actor_id,created_at,previous_state->>'mode' AS previous_mode,next_state->>'mode' AS mode,

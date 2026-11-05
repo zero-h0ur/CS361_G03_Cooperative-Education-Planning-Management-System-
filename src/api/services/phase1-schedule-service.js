@@ -107,7 +107,7 @@ class Phase1ScheduleService {
       nearDeadlineHours: nearHours
     });
     const controlled=await require('../../db/intake-control').effective(db,cycleId,null);
-    if(controlled){const state=controlled.intake;applicationWindow={state:state.is_open?'OPEN':state.reason==='UPCOMING'?'UPCOMING':'CLOSED',
+    if(controlled){const state={...controlled.intake};if(round.status!=='OPEN'){state.is_open=false;state.reason='ROUND_CLOSED';}applicationWindow={state:state.is_open?'OPEN':state.reason==='UPCOMING'?'UPCOMING':'CLOSED',
       is_open:state.is_open,is_closed:!state.is_open,is_upcoming:state.reason==='UPCOMING',is_unscheduled:state.reason==='UNCONFIGURED',
       is_near_deadline:false,remaining_ms:null,opens_at:state.opens_at,closes_at:state.closes_at,intake:state};}
 

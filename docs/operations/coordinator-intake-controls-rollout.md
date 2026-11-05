@@ -102,11 +102,10 @@ old owner tools, revive A0 or run a general migrator against observed RDS.
   schema/history together only after drift and preserved-data checks. Fixed metadata
   command provisions an approved isolated test cycle/routes/control, never arbitrary SQL.
 
-**Still unresolved:** actual internal identity/cohort bindings and approved new
-round metadata. Do not copy the expired mock cohort/three Committee assignments,
-invent staff accounts, infer academic scope or execute placeholder INSERTs. If
-the named Coordinator has no usable whole-round assignment, ask the user which
-real scope to assign before publishing destination metadata.
+Before C7 inventory, identity/cohort bindings and new round metadata were unresolved.
+Do not infer academic scope, invent staff accounts or execute placeholder INSERTs.
+The explicit user decision below, not the old mock records alone, authorizes copying
+the assignment into the isolated test round.
 
 Resolved during C7: the approved Student/TU link and Cognito Coordinator are ACTIVE;
 the Coordinator owns the single expired/mock source cohort with three active
@@ -130,6 +129,24 @@ Then publish the compatible new API/Frontend in browse mode **before** enabling
 any new writes. This preserves the temporary controller's verified unchanged-service
 baseline and still ensures old API4 never reads newly created contract2 evidence.
 After any such evidence exists, rollback must use the compatible new browse code.
+
+C7 Trial and Apply have now completed on RDS. Checkpoint:
+`tmp/tu-production/production-mW7iTn/state.json`, applied=true,
+cleanup.verified=true/failedParts=[]; post-catalog SHA256
+`0b7019ce3d24eafdb4780c68f4dfd1b32db0ef54ab6f61563b742f22d60ea87e`.
+Both migration rows were appended in the same transaction as the approved CLOSED
+test metadata. Existing business rows/history were verified preserved. Temporary
+function/version/role/log and exact endpoint grant were removed, and standing
+Lambda/Gateway configuration remained unchanged during this operation.
+
+The [cutover controller](../../scripts/operations/intake-controls-deploy.mjs) only
+updates the existing API code/timeout/environment/alias and Amplify main deployment.
+Its first live pilot stage is intake-draft with the CLOSED control, after compatible
+browse checks. Later intake-upload requires the user's genuine owner/Draft acceptance;
+intake-pilot requires real file acceptance too. Operator IAM probes using modeled
+Gateway claims only check the actual assigned database scope; they are explicitly
+not evidence of a genuine Cognito browser login. No automatic Submit/qualification
+certification is performed for the real Student.
 
 Deployment order after those checks/approvals:
 
