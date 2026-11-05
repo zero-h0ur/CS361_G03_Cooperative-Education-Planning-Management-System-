@@ -23,7 +23,7 @@
     "test:tu-identity-diagnostic": "node --test --test-concurrency=1 tests/tu-identity-diagnostic.test.mjs tests/tu-identity-diagnostic-db.test.mjs",
     "test:read-only-browse": "node --test tests/read-only-browse.test.mjs tests/read-only-browse-operations.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/read-only-browse-ui.test.js",
     "test:intake-readiness": "node --test --test-concurrency=1 tests/intake-readiness.test.mjs tests/intake-readiness-db.test.mjs",
-    "test:student-intake": "node --test --test-concurrency=1 tests/intake-controls.test.mjs tests/intake-controls-owner.test.mjs tests/student-intake.test.mjs tests/student-intake-db.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/student-intake-ui.test.js tests/intake-controls-ui.test.js",
+    "test:student-intake": "node --test --test-concurrency=1 tests/intake-controls.test.mjs tests/intake-controls-owner.test.mjs tests/intake-controls-upgrade.test.mjs tests/intake-controls-upgrade-db.test.mjs tests/student-intake.test.mjs tests/student-intake-db.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/student-intake-ui.test.js tests/intake-controls-ui.test.js",
     "migrate": "node src/db/migrate.js",
     "test:tu-auth": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/tu-auth-backend.test.js tests/tu-auth-security.test.js tests/tu-application-client.test.js tests/tu-split-auth.test.js && node --test --test-concurrency=1 tests/tu-student-coordinator-delivery.test.mjs tests/tu-split-auth-db.test.mjs tests/tu-auth-packaging.test.mjs tests/tu-auth-deployment-plan.test.mjs",
     "package:tu-auth": "node scripts/package-tu-auth.mjs",

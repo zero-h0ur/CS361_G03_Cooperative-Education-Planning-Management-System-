@@ -18,10 +18,14 @@ export const policy=()=>({Version:'2012-10-17',Statement:[{Effect:'Allow',Action
  {Effect:'Allow',Action:['logs:CreateLogStream','logs:PutLogEvents'],Resource:`arn:aws:logs:${T.region}:${T.account}:log-group:${GROUP}:*`},...eniPolicy(T.name)]});
 function bindings(){const result={STUDENT_NUMBER:process.env.COED_C7_STUDENT_NUMBER,COORDINATOR_SUBJECT:process.env.COED_C7_COORDINATOR_SUBJECT};
  fixed(/^\d{10}$/.test(result.STUDENT_NUMBER || '') && /^[a-f0-9-]{36}$/.test(result.COORDINATOR_SUBJECT || ''),'C7_EXACT_IDENTITIES_REQUIRED');return result;}
-const environment=(s,enabled)=>{const b=bindings();fixed(hash(b)===s.bindingsHash);return {NODE_ENV:'production',ENABLED:String(enabled),RUN_ID:s.runId,EXPIRES_AT:s.expiresAt,...b};};
-function config(s){const f=aws(['lambda','get-function','--function-name',T.name]);owned(f.Tags,s);
- fixed(f.Configuration.Role===roleArn(T.role) && f.Configuration.Handler==='reader.handler' && f.Configuration.Runtime==='nodejs22.x' &&
-  f.Configuration.CodeSha256===Buffer.from(s.sha256,'hex').toString('base64') && f.Configuration.Timeout===60 && f.Configuration.MemorySize===256 &&
+export const environment=(s,enabled)=>{
+ if(s.task==='intake-controls-upgrade')return {NODE_ENV:'production',ENABLED:String(enabled),RUN_ID:s.runId,EXPIRES_AT:s.expiresAt,
+  MANIFEST_SHA256:s.manifestSha256,TRIAL_PASSED:String(s.trialPassed===true),EXPECTED_POST_HASH:s.postCatalogHash || ''};
+ const b=bindings();fixed(hash(b)===s.bindingsHash);return {NODE_ENV:'production',ENABLED:String(enabled),RUN_ID:s.runId,EXPIRES_AT:s.expiresAt,...b};};
+export function config(s){const f=aws(['lambda','get-function','--function-name',T.name]);owned(f.Tags,s);
+ const upgrade=s.task==='intake-controls-upgrade';
+ fixed(f.Configuration.Role===roleArn(T.role) && f.Configuration.Handler===(upgrade?'scripts/operations/intake-controls-owner/upgrade-handler.handler':'reader.handler') && f.Configuration.Runtime==='nodejs22.x' &&
+  f.Configuration.CodeSha256===Buffer.from(s.sha256,'hex').toString('base64') && f.Configuration.Timeout===(upgrade?90:60) && f.Configuration.MemorySize===256 &&
   hash(f.Configuration.VpcConfig?.SubnetIds)===hash([T.subnet]) && hash(f.Configuration.VpcConfig?.SecurityGroupIds)===hash([T.sg]) &&
   s.environmentHashes?.includes(hash(f.Configuration.Environment?.Variables)),'C7_TEMP_CONFIG_DRIFT');return f.Configuration;}
 export async function packageInventory(ca){
@@ -47,7 +51,8 @@ export async function prepare(path,s,{check=()=>{}}={}){
  aws(['iam','put-role-policy','--role-name',T.role,'--policy-name',POLICY,'--policy-document',JSON.stringify(policy())]);
  aws(['logs','create-log-group','--log-group-name',GROUP,'--tags',JSON.stringify(tags(s))]);s.owned.logs=true;save(path,s);aws(['logs','put-retention-policy','--log-group-name',GROUP,'--retention-in-days','3']);
  s.endpointStatement=statement();save(path,s);setEndpoint(s.endpointBefore,addStatement(s.endpointBefore,s.endpointStatement));s.owned.endpoint=true;save(path,s);
- for(let i=0;i<8;i++)try{check();aws(['lambda','create-function','--function-name',T.name,'--runtime','nodejs22.x','--role',roleArn(T.role),'--handler','reader.handler','--timeout','60','--memory-size','256',
+ for(let i=0;i<8;i++)try{check();aws(['lambda','create-function','--function-name',T.name,'--runtime','nodejs22.x','--role',roleArn(T.role),
+  '--handler',s.task==='intake-controls-upgrade'?'scripts/operations/intake-controls-owner/upgrade-handler.handler':'reader.handler','--timeout',s.task==='intake-controls-upgrade'?'90':'60','--memory-size','256',
   '--zip-file','fileb://'+s.zip,'--vpc-config',JSON.stringify({SubnetIds:[T.subnet],SecurityGroupIds:[T.sg]}),'--environment',JSON.stringify({Variables:environment(s,false)}),'--tags',JSON.stringify(tags(s))]);s.owned.function=true;save(path,s);break;
  }catch(e){if(!e.rolePropagation || i===7)throw e;await delay(2000);}
  putDeny(T.name,[OPERATOR]);aws(['lambda','put-function-concurrency','--function-name',T.name,'--reserved-concurrent-executions','1']);await waitActive(T.name);const c=config(s);
@@ -57,7 +62,7 @@ export async function prepare(path,s,{check=()=>{}}={}){
  await waitForPropagation({check});s.status='INVENTORY_READY';save(path,s);
 }
 export function cleanup(path,s){
- caller();fixed(s.task==='intake-controls-inventory');const failed=[];const attempt=(part,fn)=>{try{fn();}catch{failed.push(part);}};
+ caller();fixed(['intake-controls-inventory','intake-controls-upgrade'].includes(s.task));const failed=[];const attempt=(part,fn)=>{try{fn();}catch{failed.push(part);}};
  attempt('function',()=>{if(!absent(['lambda','get-function-configuration','--function-name',T.name])){config(s);aws(['lambda','put-function-concurrency','--function-name',T.name,'--reserved-concurrent-executions','0']);aws(['lambda','delete-function','--function-name',T.name]);}});
  attempt('endpoint',()=>{const before=endpoint();if(before.Statement.some(x=>x.Sid===s.endpointStatement?.Sid))setEndpoint(before,removeStatement(before,s.endpointStatement));});
  attempt('role',()=>{if(!absent(['iam','get-role','--role-name',T.role])){const role=aws(['iam','get-role','--role-name',T.role]).Role;owned(Object.fromEntries(role.Tags.map(t=>[t.Key,t.Value])),s);fixed(role.RoleId===s.roleId);

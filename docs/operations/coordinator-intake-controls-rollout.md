@@ -40,12 +40,12 @@ matches. Its unchanged SHA256 is
 `e7beab8e04c60434649339a79dc857295ad4cc15d651ba5dd95f2fe30fd70442`;
 see its existing full ACL proposal, including the guarded cohort lock-only column.
 
-Then apply [phase1_intake_controls.sql](../../src/db/proposals/phase1_intake_controls.sql)
+Then apply [022_coordinator_intake_controls.sql](../../src/db/upgrades/022_coordinator_intake_controls.sql)
 with SHA256 `40ea01888fdfac3ea7892e08b0f6bc043ecc16b28271e74b6a318ae461c42d97`.
 The [review-only reader](../../scripts/operations/intake-controls-contract.mjs) pins
-LF bytes and has no connection/AWS capability. This is deliberately **unnumbered**
-until live migration history is rechecked. Do not assume022 is vacant, edit021 or
-alter historical migration checksums.
+LF bytes and has no connection/AWS capability. C7 inventory confirmed021/022 are
+vacant;022 is now assigned with the same reviewed SQL bytes. The proposal copy
+remains a review artifact, not a separate migration. Do not edit021 or historical checksums.
 
 This proposal creates only:
 
@@ -107,6 +107,29 @@ round metadata. Do not copy the expired mock cohort/three Committee assignments,
 invent staff accounts, infer academic scope or execute placeholder INSERTs. If
 the named Coordinator has no usable whole-round assignment, ask the user which
 real scope to assign before publishing destination metadata.
+
+Resolved during C7: the approved Student/TU link and Cognito Coordinator are ACTIVE;
+the Coordinator owns the single expired/mock source cohort with three active
+Committee accounts. Inventory completed READ ONLY and cleanup verified at
+`tmp/tu-production/production-UBeKNV/state.json`. The user explicitly approved a
+**new separate2569/1 test round**, copying that exact Coordinator/three-member
+assignment and CPE/CS destination code for test routing only. No account creation,
+old-round update, official academic certification or Committee workflow activation.
+
+The fixed [upgrade library](../../scripts/operations/intake-controls-upgrade.mjs)
+and [new artifact controller](../../scripts/operations/intake-controls-owner/upgrade-operator.mjs)
+bind the approved private metadata in a checksum-pinned ZIP. Source cohort IDs,
+members, active identity links and schema/history are checked again inside the
+transaction. Trial rolls back all SQL/metadata; Apply must reproduce its post-catalog
+hash. Existing business rows are fingerprinted and preserved; migration history
+only appends021/022. The tool has no arbitrary SQL, account-link or legacy-date mode.
+
+Cutover refinement: apply additive SQL and CLOSED test metadata while the existing
+API4 remains browse-only; no contract2 submissions can be created at this stage.
+Then publish the compatible new API/Frontend in browse mode **before** enabling
+any new writes. This preserves the temporary controller's verified unchanged-service
+baseline and still ensures old API4 never reads newly created contract2 evidence.
+After any such evidence exists, rollback must use the compatible new browse code.
 
 Deployment order after those checks/approvals:
 
