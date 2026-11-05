@@ -20,13 +20,19 @@ export async function registrationCatalog(client){
  }
  return reader.assertSafeCatalog(result);
 }
-export function registrationCatalogHash(value,schema='public'){
+export function normalizedRegistrationCatalog(value,schema='public'){
  const normalized=normalizedCatalog(value,schema);
  // PostgreSQL retains optional identifier quotes in proconfig. Fixture schemas
  // and public must represent the same fixed, trusted search_path semantically.
- for(const r of normalized.routines)if(r.settings)r.settings=r.settings.map(s=>s.replaceAll('"'+schema+'"','__schema__').replaceAll(schema,'__schema__'));
- return sha256(JSON.stringify(normalized).replaceAll(schema,'__schema__'));
+ for(const r of normalized.routines){
+  if(r.settings)r.settings=r.settings.map(s=>['search_path=pg_catalog, '+schema,'search_path=pg_catalog, "'+schema+'"'].includes(s)?'search_path=pg_catalog, __schema__':s);
+  r.definition=r.definition.replace("SET search_path TO 'pg_catalog', '"+schema+"'","SET search_path TO 'pg_catalog', '__schema__'");
+ }
+ // Never replace bare words globally: public_url and visibility='public' are
+ // real identifiers/data predicates, not schema qualifiers.
+ return normalized;
 }
+export const registrationCatalogHash=(value,schema='public')=>sha256(JSON.stringify(normalizedRegistrationCatalog(value,schema)));
 async function capabilities(client){
  const roles=(await client.query(`SELECT rolname,rolcanlogin,rolsuper,rolinherit,rolcreatedb,rolcreaterole,rolreplication,rolbypassrls,
   EXISTS(SELECT 1 FROM pg_auth_members WHERE member=r.oid OR roleid=r.oid) AS memberships,
@@ -84,7 +90,7 @@ export async function upgradeRegistration({client,expectedDatabase,expectedSchem
   await client.query(adapted);await capabilities(client);
   const postCatalog=await registrationCatalog(client),postHash=registrationCatalogHash(postCatalog,expectedSchema);
   if(postHash!==POST_SHA256){const e=Error('REGISTRATION_POSTCONDITION');e.safeCode=e.message;
-   e.safeMetadata={postCatalogSha256:postHash,sections:Object.fromEntries(Object.entries(normalizedCatalog(postCatalog,expectedSchema)).map(([k,v])=>[k,sha256(JSON.stringify(v).replaceAll(expectedSchema,'__schema__'))]))};throw e;}
+   e.safeMetadata={postCatalogSha256:postHash,sections:Object.fromEntries(Object.entries(normalizedRegistrationCatalog(postCatalog,expectedSchema)).map(([k,v])=>[k,sha256(JSON.stringify(v))]))};throw e;}
   if(await fingerprint(client,expectedSchema,names)!==preserved)fail('REGISTRATION_PRESERVATION_FAILED');
   await client.query('INSERT INTO schema_migrations(version,checksum) VALUES($1,$2)',[VERSION,SQL_SHA256]);
   await client.query(mode==='apply'?'COMMIT':'ROLLBACK');began=false;
