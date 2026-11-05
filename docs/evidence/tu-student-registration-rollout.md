@@ -12,8 +12,10 @@ Deployment remains **verification-only**. A subsequent owner clarification
 supersedes the earlier UI acceptance interpretation: TU verification reaches the
 first-registration form, but confirming it returned503. The confirmed missing
 issuer public-key configuration is now corrected; live configuration/negative
-checks passed. Completed registration, Student workspace access and an independent
-owner smoke are **not yet verified**.
+checks passed. The subsequent409 issuer mismatch has also been corrected by
+forward020 after a successful live rollback-only trial. Post-catalog verification
+and independent temporary-capability cleanup passed. Completed registration,
+Student workspace access and an independent owner smoke are **not yet verified**.
 
 | Resource | Live result |
 | --- | --- |
@@ -23,6 +25,7 @@ owner smoke are **not yet verified**.
 | New HTTP route | `POST /api/v3/auth/tu-register`, existing broker integration |
 | Frontend | Amplify job29 `SUCCEED`; published JS exactly matches packaged bytes |
 | Runtime capability | Separate registration Secret and EXECUTE-only role; login role remains SELECT-only |
+| Database follow-up | Forward020 applied; only the two registration issuer literals changed |
 | Temporary owner tool | Lambda, role, log group and endpoint statements removed; cleanup verified |
 | Business writes | Still blocked with `COED_API_MAINTENANCE=verify` |
 
@@ -230,5 +233,60 @@ Local validation for020:
 - Initial database test started before the disposable server was ready; after
   checking `pg_isready`, the same test passed. No production connection was used.
 
-Production trial/apply and real-owner acceptance are still pending. The020 source
+At the pre-deployment checkpoint, production trial/apply and real-owner acceptance
+were pending. The020 source
 checksum is `3ea3a1fc31ea7a839fff1d8fb94d3d8732d26042edc9dd4a03dbc62610082790`.
+
+### O8 production execution completed — real-owner acceptance pending
+
+Source commit `7c1a2c0` was clean when packaging. The isolated owner artifact
+SHA256 is `481af35219efc67dee5f722734ceaa6214d1b4018091f70a93595aa54b2b506b`.
+The extracted ten-entry package loaded, verified the pinned SQL, and rejected an
+invalid request without reading a credential. Auth/split regression64 also passed;
+combined with the31 Node/database checks above,95 targeted checks passed with no
+skips. Syntax lint passed304 modules; docs and historical migration checks passed.
+
+Checkpoint: ignored `tmp/tu-production/production-xg3NUI/state.json` and four fixed
+safe result files. The checkpoint contains versions/hashes/ownership flags and
+safe operation results only, never credentials, provider identities or tickets.
+
+Execution sequence and evidence:
+
+1. Read-only standing-release preflight pinned API3/broker5/issuer4, the same
+   configured issuer/client/public key and API maintenance `verify`.
+2. Temporary owner capability was created disabled, then activated only through
+   a qualified/operator-only published version with one-hour expiry. Its role
+   could read only the existing RDS owner Secret, not provider/signing Secrets,
+   rotate a password or call an account-provisioning mode.
+3. Live inventory matched019's exact catalog hash
+   `ea3ff238c1c10aaa5d32253b894c0541246ef1e04c775effffcd15ad1d0889d1`.
+4. Live020 trial passed and rolled back. Preservation checks confirmed that only
+   the two fixed issuer literals changed and all row fingerprints, history,
+   routine OIDs/owners/ACLs and role attributes/memberships were preserved.
+5. Apply passed in one atomic transaction, appending only020's history/checksum
+   entry. No account, identity link, academic profile or application was created
+   or repaired by the operator. Runtime grants and old migration records stayed
+   unchanged. Temporary function-owner membership was revoked before commit.
+6. Subsequent inventory verified exact idempotent replay and post-catalog hash
+   `89966e31c60134499d3bb7d60df92dbb51c161d0fb941517eca308817c479b91`.
+7. Cleanup removed the task Lambda/all versions, IAM role/inline policy, log group
+   and exact endpoint statement. An independent AWS read confirmed all four were
+   absent and standing Lambda configurations/aliases still matched the baseline.
+   No new standing Secret, NAT, service or permission remains.
+8. Seven public configured/invalid-input/anonymous/maintenance probes passed again
+   with no credential use or database write. Invalid registration proof still
+   returns403; anonymous owner reads return401; application writes remain503
+   `COED_MAINTENANCE`. These are negative gates, not completed signup evidence.
+
+The initial audit process output was lost when the client session was interrupted;
+continuation first checked the completed checkpoint, then reran only the read-only
+independent cleanup audit and public probes. It did not replay020, invoke the
+deleted owner tool or recreate resources. The disposable synthetic database and
+its anonymous test volume were removed; pre-existing containers were untouched.
+
+The owner has been asked to freshly Login TU, confirm the actual admission year
+and report Student workspace success or a fixed error code. Registration tickets
+from before the interruption are expired. Real-owner completion and optional
+hidden-input Login -> `/me` -> own-profile smoke remain pending. No stored chat
+credential was reused, no positive production proof/account was fabricated and
+no business write resume or push was performed.

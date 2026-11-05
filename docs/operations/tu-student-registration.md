@@ -176,3 +176,12 @@ regression, pause only new onboarding with the existing broker flag, preserve
 snapshot over live data or delete migration history. Actual Student acceptance
 still needs fresh owner Login and confirmation; local/negative gates alone do
 not establish success.
+
+Execution evidence:020 was applied on November5 after inventory/trial passed;
+post-catalog hash is `89966e31c60134499d3bb7d60df92dbb51c161d0fb941517eca308817c479b91`.
+The task checkpoint is `tmp/tu-production/production-xg3NUI/state.json`, status
+`SCHEMA020_APPLIED_CLEANUP_VERIFIED`. Temporary capabilities are removed and were
+independently checked absent. Do **not** rerun prepare/apply from the example
+sequence for this completed run. Read the checkpoint and rollout evidence first.
+API3/broker5/issuer4 and verify-only maintenance are unchanged. Genuine Student
+registration completion is awaiting the owner's fresh Login/form confirmation.
