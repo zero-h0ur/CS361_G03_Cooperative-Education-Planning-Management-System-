@@ -1,5 +1,7 @@
 # TU Student registration rollout — November5,2026
 
+> Historical 019/onboarding stage evidence. Later 020 issuer alignment and owner-confirmed registration/Student access supersede the verification-only status below. See [current deployment](../operations/current-deployment.md) and [intake verification](../operations/student-intake-verification.md). Earlier failures remain recorded, not claims of a current outage.
+
 ## Outcome
 
 Forward019 was applied to the actual observed018 production lineage after a

@@ -1,5 +1,7 @@
 # TU production deployment evidence
 
+> Historical P0-P6 stage evidence. The WAITING_OWNER_SMOKE and paused-write statements below describe that stage, not the latest result. Later onboarding/issuer fixes and the restricted intake pilot are summarized in [current deployment](../operations/current-deployment.md) and [verification](../operations/student-intake-verification.md). Do not repeat an old repair or Deploy from this evidence alone.
+
 Date:5November2026, Asia/Bangkok. Scope: approved P0-P6.
 Status: WAITING_OWNER_SMOKE. P0-P4 complete; verification-only live routing passed.
 Owner/probe temporary capabilities removed. Writes/other API reads remain paused.

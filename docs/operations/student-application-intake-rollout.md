@@ -1,5 +1,7 @@
 # Student intake: local implementation and proposed AWS rollout
 
+> Historical pre-C7 proposal/A0 record. The browse-only and fixed-48-hour statements below are not current runtime state. C7 was subsequently approved/applied and the restricted pilot accepted; see [current deployment](current-deployment.md) and [verification](student-intake-verification.md). This document is not authorization to execute A1-A4 or modify another round.
+
 ## Approval boundary
 
 The fixed48hour plan below is **superseded for the next rollout** by

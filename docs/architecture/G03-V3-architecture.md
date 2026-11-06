@@ -1,5 +1,7 @@
 # CO-ED V3 architecture, trust boundaries, and privacy baseline
 
+> Historical V3 snapshot. Preserved decisions/diagrams below do not describe the complete current TU onboarding and Phase 1 intake path. Start with [V4 architecture](G03-V4-architecture.md) and [current deployment](../operations/current-deployment.md); old Lab routes/deployment commands are not current authority.
+
 เอกสารนี้สรุปสถาปัตยกรรมที่ส่งมอบและ Accepted Decisions D01-D08 ของ
 V3 หากพบข้อขัดแย้ง ให้แก้ที่
 Decision Issue ต้นทางก่อน ไม่สร้าง policy ใหม่จากเอกสารนี้

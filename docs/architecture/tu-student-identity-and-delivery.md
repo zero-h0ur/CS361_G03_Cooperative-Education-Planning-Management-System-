@@ -1,5 +1,7 @@
 # TU Student identity and Phase 1 delivery decision
 
+> Historical decision/local evidence from 2026-11-04. The no-provisioning/local-only status below predates verified onboarding and the restricted live intake pilot. See [current V4 architecture](G03-V4-architecture.md), [decisions](../decisions/v4-tu-intake-boundaries.md) and [deployment](../operations/current-deployment.md). Preserve this record; it is not a current deployment prohibition/approval or a reason to remove newer onboarding.
+
 Status: implemented and verified locally; production rollout is not authorized.
 Date: 2026-11-04 (Asia/Bangkok).
 
