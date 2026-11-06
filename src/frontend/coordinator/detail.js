@@ -53,7 +53,9 @@ export function documentsPanel(record,onDownload) {
     const name=el('td','',title),meta=el('td'),status=el('td'),action=el('td');meta.append(el('strong','',doc?.filename || '—'));
     if(doc)meta.append(el('small','coord-muted',`${doc.content_type || ''}${doc.byte_size?' · '+Math.ceil(doc.byte_size/1024)+' KB':''}`));
     status.append(badge(doc?'FORWARDED':'RETURNED',doc?'แนบแล้ว':'ยังไม่แนบ'));
-    const open=button('เปิดดู',()=>onDownload?.(doc),{icon:'file'});open.disabled=!doc || !onDownload || record.access?.can_download===false;open.setAttribute('aria-label',`เปิดดู ${title}`);action.append(open);
+    const actions=el('div','coord-document-actions');
+    for(const [label,download] of [['เปิดดู',false],['ดาวน์โหลด',true]]){const control=button(label,()=>onDownload?.(doc,{download}),{icon:'file'});
+      control.disabled=!doc || !onDownload || record.access?.can_download===false;control.setAttribute('aria-label',`${label} ${title}`);actions.append(control);}action.append(actions);
     [name,meta,status,action].forEach((td,i)=>td.dataset.label=['เอกสาร','ไฟล์แนบ','สถานะ','ดำเนินการ'][i]);tr.append(name,meta,status,action);docs.body.append(tr);
   }root.append(docs.table,note(record.access?.can_download===false?'ช่วงทดลองนี้ยังไม่เปิดดาวน์โหลดเอกสาร':'แนบไฟล์ครบ ไม่ได้หมายถึงเอกสารผ่านการตรวจสอบ'));return root;
 }

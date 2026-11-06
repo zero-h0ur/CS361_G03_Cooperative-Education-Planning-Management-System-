@@ -29,9 +29,15 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
   function drawHeader(){const next=header();heading.replaceWith(next);heading=next;}
   function request(path,options={}){return client.request(ROOT+path,{signal,...options});}
   function attempt(id,body){const signature=JSON.stringify(body),old=attempts.get(id);if(old?.signature===signature)return old.body;const value={...body,operation_id:crypto.randomUUID()};attempts.set(id,{signature,body:value});return value;}
-  async function download(record,doc){if(!applicationClient?.download){feedback(status,'ไม่พร้อมเปิดเอกสาร กรุณาโหลดหน้าใหม่',true);return;}
-    feedback(status,'กำลังเตรียมเอกสาร…');try{const blob=await applicationClient.download(record.id,doc.id,{signal});if(stopped())return;const url=URL.createObjectURL(blob);urls.add(url);
-      const link=el('a','coord-button coord-button--outline','เปิดเอกสาร '+doc.filename);link.href=url;link.target='_blank';link.rel='noopener noreferrer';status.replaceChildren(el('span','','เตรียมเอกสารแล้ว '),link);link.click();
+  async function download(record,doc,{download:saveFile=false}={}){if(!applicationClient?.download){feedback(status,'ไม่พร้อมเปิดเอกสาร กรุณาโหลดหน้าใหม่',true);return;}
+    feedback(status,'กำลังเตรียมเอกสาร…');try{const blob=await applicationClient.download(record.id,doc.id,{signal});if(stopped())return;
+      const preview=['application/pdf','image/jpeg','image/png'].includes(doc.content_type),type=preview?doc.content_type:'application/octet-stream';
+      const url=URL.createObjectURL(new Blob([blob],{type}));urls.add(url);
+      const name=doc.filename || (type==='image/png'?'student-photo.png':type==='image/jpeg'?'student-photo.jpg':type==='application/pdf'?'document.pdf':'coed-document');
+      const save=el('a','coord-button coord-button--outline','ดาวน์โหลด '+name);save.href=url;save.download=name;
+      const links=el('span','coord-document-actions');
+      let open;if(preview){open=el('a','coord-button coord-button--outline','เปิดดู '+name);open.href=url;open.target='_blank';open.rel='noopener noreferrer';links.append(open);}links.append(save);
+      status.replaceChildren(el('span','','เตรียมเอกสารแล้ว '),links);(saveFile || !preview?save:open).click();
     }catch(e){failure(e);}}
   function paginate(host,data,refresh){const n=el('nav','coord-pagination');n.setAttribute('aria-label','หน้าใบสมัคร');const pages=Math.max(1,Math.ceil(data.total/data.pageSize));
     const previous=button('ก่อนหน้า',()=>{pageNo--;refresh();}),next=button('ถัดไป',()=>{pageNo++;refresh();});previous.disabled=pageNo<=1;next.disabled=pageNo>=pages;
@@ -70,7 +76,7 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
   async function showDetail(id,host,refresh,{modal=false}={}){const token=++detailToken;host.replaceChildren(el('p','coord-loading','กำลังโหลดใบสมัคร…'));
     try{const record=await request('/applications/'+id);if(stopped()||token!==detailToken)return;
       host.replaceChildren(renderDetail(record,{activeTab,onTab:key=>{activeTab=key;},onReturn:modal?undefined:()=>returnForm(record,refresh),onForward:modal?undefined:()=>forward(record,refresh),
-        onDownload:doc=>download(record,doc),host:root,signal}));
+        onDownload:(doc,options)=>download(record,doc,options),host:root,signal}));
     }catch(error){if(token!==detailToken)return;failure(error);if(!stopped())host.replaceChildren(note('โหลดใบสมัครไม่สำเร็จ'),button('ลองโหลดใบสมัครอีกครั้ง',()=>showDetail(id,host,refresh,{modal})));}}
   function reviewPage(){content.replaceChildren(status);const shortcuts=el('nav','coord-status-filters');shortcuts.setAttribute('aria-label','กรองใบสมัครตามสถานะ');content.append(shortcuts);
     const host=el('div'),layout=el('div','coord-review-layout'),queue=el('aside','coord-queue'),detail=el('div','coord-detail-host');

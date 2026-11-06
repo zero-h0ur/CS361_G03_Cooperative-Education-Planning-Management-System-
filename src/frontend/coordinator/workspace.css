@@ -97,6 +97,7 @@
 .coord-table td {padding:11px 14px;border-top:1px solid var(--shell-line);vertical-align:middle;overflow-wrap:anywhere;}
 .coord-table td small {display:block;}.coord-table .coord-numeric {font-variant-numeric:tabular-nums;white-space:nowrap;text-align:center;}
 .coord-table .coord-button {min-height:40px;padding:6px 12px;white-space:nowrap;}
+.coord-document-actions {display:flex;flex-wrap:wrap;gap:8px;}
 .coord-table .coord-course-status {font-weight:500;}.coord-course-status--enrolled {background:#fff0bf;color:#713e00;}.coord-course-status--studied {background:#dff3e3;color:#125b2c;}.coord-course-status--not_studied {background:#ffe2e5;color:#8b0c25;}
 .coord-tab-panel .coord-table {margin-top:8px;}.coord-tab-panel .coord-table th,.coord-tab-panel .coord-table td {padding:7px 10px;}
 .coord-skills {display:grid;grid-template-columns:.9fr 1.2fr;gap:20px;}.coord-skills > section + section {padding-left:24px;border-left:1px solid var(--shell-line);}.coord-skills > .coord-note {grid-column:1/-1;}
