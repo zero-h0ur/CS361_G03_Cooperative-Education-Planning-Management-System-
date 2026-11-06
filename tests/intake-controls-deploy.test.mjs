@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {stageEnvironment,promote,acknowledge} from '../scripts/operations/intake-controls-deploy.mjs';
+import {stageEnvironment,promote,acknowledge,promotionProbe,assertControllerSource} from '../scripts/operations/intake-controls-deploy.mjs';
 import controls from '../src/api/services/intake-control-service.js';
 const scope={student_user_id:randomUUID(),coordinator_user_id:randomUUID(),cycle_id:randomUUID()};
 const env={DB_USER:'coed_app',DB_NAME:'coed',CO_ED_APPLICATION_STORAGE:'s3',CO_ED_APPLICATION_BUCKET:'coed-v4-application-documents-130165494095-ap-southeast-2',
@@ -24,4 +24,28 @@ test('real owner/upload acceptance is required before any network operation prom
  await assert.rejects(promote({status:'DRAFT_PILOT_CLOSED_CONTROL_OWNER_ACCEPTANCE_PENDING'},'intake-upload'),/C7_GENUINE_ACCEPTANCE_REQUIRED/);
  await assert.rejects(promote({status:'UPLOAD_PILOT_ACCEPTANCE_PENDING',ownerConfirmed:true},'intake-pilot'),/C7_GENUINE_ACCEPTANCE_REQUIRED/);
  assert.throws(()=>acknowledge({status:'PREPARED'},'owner'),/C7_OWNER_STAGE_REQUIRED/);
+});
+
+test('controller-only source binding preserves the original runtime source and rejects dirty, unbound or unrelated changes',()=>{
+ const candidate={head:'a'.repeat(40)},current={head:'b'.repeat(40),dirty:false},binding={head:current.head,candidateSource:candidate.head};
+ assertControllerSource(candidate,candidate);
+ assertControllerSource(current,candidate,binding,['scripts/operations/intake-controls-deploy.mjs','tests/intake-controls-deploy.test.mjs']);
+ for(const [c,b,paths] of [[{...current,dirty:true},binding,['tests/intake-controls-deploy.test.mjs']],
+  [current,undefined,['tests/intake-controls-deploy.test.mjs']],[current,{...binding,candidateSource:'c'.repeat(40)},['tests/intake-controls-deploy.test.mjs']],
+  [current,{...binding,head:'c'.repeat(40)},['tests/intake-controls-deploy.test.mjs']],[current,binding,[]],
+  [current,binding,['src/maintenance.js']],[current,binding,['package-lock.json']],
+  [current,binding,['tests/intake-controls-deploy.test.mjs','src/db/upgrades/022_coordinator_intake_controls.sql']]])
+  assert.throws(()=>assertControllerSource(c,candidate,b,paths),/C7_SOURCE_CHANGED/);
+});
+
+test('promotion probes distinguish Gateway JWT rejection from direct Lambda maintenance without weakening any denial',async()=>{
+ for(const stage of ['intake-upload','intake-pilot'])for(const gateway of [false,true]){
+  const events=[],call=async event=>{events.push(event);return {statusCode:event.rawPath.endsWith('/forward')?(gateway?401:503):
+   event.rawPath.endsWith('/submit')&&stage==='intake-upload'?503:401};};
+  await promotionProbe(call,stage,scope.cycle_id,gateway);assert.equal(events.length,6);
+  assert.ok(events.every(e=>!e.headers && !e.requestContext.authorizer));
+  for(const openPath of ['/forward','/uploads','/submit','/me','/download','/application-options'])
+   await assert.rejects(promotionProbe(async event=>event.rawPath.endsWith(openPath)?{statusCode:200}:call(event),stage,scope.cycle_id,gateway),/C7_(REVIEW_OPEN|STAGE_GATE_FAILED|ANONYMOUS_ALLOWED)/);
+  await assert.rejects(promotionProbe(async event=>event.rawPath.endsWith('/forward')?{statusCode:gateway?503:401}:call(event),stage,scope.cycle_id,gateway),/C7_REVIEW_OPEN/);
+ }
 });

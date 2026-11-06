@@ -2,6 +2,7 @@
 import {readFileSync,writeFileSync,mkdirSync,mkdtempSync,copyFileSync,lstatSync} from 'node:fs';
 import {join,resolve,relative,isAbsolute} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {execFileSync} from 'node:child_process';
 import {LambdaClient,InvokeCommand} from '@aws-sdk/client-lambda';
 import {aws,ROOT,A,REGION,API,caller,fixed,hash,cleanSource,safeConfig,sdkCredentials,waitActive,load as loadOwner} from './tu-production/common.mjs';
 import {readZipEntry} from './zip-archive.mjs';
@@ -15,7 +16,30 @@ const save=s=>writeFileSync(checkpoint(s.path),JSON.stringify(s,null,2)+'\n');
 export function load(path){const s=JSON.parse(readFileSync(checkpoint(path)));fixed(s.task==='intake-controls-deploy' && s.account===A);return s;}
 const config=qualifier=>aws(['lambda','get-function-configuration','--function-name',FUNCTION,...(qualifier?['--qualifier',qualifier]:[])]);
 const alias=()=>aws(['lambda','get-alias','--function-name',FUNCTION,'--name','live']);
-function source(s){const c=cleanSource();fixed(!c.dirty && c.head===s.source.head,'C7_SOURCE_CHANGED');}
+const CONTROLLER_FILES=new Set(['scripts/operations/intake-controls-deploy.mjs','tests/intake-controls-deploy.test.mjs']);
+export function assertControllerSource(current,candidate,binding,paths=[]){
+ fixed(!current.dirty,'C7_SOURCE_CHANGED');
+ if(current.head===candidate.head)return;
+ fixed(binding?.head===current.head && binding.candidateSource===candidate.head && paths.length>0 &&
+  paths.every(path=>CONTROLLER_FILES.has(path)),'C7_SOURCE_CHANGED');
+}
+function controllerDelta(from,to){
+ fixed(/^[a-f0-9]{40}$/.test(from) && /^[a-f0-9]{40}$/.test(to),'C7_SOURCE_CHANGED');
+ try{execFileSync('git',['merge-base','--is-ancestor',from,to],{cwd:ROOT,stdio:'pipe',windowsHide:true});
+  return execFileSync('git',['diff','--name-only',from,to,'--'],{cwd:ROOT,encoding:'utf8',windowsHide:true}).trim().split(/\r?\n/).filter(Boolean);
+ }catch{fixed(false,'C7_SOURCE_CHANGED');}
+}
+function source(s){const c=cleanSource();assertControllerSource(c,s.source,s.controllerSource,
+ c.head===s.source.head?[]:controllerDelta(s.source.head,c.head));
+ if(c.head!==s.source.head)for(const name of ['coed-v4-lambda.zip','coed-v4-frontend.zip'])artifact(s,name);
+}
+export function bindControllerSource(s){
+ const current=cleanSource();fixed(current.head!==s.source.head,'C7_CONTROLLER_BINDING_NOT_NEEDED');
+ const paths=controllerDelta(s.source.head,current.head),binding={head:current.head,candidateSource:s.source.head};
+ assertControllerSource(current,s.source,binding,paths);
+ for(const name of ['coed-v4-lambda.zip','coed-v4-frontend.zip'])artifact(s,name);
+ s.controllerSource={...binding,paths,boundAt:new Date().toISOString()};save(s);return s;
+}
 function routing(){return {routes:hash(aws(['apigatewayv2','get-routes','--api-id',API]).Items),integrations:hash(aws(['apigatewayv2','get-integrations','--api-id',API]).Items),
  cors:hash(aws(['apigatewayv2','get-api','--api-id',API]).CorsConfiguration)};}
 function standing(){return Object.fromEntries(['coed-tu-auth','coed-tu-session-issuer'].map(name=>{const c=aws(['lambda','get-function-configuration','--function-name',name,'--qualifier','live']),a=aws(['lambda','get-alias','--function-name',name,'--name','live']);
@@ -101,18 +125,23 @@ export function acknowledge(s,kind){
  else{fixed(s.status==='UPLOAD_PILOT_ACCEPTANCE_PENDING' && s.ownerConfirmed,'C7_UPLOAD_STAGE_REQUIRED');s.uploadConfirmed=true;s.uploadConfirmedAt=new Date().toISOString();}
  save(s);return s;
 }
+export async function promotionProbe(call,stage,id,gateway=false){
+ fixed(['intake-upload','intake-pilot'].includes(stage),'C7_STAGE_DENIED');
+ for(const path of ['/api/tu-proxy/api/v3/me','/api/tu-proxy/api/v4/application-options'])fixed((await call({rawPath:path,requestContext:{http:{method:'GET'}}})).statusCode===401,'C7_ANONYMOUS_ALLOWED');
+ for(const suffix of ['/uploads','/documents/'+id+'/download','/submit']){const r=await call({rawPath:'/api/tu-proxy/api/v4/applications/'+id+suffix,requestContext:{http:{method:'POST'}},body:'{}'});
+  fixed(r.statusCode===(suffix==='/submit'&&stage!=='intake-pilot'?503:401),'C7_STAGE_GATE_FAILED');}
+ // No JWT reaches the staff Lambda through the real Gateway. A numeric IAM
+ // invocation reaches maintenance first instead; neither permits the command.
+ fixed((await call({rawPath:'/api/v4/coordinator/applications/'+id+'/forward',requestContext:{http:{method:'POST'}},body:'{}'})).statusCode===(gateway?401:503),'C7_REVIEW_OPEN');
+}
 export async function promote(s,stage){
  fixed(stage==='intake-upload' && s.status==='DRAFT_PILOT_CLOSED_CONTROL_OWNER_ACCEPTANCE_PENDING' && s.ownerConfirmed ||
   stage==='intake-pilot' && s.status==='UPLOAD_PILOT_ACCEPTANCE_PENDING' && s.ownerConfirmed && s.uploadConfirmed,'C7_GENUINE_ACCEPTANCE_REQUIRED');
  caller();source(s);unchanged(s);
  const version=await publishStage(s,stage),id=s.scope.cycle_id;
- const check=async call=>{for(const path of ['/api/tu-proxy/api/v3/me','/api/tu-proxy/api/v4/application-options'])fixed((await call({rawPath:path,requestContext:{http:{method:'GET'}}})).statusCode===401,'C7_ANONYMOUS_ALLOWED');
-  for(const suffix of ['/uploads','/documents/'+id+'/download','/submit']){const r=await call({rawPath:'/api/tu-proxy/api/v4/applications/'+id+suffix,requestContext:{http:{method:'POST'}},body:'{}'});
-   fixed(r.statusCode===(suffix==='/submit'&&stage!=='intake-pilot'?503:401),'C7_STAGE_GATE_FAILED');}
-  fixed((await call({rawPath:'/api/v4/coordinator/applications/'+id+'/forward',requestContext:{http:{method:'POST'}},body:'{}'})).statusCode===503,'C7_REVIEW_OPEN');};
- await check(event=>invoke(version,event));const a=alias();fixed(a.FunctionVersion===s.liveVersion,'C7_ALIAS_DRIFT');
+ await promotionProbe(event=>invoke(version,event),stage,id);const a=alias();fixed(a.FunctionVersion===s.liveVersion,'C7_ALIAS_DRIFT');
  aws(['lambda','update-alias','--function-name',FUNCTION,'--name','live','--function-version',version,'--revision-id',a.RevisionId]);s.liveVersion=version;
- s.status=stage==='intake-upload'?'UPLOAD_PILOT_ACCEPTANCE_PENDING':'SUBMIT_PILOT_OWNER_AND_COORDINATOR_ACCEPTANCE_PENDING';save(s);await check(publicCall);return s;
+ s.status=stage==='intake-upload'?'UPLOAD_PILOT_ACCEPTANCE_PENDING':'SUBMIT_PILOT_OWNER_AND_COORDINATOR_ACCEPTANCE_PENDING';save(s);await promotionProbe(publicCall,stage,id,true);return s;
 }
 export async function returnToBrowse(s){
  caller();source(s);unchanged(s);const a=alias();fixed(a.FunctionVersion===s.liveVersion,'C7_ROLLBACK_NOT_OWNED');const version=await publishStage(s,'browse');
@@ -124,6 +153,7 @@ if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url))
   if(mode==='prepare')s=await prepare(path,extra);else{s=load(path);if(mode==='stage')await stageBrowse(s);else if(mode==='frontend')await deployFrontend(s);else if(mode==='status')await frontendStatus(s);
    else if(mode==='draft')await openDraftPilot(s);else if(mode==='browse')await returnToBrowse(s);else if(mode==='owner-tested')acknowledge(s,'owner');
    else if(mode==='upload-tested')acknowledge(s,'upload');else if(mode==='upload')await promote(s,'intake-upload');else if(mode==='submit')await promote(s,'intake-pilot');
+   else if(mode==='bind-controller')bindControllerSource(s);
    else fixed(false,'C7_COMMAND_DENIED');}console.log(JSON.stringify(report(s)));
  }catch(e){console.log(JSON.stringify({status:'C7_DEPLOY_STOPPED',code:e.safeCode || e.awsCode || 'C7_OPERATION_FAILED',checkCheckpoint:true}));process.exitCode=1;}
 }
