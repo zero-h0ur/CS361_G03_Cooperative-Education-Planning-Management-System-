@@ -15,18 +15,20 @@ class S3DocumentStore {
       Conditions:[['content-length-range',size,size],['eq','$Content-Type',contentType],['eq','$x-amz-checksum-sha256',encoded]]});
     return {url:target.url,fields:target.fields,method:'POST',auth_required:false};
   }
-  async readStaging(key,max) {
-    const result=await this.client.send(new this.commands.GetObjectCommand({Bucket:this.bucket,Key:this.key(key,'staging')}),{abortSignal:AbortSignal.timeout(15000)});
+  async readStaging(key,max,{signal}={}) {
+    const deadline=signal?AbortSignal.any([signal,AbortSignal.timeout(15000)]):AbortSignal.timeout(15000);
+    const result=await this.client.send(new this.commands.GetObjectCommand({Bucket:this.bucket,Key:this.key(key,'staging')}),{abortSignal:deadline});
     if(result.ContentLength>max){result.Body?.destroy?.();throw new ValidationError('ไฟล์มีขนาดเกินข้อกำหนด');}
     const chunks=[];let size=0;
-    const timeout=setTimeout(()=>result.Body?.destroy?.(new ServiceUnavailableError('อ่านไฟล์เกินเวลาที่กำหนด')),15000);timeout.unref?.();
+    const abort=()=>result.Body?.destroy?.(new ServiceUnavailableError('อ่านไฟล์เกินเวลาที่กำหนด'));
+    deadline.addEventListener('abort',abort,{once:true});if(deadline.aborted)abort();
     try {for await(const chunk of result.Body){size+=chunk.length;if(size>max)throw new ValidationError('ไฟล์มีขนาดเกินข้อกำหนด');chunks.push(Buffer.from(chunk));}}
-    finally{clearTimeout(timeout);result.Body?.destroy?.();}
+    finally{deadline.removeEventListener('abort',abort);result.Body?.destroy?.();}
     return Buffer.concat(chunks,size);
   }
-  async writeFinal(key,bytes) {
+  async writeFinal(key,bytes,{signal}={}) {
     await this.client.send(new this.commands.PutObjectCommand({Bucket:this.bucket,Key:this.key(key,'final'),Body:bytes,
-      IfNoneMatch:'*',ContentType:'application/octet-stream',ServerSideEncryption:'AES256'}),{abortSignal:AbortSignal.timeout(15000)});
+      IfNoneMatch:'*',ContentType:'application/octet-stream',ServerSideEncryption:'AES256'}),{abortSignal:signal?AbortSignal.any([signal,AbortSignal.timeout(15000)]):AbortSignal.timeout(15000)});
   }
   async downloadTarget({key}) {
     const command=new this.commands.GetObjectCommand({Bucket:this.bucket,Key:this.key(key,'final'),

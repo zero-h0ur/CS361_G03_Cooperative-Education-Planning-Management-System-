@@ -7,9 +7,9 @@ const find=(root,label)=>[...root.querySelectorAll('button')].find(b=>[...b.chil
 let controller;
 beforeEach(()=>{document.body.replaceChildren();controller=new AbortController();HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');this.dispatchEvent(new Event('close'));};});
 afterEach(()=>{controller.abort();jest.restoreAllMocks();});
-async function setup({page='review',scenario='pending',wrap}={}) {
+async function setup({page='review',scenario='pending',wrap,applicationClient}={}) {
   const clients=createWorkspacePreviewClients({role:'COORDINATOR',scenario});const request=jest.fn(clients.workflowClient.request);clients.workflowClient.request=wrap?wrap(request):request;
-  const root=renderCoordinatorWorkspace({client:clients.workflowClient,applicationClient:clients.applicationClient,page,signal:controller.signal});document.body.append(root);await flush();return {root,request};
+  const root=renderCoordinatorWorkspace({client:clients.workflowClient,applicationClient:applicationClient || clients.applicationClient,page,signal:controller.signal});document.body.append(root);await flush();return {root,request};
 }
 test('three Coordinator routes are allowlisted only for Coordinator and replace the company menu',()=>{
   const routes=getNavigationRoutesForRole('COORDINATOR');expect(routes.map(r=>r.hash)).toEqual(['#/coordinator/applications','#/coordinator/tracking','#/coordinator/schedule']);
@@ -48,7 +48,7 @@ test('Coordinator colors isolate a gray-white canvas and visible green read-only
 });
 test('missing documents, grades, and declarations are explicit and never fabricated',async()=>{
   const {root}=await setup({scenario:'missing-data'});expect(root.querySelector('[data-panel=grades]').textContent).toContain('—');
-  const docs=root.querySelector('[data-panel=documents]');expect(docs.querySelectorAll('.coord-badge--returned')).toHaveLength(2);expect(docs.querySelectorAll('button:disabled')).toHaveLength(2);
+  const docs=root.querySelector('[data-panel=documents]');expect(docs.querySelectorAll('.coord-badge--returned')).toHaveLength(2);expect(docs.querySelectorAll('button:disabled')).toHaveLength(4);
   expect(root.querySelectorAll('.coord-declarations input:not(:checked)')).toHaveLength(1);
 });
 test('whitespace-only searches are cleared before requesting the API',async()=>{
@@ -96,4 +96,42 @@ test('schedule stale state is not silently overwritten; only explicit reload dis
 });
 test('abort fences late options responses and renders no private records after leaving',async()=>{
   let resolve;const root=renderCoordinatorWorkspace({client:{request:()=>new Promise(r=>{resolve=r;})},signal:controller.signal});document.body.append(root);controller.abort();resolve({cycles:[{id:'late',name:'Late data'}]});await flush();expect(root.textContent).not.toContain('Late data');
+});
+
+describe('Coordinator named document downloads',()=>{
+  let createDescriptor,revokeDescriptor,clicks;
+  beforeEach(()=>{createDescriptor=Object.getOwnPropertyDescriptor(URL,'createObjectURL');revokeDescriptor=Object.getOwnPropertyDescriptor(URL,'revokeObjectURL');
+    Object.defineProperty(URL,'createObjectURL',{configurable:true,value:jest.fn(()=>'blob:https://example.invalid/random-uuid')});
+    Object.defineProperty(URL,'revokeObjectURL',{configurable:true,value:jest.fn()});clicks=[];
+    jest.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(function(){clicks.push({name:this.download,target:this.target,href:this.href});});});
+  afterEach(()=>{controller.abort();if(createDescriptor)Object.defineProperty(URL,'createObjectURL',createDescriptor);else delete URL.createObjectURL;
+    if(revokeDescriptor)Object.defineProperty(URL,'revokeObjectURL',revokeDescriptor);else delete URL.revokeObjectURL;});
+  const withDoc=(kind,filename,content_type)=>request=>async(path,options)=>{const data=await request(path,options);
+    if(data.documents)data.documents=data.documents.map(doc=>doc.kind===kind?{...doc,filename,content_type}:doc);return data;};
+  test.each([['resume','Resume / CV','Resume final.pdf','application/pdf'],['transcript','Transcript','ผลการเรียน 2569.pdf','application/pdf'],
+    ['photo','รูปถ่ายนักศึกษา','รูปนักศึกษา.jpg','image/jpeg'],['photo','รูปถ่ายนักศึกษา','student photo.PNG','image/png'],
+    ['conduct','ใบรับรองความประพฤติ','ใบรับรอง "ฉบับจริง".pdf','application/pdf']])('downloads %s with its original name/extension and restores a safe preview MIME',async(kind,label,name,type)=>{
+    const download=jest.fn(async()=>new Blob(['synthetic bytes'],{type:'application/octet-stream'}));
+    const {root}=await setup({wrap:withDoc(kind,name,type),applicationClient:{download}});find(root,'เอกสารแนบ').click();
+    find(root,'ดาวน์โหลด '+label).click();await flush();expect(download).toHaveBeenCalledTimes(1);
+    expect(clicks.at(-1)).toEqual({name,target:'',href:'blob:https://example.invalid/random-uuid'});
+    expect(URL.createObjectURL.mock.calls[0][0].type).toBe(type);
+    find(root,'เปิดดู '+label).click();await flush();expect(clicks.at(-1).target).toBe('_blank');expect(clicks.at(-1).name).toBe('');
+    expect([...root.querySelectorAll('a[download]')].at(-1).download).toBe(name);
+    controller.abort();expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:https://example.invalid/random-uuid');
+  });
+  test('missing permission disables both actions and unknown MIME is never previewed',async()=>{
+    const download=jest.fn(async()=>new Blob(['synthetic']));
+    const denied=await setup({applicationClient:{download},wrap:request=>async(path,options)=>{const data=await request(path,options);if(data.documents)data.access={can_download:false};return data;}});
+    find(denied.root,'เอกสารแนบ').click();expect(denied.root.querySelectorAll('[data-panel=documents] button:disabled')).toHaveLength(8);expect(download).not.toHaveBeenCalled();
+    const {root}=await setup({applicationClient:{download},wrap:withDoc('resume','original.pdf','text/html')});find(root,'เอกสารแนบ').click();find(root,'เปิดดู Resume / CV').click();await flush();
+    expect(clicks.at(-1).name).toBe('original.pdf');expect(URL.createObjectURL.mock.calls[0][0].type).toBe('application/octet-stream');expect(root.querySelector('.coord-feedback a[target]')).toBeNull();
+  });
+  test('failed or aborted document requests never start a download',async()=>{
+    let resolve;const download=jest.fn().mockRejectedValueOnce(new Error('DOWNLOAD_FAILED')).mockImplementationOnce(()=>new Promise(r=>{resolve=r;}));
+    const {root}=await setup({applicationClient:{download}});find(root,'เอกสารแนบ').click();find(root,'ดาวน์โหลด Resume / CV').click();await flush();
+    expect(root.textContent).toContain('DOWNLOAD_FAILED');expect(clicks).toHaveLength(0);
+    find(root,'ดาวน์โหลด Resume / CV').click();controller.abort();resolve(new Blob(['synthetic']));await flush();
+    expect(clicks).toHaveLength(0);expect(URL.createObjectURL).not.toHaveBeenCalled();
+  });
 });

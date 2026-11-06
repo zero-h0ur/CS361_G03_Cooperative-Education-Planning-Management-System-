@@ -1,12 +1,14 @@
 import {studentElement as el,studentLink,formatStudentDate} from './workspace-components.js';
 import {createWorkspaceIcon} from '../ui/workspace-presentation.js';
+import accessMessages from '../../shared/application-access.js';
+const {READ_ONLY_MESSAGE}=accessMessages;
 
 export function applicationCycleLabel(application,cycles=[]) {
   return cycles.find(c=>c.id===application.cycle_id)?.name || application.cycle_name || 'รอบรับสมัครเดิม';
 }
 
 export function applicationEditState(application,cycles=[]) {
-  if(!['DRAFT','NEEDS_REVISION'].includes(application.status)||application.availability?.can_edit===false)return false;
+  if(application.access?.read_only===true || !['DRAFT','NEEDS_REVISION'].includes(application.status)||application.availability?.can_edit===false)return false;
   if(application.availability?.can_edit===true)return true;
   if(application.status==='NEEDS_REVISION')return null; // Only the server may authorize a correction exception.
   const cycle=cycles.find(c=>c.id===application.cycle_id);if(!cycle)return null;
@@ -48,7 +50,7 @@ export function renderApplicationFeature(application,{cycles=[],onNavigate,compa
   const link=studentLink(draft?(editable===true?'กรอกใบสมัครต่อ':editable===false?'ดูฉบับร่าง':'เปิดใบสมัคร'):'ดูใบสมัคร',`#/student/application/${application.id}`,
     {onNavigate,className:'shell-button student-feature-action'});
   link.append(createWorkspaceIcon('arrow'));
-  actions.append(link,el('p','',draft?(editable===true?'บันทึกฉบับร่างได้ แม้ยังกรอกไม่ครบ':editable===false?'รอบปิดรับ · ฉบับร่างยังไม่ได้ส่ง และแก้ไขไม่ได้':'เปิดใบสมัครเพื่อตรวจสอบช่วงรับสมัคร'):'ใบสมัครที่ส่งแล้วเปิดดูได้ แต่แก้ไขไม่ได้'));
+  actions.append(link,el('p','',application.access?.read_only===true?READ_ONLY_MESSAGE:draft?(editable===true?'บันทึกฉบับร่างได้ แม้ยังกรอกไม่ครบ':editable===false?'รอบปิดรับ · ฉบับร่างยังไม่ได้ส่ง และแก้ไขไม่ได้':'เปิดใบสมัครเพื่อตรวจสอบช่วงรับสมัคร'):'ใบสมัครที่ส่งแล้วเปิดดูได้ แต่แก้ไขไม่ได้'));
   card.append(content,actions);return card;
 }
 

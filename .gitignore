@@ -37,3 +37,5 @@ skills-lock.json
 coed-advisor83-identity.json
 coed-db83-baseline.json
 __pycache__/
+## Local read-only recovery checkpoints and retained rollback artifacts
+/tmp/read-only-browse/

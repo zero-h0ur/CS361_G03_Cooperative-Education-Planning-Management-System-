@@ -5,6 +5,10 @@ const v=require('./application-input');
 const {templates,readiness,effectiveCriteria}=require('./application-policy');
 const {FORM_VERSION,DECLARED_IDENTITY}=require('../../shared/application-form');
 const delivery=require('../../db/phase1-delivery');
+const {INTAKE_MODES,pilotScope}=require('../../shared/application-access');
+const intake=require('../../db/phase1-intake');
+const intakeControl=require('../../db/intake-control');
+const {applicationBudget}=require('../../db/application-budget');
 function canonical(value) {
   if(Array.isArray(value))return value.map(canonical);
   if(value && typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]));
@@ -35,23 +39,26 @@ class ApplicationService {
     return this.repository.profile(db,{studentId:app.student_id,userId:user.user_id},lock);
   }
   async detail(db,actor,app) {
+    const access=intake.access(actor,app.cycle_id);
     const retained=(await db.query('SELECT id,policy_id,snapshot,checksum,submitted_at FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC LIMIT 1',[app.id])).rows[0] || null;
     // Coordinator sees the last submitted snapshot, never the student's unsent correction.
     const submission=app.status==='SUBMITTED' || actor.role==='COORDINATOR'?retained:null;
     const official=submission?.snapshot.official || await this.official(db,actor,app);
-    const policy=submission?.snapshot.policy || await this.repository.policy(db,app,official);
+    const policy=submission?submission.snapshot.policy:await this.repository.policy(db,app,official);
     const documents=submission?.snapshot.documents || await this.repository.documents(db,app.id);
     const cycle=(await db.query(`SELECT r.name,r.status,w.opens_at,w.closes_at,
-      (w.cycle_id IS NULL OR (clock_timestamp()>=w.opens_at AND clock_timestamp()<w.closes_at)) AS window_open
+      (clock_timestamp()>=w.opens_at AND clock_timestamp()<w.closes_at) AS window_open,w.cycle_id AS scheduled_cycle
       FROM rounds r LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id WHERE r.id=$1`,[app.cycle_id])).rows[0];
     const effective=app.status==='NEEDS_REVISION'?await this.repository.cycleForApplication(db,app,official):null;
+    const window=effective?.window || await intakeControl.effective(db,app.cycle_id,cycle.scheduled_cycle?{opens_at:cycle.opens_at,closes_at:cycle.closes_at,is_open:cycle.window_open}:null);
     const correction=app.status==='NEEDS_REVISION'?(await db.query('SELECT reason,version FROM phase1_reviews WHERE application_id=$1 AND state=\'RETURNED\'',[app.id])).rows[0]:null;
     return {id:app.id,student_id:app.student_id,cycle_id:app.cycle_id,status:app.status,version:app.version,
       payload:submission?.snapshot.payload || app.payload,form_version:submission ? submission.snapshot.form_version || 1 : FORM_VERSION,
-      official:submission?.snapshot.official || official,policy:submission?.snapshot.policy || safePolicy(policy),documents,
-      cycle_name:submission?.snapshot.cycle?.name || cycle.name,availability:{can_edit:Boolean(actor.role==='STUDENT' &&
-        (app.status==='DRAFT' && cycle.status==='OPEN' && cycle.window_open || app.status==='NEEDS_REVISION' && effective?.status==='OPEN' && effective.window?.is_open)),
-        opens_at:cycle.opens_at,closes_at:effective?.window?.closes_at || cycle.closes_at},
+      official:submission?.snapshot.official || official,policy:safePolicy(policy),documents,
+      assessment:submission?.snapshot.assessment || null,
+      access,cycle_name:submission?.snapshot.cycle?.name || cycle.name,availability:{can_edit:Boolean(!access.read_only && actor.role==='STUDENT' &&
+        (app.status==='DRAFT' && cycle.status==='OPEN' && (window?.is_open || !intake.pendingAcademic(official) && !window) || app.status==='NEEDS_REVISION' && effective?.status==='OPEN' && window?.is_open)),
+        opens_at:window?.opens_at,closes_at:window?.closes_at,...(window?.intake?{intake:window.intake,exception:window.exception || null}:{})},
       correction:correction?{...correction,closes_at:effective?.window?.closes_at}:null,
       last_submission:retained?{id:retained.id,checksum:retained.checksum,submitted_at:retained.submitted_at}:null,
       submitted_at:app.submitted_at,submission,
@@ -59,47 +66,67 @@ class ApplicationService {
   }
   async options(actor) {
     guard(actor,true);const db=this.repository.pool,official=await this.repository.profile(db,actor);
-    const cycles=(await db.query(`SELECT r.id,r.name,r.academic_year,r.semester,r.status,w.opens_at,w.closes_at
+    const intakeCycles=await intake.visibleCycles(db,official);
+    let cycles=(await db.query(`SELECT r.id,r.name,r.academic_year,r.semester,r.status,w.opens_at,w.closes_at
       FROM rounds r LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id WHERE r.visibility='public' OR EXISTS
       (SELECT 1 FROM selection_cohorts c WHERE c.cycle_id=r.id AND c.status='ACTIVE' AND c.department=$1 AND c.program=$2)
-      ORDER BY r.academic_year DESC,r.semester DESC NULLS LAST,r.id LIMIT 100`,[official.department,official.program])).rows;
-    return {official,cycles,criteria:templates(),storage_configured:Boolean(this.store || process.env.CO_ED_APPLICATION_STORAGE)};
+      OR r.id=ANY($3::uuid[]) ORDER BY r.academic_year DESC,r.semester DESC NULLS LAST,r.id LIMIT 100`,[official.department,official.program,intakeCycles])).rows;
+    if(INTAKE_MODES.includes(process.env.COED_API_MAINTENANCE)){
+      const pilot=pilotScope(process.env.COED_INTAKE_PILOT);cycles=cycles.filter(c=>pilot && c.id===pilot.cycle_id);
+    }
+    cycles=await Promise.all(cycles.map(async c=>{const window=await intakeControl.effective(db,c.id,null);return window?{...c,opens_at:window.opens_at,closes_at:window.closes_at,intake:window.intake}:c;}));
+    return {official,cycles,criteria:templates(),storage_configured:Boolean(this.store || process.env.CO_ED_APPLICATION_STORAGE),
+      access:intake.access(actor),pending_academic_submission:intake.pendingAcademic(official)};
   }
   async list(actor) {
-    guard(actor,true);const db=this.repository.pool;await this.repository.profile(db,actor);
-    return (await db.query(`SELECT a.id,a.cycle_id,a.status,a.version,a.submitted_at,a.updated_at,rv.reason AS correction_reason,
+    guard(actor,true);const db=this.repository.pool,official=await this.repository.profile(db,actor);
+    const rows=(await db.query(`SELECT a.id,a.cycle_id,a.status,a.version,a.submitted_at,a.updated_at,rv.reason AS correction_reason,
       CASE WHEN a.status='NEEDS_REVISION' THEN jsonb_build_object('can_edit',r.status='OPEN' AND rv.state='RETURNED'
         AND clock_timestamp()>=w.opens_at AND clock_timestamp()<COALESCE(s.review_closes_at,w.closes_at)) ELSE NULL END AS availability
       FROM phase1_applications a JOIN rounds r ON r.id=a.cycle_id LEFT JOIN phase1_reviews rv ON rv.application_id=a.id
       LEFT JOIN phase1_cycle_windows w ON w.cycle_id=a.cycle_id LEFT JOIN coordinator_round_schedules s ON s.cycle_id=a.cycle_id
       WHERE a.student_id=$1 ORDER BY a.created_at DESC,a.id LIMIT 100`,[actor.studentId])).rows;
+    return Promise.all(rows.map(async row=>{const access=intake.access(actor,row.cycle_id);
+      let availability=row.availability;
+      if(['DRAFT','NEEDS_REVISION'].includes(row.status)){
+        try{const cycle=await this.repository.cycleForApplication(db,row,official),window=cycle.window;
+          availability={can_edit:Boolean(cycle.status==='OPEN' && (window?.is_open || !intake.pendingAcademic(official) && !window)),
+            opens_at:window?.opens_at,closes_at:window?.closes_at,...(window?.intake?{intake:window.intake,exception:window.exception || null}:{})};
+        }catch(error){if(error.statusCode!==404)throw error;availability={can_edit:false};}
+      }
+      return {...row,availability:{...availability,...(access.read_only?{can_edit:false}:{})},access};}));
   }
   async get(actor,id) {
     guard(actor);v.uuid(id);const db=await this.repository.pool.connect();
     try {await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ');await this.repository.active(db,actor);
-      const result=await this.detail(db,actor,await this.repository.application(db,id,actor));await db.query('COMMIT');return result;
+      const app=await this.repository.application(db,id,actor);if(actor.role==='COORDINATOR')intake.staffScope(actor,app.cycle_id);
+      const result=await this.detail(db,actor,app);await db.query('COMMIT');return result;
     } catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
   }
   async check(db,actor,app) {
     const official=await this.official(db,actor,app),policy=await this.repository.policy(db,app,official);
     const cycle=await this.repository.cycleForApplication(db,app,official,true);
-    const result=readiness({app,official,policy,documents:await this.repository.documents(db,app.id),window:cycle.window,roundOpen:cycle.status==='OPEN',allowSynthetic:this.allowSynthetic});
+    const result=readiness({app,official,policy,documents:await this.repository.documents(db,app.id),window:cycle.window,roundOpen:cycle.status==='OPEN',allowSynthetic:this.allowSynthetic,allowPendingAcademic:intake.pendingAcademic(official)});
     const receiver=await delivery.destination(db,app,official);
     result.destination={ready:receiver.ready,department:receiver.department || official.department,program:receiver.program || official.program};
     if(!receiver.ready){result.can_submit=false;result.blockers.push({field:'destination',code:receiver.code,message:receiver.message});}
     return {policy,cycle,result};
   }
   async readiness(actor,id) {
-    guard(actor,true);v.uuid(id);const db=await this.repository.pool.connect();
+    guard(actor,true);v.uuid(id);intake.requireCapability(actor,null,'can_edit');const db=await this.repository.pool.connect();
     try{await db.query('BEGIN');await this.repository.active(db,actor,true);const app=await this.repository.application(db,id,actor,true);
-      const {result}=await this.check(db,actor,app);await db.query('COMMIT');return result;
+      intake.requireCapability(actor,app.cycle_id,'can_edit');const {result}=await this.check(db,actor,app);await db.query('COMMIT');return result;
     }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
   }
   async mutate(actor,id,input,action,work,{create=false}={}) {
     guard(actor,true);if(id)v.uuid(id);v.uuid(input.operation_id,'operation_id');
-    const db=await this.repository.pool.connect();
+    const capability={APPLICATION_CREATED:'can_create',APPLICATION_DRAFT_SAVED:'can_edit',APPLICATION_SUBMITTED:'can_submit',
+      APPLICATION_UPLOAD_STARTED:'can_upload',APPLICATION_DOCUMENT_ATTACHED:'can_upload'}[action];
+    if(!capability)throw new ForbiddenError();intake.requireCapability(actor,create?input.cycle_id:null,capability);
+    const connection=await this.repository.pool.connect(),db=applicationBudget(connection);
     try {
-      await db.query('BEGIN');await this.repository.active(db,actor,true);
+      await connection.query('BEGIN');await this.repository.active(db,actor,true);
+      await db.query("SET LOCAL lock_timeout='1000ms'");
       const official=await this.repository.profile(db,actor,true);
       // Serialize an operation globally before looking for its receipt, including create retries.
       await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[input.operation_id]);
@@ -107,10 +134,11 @@ class ApplicationService {
       const requestHash=hash({id,input,action});
       if(old) {
         if(old.actor_id!==actor.userId || old.action!==action || old.request_hash!==requestHash)throw new ConflictError('Operation ID ถูกใช้กับข้อมูลอื่นแล้ว','IDEMPOTENCY_KEY_REUSED');
-        await this.repository.application(db,old.application_id,actor,true);
+        const prior=await this.repository.application(db,old.application_id,actor,true);intake.requireCapability(actor,prior.cycle_id,capability);
         await db.query('COMMIT');return {...old.result,idempotent_replay:true};
       }
       let app=create?null:await this.repository.application(db,id,actor,true);
+      if(app)intake.requireCapability(actor,app.cycle_id,capability);
       if(app && app.version!==input.expected_version)throw new ConflictError('ข้อมูลเปลี่ยนไปแล้ว ข้อมูลที่คุณกรอกยังไม่ถูกบันทึก','STALE_RECORD_CONFLICT');
       const result=await work(db,app,official);
       const appId=result.id || id;
@@ -120,16 +148,16 @@ class ApplicationService {
         VALUES($1,$2,$3,$4,$5,$6)`,[randomUUID(),input.operation_id,appId,actor.userId,action,result.version || app?.version || 1]);
       await db.query('COMMIT');return result;
     } catch(e) {
-      await db.query('ROLLBACK');
+      await connection.query('ROLLBACK');
       if(e.code==='23505')throw new ConflictError('มีใบสมัครหรือรายการนี้อยู่แล้ว','APPLICATION_ALREADY_EXISTS');
       throw e;
-    } finally {db.release();}
+    } finally {connection.release();}
   }
   async create(actor,input) {
     v.command(input,['cycle_id'],false);v.uuid(input.cycle_id,'cycle_id');
     return this.mutate(actor,null,input,'APPLICATION_CREATED',async(db,_app,official)=>{
       const cycle=await this.repository.cycle(db,input.cycle_id,official,true);
-      if(cycle.status!=='OPEN' || (cycle.window && !cycle.window.is_open))throw new InvalidStateTransitionError('รอบสมัครไม่เปิด');
+      if(cycle.status!=='OPEN' || (cycle.window && !cycle.window.is_open) || intake.pendingAcademic(official) && !cycle.window)throw new InvalidStateTransitionError('รอบสมัครไม่เปิดหรือยังไม่มีกำหนดการ');
       const app=(await db.query(`INSERT INTO phase1_applications(id,student_id,cycle_id) VALUES($1,$2,$3) RETURNING *`,[randomUUID(),actor.studentId,input.cycle_id])).rows[0];
       return this.detail(db,actor,app);
     },{create:true});
@@ -159,12 +187,19 @@ class ApplicationService {
       if(!result.can_submit)throw new ValidationError('ใบสมัครยังไม่พร้อมส่ง',result.blockers,'APPLICATION_NOT_READY');
       const documents=await this.repository.documents(db,id);
       const destination={cohort_id:receiver.cohort_id,coordinator_id:receiver.coordinator_id,department:receiver.department,program:receiver.program};
-      const snapshot={form_version:FORM_VERSION,official,payload:app.payload,policy:safePolicy(policy),documents,delivery:destination,
+      const pending=intake.pendingAcademic(official),contractVersion=pending?2:1;
+      const snapshot={form_version:FORM_VERSION,...(pending?{contract_version:2,intake:{route_id:receiver.route_id,route_version:receiver.route_version},
+        assessment:{eligibility:result.eligibility,group_gpa:result.group_gpa,review_required:true,review_flags:result.review_flags,source:'STUDENT_DECLARED'},
+        declared_academic:{curriculum:app.payload.curriculum,major_group:app.payload.major_group,entry_year:official.registration.entry_year,program_type:official.registration.program_type,source:'STUDENT_DECLARED'}}:{}),
+        ...(cycle.window.intake?{intake_control:{...cycle.window.intake,exception:cycle.window.exception || null,return_version:cycle.window.return_version || null}}:{}),
+        official,payload:app.payload,policy:safePolicy(policy),documents,delivery:destination,
         cycle:{id:cycle.id,name:cycle.name,academic_year:cycle.academic_year,semester:cycle.semester,
           opens_at:cycle.window.opens_at,closes_at:cycle.window.closes_at,window_version:cycle.window.version},
-        acknowledgements:{actor_id:actor.userId,policy_id:policy.id,accepted_at:new Date().toISOString()}};
+        acknowledgements:{actor_id:actor.userId,policy_id:policy?.id || null,accepted_at:new Date().toISOString()}};
       const submissionId=randomUUID();
-      await db.query(`INSERT INTO phase1_submissions(id,application_id,application_version,policy_id,snapshot,checksum,submitted_by)
+      if(pending)await db.query(`INSERT INTO phase1_submissions(id,application_id,application_version,policy_id,snapshot,checksum,submitted_by,contract_version)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,[submissionId,id,app.version+1,policy?.id || null,JSON.stringify(snapshot),hash(snapshot),actor.userId,contractVersion]);
+      else await db.query(`INSERT INTO phase1_submissions(id,application_id,application_version,policy_id,snapshot,checksum,submitted_by)
         VALUES($1,$2,$3,$4,$5,$6,$7)`,[submissionId,id,app.version+1,policy.id,JSON.stringify(snapshot),hash(snapshot),actor.userId]);
       await db.query(`INSERT INTO phase1_submission_deliveries(submission_id,application_id,application_version,cohort_id,
         coordinator_id_at_send,department,program,snapshot_checksum) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
@@ -202,10 +237,11 @@ class ApplicationService {
     return this.mutate(actor,id,{...input,ticket_id:ticketId},'APPLICATION_DOCUMENT_ATTACHED',async(db,app,official)=>{
       await this.repository.editable(db,app,official);
       const {ticket}=await this.ticket(db,actor,id,ticketId);
-      const store=this.documentStore(),bytes=await store.readStaging(ticket.staging_key,ticket.byte_size);
+      const signal=db.signal(),store=this.documentStore(),bytes=await store.readStaging(ticket.staging_key,ticket.byte_size,{signal});
       const {validateBytes}=require('../../storage/application-document-store');validateBytes(bytes,ticket);
       // A distinct, write-once key closes the reusable presigned-upload overwrite hole.
-      const key=`final/${randomUUID()}`;await store.writeFinal(key,bytes);
+      const key=`final/${randomUUID()}`;await store.writeFinal(key,bytes,{signal});
+      if(signal.aborted)throw new ServiceUnavailableError('ตรวจเอกสารเกินเวลาที่กำหนด ไฟล์เดิมยังอยู่','APPLICATION_STORAGE_TIMEOUT');
       await this.repository.editable(db,app,official); // Time window may have closed during storage I/O.
       const docId=randomUUID();
       await db.query(`INSERT INTO phase1_documents(id,application_id,ticket_id,kind,filename,content_type,byte_size,checksum,object_key)
@@ -219,7 +255,8 @@ class ApplicationService {
   }
   async download(actor,id,documentId) {
     guard(actor);v.uuid(id);v.uuid(documentId);const db=this.repository.pool;
-    await this.repository.active(db,actor);await this.repository.application(db,id,actor);
+    await this.repository.active(db,actor);
+    const app=await this.repository.application(db,id,actor);intake.requireCapability(actor,app.cycle_id,'can_download');
     const doc=(await db.query(`SELECT d.* FROM phase1_documents d WHERE d.id=$1 AND d.application_id=$2 AND
       (($3='STUDENT' AND EXISTS(SELECT 1 FROM phase1_attachments a WHERE a.document_id=d.id)) OR
       EXISTS(SELECT 1 FROM phase1_submissions s,jsonb_array_elements(s.snapshot->'documents') x WHERE s.application_id=$2 AND x->>'id'=d.id::text))`,[documentId,id,actor.role])).rows[0];
@@ -230,8 +267,8 @@ class ApplicationService {
     guard(actor,bytes!==null);v.uuid(id);v.uuid(resourceId);
     const store=this.documentStore();if(!store.local)throw new ServiceUnavailableError();
     if(bytes===null){const {document}=await this.download(actor,id,resourceId);return {bytes:await store.readFinal(document.object_key,document.byte_size),contentType:document.content_type};}
-    const db=await this.repository.pool.connect();
-    try{await db.query('BEGIN');const {ticket}=await this.ticket(db,actor,id,resourceId);if(bytes.length!==ticket.byte_size)throw new ValidationError('ขนาดไฟล์ไม่ตรง');
+    intake.requireCapability(actor,null,'can_upload');const db=await this.repository.pool.connect();
+    try{await db.query('BEGIN');const {app,ticket}=await this.ticket(db,actor,id,resourceId);intake.requireCapability(actor,app.cycle_id,'can_upload');if(bytes.length!==ticket.byte_size)throw new ValidationError('ขนาดไฟล์ไม่ตรง');
       await store.writeStaging(ticket.staging_key,bytes);await db.query('COMMIT');return {uploaded:true};
     }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
   }

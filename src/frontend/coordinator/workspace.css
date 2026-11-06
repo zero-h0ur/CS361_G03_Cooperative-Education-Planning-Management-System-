@@ -97,6 +97,7 @@
 .coord-table td {padding:11px 14px;border-top:1px solid var(--shell-line);vertical-align:middle;overflow-wrap:anywhere;}
 .coord-table td small {display:block;}.coord-table .coord-numeric {font-variant-numeric:tabular-nums;white-space:nowrap;text-align:center;}
 .coord-table .coord-button {min-height:40px;padding:6px 12px;white-space:nowrap;}
+.coord-document-actions {display:flex;flex-wrap:wrap;gap:8px;}
 .coord-table .coord-course-status {font-weight:500;}.coord-course-status--enrolled {background:#fff0bf;color:#713e00;}.coord-course-status--studied {background:#dff3e3;color:#125b2c;}.coord-course-status--not_studied {background:#ffe2e5;color:#8b0c25;}
 .coord-tab-panel .coord-table {margin-top:8px;}.coord-tab-panel .coord-table th,.coord-tab-panel .coord-table td {padding:7px 10px;}
 .coord-skills {display:grid;grid-template-columns:.9fr 1.2fr;gap:20px;}.coord-skills > section + section {padding-left:24px;border-left:1px solid var(--shell-line);}.coord-skills > .coord-note {grid-column:1/-1;}
@@ -125,6 +126,14 @@
 .coord-schedule-actions {display:flex;gap:14px;margin:20px 0;}.coord-schedule-actions > button {flex:1;}
 .coord-dialog {width:min(1160px,calc(100vw - 40px));max-height:90dvh;overflow:auto;border:1px solid var(--shell-line);border-radius:8px;padding:20px;background:var(--coord-panel);color:var(--shell-ink);}
 .coord-dialog::backdrop {background:#15151588;}.coord-dialog__header {display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:18px;}
+.coord-intake-controls {padding:clamp(16px,2.4vw,28px);border:1px solid var(--shell-line);border-radius:6px;background:#fff;display:grid;gap:16px;}
+.coord-intake-controls h2,.coord-intake-controls p {margin:0;}
+.coord-intake-current {display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;background:#f3f5f7;border-left:4px solid var(--shell-primary);}
+.coord-intake-current strong {font-size:1.15rem;}.coord-intake-form {display:grid;gap:16px;}
+.coord-intake-form .coord-button {justify-self:start;}.coord-intake-history {padding-top:12px;border-top:1px solid var(--shell-line);}
+.coord-intake-history summary {cursor:pointer;min-height:44px;}.coord-intake-history li {padding-block:6px;}
+.coord-intake-confirm-round {display:block;padding:16px;border-left:4px solid var(--shell-primary);background:#fff0f3;font-size:1.2rem;overflow-wrap:anywhere;}
+.coord-intake-form [hidden] {display:none;}
 .coord-dialog--confirmation {max-width:680px;}
 .coord-forward-confirmation {display:grid;gap:16px;}
 .coord-confirm-applicant {display:grid;gap:4px;padding:18px 20px;border:1px solid #e5a7b5;border-left:5px solid var(--shell-primary);border-radius:5px;background:#fff0f3;overflow-wrap:anywhere;}

@@ -73,6 +73,17 @@ test('real disposable PostgreSQL:020 exact issuer correction and non-default-con
      else{assert.equal(data.user.id,session.user.id);assert.equal(data.studentId,session.user.studentId);}
     }
     assert.equal((await pool.query('SELECT count(*)::int n FROM audit_events WHERE resource_id=$1',[session.user.studentId])).rows[0].n,1);
+    const maintenance=process.env.COED_API_MAINTENANCE;
+    try{
+     process.env.COED_API_MAINTENANCE='browse';
+     for(const path of ['/api/tu-proxy/api/v4/application-options','/api/tu-proxy/api/v4/applications']){
+      const response=await api({rawPath:path,requestContext:{http:{method:'GET'}},headers:{authorization:'Bearer '+session.accessToken}});
+      assert.equal(response.statusCode,200);const data=JSON.parse(response.body).data;
+      if(Array.isArray(data))assert.deepEqual(data,[]);
+      else{assert.equal(data.access.read_only,true);assert.equal(data.official.academic_verified,false);assert.equal(data.official.program,null);assert.equal(data.official.department,null);}
+     }
+     assert.equal((await pool.query('SELECT count(*)::int n FROM phase1_applications WHERE student_id=$1',[session.user.studentId])).rows[0].n,0);
+    }finally{if(maintenance===undefined)delete process.env.COED_API_MAINTENANCE;else process.env.COED_API_MAINTENANCE=maintenance;}
    }finally{await login.end();await app.end();await provision.end();}
   });
   await t.test('wrong/default issuer, status and injected fields cannot register or overwrite',async()=>{

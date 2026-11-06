@@ -136,7 +136,7 @@ export function renderStudentProfile({profileClient,applicationClient,workflowCl
     }
     const app=latestApplication(listResult.value,options?.cycles);
     if(app)latest.append(renderApplicationFeature(app,{cycles:options?.cycles,onNavigate,compact:true}));
-    else {latest.className='student-profile-latest student-record-card';latest.append(el('h2','','เริ่มสมัครเข้าแผนสหกิจ'),el('p','student-record-description','ยังไม่มีใบสมัคร เลือกรอบแล้วทยอยกรอกข้อมูลได้'),studentLink('เลือกรอบสมัคร','#/student/application',{onNavigate,className:'shell-button'}));}
+    else {const readOnly=options?.access?.read_only===true;latest.className='student-profile-latest student-record-card';latest.append(el('h2','',readOnly?'ใบสมัครของคุณ':'เริ่มสมัครเข้าแผนสหกิจ'),el('p','student-record-description',readOnly?'ยังไม่มีใบสมัครที่บันทึกไว้ในระบบ · ขณะนี้เปิดให้อ่านข้อมูลเท่านั้น':'ยังไม่มีใบสมัคร เลือกรอบแล้วทยอยกรอกข้อมูลได้'),studentLink(readOnly?'ดูหน้าใบสมัคร':'เลือกรอบสมัคร','#/student/application',{onNavigate,className:'shell-button'}));}
   }
   loading(identity,'กำลังโหลดข้อมูลนักศึกษา…');loading(contact,'กำลังโหลดช่องทางติดต่อ…');
   loadProfile();loadApplications();return root;

@@ -33,7 +33,8 @@ export function createApplicationClient({apiBaseUrl,getAccessToken,fetchImpl=glo
       throw new ApplicationError(method==='GET'?'NETWORK_ERROR':'RESULT_UNKNOWN',method==='GET'?'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่':'ยังยืนยันผลบันทึกไม่ได้ ข้อมูลที่กรอกยังอยู่ โปรดลองรายการเดิมซ้ำ');}
     let json;try{json=await response.json();}catch{throw new ApplicationError('INVALID_RESPONSE','ยังยืนยันผลรายการไม่ได้ กรุณาลองใหม่');}
     if(!response.ok)throw new ApplicationError(response.status===401?'SESSION_EXPIRED':response.status===403?'ACCESS_DENIED':json.error?.code || 'REQUEST_FAILED',
-      response.status>=500?'ระบบยังไม่พร้อม ข้อมูลที่กรอกยังอยู่ กรุณาลองอีกครั้ง':json.error?.message || 'ทำรายการไม่สำเร็จ',json.error?.details || []);
+      json.error?.code==='COED_MAINTENANCE'?'ส่วนนี้ยังไม่เปิดให้ทำรายการ ระบบเปิดให้อ่านข้อมูลที่กำหนดไว้เท่านั้น':
+        response.status>=500?(method==='GET'?'โหลดข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง':'ระบบยังไม่พร้อม ข้อมูลที่กรอกยังอยู่ กรุณาลองอีกครั้ง'):json.error?.message || 'ทำรายการไม่สำเร็จ',json.error?.details || []);
     if(!Object.hasOwn(json,'data'))throw new ApplicationError('INVALID_RESPONSE','ข้อมูลตอบกลับไม่ครบ');return json.data;
   }
   function storageURL(target,expectedPath) {

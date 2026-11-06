@@ -24,6 +24,7 @@ function academic(snapshot,{allowSynthetic=false}={}) {
   if(!snapshot)return {core:null,gpax:null,declared_core:null};
   const p=snapshot.payload || {};
   const numeric=value=>value!==null && value!==undefined && value!=='' && Number.isFinite(Number(value)) && Number(value)>=0 && Number(value)<=4?Number(value):null;
+  if(snapshot.contract_version===2)return {core:numeric(snapshot.assessment?.group_gpa),gpax:numeric(p.gpax),declared_core:numeric(p.declared_group_gpa)};
   const check=readiness({app:{status:'DRAFT',payload:p},official:snapshot.official,policy:snapshot.policy,
     documents:snapshot.documents,window:{is_open:true},roundOpen:true,allowSynthetic});
   return {core:numeric(check.group_gpa),gpax:numeric(p.gpax),declared_core:numeric(p.declared_group_gpa)};

@@ -2,7 +2,8 @@ const {getPool}=require('../../db/connection');
 const {roleGuard}=require('./selection-service');
 const {hash}=require('./application-service');
 const v=require('./workflow-input');
-const {ValidationError,ForbiddenError,NotFoundError,ConflictError,InvalidStateTransitionError}=require('../errors');
+const {ValidationError,ForbiddenError,NotFoundError,ConflictError,InvalidStateTransitionError,ServiceUnavailableError}=require('../errors');
+const intake=require('../../db/phase1-intake');
 const domain=require('./coordinator-domain');
 const {assertDeliverySchema}=require('../../db/phase1-delivery');
 const {confirmationWindow}=require('./phase1-schedule-compat');
@@ -13,7 +14,7 @@ class CoordinatorWorkspaceService {
   constructor({pool,allowSyntheticPolicy=false}={}){this.pool=pool;this.allowSynthetic=process.env.NODE_ENV==='test' && allowSyntheticPolicy;}
   db(){return this.pool || getPool();}
   async scope(db,actor,cycleId=null,lock=false) {
-    roleGuard(actor,['COORDINATOR']);if(cycleId)v.uuid(cycleId,'cycle_id');
+    roleGuard(actor,['COORDINATOR']);if(cycleId)v.uuid(cycleId,'cycle_id');cycleId=intake.staffScope(actor,cycleId);
     const user=(await db.query(`SELECT id FROM users WHERE id=$1 AND role='COORDINATOR' AND account_status='ACTIVE' ${lock?'FOR SHARE':''}`,[actor.userId])).rows[0];
     if(!user)throw new ForbiddenError();
     const rows=(await db.query(`SELECT c.*,r.name AS cycle_name,r.academic_year,r.semester,r.status AS cycle_status
@@ -61,11 +62,13 @@ class CoordinatorWorkspaceService {
       application_version:row.application_version,submission_id:row.submission_id,submitted_version:row.submitted_version,
       review_version:row.review_version || 0,state,reason:row.reason || null,submitted_at:row.submitted_at,
       cycle_status:row.cycle_status,student_number:official.student_number || null,full_name:official.full_name || p.thai_full_name || null,
-      curriculum:official.curriculum || null,program:row.program,program_type:track(row.program),major_group:p.major_group || null,
+      curriculum:official.curriculum || s.declared_academic?.curriculum || null,academic_source:s.declared_academic?.source || 'CANONICAL',
+      assessment:s.assessment || null,program:row.program,program_type:s.declared_academic?.program_type || track(row.program),major_group:p.major_group || null,
       positions:p.interested_position_codes || [],...domain.academic(s,{allowSynthetic:this.allowSynthetic})};
     if(detail)Object.assign(record,{official,payload:p,documents:s.documents || [],policy:s.policy || null,
       declarations:domain.declarations(s),checksum:row.checksum,reviewed_at:row.reviewed_at,
-      can_review:state==='PENDING' && row.status==='SUBMITTED' && row.cycle_status==='OPEN' && row.review_open===true && !row.committee_state?.finalized});
+      can_review:!process.env.COED_API_MAINTENANCE || process.env.COED_API_MAINTENANCE==='off'?
+        state==='PENDING' && row.status==='SUBMITTED' && row.cycle_status==='OPEN' && row.review_open===true && !row.committee_state?.finalized:false});
     return record;
   }
   async list(actor,filters={}) {
@@ -93,9 +96,10 @@ class CoordinatorWorkspaceService {
     if(!row)throw new NotFoundError('ไม่พบใบสมัครที่คุณมีสิทธิ์ตรวจ');
     const history=(await db.query('SELECT id,application_version,submitted_at,checksum FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC',[id])).rows;
     const reviews=(await db.query("SELECT action,result,created_at FROM coordinator_operations WHERE resource_id=$1 AND action IN ('return','forward') ORDER BY created_at",[id])).rows;
-    return {...this.present(row,true),submission_history:history,review_history:reviews};
+    return {...this.present(row,true),access:intake.access(actor,row.cycle_id),submission_history:history,review_history:reviews};
   }
   async command(actor,id,body,action,work) {
+    if(process.env.COED_API_MAINTENANCE && process.env.COED_API_MAINTENANCE!=='off')throw new ServiceUnavailableError('ยังไม่เปิดการทำรายการพิจารณา','COED_MAINTENANCE');
     roleGuard(actor,['COORDINATOR']);v.uuid(id,'resource_id');v.command(body);
     const db=await this.db().connect();
     try {
@@ -126,7 +130,9 @@ class CoordinatorWorkspaceService {
       const cohort=cohorts.find(c=>c.id===scoped?.cohort_id);
       if(!cohort)throw new ForbiddenError();if(replay)return;
       await db.query("SELECT pg_advisory_xact_lock(hashtextextended('phase1:cycle:' || $1::text,0))",[app.cycle_id]);
-      const latest=(await db.query('SELECT id FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC LIMIT 1',[id])).rows[0];
+      const latest=(await db.query('SELECT id,snapshot FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC LIMIT 1',[id])).rows[0];
+      if(action==='forward' && latest?.snapshot?.assessment?.review_required===true)
+        throw new InvalidStateTransitionError('ต้องตรวจและรับรองหลักฐานการศึกษาก่อนส่งต่อกรรมการ','ACADEMIC_REVIEW_REQUIRED');
       const current=(await db.query('SELECT * FROM phase1_reviews WHERE application_id=$1 FOR UPDATE',[id])).rows[0];
       if(body.expected_version!==(current?.version || 0) || latest?.id!==body.submission_id)throw new ConflictError('ใบสมัครเปลี่ยนแล้ว กรุณาโหลดฉบับล่าสุด');
       const window=(await db.query(`SELECT r.status,COALESCE(s.review_closes_at,w.closes_at) AS deadline,
@@ -183,7 +189,9 @@ class CoordinatorWorkspaceService {
       w.confirmation_opens_at AS window_confirmation_opens_at,w.confirmation_closes_at AS window_confirmation_closes_at FROM rounds r
       LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id LEFT JOIN coordinator_round_schedules s ON s.cycle_id=r.id WHERE r.id=$1`,[id])).rows[0];
     Object.assign(row,confirmationWindow({confirmation_opens_at:row.window_confirmation_opens_at,confirmation_closes_at:row.window_confirmation_closes_at},row));
-    return {cycle_id:id,cycle_name:scope.cohorts[0].cycle_name,...row,version:row.version || 0,window_version:row.window_version || 0,can_edit:scope.can_edit};
+    const intake=await require('../../db/intake-control').effective(db,id,null);
+    return {cycle_id:id,cycle_name:scope.cohorts[0].cycle_name,...row,version:row.version || 0,window_version:row.window_version || 0,
+      intake:intake?.intake || null,can_edit:!intake && scope.can_edit && (!process.env.COED_API_MAINTENANCE || process.env.COED_API_MAINTENANCE==='off')};
   }
   async saveSchedule(actor,id,body) {
     v.fields(body,['operation_id','expected_version','expected_window_version','opens_at','closes_at','review_opens_at','review_closes_at','confirmation_opens_at','confirmation_closes_at']);

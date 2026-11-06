@@ -53,9 +53,11 @@ export function documentsPanel(record,onDownload) {
     const name=el('td','',title),meta=el('td'),status=el('td'),action=el('td');meta.append(el('strong','',doc?.filename || '—'));
     if(doc)meta.append(el('small','coord-muted',`${doc.content_type || ''}${doc.byte_size?' · '+Math.ceil(doc.byte_size/1024)+' KB':''}`));
     status.append(badge(doc?'FORWARDED':'RETURNED',doc?'แนบแล้ว':'ยังไม่แนบ'));
-    const open=button('เปิดดู',()=>onDownload?.(doc),{icon:'file'});open.disabled=!doc || !onDownload;open.setAttribute('aria-label',`เปิดดู ${title}`);action.append(open);
+    const actions=el('div','coord-document-actions');
+    for(const [label,download] of [['เปิดดู',false],['ดาวน์โหลด',true]]){const control=button(label,()=>onDownload?.(doc,{download}),{icon:'file'});
+      control.disabled=!doc || !onDownload || record.access?.can_download===false;control.setAttribute('aria-label',`${label} ${title}`);actions.append(control);}action.append(actions);
     [name,meta,status,action].forEach((td,i)=>td.dataset.label=['เอกสาร','ไฟล์แนบ','สถานะ','ดำเนินการ'][i]);tr.append(name,meta,status,action);docs.body.append(tr);
-  }root.append(docs.table,note('แนบไฟล์ครบ ไม่ได้หมายถึงเอกสารผ่านการตรวจสอบ'));return root;
+  }root.append(docs.table,note(record.access?.can_download===false?'ช่วงทดลองนี้ยังไม่เปิดดาวน์โหลดเอกสาร':'แนบไฟล์ครบ ไม่ได้หมายถึงเอกสารผ่านการตรวจสอบ'));return root;
 }
 export function skillsPanel(record) {
   const p=record.payload || {},root=el('div','coord-skills'),positions=el('section');positions.append(el('h3','','งานและทักษะของนักศึกษา'),el('p','coord-muted','ข้อมูลที่นักศึกษาระบุในใบสมัคร'),el('h3','','ตำแหน่งงานที่สนใจ'));
@@ -90,6 +92,8 @@ export function renderDetail(record,{activeTab='summary',onTab,onReturn,onForwar
     body.prepend(note('ฉบับที่ส่งเมื่อ '+date(record.submitted_at,true)+' · ไม่แสดงการแก้ไขที่ยังไม่ได้ส่ง'));dialog(host,'ใบสมัครฉบับที่ส่ง',body,{signal});
   },{icon:'file'}));root.append(header);
   if(record.reason)root.append(note('ส่งกลับแก้ไข: '+record.reason));
+  if(record.academic_source==='STUDENT_DECLARED')root.append(note('หลักสูตร กลุ่มวิชา และผลการเรียนเป็นข้อมูลที่นักศึกษาแจ้ง · รอตรวจหลักฐาน ไม่ใช่ข้อมูลการศึกษาที่ TU ยืนยัน'));
+  if(record.assessment?.review_required)root.append(note('ผลตรวจคุณสมบัติ: รอตรวจสอบ ไม่ใช่ผ่านคุณสมบัติ · ช่วงทดลองนี้เปิดให้อ่านใบสมัครและเอกสารเท่านั้น'));
   const tablist=el('div','coord-tabs');tablist.setAttribute('role','tablist');tablist.setAttribute('aria-label','รายละเอียดใบสมัคร');
   const panels=el('div','coord-panels'),prefix='coord-'+crypto.randomUUID();
   const content={summary:()=>summaryPanel(record),grades:()=>gradesPanel(record,{onAll:()=>dialog(host,'ผลการเรียนทั้งหมด',gradesPanel(record,{all:true}),{signal})}),
@@ -105,6 +109,6 @@ export function renderDetail(record,{activeTab='summary',onTab,onReturn,onForwar
   }activate(activeTab);root.append(tablist,panels);
   const footer=el('footer','coord-detail-actions');
   if(record.can_review && onReturn && onForward){footer.append(button('ส่งกลับแก้ไข',onReturn,{icon:'return'}),button('รับเรื่องและส่งต่อกรรมการ',onForward,{primary:true,icon:'arrow'}),el('small','coord-action-note','การรับเรื่องยังไม่ใช่การประกาศผลคัดเลือก'));}
-  else footer.append(note(record.state==='RETURNED'?'รอนักศึกษาแก้ไขและส่งฉบับใหม่ ข้อมูลด้านบนเป็นฉบับที่ส่งล่าสุด':record.state==='FORWARDED'?'ส่งให้กรรมการแล้ว ติดตามข้อมูลได้ที่ “ติดตามการพิจารณา”':'รอบนี้ไม่เปิดให้ทำรายการ ตรวจสอบกำหนดการหรือโหลดข้อมูลล่าสุด'));
+  else footer.append(note(record.access?.read_only?'ช่วงทดลองนี้เปิดให้อ่านใบสมัครเท่านั้น ยังไม่เปิดรับเรื่อง ส่งกลับ หรือส่งต่อกรรมการ':record.state==='RETURNED'?'รอนักศึกษาแก้ไขและส่งฉบับใหม่ ข้อมูลด้านบนเป็นฉบับที่ส่งล่าสุด':record.state==='FORWARDED'?'ส่งให้กรรมการแล้ว ติดตามข้อมูลได้ที่ “ติดตามการพิจารณา”':'รอบนี้ไม่เปิดให้ทำรายการ ตรวจสอบกำหนดการหรือโหลดข้อมูลล่าสุด'));
   root.append(footer);return root;
 }

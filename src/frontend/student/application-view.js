@@ -3,6 +3,8 @@ import {studentElement as node,renderStudentPageHeader,formatStudentDate} from '
 import {applicationCycleLabel,applicationEditState,latestApplication,renderApplicationFeature} from './application-presentation.js';
 import {createWorkspaceIcon} from '../ui/workspace-presentation.js';
 import {renderDraftRecovery} from './application-recovery.js';
+import accessMessages from '../../shared/application-access.js';
+const {READ_ONLY_MESSAGE}=accessMessages;
 export {node};
 export function button(text,action,secondary=false) {
   const b=node('button',`shell-button${secondary?' shell-button--secondary':''}`,text);
@@ -24,8 +26,8 @@ export function renderApplicationWorkspace({client,applicationId,signal,onNaviga
     const label=node('label','','รอบรับสมัคร'),select=node('select','application-input');
     select.id='application-cycle';label.htmlFor=select.id;select.append(new Option('เลือกรอบรับสมัคร',''));
     for(const cycle of options.cycles.filter(c=>c.status==='OPEN'&&!list.some(a=>a.cycle_id===c.id))) {
-      const unavailable=cycle.opens_at&&Date.now()<Date.parse(cycle.opens_at)||cycle.closes_at&&Date.now()>=Date.parse(cycle.closes_at);
-      const option=new Option(cycle.name+(unavailable?' · ไม่อยู่ในช่วงรับสมัคร':''),cycle.id);
+      const unavailable=cycle.intake?!cycle.intake.is_open:cycle.opens_at&&Date.now()<Date.parse(cycle.opens_at)||cycle.closes_at&&Date.now()>=Date.parse(cycle.closes_at);
+      const option=new Option(cycle.name+(unavailable?' · ไม่อยู่ในช่วงรับสมัคร':cycle.intake?.mode==='MANUAL_OPEN'?' · เปิดรับจนกว่าจะสั่งปิด':''),cycle.id);
       option.disabled=Boolean(unavailable);select.append(option);
     }
     const message=node('p','student-record-description');message.setAttribute('role','status');
@@ -81,15 +83,17 @@ export function renderApplicationWorkspace({client,applicationId,signal,onNaviga
       const options=optionResult.status==='fulfilled'?optionResult.value:null,list=listResult.value;
       const content=node('div','student-page-content'),toolbar=node('div','student-list-toolbar');
       toolbar.append(node('h2','student-section-title',`ใบสมัครของคุณ · ${list.length} รายการ`));
-      if(options)toolbar.append(cyclePicker(options,list));content.append(toolbar);
-      if(options && !options.preview) {
+      const readOnly=options?.access?.read_only===true || options?.access?.can_create===false;
+      if(options && !readOnly)toolbar.append(cyclePicker(options,list));content.append(toolbar);
+      if(readOnly){const notice=node('p','application-notice',READ_ONLY_MESSAGE);notice.setAttribute('role','status');content.append(notice);}
+      if(options && !options.preview && !readOnly) {
         const recovery=renderDraftRecovery({client,official:options.official,cycles:options.cycles,list,signal,onNavigate});
         if(recovery)content.append(recovery);
       }
       if(!options)content.append(node('p','application-warning','โหลดข้อมูลรอบสมัครไม่สำเร็จ แต่ยังเปิดใบสมัครเดิมได้'),button('ลองโหลดรอบสมัครอีกครั้ง',load,true));
       if(!list.length) {
         const empty=node('section','student-empty-state');empty.append(createWorkspaceIcon('document'),node('h3','','ยังไม่มีใบสมัคร'),
-          node('p','','เริ่มจาก “เลือกรอบสมัครใหม่” ด้านบน แล้วบันทึกข้อมูลทีละส่วนได้'));content.append(empty);
+          node('p','',readOnly?'ยังไม่มีใบสมัครที่บันทึกไว้ในระบบ ขณะนี้ยังไม่เปิดสร้างใบสมัครใหม่':'เริ่มจาก “เลือกรอบสมัครใหม่” ด้านบน แล้วบันทึกข้อมูลทีละส่วนได้'));content.append(empty);
       } else {
         const latest=latestApplication(list,options?.cycles);content.append(renderApplicationFeature(latest,{cycles:options?.cycles,onNavigate}));
         const others=list.filter(app=>app.id!==latest.id);if(others.length)content.append(applicationTable(others,options?.cycles));
