@@ -1,5 +1,7 @@
 # Phase 1 application preparation — #141
 
+> Historical preparation-stage handoff. Newer verified TU onboarding, pending-academic intake, existing S3 use and Coordinator controls extend this baseline. Read [V4 architecture](../architecture/G03-V4-architecture.md), [current deployment](current-deployment.md) and [verification](student-intake-verification.md) for the released pilot. Do not interpret old storage/policy blockers here as current blanket status.
+
 ## What is delivered
 
 The Student entry is `#/student/application`, with UUID details beneath it.

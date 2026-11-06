@@ -1,5 +1,7 @@
 # V4 — AWS migration and source baseline
 
+> Historical migration baseline (1 November 2026), not current AWS inventory. For TU/Cognito, current aliases, intake gates and verification use [current deployment](current-deployment.md), [V4 architecture](../architecture/G03-V4-architecture.md) and [documentation index](../README.md). Keep the original migration evidence below; do not reapply its operations to the current database.
+
 งาน [#139](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/139)
 ภายใต้ [V4 – Planning, Tracking & Reliability](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/milestone/4)
 

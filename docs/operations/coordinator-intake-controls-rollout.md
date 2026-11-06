@@ -1,6 +1,8 @@
 # Coordinator intake controls: local verification and next AWS boundary
 
-## Current authority and status
+> Historical C1-C7 proposal plus phased Apply evidence. C7 subsequently applied 021/022, deployed API8/Frontend and passed the owner-confirmed scoped intake path. Use [current deployment](current-deployment.md) for the latest snapshot and [verification](student-intake-verification.md) for acceptance limits. Pre-deployment status and outstanding items below are preserved as stage records, not the current overall status or permission to rerun.
+
+## Authority and status before C7 execution
 
 C1-C6 local implementation/testing/commits were approved November5,2026; no push.
 The user also requests deployment and approved C7 after reviewing this scope.
@@ -186,7 +188,7 @@ remain usable until expiry; attachment finalization still checks the current gat
 Stop on history/catalog/config drift, failed owner binding, missing destination,
 audit failure, wrong-scope access, timeout or failed real file/Coordinator acceptance.
 
-## Local evidence and outstanding gates
+## Local evidence and outstanding gates at the pre-deployment stage
 
 Local feature commits: `3e5c92a` backend/SQL proposal, `826662e` UI, `ae63b75`
 authorization matrix/regression entry. Feature tests use a disposable observed

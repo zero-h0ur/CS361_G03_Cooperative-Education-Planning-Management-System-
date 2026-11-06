@@ -1,5 +1,7 @@
 # Phase 1 application preparation
 
+> Baseline #141 contract, preserved for compatibility/history. The versioned pending-academic path and Coordinator intake controls are later extensions; see [current V4 architecture](../architecture/G03-V4-architecture.md). This file alone does not establish current AWS permissions, policy or rollout state; use [current deployment](../operations/current-deployment.md).
+
 Issue #141 adds an application domain, not a conversion of legacy V3 Plans. No
 accepted company, company position ID, project or Advisor assignment is required.
 Review/return/resubmission belong to #142, tracking to #143, history contracts to

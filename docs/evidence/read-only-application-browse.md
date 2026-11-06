@@ -1,5 +1,7 @@
 # Read-only application and directory recovery
 
+> Historical browse-only recovery stage. C7 later enabled scoped Draft/files/Submit for a restricted test round, not all accounts. See [current deployment](../operations/current-deployment.md) and [verification](../operations/student-intake-verification.md) before interpreting the old write blocks below.
+
 Date: November5,2026. Approval: restore actual reads, retain all business-write
 blocks. No mock records, account repair, academic guesses or production SQL.
 

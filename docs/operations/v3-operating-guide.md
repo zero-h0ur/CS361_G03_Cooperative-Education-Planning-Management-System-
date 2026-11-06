@@ -1,5 +1,7 @@
 # คู่มือพัฒนาและดูแล V3
 
+> คู่มือระบบเดิม V3 เก็บไว้เป็นประวัติ ไม่ครอบคลุม TU onboarding/intake ปัจจุบัน คำสั่ง Deploy, migrate, seed และ URL Lab ในไฟล์นี้ห้ามนำไปรันกับ AWS ปัจจุบันโดยอัตโนมัติ เริ่มที่ [V4 architecture](../architecture/G03-V4-architecture.md), [Current deployment](current-deployment.md) และ [Team Dev/Test](team-dev-test.md) ก่อน
+
 เอกสารนี้รวมวิธีรัน ทดสอบ ติดตั้ง และดูแลระบบสำหรับทีมที่จะพัฒนาต่อ รายละเอียดโครงสร้างและ API อยู่ใน [Architecture](../architecture/G03-V3-architecture.md) และ [API contract](../api/v3-shared-contract.md) ส่วนผลทดสอบที่ผ่านมาอยู่ใน [สรุปส่งมอบ](../evidence/v3-delivery-index.md)
 
 ตัวอย่างคำสั่งใช้ Bash จาก root ของ repo ส่วนคำสั่ง AWS ใช้ session ที่มีสิทธิ์ของผู้ดูแล ตรวจ environment และสำรองข้อมูลก่อนเปลี่ยนระบบจริง

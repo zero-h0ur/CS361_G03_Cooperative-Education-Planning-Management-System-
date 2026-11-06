@@ -1,5 +1,7 @@
 # Team Dev/Test — V4
 
+> คู่มือ local/synthetic data ไม่ใช่คู่มือทดสอบ credentials จริงบน AWS ดู [architecture ปัจจุบัน](../architecture/G03-V4-architecture.md), [สถานะ Deploy](current-deployment.md) และ [intake verification](student-intake-verification.md) เพิ่มเติม โดยเฉพาะฐาน `coed_intake_test`/environment ของ suite ใหม่ที่ตัวช่วย local เดิมยังไม่สร้างให้ครบ
+
 งาน [#140](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/140)
 ใช้ฐาน V4 จาก PR #149 ทุกคนรับงานตามส่วนของระบบ และทำ UI, API, Database และ Tests ที่งานต้องใช้ได้
 ไม่มีการแบ่งสมาชิกเป็น Frontend/Backend หรือบทบาทผู้ใช้ถาวร
@@ -39,7 +41,7 @@ npm run dev:setup
 ```
 
 `dev:db` เปิด PostgreSQL 16 เฉพาะ `127.0.0.1:54329` พร้อม named volume `coed-local_local-postgres`
-`dev:setup` **ล้างเฉพาะ coed_dev ในชุด local นี้** แล้วลง migrations 001–010, V2/V3 fixtures และ V4 personas
+`dev:setup` **ล้างเฉพาะ coed_dev ในชุด local นี้** แล้วลงไฟล์ใน `src/db/migrations/` ของ checkout ปัจจุบัน, V2/V3 fixtures และ V4 personas ไม่ใช้ observed RDS upgrades ใน `src/db/upgrades/` รายการ fresh/workspace ที่ตรวจทานปัจจุบันคือ 001–014 และ 017 ไม่ใช่ chain 001–022
 ไม่รับ `DATABASE_URL` จากภายนอกให้เปลี่ยนไป RDS และไม่สร้าง/เปลี่ยนบัญชี Cognito
 รหัสใน Compose เป็นรหัสจำลองสำหรับเครื่องนี้เท่านั้น ห้ามนำไปใช้กับฐานข้อมูลที่เผยแพร่
 
@@ -48,6 +50,8 @@ npm run dev:setup
 | `coed_dev` | พัฒนา/ลอง API มี draft และ cohort จำลอง |
 | `coed_v3_test` | Full regression และ workflow integration; ข้อมูลสร้างทิ้งได้ |
 | `coed_selection_test` | Selection integration แยกจาก development |
+
+Compose init ปัจจุบันยังไม่สร้าง `coed_intake_test` และตัวช่วย `test:local` ยังไม่ตั้งทุกตัวแปรของ intake/TU-delivery/Coordinator suites ที่เพิ่มภายหลัง สำหรับ focused intake และ full CI ให้ใช้ [วิธีเตรียมและข้อจำกัด](student-intake-verification.md) ไม่ถือว่าการ skipped ในเครื่องเป็นผล integration ผ่าน
 
 ต้องการเริ่มข้อมูล development ใหม่ให้รัน `npm run dev:setup` ซ้ำ ข้อมูลทดสอบถูก Reset ได้โดยไม่มีความหมายเป็นผลการศึกษาจริง
 หากพอร์ตชน ให้ตั้ง `CO_ED_LOCAL_DB_PORT` ก่อนใช้ทั้ง Compose และคำสั่ง Node ทุก Terminal ค่าอื่นยังเป็น loopback และชื่อ DB เดิม
@@ -117,7 +121,7 @@ npm run lint
 npm run test:docs
 ```
 
-`test:local` ตั้งค่าฐานทดสอบใน Compose ให้แล้วและเรียก `npm test` ครบ รวม PostgreSQL/selection โดยไม่ล้าง `coed_dev`
+`test:local` เรียก `npm test` โดยตั้ง URL ของ TEST/WORKFLOW/APPLICATION/SELECTION และ reset guard ให้กับฐาน local โดยไม่ล้าง `coed_dev` แต่ยังไม่ได้ตั้ง URL ครบทุก integration suite ใหม่ จึงอาจ skipped เมื่อรันในเครื่อง ส่วน CI บังคับ intake DB และจะ fail หากไม่ตั้งตาม [workflow](../../.github/workflows/v4-verification.yml) ใช้ [verification guide](student-intake-verification.md) ก่อนสรุปว่าทดสอบครบ
 อย่าใช้ DB test ร่วมกับข้อมูล development ที่ต้องเก็บ และอย่ารัน full regression หลายชุดพร้อมกันบน test DB เดียวกัน
 
 ทดสอบการเริ่มเครื่องใหม่, local JWT/สิทธิ์, runtime ACL, Flow 3/3 และ Reset หลังมีความเห็นจริงใน DB local:
