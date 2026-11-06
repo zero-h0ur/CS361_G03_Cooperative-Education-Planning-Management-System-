@@ -6,9 +6,23 @@ import maintenance from '../src/maintenance.js';
 import policy from '../src/api/services/application-policy.js';
 import budget from '../src/db/application-budget.js';
 import {PassThrough} from 'node:stream';
+import {readFileSync} from 'node:fs';
 import s3 from '../src/storage/s3-document-store.js';
 const scope={student_user_id:randomUUID(),coordinator_user_id:randomUUID(),cycle_id:randomUUID()};
 const actor={isAuthenticated:true,role:'STUDENT',accountStatus:'ACTIVE',userId:scope.student_user_id};
+
+test('CI provisions a dedicated disposable intake database before running the mandatory integration suite',()=>{
+ const workflow=readFileSync(new URL('../.github/workflows/v4-verification.yml',import.meta.url),'utf8');
+ const regression=workflow.split('  regression:')[1]?.split('  observed-schema-upgrade:')[0] || '';
+ const match=regression.match(/^\s+STUDENT_INTAKE_TEST_DATABASE_URL:\s*(\S+)\s*$/m);assert.ok(match,'CI must configure the intake database URL');
+ const url=new URL(match[1]);assert.equal(url.hostname,'127.0.0.1');assert.equal(url.pathname,'/coed_intake_test');
+ assert.match(regression,/^\s+INTAKE_DISPOSABLE:\s*['"]true['"]\s*$/m);
+ const create=regression.indexOf("client.query('CREATE DATABASE coed_intake_test')"),run=regression.indexOf('npm test');
+ assert.ok(create>=0&&run>create,'provision the isolated intake database before full regression');
+ const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
+ assert.ok(pkg.scripts.test.includes('npm run test:student-intake'));
+ for(const file of ['student-intake-db.test.mjs','intake-controls-upgrade-db.test.mjs'])assert.ok(pkg.scripts['test:student-intake'].includes(file));
+});
 test('pilot capabilities require exact owner/cycle and stage; malformed config fails closed',()=>{
  for(const mode of access.INTAKE_MODES){const a=access.applicationAccess(mode,{actor,cycleId:scope.cycle_id,scope});
   assert.equal(a.can_edit,true);assert.equal(a.can_upload,mode!=='intake-draft');assert.equal(a.can_submit,mode==='intake-pilot');

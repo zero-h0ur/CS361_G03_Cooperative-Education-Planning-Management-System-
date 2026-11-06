@@ -37,6 +37,8 @@ jobs:
       CO_ED_APPLICATION_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/coed_v3_test
       COORDINATOR_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/coed_v3_test
       TU_DELIVERY_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/coed_v3_test
+      STUDENT_INTAKE_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/coed_intake_test
+      INTAKE_DISPOSABLE: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -44,7 +46,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - name: Prepare isolated selection test database
+      - name: Prepare isolated selection and intake test databases
         run: |
           node - <<'JS'
           const { Client } = require('pg');
@@ -53,6 +55,7 @@ jobs:
             try {
               await client.connect();
               await client.query('CREATE DATABASE coed_selection_test');
+              await client.query('CREATE DATABASE coed_intake_test');
             } finally { await client.end(); }
           })().catch(error => { console.error(error.message); process.exitCode = 1; });
           JS
