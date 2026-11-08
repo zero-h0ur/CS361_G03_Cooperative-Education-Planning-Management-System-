@@ -15,12 +15,15 @@ function pilotScope(value){
     return s;
   }catch{return null;}
 }
-function applicationAccess(mode,{actor,cycleId,scope}={}) {
+function applicationAccess(mode,{actor,cycleId,scope,audience='pilot',routedStudent=false}={}) {
   const restricted=Boolean(mode && mode!=='off');
   if(INTAKE_MODES.includes(mode)){
     const s=pilotScope(scope),cycle=Boolean(s && (!cycleId || cycleId===s.cycle_id));
-    const student=Boolean(cycle && actor?.isAuthenticated && actor.role==='STUDENT' && actor.accountStatus==='ACTIVE' && actor.userId===s.student_user_id);
-    const coordinator=Boolean(cycle && actor?.isAuthenticated && actor.role==='COORDINATOR' && actor.accountStatus==='ACTIVE' && actor.userId===s.coordinator_user_id);
+    const validAudience=['pilot','routed-tu-students'].includes(audience);
+    // routedStudent is supplied only after server-side identity/routing checks.
+    const student=Boolean(validAudience && cycle && actor?.isAuthenticated && actor.role==='STUDENT' && actor.accountStatus==='ACTIVE' &&
+      (audience==='pilot'?actor.userId===s.student_user_id:routedStudent===true));
+    const coordinator=Boolean(validAudience && cycle && actor?.isAuthenticated && actor.role==='COORDINATOR' && actor.accountStatus==='ACTIVE' && actor.userId===s.coordinator_user_id);
     return {read_only:!student,can_create:student,can_edit:student,can_upload:student && mode!=='intake-draft',
       can_submit:student && mode==='intake-pilot',can_download:(student || coordinator) && mode!=='intake-draft',
       reason:!student?'PILOT_SCOPE':mode!=='intake-pilot'?'PILOT_STAGE':null};

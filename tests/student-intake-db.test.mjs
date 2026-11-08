@@ -28,12 +28,13 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
  const admin=new pg.Pool({connectionString:url}),schema='present_'+id().replaceAll('-',''),q=identifier(schema);
  const suffix=id().replaceAll('-',''),registrationOwner='intake_reg_owner_'+suffix,registrationRole='intake_reg_'+suffix;
  const owner=new pg.Pool({connectionString:url,options:`-c search_path=${schema},public`});let runtime;
- const oldMode=process.env.COED_API_MAINTENANCE,oldPilot=process.env.COED_INTAKE_PILOT,oldOnboarding=process.env.TU_ONBOARDING_ENABLED,dir=mkdtempSync(join(tmpdir(),'coed-intake-test-'));
+ const oldMode=process.env.COED_API_MAINTENANCE,oldPilot=process.env.COED_INTAKE_PILOT,oldAudience=process.env.COED_INTAKE_AUDIENCE,oldOnboarding=process.env.TU_ONBOARDING_ENABLED,dir=mkdtempSync(join(tmpdir(),'coed-intake-test-'));
  const cycle=id(),cohort=id(),coord=id(),operator=id(),members=[id(),id(),id()];let actor,app;
  const command=()=>({operation_id:id(),expected_version:app.version});
  const restore=(key,value)=>{if(value===undefined)delete process.env[key];else process.env[key]=value;};
  try{
   process.env.TU_ONBOARDING_ENABLED='true';
+  delete process.env.COED_INTAKE_AUDIENCE;
   await admin.query('CREATE EXTENSION IF NOT EXISTS btree_gist');if(!(await admin.query("SELECT 1 FROM pg_roles WHERE rolname='coed_app'")).rowCount)await admin.query('CREATE ROLE coed_app NOLOGIN');
   await admin.query('CREATE SCHEMA '+q);const setup=await owner.connect();
   try{await createObservedFixture(setup,schema);await upgradeObservedSchema({client:setup,profile:PROFILE,expectedDatabase:'coed_intake_test',expectedSchema:schema,mode:'apply',maintenanceApproved:true});}finally{setup.release();}
@@ -212,12 +213,57 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
    assert.equal(results[1].submission.id,app.submission.id);assert.equal(app.delivery_receipt.submission_id,app.submission.id);
    assert.equal((await owner.query('SELECT count(*)::int n FROM phase1_submissions WHERE application_id=$1',[app.id])).rows[0].n,1);
    const co={isAuthenticated:true,userId:coord,role:'COORDINATOR',accountStatus:'ACTIVE'},listed=await staff.list(co,{cycle_id:cycle});
-   assert.equal(listed.applications[0].id,app.id);assert.equal(listed.applications[0].curriculum,'66');assert.equal(listed.applications[0].academic_source,'STUDENT_DECLARED');
+   assert.ok(listed.applications.some(x=>x.id===app.id));assert.equal(listed.applications[0].curriculum,'66');assert.equal(listed.applications[0].academic_source,'STUDENT_DECLARED');
    const detail=await staff.detail(co,app.id);assert.equal(detail.submission_id,app.submission.id);assert.equal(detail.checksum,app.submission.checksum);assert.equal(detail.can_review,false);assert.equal(detail.documents.length,4);
    await assert.rejects(staff.list({...co,userId:id()}),e=>e.code==='COED_MAINTENANCE');
    await assert.rejects(service.save(actor,app.id,{...command(),expected_policy_id:null,payload:{skills_detail:'tamper'}}),e=>e.statusCode===422);
    assert.equal((await controller.get(coordinator,cycle)).control.mode,'CLOSED');assert.equal((await service.get(actor,app.id)).submission.checksum,app.submission.checksum);
    await change('MANUAL_OPEN');
+  });
+  await t.test('routed TU audience admits another matching Student end-to-end without widening pilot round or ownership',async()=>{
+   const register=async(subject,overrides={})=>{
+    const record=(await owner.query(`SELECT * FROM ${q}.complete_tu_registration($1,$2,$3,$4,'special',2567,clock_timestamp()+interval '240 seconds')`,
+     [ISSUER,id(),id(),{...identity,subject,email:subject+'@example.invalid',...overrides}])).rows[0];
+    return {...actor,userId:record.user_id,studentId:record.student_id};
+   };
+   const second=await register('9900000062'),outsider=await register('9900000063',{department:'Other Department'});
+   await assert.rejects(service.create(second,{operation_id:id(),cycle_id:cycle}),e=>e.code==='COED_MAINTENANCE');
+   const previousIssuer=process.env.TU_AUTH_ISSUER;process.env.TU_AUTH_ISSUER=ISSUER;
+   process.env.COED_INTAKE_AUDIENCE='routed-tu-students';
+   try{
+    assert.equal((await service.options(second)).access.can_create,true);
+    assert.deepEqual((await service.options(outsider)).cycles,[]);
+    await assert.rejects(service.create(outsider,{operation_id:id(),cycle_id:cycle}),e=>e.code==='COED_MAINTENANCE');
+    await assert.rejects(service.create(second,{operation_id:id(),cycle_id:id()}),e=>e.code==='COED_MAINTENANCE');
+    await assert.rejects(service.get(second,app.id),e=>e.statusCode===404);
+    await assert.rejects(service.download(second,app.id,app.documents[0].id),e=>e.statusCode===404);
+    let draft=await service.create(second,{operation_id:id(),cycle_id:cycle});
+    const save=data=>service.save(second,draft.id,{operation_id:id(),expected_version:draft.version,expected_policy_id:null,payload:data});
+    await assert.rejects(save({curriculum:'61'}),e=>e.code==='COED_MAINTENANCE');
+    draft=await save(payload);
+    await change('CLOSED');await assert.rejects(save({skills_detail:'blocked'}),e=>e.statusCode===422);await change('MANUAL_OPEN');
+    const publishRoute=active=>owner.query(`INSERT INTO phase1_intake_routes(id,cycle_id,cohort_id,tu_faculty,tu_department,program_type,curriculum,version,active,source,approved_by)
+     SELECT $1,$2,$3,'Science','Computer Science','special','66',max(version)+1,$4,'synthetic reviewed source',$5 FROM phase1_intake_routes WHERE cycle_id=$2`,[id(),cycle,cohort,active,operator]);
+    await publishRoute(false);
+    try{await assert.rejects(save({skills_detail:'revoked route'}),e=>e.code==='COED_MAINTENANCE');}
+    finally{await publishRoute(true);}
+    await owner.query("UPDATE external_identity_links SET status='REVOKED',revoked_at=clock_timestamp(),revoked_by=$2 WHERE user_id=$1",[second.userId,operator]);
+    try{assert.equal((await service.options(second)).access.can_create,false);await assert.rejects(save({skills_detail:'unlinked'}),e=>e.code==='COED_MAINTENANCE');}
+    finally{await owner.query("UPDATE external_identity_links SET status='ACTIVE',revoked_at=NULL,revoked_by=NULL WHERE user_id=$1",[second.userId]);}
+    for(const kind of ['resume','transcript','conduct','photo']){
+     const bytes=kind==='photo'?Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5l0AAAAASUVORK5CYII=','base64'):Buffer.from('%PDF-1.4\nSynthetic second Student\n%%EOF\n');
+     const ticket=await service.beginUpload(second,draft.id,{operation_id:id(),expected_version:draft.version,kind,filename:kind+(kind==='photo'?'.png':'.pdf'),content_type:kind==='photo'?'image/png':'application/pdf',byte_size:bytes.length,checksum:createHash('sha256').update(bytes).digest('hex')});
+     await service.localContent(second,draft.id,ticket.ticket_id,bytes);
+     draft=await service.completeUpload(second,draft.id,ticket.ticket_id,{operation_id:id(),expected_version:draft.version});
+    }
+    assert.equal((await service.readiness(second,draft.id)).can_submit,true);
+    const submit={operation_id:id(),expected_version:draft.version,expected_policy_id:null};
+    draft=await service.submit(second,draft.id,submit);
+    assert.equal(draft.delivery_receipt.status,'QUEUED_FOR_COORDINATOR');assert.equal(draft.assessment.eligibility,'UNKNOWN');
+    assert.equal((await service.submit(second,draft.id,submit)).submission.id,draft.submission.id);
+    const detail=await staff.detail(coordinator,draft.id);assert.equal(detail.checksum,draft.submission.checksum);assert.equal(detail.can_review,false);
+    assert.equal((await service.list(second)).length,1);assert.equal((await service.list(actor)).length,1);
+   }finally{delete process.env.COED_INTAKE_AUDIENCE;restore('TU_AUTH_ISSUER',previousIssuer);}
   });
   await t.test('later policy publication cannot replace explicit null submitted policy; new pending record cannot be forwarded',async()=>{
    await owner.query(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data)
@@ -256,7 +302,7 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
     assert.equal((await request('/api/tu-proxy/api/v3/me')).studentId,actor.studentId);
     assert.equal((await request(proxy))[0].id,app.id);
     assert.equal((await request(proxy+'/'+app.id)).submission.id,app.submission.id);
-    const listed=await request('/api/v4/coordinator/applications?cycle_id='+cycle,'synthetic-coordinator');assert.equal(listed.applications[0].id,app.id);
+    const listed=await request('/api/v4/coordinator/applications?cycle_id='+cycle,'synthetic-coordinator');assert.ok(listed.applications.some(x=>x.id===app.id));
     assert.equal((await request('/api/v4/coordinator/applications/'+app.id,'synthetic-coordinator')).checksum,app.submission.checksum);
     await request(proxy+'/'+app.id,null,'GET',undefined,401);
     await request('/api/v4/coordinator/applications',token,'GET',undefined,401);
@@ -326,7 +372,7 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
    await assert.rejects(staff.detail({isAuthenticated:true,userId:coord,role:'COORDINATOR',accountStatus:'ACTIVE'},app.id),e=>e.code==='COED_MAINTENANCE');
   });
  }finally{
-  restore('COED_API_MAINTENANCE',oldMode);restore('COED_INTAKE_PILOT',oldPilot);restore('TU_ONBOARDING_ENABLED',oldOnboarding);
+  restore('COED_API_MAINTENANCE',oldMode);restore('COED_INTAKE_PILOT',oldPilot);restore('COED_INTAKE_AUDIENCE',oldAudience);restore('TU_ONBOARDING_ENABLED',oldOnboarding);
   if(runtime)await runtime.end();await owner.end();await admin.query('DROP SCHEMA IF EXISTS '+q+' CASCADE');
   for(const role of [registrationRole,registrationOwner])if((await admin.query('SELECT 1 FROM pg_roles WHERE rolname=$1',[role])).rowCount){
    await admin.query('DROP OWNED BY '+identifier(role));await admin.query('DROP ROLE '+identifier(role));
