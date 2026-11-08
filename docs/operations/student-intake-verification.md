@@ -83,6 +83,24 @@ npm run test:docs
 
 Some listed commands need additional dedicated DB variables; do not treat the example above as their complete setup. `verify:migrations` reads the 15 reviewed fresh/workspace files and does not connect to a DB. Observed 018–022 are separately gated upgrades, never implicitly applied by general packaging or API Deploy.
 
+## Routed TU audience — unreleased source extension (2026-11-08)
+
+The requested extension admits other TU-onboarded Students matching the approved intake route, instead of manually adding account UUIDs. This section describes source/configuration, **not a new live deployment snapshot**. Default behavior remains the existing single-account pilot.
+
+Configuration and data needed for a future approved activation:
+
+1. Release the updated `coed-api` backend containing `src/shared/application-access.js`, `src/db/phase1-intake.js` and `src/api/services/application-service.js`. Changing an environment variable on the old Lambda does not add this behavior. Existing frontend screens consume the returned access flags; no new page, broker Lambda, Gateway route or IAM grant is required by this source change.
+2. Set backend `COED_INTAKE_AUDIENCE=routed-tu-students`. Keep `COED_API_MAINTENANCE=intake-pilot`, `COED_INTAKE_CONTROLS_REQUIRED=true`, and the private three-UUID `COED_INTAKE_PILOT` binding for the approved round/Coordinator. The Student UUID remains part of the compatible fallback binding but is not the audience criterion in routed mode. Do not publish that binding in repository examples or browser configuration.
+3. Inspect the actual approved `phase1_intake_routes` and `selection_cohorts` in RDS: latest active route, exact retained TU faculty/department, declared program type/curriculum, active cohort and assigned active Coordinator. Existing test routing metadata is not authorization to invent mappings for new curricula. Missing routes need a separately approved, versioned owner data operation; never rewrite a historical route or run general migrate/seed/reset. Schema 019–022 already supplies the required tables; this source extension adds no migration.
+4. The assigned Coordinator opens the round through existing scheduled/manual controls. Each Student must complete their own TU onboarding, fields, declarations and genuine documents. The server checks membership again for mutations and Submit. Queue receipt remains pending academic review, not acceptance or selection.
+5. Verify two genuine authorized TU Students can submit and the Coordinator reads each matching immutable snapshot/files; also verify an unrelated department, unsupported curriculum, revoked identity, another Student's application and closed intake are denied. Local synthetic tests do not replace this browser acceptance.
+
+Rollback audience to `pilot` (or use the compatible `browse` stage to close writes), retaining the current compatible code and all records/files/receipts. Do not restore an old database or blindly deploy an old API. The historical C7 single-account controller now rejects non-pilot audience configuration; it is not a deployment path for this expansion. AWS writes/data changes/deployment still need explicit approval under [AGENTS](../../AGENTS.md).
+
+Local verification this turn: Node **22.23.4**, `npm ci`, isolated PostgreSQL 16 on loopback port **54339**, fresh disposable `coed_v3_test`, `coed_selection_test`, `coed_intake_test`; existing local test databases were not reset. Intake: **41 Node + 7 DOM checks passed, zero skipped**, including a second synthetic TU Student's real local-byte upload/Submit/Coordinator receipt, unrelated department/curriculum/round denials, revoked link, ownership, Close and replay. Application: **18 Node + 56 DOM/API checks passed**; Coordinator: **8 DB + 34 DOM/API checks passed**; Committee: **1 DB + 9 DOM checks passed**, zero skips in these runs. Syntax lint passed **336 modules**. These are synthetic local/auth-modeled boundaries, not live Cognito/TU or S3 acceptance.
+
+Full `npm test` passed through the application/intake suites but **did not pass overall**: `test:release` had **31 passed, 1 failed**, at the unchanged ZIP Unicode filename round trip on macOS (`Unsafe archive entry name` after `unzip` output damaged the Thai filename). A focused rerun also reproduced it with `en_US.UTF-8`. No ZIP implementation/test was changed to conceal it. Committee was then run separately with its disposable DB configured. No AWS call/write, migration, deployment, commit or push was performed for this extension.
+
 ## Historical stages and lessons retained
 
 - A0 inventory (`9e92bf6`): 11 checks including READ ONLY transaction and denied writes; live temporary-tool cleanup verified. It found no ready real round, so no mock dates/recipient were silently extended.

@@ -69,3 +69,13 @@ Recorded: 2026-11-06 (Asia/Bangkok). Status: existing approved decisions, consol
 **Decision:** expose separate Open and Download actions. Use the authorized metadata filename including extension for Download, and safe PDF/JPEG/PNG MIME handling for previews; unknown types remain download-only.
 
 **Tradeoffs:** authorized byte fetching/CORS and Blob lifecycle need testing. The named Download button is the supported filename guarantee, not a promise about every browser PDF toolbar. Private signed links remain short-lived bearer capabilities and must not be logged/shared.
+
+## D8. Explicit routed TU audience within the existing intake boundary
+
+Recorded: 2026-11-08. Scope: requested source implementation, not AWS activation.
+
+**Context:** the owner requested that other TU Students in the round's department/curriculum be able to submit, instead of adding individual Student UUIDs indefinitely.
+
+**Decision:** retain the single-account default and add backend-only `COED_INTAKE_AUDIENCE=routed-tu-students`. Resolve eligibility from the Student's own active TU identity link, completed onboarding and the latest active approved intake route to the configured Coordinator/round. Check membership on the server for Draft creation/save, readiness, uploads/finalization, Submit/retries and document access. Do not use public visibility or browser role/department as permission. Retain staged maintenance, whole-round controls, ownership and immutable submission contracts.
+
+**Tradeoffs:** the round and Coordinator remain explicitly bound; this is not opening every round or adding other Coordinators. Program type/curriculum are pending declarations, so routing is admission to review, not academic certification. Students without complete TU onboarding or an approved matching route stay blocked. Existing schema 019–022 supports the feature; adding actual audience routes is a separate reviewed data operation. Deployment requires reviewed backend release/configuration and actual multi-account browser acceptance; source tests alone do not activate AWS.

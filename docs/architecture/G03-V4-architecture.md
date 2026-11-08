@@ -1,6 +1,6 @@
 # CO-ED V4 architecture
 
-Updated: 2026-11-06 (Asia/Bangkok). Describes implemented source through `c63b238`, not an assertion that every route is enabled on AWS. Read [current deployment](../operations/current-deployment.md) for the released subset and [verification](../operations/student-intake-verification.md) for evidence. [Decisions](../decisions/v4-tu-intake-boundaries.md) explain why these boundaries exist.
+Updated: 2026-11-08 (Asia/Bangkok). Describes source through `c63b238` plus the unreleased routed-TU-audience extension below; this is not an assertion that every route is enabled on AWS. Read [current deployment](../operations/current-deployment.md) for the released subset and [verification](../operations/student-intake-verification.md) for evidence. [Decisions](../decisions/v4-tu-intake-boundaries.md) explain why these boundaries exist.
 
 ## System and trust boundaries
 
@@ -66,6 +66,8 @@ If any step fails, the transaction rolls back. Operation IDs handle retries; exp
 ## Intake gates and closing behavior
 
 An operation must pass all layers: Gateway/verified identity → maintenance stage → exact pilot audience/round → internal role/ownership/scope → current intake control/correction exception → input/evidence/state/version checks.
+
+Source extension, 2026-11-08 (not deployed): `COED_INTAKE_AUDIENCE` defaults to `pilot`. The explicit value `routed-tu-students` replaces the single Student UUID check with server-side TU registration/link and route membership checks; unknown values fail closed within intake stages. It retains the configured `COED_INTAKE_PILOT` round and Coordinator binding and all three rollout stages. A Student needs their own active exact TU issuer/subject link and completed TU onboarding. Faculty/department come from retained TU identity; program type and curriculum remain self-reported, pending review. An active latest `phase1_intake_routes` entry must match these fields and lead to the configured active Coordinator/cohort. A blank curriculum allows starting a Draft for a matching route; saving a curriculum and subsequent mutations require a matching curriculum route. A public round alone cannot grant membership. Existing ownership, readiness, Close, immutable receipt and audit rules still apply. This adds no review/forward/Committee access. See [decision D8](../decisions/v4-tu-intake-boundaries.md#d8-explicit-routed-tu-audience-within-the-existing-intake-boundary).
 
 | Control | Meaning |
 | --- | --- |
