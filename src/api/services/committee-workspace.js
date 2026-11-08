@@ -38,18 +38,22 @@ class CommitteeWorkspaceService {
       curriculum: s.payload?.curriculum || null,
       program: /พิเศษ|special/i.test(s.program) ? "special" : "regular"
     }));
-    const phase1=(await db.query(`SELECT a.id,sub.snapshot,sub.application_version,sub.snapshot->'official'->>'program' AS program
-      FROM phase1_reviews rv JOIN phase1_applications a ON a.id=rv.application_id
-      JOIN phase1_submissions sub ON sub.id=rv.submission_id JOIN students st ON st.id=a.student_id
+    const phase1=(await db.query(`SELECT a.id,sub.snapshot,sub.application_version,
+      COALESCE(sub.snapshot->'official'->>'program', sub.snapshot->'declared_academic'->>'program_type', sub.snapshot->'payload'->>'program_type', c.program) AS program
+      FROM phase1_reviews rv
+      JOIN selection_cohorts c ON c.id=rv.cohort_id
+      JOIN phase1_applications a ON a.id=rv.application_id
+      JOIN phase1_submissions sub ON sub.id=rv.submission_id
+      JOIN students st ON st.id=a.student_id
       WHERE rv.cohort_id=ANY($1::uuid[]) AND rv.state='FORWARDED' AND a.status='SUBMITTED'
       ORDER BY a.id`,[cohort.ids || [cohort.id]])).rows.map(s=>({
         id:s.id,name:s.snapshot.official?.full_name || s.snapshot.payload?.thai_full_name || null,
-        number:s.snapshot.official?.student_number || null,payload:s.snapshot.payload,
+        number:s.snapshot.official?.student_number || s.snapshot.declared_academic?.student_number || s.snapshot.payload?.student_number || null,payload:s.snapshot.payload,
         documents:(s.snapshot.documents || []).map(d=>({id:d.id,filename:d.filename,kind:d.kind})),
         core:academic(s.snapshot,{allowSynthetic:this.allowSynthetic}).core,
         gpax:academic(s.snapshot,{allowSynthetic:this.allowSynthetic}).gpax,
-        curriculum:s.snapshot.official?.curriculum || null,
-        program:/พิเศษ|special/i.test(s.program)?'special':'regular',
+        curriculum:s.snapshot.official?.curriculum || s.snapshot.declared_academic?.curriculum || s.snapshot.payload?.curriculum || null,
+        program:/พิเศษ|special|\bACS\b/i.test(s.program)?'special':'regular',
         plan_version:s.application_version,received_version:s.application_version,source:'PHASE1'
       }));
     return [...legacy,...phase1];

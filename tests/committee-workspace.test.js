@@ -26,3 +26,25 @@ test('role checked before database membership lookup',async()=>{
  const pool={query:jest.fn()};const service=new CommitteeWorkspaceService({pool});
  await expect(service.read({isAuthenticated:true,userId:'x',role:'STUDENT',accountStatus:'ACTIVE'})).rejects.toThrow();expect(pool.query).not.toHaveBeenCalled();
 });
+test('Phase 1 forwarded students with declared_academic fallbacks map curriculum and program correctly',async()=>{
+  const query=jest.fn()
+    .mockResolvedValueOnce({rows:[]})
+    .mockResolvedValueOnce({rows:[{
+      id:'app-1',
+      application_version:2,
+      program:'ภาคพิเศษ',
+      snapshot:{
+        official:{full_name:'นายสมชาย ใจดี'},
+        declared_academic:{curriculum:'66',program_type:'special',student_number:'6609650001'},
+        payload:{thai_full_name:'นายสมชาย ใจดี'},
+        assessment:{review_required:false}
+      }
+    }]});
+  const service=new CommitteeWorkspaceService({pool:{query}});
+  const result=await service.students({query},{id:'cohort-1'});
+  expect(result).toHaveLength(1);
+  expect(result[0].curriculum).toBe('66');
+  expect(result[0].program).toBe('special');
+  expect(result[0].number).toBe('6609650001');
+  expect(result[0].source).toBe('PHASE1');
+});

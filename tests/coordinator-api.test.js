@@ -22,7 +22,7 @@ test('scoped filters and exact review submission identity reach the service',asy
   expect((await handler(get)).statusCode).toBe(200);
   expect(service.list).toHaveBeenCalledWith(expect.objectContaining({userId,role:'COORDINATOR'}),{curriculum:'66',program_type:'special',state:'PENDING',page:'2'});
   const post=event(`/api/v4/coordinator/applications/${id}/forward`,'POST');
-  post.body=JSON.stringify({operation_id:randomUUID(),expected_version:0,submission_id:randomUUID()});
+  post.body=JSON.stringify({operation_id:randomUUID(),expected_version:0,submission_id:randomUUID(),confirm_academic_review:true});
   expect((await handler(post)).statusCode).toBe(200);expect(service.review).toHaveBeenCalledWith(expect.objectContaining({userId}),id,JSON.parse(post.body),'forward');
 });
 test.each(['STUDENT','STAFF','ADVISOR','ADMIN','COMMITTEE'])('%s cannot read or mutate Coordinator resources with a forged role header',async role=>{

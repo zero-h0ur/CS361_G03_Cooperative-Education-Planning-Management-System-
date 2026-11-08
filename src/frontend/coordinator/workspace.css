@@ -141,6 +141,8 @@
 .coord-confirm-applicant__name {font-size:1.4rem;line-height:1.5;color:#151515;}
 .coord-confirm-applicant__number {font-variant-numeric:tabular-nums;color:#35282c;}
 .coord-forward-confirmation .coord-confirm-question {margin:0;font-size:1.05rem;font-weight:500;}
+.coord-confirm-academic {display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--shell-line);border-radius:6px;background:var(--coord-panel);cursor:pointer;font-size:.95rem;font-weight:500;color:var(--shell-ink);}
+.coord-confirm-academic input[type=checkbox] {width:20px;height:20px;margin-top:2px;flex-shrink:0;accent-color:var(--shell-primary);cursor:pointer;}
 .coord-forward-confirmation .coord-note {margin:0;}
 .coord-forward-confirmation > .coord-button {width:100%;}
 .coord-return-form {display:grid;gap:16px;}.coord-return-form .coord-field {font-size:1rem;}.coord-full-application {display:grid;gap:24px;}.coord-meeting-counts {display:grid;gap:12px;}.coord-meeting-counts dd {margin:0;white-space:pre-wrap;}

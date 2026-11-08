@@ -73,6 +73,29 @@ test('forward action requires explicit confirmation and exposes no publish/admit
   find(modal,'รับเรื่องและส่งต่อกรรมการ').click();await flush();expect(request.mock.calls.filter(([,o])=>o?.method==='POST')).toHaveLength(1);
   expect(root.textContent).not.toContain('ประกาศผลการคัดเลือก');
 });
+test('forwarding intake student with review_required enforces academic confirmation checkbox before submission',async()=>{
+  const {root,request}=await setup({wrap:request=>async(path,options)=>{
+    const data=await request(path,options);
+    if(path.includes('/applications/') && !path.includes('/applications?') && !options?.method){
+      data.assessment={eligibility:'UNKNOWN',group_gpa:null,review_required:true,review_flags:['ACADEMIC_UNVERIFIED'],source:'STUDENT_DECLARED'};
+    }
+    return data;
+  }});
+  find(root,'รับเรื่องและส่งต่อกรรมการ').click();
+  const modal=root.querySelector('dialog');
+  expect(modal.textContent).toContain('ได้ตรวจสอบหลักฐานการศึกษา (Transcript)');
+  const check=modal.querySelector('.coord-confirm-academic input[type=checkbox]');
+  expect(check).not.toBeNull();
+  const confirmBtn=find(modal,'รับเรื่องและส่งต่อกรรมการ');
+  expect(confirmBtn.disabled).toBe(true);
+  check.click();
+  expect(confirmBtn.disabled).toBe(false);
+  confirmBtn.click();
+  await flush();
+  const postCall=request.mock.calls.find(([p,o])=>p.endsWith('/forward') && o?.method==='POST');
+  expect(postCall).toBeTruthy();
+  expect(postCall[1].body.confirm_academic_review).toBe(true);
+});
 test('tracking shows one three-member panel, plain sequential row positions, real secondary sorting, and read-only meeting summary',async()=>{
   const {root}=await setup({page:'tracking',scenario:'ranking'});expect(root.textContent).toContain('คณะกรรมการ 3 คน');
   expect(root.querySelectorAll('tbody tr')).toHaveLength(6);expect([...root.querySelectorAll('tbody tr td:first-child')].map(n=>n.textContent)).toEqual(['1','2','3','4','5','6']);

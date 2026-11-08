@@ -68,11 +68,26 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
     applicant.append(el('span','coord-confirm-applicant__label','ใบสมัครที่จะรับเรื่องและส่งต่อ'),el('strong','coord-confirm-applicant__name',text(record.full_name)),el('span','coord-confirm-applicant__number','รหัสนักศึกษา '+text(record.student_number)));
     const question=el('p','coord-confirm-question','รับเรื่องและส่งใบสมัครของนักศึกษารายนี้ให้กรรมการพิจารณาหรือไม่?');
     review.append(applicant,question,note('การรับเรื่องไม่ใช่ผลคัดเลือก และไม่สามารถส่งกลับแก้ไขหลังส่งต่อแล้ว'));
-    const confirm=button('รับเรื่องและส่งต่อกรรมการ',async()=>{if(busy)return;busy=true;confirm.disabled=true;
-      try{await request('/applications/'+record.id+'/forward',{method:'POST',body:attempt('forward-'+record.id,{expected_version:record.review_version,submission_id:record.submission_id})});if(stopped())return;attempts.delete('forward-'+record.id);modal.close();feedback(status,'รับเรื่องและส่งต่อกรรมการแล้ว');await refresh();}
+    let confirmAcademicCheck=null;
+    if(record.assessment?.review_required){
+      const checkLabel=el('label','coord-confirm-academic');
+      confirmAcademicCheck=el('input');confirmAcademicCheck.type='checkbox';
+      checkLabel.append(confirmAcademicCheck,el('span','','ได้ตรวจสอบหลักฐานการศึกษา (Transcript) และเอกสารแนบเบื้องต้นแล้ว'));
+      review.append(note('ใบสมัครนี้มีผลการเรียนหรือหลักสูตรที่นักศึกษาแจ้ง ต้องรับรองการตรวจสอบก่อนส่งต่อ'),checkLabel);
+    }
+    const confirm=button('รับเรื่องและส่งต่อกรรมการ',async()=>{if(busy)return;
+      if(record.assessment?.review_required && !confirmAcademicCheck?.checked){confirmAcademicCheck?.focus();return;}
+      busy=true;confirm.disabled=true;
+      const payload={expected_version:record.review_version,submission_id:record.submission_id,...(record.assessment?.review_required?{confirm_academic_review:true}:{})};
+      try{await request('/applications/'+record.id+'/forward',{method:'POST',body:attempt('forward-'+record.id,payload)});if(stopped())return;attempts.delete('forward-'+record.id);modal.close();feedback(status,'รับเรื่องและส่งต่อกรรมการแล้ว');await refresh();}
       catch(error){failure(error);review.append(note('ยังยืนยันผลไม่ได้ ลองรายการเดิมซ้ำหรือโหลดข้อมูลล่าสุดเพื่อตรวจสถานะ'));}
-      finally{busy=false;confirm.disabled=false;}
-    },{primary:true});review.append(confirm);const modal=dialog(root,'ยืนยันรับเรื่อง',review,{signal,canClose:()=>!busy});modal.classList.add('coord-dialog--confirmation');const descriptionId='coord-confirm-'+crypto.randomUUID();question.id=descriptionId+'-question';applicant.id=descriptionId+'-applicant';modal.setAttribute('aria-describedby',applicant.id+' '+question.id);modal.addEventListener('cancel',e=>{if(busy)e.preventDefault();});}
+      finally{busy=false;confirm.disabled=Boolean(record.assessment?.review_required && !confirmAcademicCheck?.checked);}
+    },{primary:true});
+    if(record.assessment?.review_required){
+      confirm.disabled=true;
+      confirmAcademicCheck.addEventListener('change',()=>{confirm.disabled=!confirmAcademicCheck.checked || busy;});
+    }
+    review.append(confirm);const modal=dialog(root,'ยืนยันรับเรื่อง',review,{signal,canClose:()=>!busy});modal.classList.add('coord-dialog--confirmation');const descriptionId='coord-confirm-'+crypto.randomUUID();question.id=descriptionId+'-question';applicant.id=descriptionId+'-applicant';modal.setAttribute('aria-describedby',applicant.id+' '+question.id);modal.addEventListener('cancel',e=>{if(busy)e.preventDefault();});}
   async function showDetail(id,host,refresh,{modal=false}={}){const token=++detailToken;host.replaceChildren(el('p','coord-loading','กำลังโหลดใบสมัคร…'));
     try{const record=await request('/applications/'+id);if(stopped()||token!==detailToken)return;
       host.replaceChildren(renderDetail(record,{activeTab,onTab:key=>{activeTab=key;},onReturn:modal?undefined:()=>returnForm(record,refresh),onForward:modal?undefined:()=>forward(record,refresh),

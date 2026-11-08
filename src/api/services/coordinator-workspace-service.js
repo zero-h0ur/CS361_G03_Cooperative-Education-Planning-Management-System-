@@ -61,7 +61,7 @@ class CoordinatorWorkspaceService {
     const record={id:row.id,cycle_id:row.cycle_id,cycle_name:row.cycle_name,cohort_id:row.cohort_id,
       application_version:row.application_version,submission_id:row.submission_id,submitted_version:row.submitted_version,
       review_version:row.review_version || 0,state,reason:row.reason || null,submitted_at:row.submitted_at,
-      cycle_status:row.cycle_status,student_number:official.student_number || null,full_name:official.full_name || p.thai_full_name || null,
+      cycle_status:row.cycle_status,student_number:official.student_number || s.declared_academic?.student_number || p.student_number || null,full_name:official.full_name || p.thai_full_name || null,
       curriculum:official.curriculum || s.declared_academic?.curriculum || null,academic_source:s.declared_academic?.source || 'CANONICAL',
       assessment:s.assessment || null,program:row.program,program_type:s.declared_academic?.program_type || track(row.program),major_group:p.major_group || null,
       positions:p.interested_position_codes || [],...domain.academic(s,{allowSynthetic:this.allowSynthetic})};
@@ -118,8 +118,10 @@ class CoordinatorWorkspaceService {
   }
   async review(actor,id,body,action) {
     if(!['return','forward'].includes(action))throw new ValidationError('คำสั่งไม่ถูกต้อง');
-    v.fields(body,['operation_id','expected_version','submission_id',...(action==='return'?['reason']:[])]);
+    v.fields(body,['operation_id','expected_version','submission_id',...(action==='return'?['reason']:[]),...(action==='forward'?['confirm_academic_review']:[])]);
     v.uuid(body.submission_id,'submission_id');
+    if(action==='forward' && body.confirm_academic_review!==undefined && typeof body.confirm_academic_review!=='boolean')
+      throw new ValidationError('confirm_academic_review must be a boolean');
     const reason=action==='return' && typeof body.reason==='string'?body.reason.replace(/\r\n?/g,'\n').trim():null;
     if(action==='return' && (!reason || reason.length>2000 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(reason)))throw new ValidationError('กรุณาระบุเหตุผลไม่เกิน 2,000 ตัวอักษร');
     return this.command(actor,id,body,action,async(db,replay)=>{
@@ -131,7 +133,7 @@ class CoordinatorWorkspaceService {
       if(!cohort)throw new ForbiddenError();if(replay)return;
       await db.query("SELECT pg_advisory_xact_lock(hashtextextended('phase1:cycle:' || $1::text,0))",[app.cycle_id]);
       const latest=(await db.query('SELECT id,snapshot FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC LIMIT 1',[id])).rows[0];
-      if(action==='forward' && latest?.snapshot?.assessment?.review_required===true)
+      if(action==='forward' && latest?.snapshot?.assessment?.review_required===true && body.confirm_academic_review!==true)
         throw new InvalidStateTransitionError('ต้องตรวจและรับรองหลักฐานการศึกษาก่อนส่งต่อกรรมการ','ACADEMIC_REVIEW_REQUIRED');
       const current=(await db.query('SELECT * FROM phase1_reviews WHERE application_id=$1 FOR UPDATE',[id])).rows[0];
       if(body.expected_version!==(current?.version || 0) || latest?.id!==body.submission_id)throw new ConflictError('ใบสมัครเปลี่ยนแล้ว กรุณาโหลดฉบับล่าสุด');
