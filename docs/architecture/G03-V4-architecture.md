@@ -1,6 +1,6 @@
 # CO-ED V4 architecture
 
-Updated: 2026-11-08 (Asia/Bangkok). Describes source through `c63b238` plus the unreleased routed-TU-audience extension below; this is not an assertion that every route is enabled on AWS. Read [current deployment](../operations/current-deployment.md) for the released subset and [verification](../operations/student-intake-verification.md) for evidence. [Decisions](../decisions/v4-tu-intake-boundaries.md) explain why these boundaries exist.
+Updated: 2026-11-08 (Asia/Bangkok). Describes source through `c63b238` plus the routed-TU-audience extension merged in `cdfdf7d`; this is not an assertion that every route is enabled on AWS. Read [current deployment](../operations/current-deployment.md) for the released subset and [verification](../operations/student-intake-verification.md) for evidence. [Decisions](../decisions/v4-tu-intake-boundaries.md) explain why these boundaries exist.
 
 ## System and trust boundaries
 
@@ -67,7 +67,7 @@ If any step fails, the transaction rolls back. Operation IDs handle retries; exp
 
 An operation must pass all layers: Gateway/verified identity → maintenance stage → exact pilot audience/round → internal role/ownership/scope → current intake control/correction exception → input/evidence/state/version checks.
 
-Source extension, 2026-11-08 (not deployed): `COED_INTAKE_AUDIENCE` defaults to `pilot`. The explicit value `routed-tu-students` replaces the single Student UUID check with server-side TU registration/link and route membership checks; unknown values fail closed within intake stages. It retains the configured `COED_INTAKE_PILOT` round and Coordinator binding and all three rollout stages. A Student needs their own active exact TU issuer/subject link and completed TU onboarding. Faculty/department come from retained TU identity; program type and curriculum remain self-reported, pending review. An active latest `phase1_intake_routes` entry must match these fields and lead to the configured active Coordinator/cohort. A blank curriculum allows starting a Draft for a matching route; saving a curriculum and subsequent mutations require a matching curriculum route. A public round alone cannot grant membership. Existing ownership, readiness, Close, immutable receipt and audit rules still apply. This adds no review/forward/Committee access. See [decision D8](../decisions/v4-tu-intake-boundaries.md#d8-explicit-routed-tu-audience-within-the-existing-intake-boundary).
+Source extension, 2026-11-08 (backend version 9 deployed; genuine multi-account acceptance pending): `COED_INTAKE_AUDIENCE` defaults to `pilot`. The explicit value `routed-tu-students` replaces the single Student UUID check with server-side TU registration/link and route membership checks; unknown values fail closed within intake stages. It retains the configured `COED_INTAKE_PILOT` round and Coordinator binding and all three rollout stages. A Student needs their own active exact TU issuer/subject link and completed TU onboarding. Faculty/department come from retained TU identity; program type and curriculum remain self-reported, pending review. An active latest `phase1_intake_routes` entry must match these fields and lead to the configured active Coordinator/cohort. A blank curriculum allows starting a Draft for a matching route; saving a curriculum and subsequent mutations require a matching curriculum route. A public round alone cannot grant membership. Existing ownership, readiness, Close, immutable receipt and audit rules still apply. This adds no review/forward/Committee access. See [decision D8](../decisions/v4-tu-intake-boundaries.md#d8-explicit-routed-tu-audience-within-the-existing-intake-boundary).
 
 | Control | Meaning |
 | --- | --- |
@@ -78,6 +78,14 @@ Source extension, 2026-11-08 (not deployed): `COED_INTAKE_AUDIENCE` defaults to 
 Only the active Cognito Coordinator assigned to the whole provisioned round can change intake mode. Each change has optimistic version, idempotent receipt and immutable mode event. The cycle advisory lock serializes mode changes with Student mutations. A transaction admitted before Close may complete first; later mutations after Close commits fail. File finalization rechecks the gate after external storage work.
 
 Returned corrections use a genuine retained return/cohort/review deadline. Manual opening cannot extend that deadline; closing ordinary intake does not erase the exception. These rules exist in source; review/return/forward remain disabled in the current pilot. Already-issued S3 upload/download URLs are bearer capabilities with normal expiry (300s/60s), not instantly revoked by closing intake.
+
+## Unreleased academic-review handoff extension (2026-11-08)
+
+The owner requires complete verified criteria before forwarding pending-academic applications. New source adds separate append-only `phase1_academic_reviews`, not a rewrite of `phase1_submissions` or official profiles. Assigned Cognito Coordinators explicitly inspect six evidence categories and record a note; the server recomputes readiness against the latest complete verified policy. Forwarding requires matching submission/checksum, actor/cohort, policy/version and `PASS`, in addition to existing review windows, operation/version checks, panel readiness and transactional locks. Corrections or policy changes require a new review. Committee reads the same forwarded evidence and separately labeled reviewed assessment; decisions stay blocked in the scoped handoff stage.
+
+The owner subsequently confirmed actual criteria in [D10](../decisions/v4-tu-intake-boundaries.md#d10-owner-confirmed-academic-criteria-and-highest-grade-entry): 3 credits, highest grade, C per-course minimum, fixed CS213/CS216 by regular/CIS versus special/ACS, and enrolled additional courses allowed. Registration rules preventing retakes after C are owned by the university registration system; neither CO-ED nor Coordinator rechecks that condition. [Shared criteria](../../src/shared/faculty-criteria.js) owns the versioned contract; current Draft readiness/Submit and academic review use it. New submission JSON pins the criteria and explicit acknowledgement version; original submissions are not backfilled. A matching latest verified RDS policy is still a separate publication prerequisite. Transcript grade/GPAX checks remain manual.
+
+Backend flags `COED_COORDINATOR_REVIEW_ENABLED` and `COED_COMMITTEE_HANDOFF_ENABLED` default disabled. In `intake-pilot`, they retain the private cycle/Coordinator binding and permit only the specified review/handoff paths. This extension needs separately approved observed 023, backend and frontend releases; AWS version 9 does not include it. Actual criteria, schedules and assigned staff must be ready first. See [contract](../api/v4-academic-review.md), [decision D9](../decisions/v4-tu-intake-boundaries.md#d9-complete-criteria-and-separate-coordinator-evidence-before-handoff) and [local evidence](../operations/academic-review-verification.md).
 
 ## Documents
 
@@ -91,8 +99,8 @@ These are **not** one automatically applied `001–022` chain:
 
 | Path | Baseline/purpose | Rule |
 | --- | --- | --- |
-| `src/db/migrations/` | Reviewed fresh/workspace lineage: 001–014 and 017 (15 files) | Immutable LF bytes/allowlist in `reviewed-migrations.mjs` |
-| `src/db/upgrades/` | Observed RDS lineage: 018 delivery, 019 onboarding, 020 issuer alignment, 021 pending intake, 022 controls | Separate catalog/history/hash/approval gates; never general fresh migrator on RDS |
+| `src/db/migrations/` | Reviewed fresh/workspace lineage: 001–014, 017 and new 023 (16 files in working source) | Immutable LF bytes/allowlist in `reviewed-migrations.mjs`; 023 not deployed |
+| `src/db/upgrades/` | Observed RDS lineage: 018 delivery, 019 onboarding, 020 issuer alignment, 021 pending intake, 022 controls; new 023 academic review not applied | Separate catalog/history/hash/approval gates; never general fresh migrator on RDS |
 | `src/db/proposals/phase1_intake_controls.sql` | Review copy of 022 | Not a third migration or separate Apply |
 
 Original live `014_phase1_review_handoff.sql` and `015_phase1_schedule_audit_integrity.sql` were unavailable. Same-numbered workspace files are not replacements. Preserve their observed history/checksums; do not claim the originals were recovered. Later upgrades use the observed catalog as baseline, trial rollback, preservation checks and append-only history. This cannot prove every action an unavailable historical SQL ever performed.

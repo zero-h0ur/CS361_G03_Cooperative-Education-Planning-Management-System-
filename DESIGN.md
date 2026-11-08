@@ -53,6 +53,10 @@ Panels use 8px corners; inputs and actions use 6px. Circular member markers iden
 ## Components
 Native selects and checkboxes preserve keyboard behavior. Native HTML dialog owns modal focus and Escape. Actions remain disabled while a command is pending. Loading, error/retry, no-results and permission expiry are explicit states. Search has a clear action that restores input focus. The final action has a review dialog; counts alone do not publish results.
 
+Coordinator academic review reuses the existing field, feedback and confirmation dialog helpers. Keep the unconfirmed calculation, saved review and original submission provenance visibly distinct. Six evidence checks require deliberate input; saved checks/notes are read-only. Missing approved criteria explains the disabled confirmation/forward actions. Committee handoff displays a read-only stage label and disables decision controls until the server permits them. No new palette or competing review page is introduced.
+
+Student academic entry keeps the same native labeled selects, course sections and stepper. A fixed program course and highest-grade-only entry are business variants, not a new visual system. Show the C minimum and three-credit rule as help text; keep old submitted evidence readable in its original form.
+
 ## Motion
 Respect reduced motion. Avoid entrance animation around dense review data.
 
