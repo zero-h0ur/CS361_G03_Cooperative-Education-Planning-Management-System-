@@ -10,6 +10,7 @@ const {Pool}=require('pg');
 const {ApplicationService}=require('../src/api/services/application-service');
 const {ApplicationRepository}=require('../src/db/repositories/application-repository');
 const {readiness,GROUPS}=require('../src/api/services/application-policy');
+const faculty=require('../src/shared/faculty-criteria');
 const input=require('../src/api/services/application-input');
 const {ACKNOWLEDGEMENTS}=require('../src/shared/application-form');
 const {validateBytes,createDocumentStore}=require('../src/storage/application-document-store');
@@ -21,7 +22,7 @@ const digest=b=>createHash('sha256').update(b).digest('hex');
 const pdf=Buffer.from('%PDF-1.4\n1 0 obj <<>> endobj\n%%EOF\n');
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64');
 const metadata=(kind,bytes=pdf)=>({kind,filename:kind==='photo'?'student.png':'document.pdf',content_type:kind==='photo'?'image/png':'application/pdf',byte_size:bytes.length,checksum:digest(bytes)});
-const payload=curriculum=>({curriculum,gpax:'3.20',declared_group_gpa:'3.00',gpax_reporting_term:'Synthetic term 3/2568',
+const payload=curriculum=>({academic_criteria_acknowledgement:faculty.ID,curriculum,gpax:'3.20',declared_group_gpa:'3.00',gpax_reporting_term:'Synthetic term 3/2568',
   name_prefix:'Mx',thai_full_name:'นักศึกษาสมมติ สำหรับทดสอบ',english_full_name:'Synthetic Test Student',contact_email:'contact@example.invalid',contact_address:'Synthetic address',contact_phone:'0000000000',
   institutional_email:'test@example.invalid',major_group:'CIS',guardian_name:'Synthetic guardian',guardian_relationship:'Parent',
   guardian_address:'Synthetic address',guardian_phone:'0000000000',interested_position_codes:['SOFTWARE'],skills_detail:'JavaScript\nTesting and teamwork',
@@ -234,7 +235,7 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
       for(const id of [sid])await q(`INSERT INTO phase1_academic_profiles(student_id,curriculum,entry_year,institution,source,verified_by)
         VALUES($1,'66',2566,'TU_CS','synthetic test only',$2)`,[id,coordinator]);
       await q("INSERT INTO phase1_cycle_windows(cycle_id,opens_at,closes_at) VALUES($1,now()-interval '1 day',now()+interval '1 day')",[cycle]);
-      pol=policy('66');await q(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data)
+      pol=policy('66');pol.data=faculty.policyData('66');await q(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data)
         VALUES($1,$2,'66',1,2568,'synthetic test only',true,true,$3)`,[pol.id,cycle,JSON.stringify(pol.data)]);
       for(const kind of ['transcript','conduct','photo'])await attach(kind);
       assert.equal((await service.readiness(actor,app.id)).can_submit,true);

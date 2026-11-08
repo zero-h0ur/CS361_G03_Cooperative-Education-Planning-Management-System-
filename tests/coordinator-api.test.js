@@ -4,7 +4,7 @@ const {randomUUID}=require('node:crypto');
 const issuer='https://issuer.example.invalid/coordinator',clientId='test-coordinator-client';
 function setup(role='COORDINATOR') {
   const userId=randomUUID(),pool={query:jest.fn(async()=>({rows:[{user_id:userId,role,account_status:'ACTIVE',link_status:'ACTIVE',active_link_count:1}]}))};
-  const service=Object.fromEntries(['options','list','detail','tracking','review','getSchedule','saveSchedule'].map(k=>[k,jest.fn(async()=>({ok:true}))]));
+  const service=Object.fromEntries(['options','list','detail','tracking','review','confirmAcademics','getSchedule','saveSchedule'].map(k=>[k,jest.fn(async()=>({ok:true}))]));
   const handler=createLambdaHandler({coordinatorWorkspaceService:service,authOptions:{pool,
     tokenValidator:new TokenValidator({expectedIssuer:issuer,expectedClientId:clientId}),identityResolver:new IdentityResolver({pool})}});
   const event=(path,method='GET',authenticated=true)=>({rawPath:path,rawQueryString:'',body:method==='POST'?'{}':undefined,
@@ -36,4 +36,11 @@ test('anonymous malformed commands fail auth before body parsing; duplicate/unkn
   expect((await handler(post)).statusCode).toBe(401);
   for(const query of ['role=ADMIN','cycle_id=x&cycle_id=y']){const get=event('/api/v4/coordinator/applications');get.rawQueryString=query;expect((await handler(get)).statusCode).toBe(400);}
   expect(service.saveSchedule).not.toHaveBeenCalled();expect(service.list).not.toHaveBeenCalled();
+});
+
+test('academic review route uses the trusted Coordinator and refuses forged student role',async()=>{
+ const {handler,event,service,userId}=setup(),id=randomUUID(),post=event('/api/v4/coordinator/applications/'+id+'/academic-review','POST');
+ post.body=JSON.stringify({operation_id:randomUUID(),expected_version:0,submission_id:randomUUID(),expected_policy_id:randomUUID(),checks:{grades:true},note:'Synthetic'});
+ expect((await handler(post)).statusCode).toBe(200);expect(service.confirmAcademics).toHaveBeenCalledWith(expect.objectContaining({userId,role:'COORDINATOR'}),id,JSON.parse(post.body));
+ const student=setup('COMMITTEE');expect((await student.handler(student.event(post.rawPath,'POST'))).statusCode).toBe(403);expect(student.service.confirmAcademics).not.toHaveBeenCalled();
 });

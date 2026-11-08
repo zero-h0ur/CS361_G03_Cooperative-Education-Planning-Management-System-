@@ -9,6 +9,7 @@ const {INTAKE_MODES,pilotScope}=require('../../shared/application-access');
 const intake=require('../../db/phase1-intake');
 const intakeControl=require('../../db/intake-control');
 const {applicationBudget}=require('../../db/application-budget');
+const faculty=require('../../shared/faculty-criteria');
 function canonical(value) {
   if(Array.isArray(value))return value.map(canonical);
   if(value && typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]));
@@ -21,7 +22,7 @@ function guard(actor,write=false) {
   if(actor.accountStatus!=='ACTIVE' || !(write?['STUDENT']:['STUDENT','COORDINATOR']).includes(actor.role))throw new ForbiddenError();
 }
 const safePolicy=p=>p?{id:p.id,version:p.version,curriculum:p.curriculum,source_year:p.source_year,source:p.source,verified:p.verified,synthetic:p.synthetic,data:p.data,
-  effective_criteria:p.effective_criteria || effectiveCriteria(p.curriculum)}:null;
+  effective_criteria:p.effective_criteria || effectiveCriteria(p.curriculum,p.data)}:null;
 class ApplicationService {
   constructor(options={}) {
     this.repository=options.repository || new ApplicationRepository(options);
@@ -56,6 +57,7 @@ class ApplicationService {
     return {id:app.id,student_id:app.student_id,cycle_id:app.cycle_id,status:app.status,version:app.version,
       payload:submission?.snapshot.payload || app.payload,form_version:submission ? submission.snapshot.form_version || 1 : FORM_VERSION,
       official:submission?.snapshot.official || official,policy:safePolicy(policy),documents,
+      academic_criteria:submission?submission.snapshot.academic_criteria || null:faculty.snapshot(official.curriculum || app.payload?.curriculum),
       assessment:submission?.snapshot.assessment || null,
       access,cycle_name:submission?.snapshot.cycle?.name || cycle.name,availability:{can_edit:Boolean(!access.read_only && actor.role==='STUDENT' &&
         (app.status==='DRAFT' && cycle.status==='OPEN' && (window?.is_open || !intake.pendingAcademic(official) && !window) || app.status==='NEEDS_REVISION' && effective?.status==='OPEN' && window?.is_open)),
@@ -111,7 +113,7 @@ class ApplicationService {
   async check(db,actor,app) {
     const official=await this.official(db,actor,app),policy=await this.repository.policy(db,app,official);
     const cycle=await this.repository.cycleForApplication(db,app,official,true);
-    const result=readiness({app,official,policy,documents:await this.repository.documents(db,app.id),window:cycle.window,roundOpen:cycle.status==='OPEN',allowSynthetic:this.allowSynthetic,allowPendingAcademic:intake.pendingAcademic(official)});
+    const result=readiness({app,official,policy,documents:await this.repository.documents(db,app.id),window:cycle.window,roundOpen:cycle.status==='OPEN',allowSynthetic:this.allowSynthetic,allowPendingAcademic:intake.pendingAcademic(official),facultyConfirmed:true,requireCriteriaAcknowledgement:true});
     const receiver=await delivery.destination(db,app,official);
     result.destination={ready:receiver.ready,department:receiver.department || official.department,program:receiver.program || official.program};
     if(!receiver.ready){result.can_submit=false;result.blockers.push({field:'destination',code:receiver.code,message:receiver.message});}
@@ -198,7 +200,7 @@ class ApplicationService {
         assessment:{eligibility:result.eligibility,group_gpa:result.group_gpa,review_required:true,review_flags:result.review_flags,source:'STUDENT_DECLARED'},
         declared_academic:{curriculum:app.payload.curriculum,major_group:app.payload.major_group,entry_year:official.registration.entry_year,program_type:official.registration.program_type,source:'STUDENT_DECLARED'}}:{}),
         ...(cycle.window.intake?{intake_control:{...cycle.window.intake,exception:cycle.window.exception || null,return_version:cycle.window.return_version || null}}:{}),
-        official,payload:app.payload,policy:safePolicy(policy),documents,delivery:destination,
+        academic_criteria:faculty.snapshot(official.curriculum || app.payload.curriculum),official,payload:app.payload,policy:safePolicy(policy),documents,delivery:destination,
         cycle:{id:cycle.id,name:cycle.name,academic_year:cycle.academic_year,semester:cycle.semester,
           opens_at:cycle.window.opens_at,closes_at:cycle.window.closes_at,window_version:cycle.window.version},
         acknowledgements:{actor_id:actor.userId,policy_id:policy?.id || null,accepted_at:new Date().toISOString()}};

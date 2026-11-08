@@ -1,3 +1,4 @@
+import faculty from '../src/shared/faculty-criteria.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -45,14 +46,14 @@ test('Coordinator Phase 1 review, retained corrections, schedule concurrency, sc
     await pool.query("INSERT INTO phase1_academic_profiles(student_id,curriculum,entry_year,institution,source,verified_by) VALUES($1,'66',2567,'TU_CS','synthetic',$2)",[studentId,coordId]);
     const policyId=ids();
     await pool.query(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data)
-      VALUES($1,$2,'66',1,2568,'synthetic',true,true,$3)`,[policyId,cycle,JSON.stringify({credits:Object.fromEntries(form.GROUPS['66'].flat().map(c=>[c,'3'])),repeat_rule:'LATEST',alternative_rule:'STUDENT_SELECTED'})]);
+      VALUES($1,$2,'66',1,2568,'synthetic',true,true,$3)`,[policyId,cycle,JSON.stringify(faculty.policyData('66'))]);
     const coord=actor(coordId,'COORDINATOR'),student=actor(studentUser,'STUDENT',studentId),other=actor(outsiderId,'COORDINATOR');
     const appService=new application.ApplicationService({pool:runtime,allowSyntheticPolicy:true,documentStore:{downloadTarget:async()=>({url:'https://files.example.invalid/signed',method:'GET'})}});
     const review=new coordinator.CoordinatorWorkspaceService({pool:runtime,allowSyntheticPolicy:true});
     const board=new committee.CommitteeWorkspaceService({pool:runtime,allowSyntheticPolicy:true});
     const command=version=>({operation_id:ids(),expected_version:version});
     let app=await appService.create(student,{operation_id:ids(),cycle_id:cycle});
-    const payload={curriculum:'66',gpax:'3.12',declared_group_gpa:'2.8',gpax_reporting_term:'2/2568',name_prefix:'Mx',thai_full_name:'นักศึกษาสมมติ',english_full_name:'Synthetic Student',
+    const payload={academic_criteria_acknowledgement:faculty.ID,curriculum:'66',gpax:'3.12',declared_group_gpa:'2.8',gpax_reporting_term:'2/2568',name_prefix:'Mx',thai_full_name:'นักศึกษาสมมติ',english_full_name:'Synthetic Student',
       institutional_email:'test@example.invalid',contact_email:'contact@example.invalid',contact_address:'Original submitted address',contact_phone:'0000000000',major_group:'CIS',
       guardian_name:'Synthetic parent',guardian_relationship:'Parent',guardian_phone:'0000000000',guardian_address:'Synthetic address',interested_position_codes:['FRONTEND'],skills_detail:'คำตอบปลายเปิด\nJavaScript and testing',
       selected_courses:{alternative:'CS213'},course_attempts:form.GROUPS['66'].map(g=>({code:g[0],attempt:1,points:'3'})),additional_studies:{CS180:'ENROLLED',CS262:'STUDIED'},

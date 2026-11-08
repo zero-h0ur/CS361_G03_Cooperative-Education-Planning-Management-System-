@@ -1,3 +1,4 @@
+import faculty from '../src/shared/faculty-criteria.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID as id,generateKeyPairSync,createHash} from 'node:crypto';
@@ -58,7 +59,7 @@ test('TU Student to Cognito Coordinator: real HTTP, isolated PostgreSQL and leas
     await db.query("INSERT INTO selection_cohorts(id,cycle_id,department,program,coordinator_id,committee_one,committee_two,committee_three) VALUES($1,$2,'CS','regular',$3,$4,$5,$6)",[cohort,cycle,coord,...members]);
     await db.query("INSERT INTO phase1_cycle_windows(cycle_id,opens_at,closes_at) VALUES($1,now()-interval '1 day',now()+interval '1 day')",[cycle]);
     await db.query("INSERT INTO phase1_academic_profiles(student_id,curriculum,entry_year,institution,source,verified_by) VALUES($1,'66',2567,'TU_CS','synthetic',$2)",[sid,operator]);
-    await db.query(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data) VALUES($1,$2,'66',1,2568,'synthetic',true,true,$3)`,[policy,cycle,JSON.stringify({credits:Object.fromEntries(form.GROUPS['66'].flat().map(c=>[c,'3'])),repeat_rule:'LATEST',alternative_rule:'STUDENT_SELECTED'})]);
+    await db.query(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data) VALUES($1,$2,'66',1,2568,'synthetic',true,true,$3)`,[policy,cycle,JSON.stringify(faculty.policyData('66'))]);
     const keys=generateKeyPairSync('rsa',{modulusLength:2048});
     const login=new tu.TuAuthService({pool:runtime,keyPair:keys,tuAppKey:'synthetic-only',tuSecretArn:'',issuer:tuIssuer,clientId:'coed-api',fetchImpl:async(_url,request)=>({ok:true,json:async()=>({status:true,type:'student',username:JSON.parse(request.body).UserName})})});
     connection=await db.connect();
@@ -145,7 +146,7 @@ test('TU Student to Cognito Coordinator: real HTTP, isolated PostgreSQL and leas
         assert.deepEqual((await db.query('SELECT * FROM phase1_operations ORDER BY operation_id')).rows,operations);
       }finally{if(previous===undefined)delete process.env.COED_API_MAINTENANCE;else process.env.COED_API_MAINTENANCE=previous;}
     });
-    const payload={curriculum:'66',gpax:'3.12',declared_group_gpa:'2.8',gpax_reporting_term:'2/2568',name_prefix:'Mx',thai_full_name:'นักศึกษาสมมติ',english_full_name:'Synthetic Student',institutional_email:'test@example.invalid',contact_email:'contact@example.invalid',contact_address:'Synthetic address',contact_phone:'0000000000',major_group:'CIS',guardian_name:'Synthetic parent',guardian_relationship:'Parent',guardian_phone:'0000000000',guardian_address:'Synthetic address',interested_position_codes:['FRONTEND'],skills_detail:'Free text\nTesting',selected_courses:{alternative:'CS213'},course_attempts:form.GROUPS['66'].map(g=>({code:g[0],attempt:1,points:'3'})),additional_studies:{CS180:'ENROLLED',CS262:'STUDIED'},acknowledgements:Object.fromEntries(form.ACKNOWLEDGEMENTS.map(k=>[k,true]))};
+    const payload={academic_criteria_acknowledgement:faculty.ID,curriculum:'66',gpax:'3.12',declared_group_gpa:'2.8',gpax_reporting_term:'2/2568',name_prefix:'Mx',thai_full_name:'นักศึกษาสมมติ',english_full_name:'Synthetic Student',institutional_email:'test@example.invalid',contact_email:'contact@example.invalid',contact_address:'Synthetic address',contact_phone:'0000000000',major_group:'CIS',guardian_name:'Synthetic parent',guardian_relationship:'Parent',guardian_phone:'0000000000',guardian_address:'Synthetic address',interested_position_codes:['FRONTEND'],skills_detail:'Free text\nTesting',selected_courses:{alternative:'CS213'},course_attempts:form.GROUPS['66'].map(g=>({code:g[0],attempt:1,points:'3'})),additional_studies:{CS180:'ENROLLED',CS262:'STUDIED'},acknowledgements:Object.fromEntries(form.ACKNOWLEDGEMENTS.map(k=>[k,true]))};
     app=await request(`${proxy}/${app.id}`,{method:'PATCH',token,body:{...cmd(app.version),expected_policy_id:policy,payload}});
     const pdf=Buffer.from('%PDF-1.4\n1 0 obj <<>> endobj\n%%EOF\n'),png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64');
     await t.test('all four actual uploads complete through the TU bridge',async()=>{

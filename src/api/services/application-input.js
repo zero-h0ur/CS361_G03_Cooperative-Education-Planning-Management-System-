@@ -26,6 +26,7 @@ function command(input, extra=[], version=true) {
   return input;
 }
 const STRINGS={contact_address:1000,contact_phone:40,institutional_email:254,contact_email:254,major_group:100,
+  academic_criteria_acknowledgement:80,
   name_prefix:100,thai_full_name:200,english_full_name:200,gpax_reporting_term:100,skills_detail:5000,interested_position_other:500,
   guardian_name:200,guardian_relationship:100,guardian_address:1000,guardian_phone:40};
 function payload(value) {
