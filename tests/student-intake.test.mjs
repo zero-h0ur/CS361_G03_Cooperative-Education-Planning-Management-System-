@@ -31,6 +31,17 @@ test('pilot capabilities require exact owner/cycle and stage; malformed config f
  }
  assert.equal(access.pilotScope('not-json'),null);
 });
+test('routed audience requires server membership proof, preserves stage/round and rejects unknown audience',()=>{
+ const other={...actor,userId:randomUUID()};
+ for(const mode of access.INTAKE_MODES){
+  const context={actor:other,cycleId:scope.cycle_id,scope,audience:'routed-tu-students',routedStudent:true};
+  const allowed=access.applicationAccess(mode,context);
+  assert.equal(allowed.can_create,true);assert.equal(allowed.can_submit,mode==='intake-pilot');
+  for(const change of [{routedStudent:false},{cycleId:randomUUID()},{audience:'everyone'},
+   {actor:{...other,accountStatus:'DISABLED'}},{actor:{...other,isAuthenticated:false}},{scope:{...scope,extra:true}}])
+   assert.equal(access.applicationAccess(mode,{...context,...change}).can_create,false);
+ }
+});
 test('intake path gate never opens staff commands, legacy Plans or local binary writes',()=>{
  const app='/api/tu-proxy/api/v4/applications/'+randomUUID();
  for(const mode of access.INTAKE_MODES){const invoke=(method,path,rawQueryString='')=>maintenance.maintenanceResponse({rawPath:path,rawQueryString,requestContext:{http:{method}}},mode);

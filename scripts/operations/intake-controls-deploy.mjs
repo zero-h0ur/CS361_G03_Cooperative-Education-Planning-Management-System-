@@ -50,6 +50,7 @@ async function assetHashes(){const result={};for(const path of ASSETS){const r=a
 export function stageEnvironment(original,scope,stage){
  fixed(['browse','intake-draft','intake-upload','intake-pilot'].includes(stage),'C7_STAGE_DENIED');
  fixed(access.pilotScope(scope),'C7_SCOPE_DENIED');
+ fixed((original.COED_INTAKE_AUDIENCE ?? 'pilot')==='pilot','C7_AUDIENCE_DRIFT');
  fixed(original.DB_USER==='coed_app' && original.DB_NAME==='coed' && original.CO_ED_APPLICATION_STORAGE==='s3' && original.CO_ED_APPLICATION_BUCKET==='coed-v4-application-documents-130165494095-ap-southeast-2' && original.TU_ONBOARDING_ENABLED==='true','C7_CONFIG_DRIFT');
  fixed(!['DATABASE_URL','DB_PASSWORD','TU_API_APP_KEY','TU_AUTH_PRIVATE_KEY','TU_SIGNING_SECRET_ARN'].some(k=>original[k]),'C7_UNSAFE_ENVIRONMENT');
  return {...original,COED_API_MAINTENANCE:stage,COED_INTAKE_PILOT:JSON.stringify(scope),COED_INTAKE_CONTROLS_REQUIRED:'true'};
