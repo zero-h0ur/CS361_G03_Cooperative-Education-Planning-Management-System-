@@ -99,7 +99,7 @@ class CommitteeWorkspaceService {
   }
   async mutate(actor, id, body) {
     v.uuid(id, "cohort_id");
-    v.fields(body, ["operation_id", "expected_version", "action", "normal", "special", "reason", "selected", "ranking"]);
+    v.fields(body, ["operation_id", "expected_version", "action", "total", "normal", "special", "reason", "selected", "ranking"]);
     v.command(body);
     const db = await this.db().connect();
     try {

@@ -118,7 +118,7 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
       else{body.append(el('h3','','จำนวนรับนักศึกษาตามข้อเสนอ'),rowsForMeeting(p),el('p','',p.status==='accepted'?'ตกลงจำนวนรับแล้ว':p.status==='rejected'?'ข้อเสนอนี้ถูกส่งกลับเพื่อปรับปรุง':'อยู่ระหว่างตกลงจำนวนรับ'));}
       body.append(note(state?.finalized?`กรรมการยืนยันรายชื่อแล้ว ${state.selected?.length || 0} คน · ยังไม่ใช่การประกาศผล`:'ยังไม่มีการยืนยันรายชื่อคัดเลือก'),note('หน้านี้อ่านอย่างเดียว Coordinator ไม่แก้ผลคัดเลือกหรือข้อเสนอจำนวนรับ'));
     }if(!meetings.length)body.append(note('ยังไม่มีข้อมูลมติในขอบเขตที่ได้รับมอบหมาย'));dialog(root,'มติและจำนวนรับ',body,{signal});}
-    function rowsForMeeting(p){const dl=el('dl','coord-meeting-counts');for(const [label,value] of [['จำนวนรับภาคปกติ',p.normal],['จำนวนรับภาคพิเศษ',p.special],['เหตุผลที่เสนอ',p.reason]]){const item=el('div');item.append(el('dt','',label),el('dd','',text(value)));dl.append(item);}return dl;}
+    function rowsForMeeting(p){const dl=el('dl','coord-meeting-counts');const items=p.total!==undefined?[['จำนวนรับนักศึกษาที่เสนอ',p.total],['เหตุผลที่เสนอ',p.reason]]:[['จำนวนรับภาคปกติ',p.normal],['จำนวนรับภาคพิเศษ',p.special],['เหตุผลที่เสนอ',p.reason]];for(const [label,value] of items){const item=el('div');item.append(el('dt','',label),el('dd','',text(value)));dl.append(item);}return dl;}
     async function refresh(){const token=++queryToken;records.setAttribute('aria-busy','true');
       try{const data=await request('/tracking?'+query());if(stopped()||token!==queryToken)return;
         intro.replaceChildren(el('h2','',`รายชื่อที่ส่งให้กรรมการ · ${data.total} รายการ`));const one=data.meetings?.length===1 && !data.meetings[0].scope_limited;

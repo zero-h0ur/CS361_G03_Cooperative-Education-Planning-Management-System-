@@ -6,12 +6,16 @@ function transition(state, actor, body, students, members) {
   if (next.finalized) throw new ConflictError("Selection already finalized.");
   if (body.action === "propose") {
     if (next.proposal && next.proposal.status !== "rejected") throw new ConflictError("A proposal already exists.");
-    if (!Number.isInteger(body.normal) || !Number.isInteger(body.special) || body.normal < 0 || body.special < 0 || body.normal + body.special < 1 || body.normal + body.special > 999) throw new ValidationError("Invalid capacity.");
+    const total = Number.isInteger(body.total) ? body.total : (Number.isInteger(body.normal) && Number.isInteger(body.special) ? body.normal + body.special : null);
+    const normal = Number.isInteger(body.normal) ? body.normal : (Number.isInteger(total) ? total : null);
+    const special = Number.isInteger(body.special) ? body.special : 0;
+    if (!Number.isInteger(normal) || !Number.isInteger(special) || normal < 0 || special < 0 || normal + special < 1 || normal + special > 999) throw new ValidationError("Invalid capacity.");
     const reason = v.text(body.reason, "reason", 2e3);
     next.proposal = {
       number: (next.proposal?.number || 0) + 1,
-      normal: body.normal,
-      special: body.special,
+      total: total ?? (normal + special),
+      normal,
+      special,
       reason,
       proposer: actor,
       votes: Object.fromEntries(members.filter((x) => x !== actor).map((x) => [x, "pending"])),
