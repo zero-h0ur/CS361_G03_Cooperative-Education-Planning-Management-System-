@@ -37,7 +37,7 @@ class CoordinatorWorkspaceService {
       sub.id AS submission_id,sub.application_version AS submitted_version,sub.snapshot,sub.checksum,sub.submitted_at,
       rv.state AS review_state,rv.version AS review_version,rv.reason,rv.updated_at AS reviewed_at,
       cw.state AS committee_state,cw.version AS committee_version,
-      clock_timestamp()<COALESCE(sched.review_closes_at,win.closes_at) AS review_open
+      (COALESCE(sched.review_closes_at,win.closes_at) IS NULL OR clock_timestamp()<COALESCE(sched.review_closes_at,win.closes_at)) AS review_open
       FROM phase1_applications a JOIN students st ON st.id=a.student_id
       JOIN LATERAL(SELECT * FROM phase1_submissions s WHERE s.application_id=a.id ORDER BY s.application_version DESC LIMIT 1) sub ON true
       LEFT JOIN phase1_submission_deliveries delivery ON delivery.submission_id=sub.id
@@ -138,7 +138,7 @@ class CoordinatorWorkspaceService {
       const current=(await db.query('SELECT * FROM phase1_reviews WHERE application_id=$1 FOR UPDATE',[id])).rows[0];
       if(body.expected_version!==(current?.version || 0) || latest?.id!==body.submission_id)throw new ConflictError('ใบสมัครเปลี่ยนแล้ว กรุณาโหลดฉบับล่าสุด');
       const window=(await db.query(`SELECT r.status,COALESCE(s.review_closes_at,w.closes_at) AS deadline,
-        clock_timestamp()<COALESCE(s.review_closes_at,w.closes_at) AS is_open FROM rounds r
+        (COALESCE(s.review_closes_at,w.closes_at) IS NULL OR clock_timestamp()<COALESCE(s.review_closes_at,w.closes_at)) AS is_open FROM rounds r
         LEFT JOIN coordinator_round_schedules s ON s.cycle_id=r.id LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id WHERE r.id=$1`,[app.cycle_id])).rows[0];
       if(app.status!=='SUBMITTED' || current && current.state!=='PENDING' || window?.status!=='OPEN' || !window?.is_open)
         throw new InvalidStateTransitionError('ใบสมัครหรือช่วงพิจารณาไม่เปิดให้ทำรายการแล้ว');
