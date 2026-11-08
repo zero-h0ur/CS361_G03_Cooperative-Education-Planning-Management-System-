@@ -1,6 +1,6 @@
 # Current deployment — last verified snapshot
 
-Snapshot consolidated: **2026-11-06, Asia/Bangkok**. Evidence is from the completed TU/onboarding/C7 pilot operations and owner confirmations described below. The documentation update itself made **no new AWS calls or deployments**. Treat this as last verified state, not a realtime monitor or authorization to repeat an operation.
+Snapshot updated: **2026-11-08, Asia/Bangkok**. The explicitly owner-approved routed-TU audience cutover was verified at **20:09**. Lambda/Gateway/Amplify reads and deployment checks below are fresh evidence; RDS rows and genuine multi-account browser acceptance were not refreshed. Earlier C7/schema/owner evidence retains its original date. Treat this as last verified state, not a realtime monitor or standing operational approval.
 
 ## Released versions
 
@@ -8,23 +8,34 @@ Region: `ap-southeast-2`. Existing Amplify main site: [public home](https://main
 
 | Resource | Last verified version | Source/evidence |
 | --- | --- | --- |
-| `coed-api:live` | Lambda version **8** | Runtime source `204adc089d366d26662f7a236b673deaf4b750ea`; compatible intake-pilot backend |
-| `coed-tu-auth:live` | Lambda version **5** | TU broker; unchanged by C7 intake/filename rollout |
-| `coed-tu-session-issuer:live` | Lambda version **4** | Private issuer/onboarding; unchanged by C7 |
-| Amplify main | Manual deployment job **32**, `SUCCEED` | Frontend source `f3a765280d65ad7f9e8b15cea6cebd0c064ffbb8`; named document Download fix |
-| Observed RDS upgrades | Through **022** | 019 registration/020 issuer alignment retained; 021/022 applied together with isolated CLOSED test-round metadata |
+| `coed-api:live` | Lambda version **9** | Runtime source `cdfdf7d4dfa9dbbc399d991361fcc250de8ca129`; routed TU audience, same intake stage |
+| `coed-tu-auth:live` | Lambda version **5** | TU broker; alias/configuration unchanged by the Nov 8 cutover |
+| `coed-tu-session-issuer:live` | Lambda version **4** | Private issuer/onboarding; alias/configuration unchanged by the Nov 8 cutover |
+| Amplify main | Manual deployment job **32**, `SUCCEED` | Last recorded frontend source `f3a765280d65ad7f9e8b15cea6cebd0c064ffbb8`; fresh job-32 status read and before/after asset hashes; no frontend deployment |
+| Observed RDS upgrades | Through **022** | Last verified C7 schema evidence from Nov 6; no SQL/DB write or fresh catalog inventory in the Nov 8 cutover |
 
-The newer source commits `c9d8b32` (operator probe distinction) and `c63b238` (CI dedicated intake DB configuration) are **not additional AWS deployments**. Runtime and frontend sources above intentionally differ: the latter rollout was frontend-only and verified the backend stayed at 8.
+Runtime and frontend source commits above intentionally differ. The Nov 8 release was backend-only; it preserved the existing Gateway integrations, TU functions and public frontend asset hashes. API version 8 remains the pre-cutover rollback target; no rollback was needed.
 
 Known release mode is manual Amplify deployment and versioned Lambda aliases. PR Merge/Push does not by itself establish live parity. This document does not claim a fresh audit of Amplify auto-build settings.
+
+## Nov 8 cutover evidence and limits
+
+- Main CI [run 42482561212](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/actions/runs/42482561212) completed successfully for `cdfdf7d` before deployment.
+- Exact backend ZIP: **778,841 bytes**, **19 allowlisted entries**, SHA-256 `4fa9657de8b480ea32b8eef425e376ff94d0134f250525108169d202dbc45249`. Published and live Lambda code hashes matched the artifact. No migration runner was invoked.
+- Preflight pinned account, clean source, artifact, version-8 alias/latest revisions, original environment hash and qualified Gateway integration. Updated `$LATEST`, changed only the audience environment key, published version 9, checked the numeric candidate, then conditionally moved `live` from 8 to 9.
+- Candidate checks: unauthenticated own-session/options/create/Submit returned 401; forward, legacy writes and a role-query attempt remained 503; public directory returned 200. These denied synthetic requests created no application or submission.
+- Post-cutover Gateway checks: unauthenticated session/options and Cognito-protected forward returned 401; directory returned 200; exact-origin preflight returned 204. Gateway rejection is distinct from the candidate's maintenance rejection. Directory success exercises a real read path, not intake acceptance.
+- Original round/Coordinator binding, maintenance stage, required controls and other environment values were preserved. Gateway routing, TU function configuration/aliases and frontend hashes were unchanged. No SQL, data correction, new resource, IAM, Gateway or frontend write was performed.
+- **Still pending:** actual TU Student #2 login, its matching approved RDS route, current intake open/close state, four real S3 files and Submit-to-Coordinator browser acceptance. No genuine TU/Cognito credentials or tokens were fabricated, requested in chat or read for deployment tests.
 
 ## Enabled audience and stage
 
 - `COED_API_MAINTENANCE=intake-pilot` — not `off`.
 - `COED_INTAKE_CONTROLS_REQUIRED=true`.
-- `COED_INTAKE_PILOT` is a strict three-UUID binding (`student_user_id`, `coordinator_user_id`, `cycle_id`). Values are private and deliberately omitted.
-- One approved TU Student, one assigned Cognito Coordinator and one separate test round **2569/1**. This is not general enrollment for all Students/rounds.
-- Round label: “รอบทดสอบรับสมัคร CO-ED 2569/1 · เฉพาะบัญชีที่อนุมัติ”. It was provisioned CLOSED; the owner confirmed that the Coordinator then selected manual open. **Last confirmed mode: `MANUAL_OPEN`**, not a promise it is still open now. Read the saved server status before testing.
+- `COED_INTAKE_AUDIENCE=routed-tu-students` — active exact TU linkage/onboarding and approved route membership replace the single Student UUID audience check.
+- `COED_INTAKE_PILOT` retains its strict three-UUID binding (`student_user_id`, `coordinator_user_id`, `cycle_id`). Round and Coordinator remain enforced; the Student UUID is retained for compatible single-account fallback. Values are private and deliberately omitted.
+- Other TU-onboarded Students may operate only when their own verified faculty/department and declared program type/curriculum match an active latest route in the existing bound round to the bound active Coordinator. The last documented round is **2569/1**; its data/labels were not changed or freshly queried. This is not opening every Student/round/curriculum.
+- Last documented round label (Nov 6): “รอบทดสอบรับสมัคร CO-ED 2569/1 · เฉพาะบัญชีที่อนุมัติ”. It was provisioned CLOSED; the owner confirmed that the Coordinator then selected manual open. **Last confirmed mode: `MANUAL_OPEN`**, not a promise it is still open now. Read the saved server status before testing.
 - The assigned Coordinator/three Committee accounts were explicitly copied to the separate test cohort. CPE/CS codes are **test routing only**, not an official certification of the Student's curriculum or major. Committee actions are still disabled.
 
 Coordinator may choose scheduled open/close or manual-until-closed for that round. The previously proposed 48-hour cap was superseded. Neither manual opening nor changing dates widens the pilot audience or bypasses the deployment stage.
@@ -32,9 +43,9 @@ Coordinator may choose scheduled open/close or manual-until-closed for that roun
 | Feature | Current released boundary |
 | --- | --- |
 | TU login / first registration / own profile | Enabled under verified identity/onboarding rules |
-| Draft create/save | Enabled only for the bound Student/round when intake permits |
+| Draft create/save | Enabled for routed TU membership within the bound round when intake permits |
 | Four real files, authorized preview/download | Enabled for the scoped workflow |
-| Explicit Submit / immutable destination receipt | Enabled for the scoped pilot; owner confirmed genuine use |
+| Explicit Submit / immutable destination receipt | Enabled for routed membership; genuine use confirmed only for the earlier single-account pilot, new-account acceptance pending |
 | Coordinator read of same submission / named document Download | Enabled for assigned Coordinator; owner confirmed filename/extension fix |
 | Coordinator intake open/close control | Enabled for assigned whole-round Coordinator |
 | Public company directory | Names/locations/logos available; positions/details require login |
@@ -53,7 +64,9 @@ An S3 signed URL issued before Close can remain usable until normal expiry; atta
 
 ## Evidence provenance and handoff limits
 
-Local ignored checkpoints used for this summary:
+The Nov 8 sanitized release/deployment manifest is local-only at `tmp/release-candidates/routed-tu-cdfdf7d/release-manifest.json`, status `DEPLOYED_SMOKE_VERIFIED_OWNER_ACCEPTANCE_PENDING`; its matching ZIP and one-off guarded controller are not tracked team release tools. Source/artifact/target/probe/rollback evidence is summarized above so the handoff does not rely on possessing that directory.
+
+Earlier local ignored checkpoints used for the Nov 6 evidence:
 
 - `tmp/tu-production/production-mW7iTn/state.json`: trial, Apply and verified temporary-tool cleanup.
 - `tmp/tu-production/production-nSRr3Y/state.json`: staged API rollout to 8 and genuine owner Draft/file confirmations. Its status was still awaiting final Submit acceptance; the later owner confirmation supplements it, rather than pretending the old checkpoint changed.
