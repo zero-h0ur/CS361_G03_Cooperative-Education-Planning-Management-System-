@@ -35,6 +35,7 @@ export const SELECTION_STUDENT_SCENARIOS = Object.freeze({
 
 export const SELECTION_SCENARIOS = Object.freeze({
   pending: 'รอรับเรื่อง / เริ่มให้ความเห็น',
+  'academic-handoff': 'รับข้อมูลที่ Coordinator ตรวจรับรอง · อ่านอย่างเดียว (จำลอง)',
   revision: 'ส่งกลับให้แก้ไขแล้ว 1 รายการ',
   review: 'บันทึกแล้วหนึ่งความเห็น',
   complete: 'ครบสามความเห็น รอประกาศผล (ไม่ใช่อนุมัติ)',

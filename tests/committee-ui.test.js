@@ -40,3 +40,11 @@ test('server refresh removes old delegated listeners before the next confirmatio
  root.querySelector('[data-go="results"]').click();root.querySelector('#suggestSelection').click();
  const spy=jest.spyOn(HTMLDialogElement.prototype,'showModal');root.querySelector('#confirmResults').click();expect(spy).toHaveBeenCalledTimes(1);spy.mockRestore();
 });
+
+test('handoff-only workspace can read applicants but disables proposal, vote and selection actions',async()=>{
+ const data={...model(),can_decide:false};const client={request:jest.fn(async()=>JSON.parse(JSON.stringify(data)))};
+ const controller=new AbortController(),host=renderCommitteeWorkspace({client,signal:controller.signal});document.body.append(host);await flush();
+ const root=host.shadowRoot || host;expect(root.textContent).toContain('ยังไม่เปิดลงมติ');
+ for(const b of root.querySelectorAll('[data-propose],[data-review],[data-vote],#confirmResults,#suggestSelection'))expect(b.disabled).toBe(true);
+ expect(client.request.mock.calls.every(([,options])=>!options || !options.method || options.method==='GET')).toBe(true);controller.abort();
+});

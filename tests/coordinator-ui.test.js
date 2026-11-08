@@ -135,3 +135,37 @@ describe('Coordinator named document downloads',()=>{
     expect(clicks).toHaveLength(0);expect(URL.createObjectURL).not.toHaveBeenCalled();
   });
 });
+
+test('academic review requires every manual check, retains an uncertain retry operation and unlocks forward after saved confirmation',async()=>{
+  let failOnce=true;const attempted=[];
+  const {root,request}=await setup({scenario:'academic-review',wrap:original=>async(path,options)=>{
+    if(path.endsWith('/academic-review'))attempted.push(options.body.operation_id);
+    if(path.endsWith('/academic-review') && failOnce){failOnce=false;throw new Error('Synthetic uncertain network failure');}
+    return original(path,options);
+  }});
+  const forward=find(root,'รับเรื่องและส่งต่อกรรมการ');expect(forward.disabled).toBe(true);
+  const form=root.querySelector('.coord-academic-form');expect(form).not.toBeNull();expect(form.querySelectorAll('input[type=checkbox]')).toHaveLength(6);
+  expect(form.textContent).toContain('เกรดสูงสุดตั้งแต่ C และ GPAX ตรงกับ Transcript');expect(form.textContent).not.toContain('ไม่มีเรียนซ้ำหลังผ่าน C');
+  for(const check of form.querySelectorAll('input')){check.checked=true;check.dispatchEvent(new Event('change',{bubbles:true}));}
+  const notes=form.querySelector('textarea');notes.value='Synthetic Transcript checked';notes.dispatchEvent(new Event('input',{bubbles:true}));
+  form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));find(root,'ยืนยันบันทึกผลรับรอง').click();await flush();
+  expect(notes.value).toBe('Synthetic Transcript checked');expect(root.textContent).toContain('ผลตรวจที่กรอกยังอยู่');
+  form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));find(root,'ยืนยันบันทึกผลรับรอง').click();await flush();await flush();
+  const calls=request.mock.calls.filter(([path])=>path.endsWith('/academic-review'));
+  // The wrapper's first failure happened before the underlying fake server.
+  expect(calls).toHaveLength(1);expect(attempted).toHaveLength(2);expect(attempted[0]).toBe(attempted[1]);expect(calls[0][1].body.checks.grades).toBe(true);
+  expect(find(root,'รับเรื่องและส่งต่อกรรมการ').disabled).toBe(false);expect(root.textContent).toContain('ตรวจรับรองแล้ว');
+});
+test('missing verified policy keeps academic certification and forwarding disabled',async()=>{
+ const {root,request}=await setup({scenario:'academic-policy-pending'});
+ expect(root.textContent).toContain('ต้องมีเกณฑ์หลักสูตรที่ยืนยันแล้ว');expect(find(root,'ตรวจทานและบันทึกผลรับรอง').disabled).toBe(true);
+ expect(find(root,'รับเรื่องและส่งต่อกรรมการ').disabled).toBe(true);
+ expect(request.mock.calls.some(([path])=>path.endsWith('/academic-review'))).toBe(false);
+});
+test('canceling a filter change preserves unsaved academic notes and restores the displayed filter',async()=>{
+ const {root,request}=await setup({scenario:'academic-review'}),confirm=jest.spyOn(window,'confirm').mockReturnValue(false);
+ const notes=root.querySelector('.coord-academic-form textarea');notes.value='Synthetic unsaved evidence';notes.dispatchEvent(new Event('input',{bubbles:true}));
+ const before=request.mock.calls.length,filter=root.querySelector('.coord-filters select');filter.value='FORWARDED';filter.dispatchEvent(new Event('change',{bubbles:true}));await flush();
+ expect(confirm).toHaveBeenCalled();expect(request.mock.calls).toHaveLength(before);expect(filter.value).toBe('');expect(root.querySelector('.coord-academic-form textarea')).toBe(notes);expect(notes.value).toBe('Synthetic unsaved evidence');
+ confirm.mockReturnValue(true);filter.value='FORWARDED';filter.dispatchEvent(new Event('change',{bubbles:true}));await flush();expect(request.mock.calls.length).toBeGreaterThan(before);
+});

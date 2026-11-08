@@ -1,3 +1,4 @@
+import {renderAcademicReview} from './academic-review.js';
 import form from '../../shared/application-form.js';
 import {createWorkspaceIcon} from '../ui/workspace-presentation.js';
 import {el,text,score,date,button,badge,rows,table,note,dialog} from './components.js';
@@ -83,7 +84,7 @@ export function declarationsPanel(record) {
     const marker=el('span','coord-declaration-marker');marker.setAttribute('aria-hidden','true');marker.append(createWorkspaceIcon('check'));
     l.append(check,marker,el('span','coord-declaration-text',label));if(!check.checked)l.append(el('small','coord-muted','ไม่ได้รับรองในฉบับนี้'));item.append(l);list.append(item);}root.append(list,note('เครื่องหมายถูกเป็นคำรับรองของนักศึกษา ไม่ใช่ผลตรวจอัตโนมัติหรือผลคัดเลือก'));return root;
 }
-export function renderDetail(record,{activeTab='summary',onTab,onReturn,onForward,onDownload,host,signal,full=false}={}) {
+export function renderDetail(record,{activeTab='summary',onTab,onReturn,onForward,onConfirmAcademics,onAcademicDirty,onDownload,host,signal,full=false}={}) {
   const root=el('article','coord-detail'),header=el('header','coord-detail-header'),title=el('div');
   title.append(el('p','coord-muted',`${record.cycle_name || 'รอบรับสมัคร'} · ใบสมัครฉบับที่ส่ง v${record.submitted_version}`),el('h2','',`${text(record.student_number)} · ${text(record.full_name)}`),
     el('p','',`${text(record.official?.department)} / หลักสูตร ${text(record.curriculum)} / ${text(record.major_group)}`),badge(record.state));
@@ -93,7 +94,7 @@ export function renderDetail(record,{activeTab='summary',onTab,onReturn,onForwar
   },{icon:'file'}));root.append(header);
   if(record.reason)root.append(note('ส่งกลับแก้ไข: '+record.reason));
   if(record.academic_source==='STUDENT_DECLARED')root.append(note('หลักสูตร กลุ่มวิชา และผลการเรียนเป็นข้อมูลที่นักศึกษาแจ้ง · รอตรวจหลักฐาน ไม่ใช่ข้อมูลการศึกษาที่ TU ยืนยัน'));
-  if(record.assessment?.review_required)root.append(note('ผลตรวจคุณสมบัติ: รอตรวจสอบ ไม่ใช่ผ่านคุณสมบัติ · ช่วงทดลองนี้เปิดให้อ่านใบสมัครและเอกสารเท่านั้น'));
+  if(record.assessment?.review_required)root.append(note('ผลตรวจคุณสมบัติ: ผลในใบสมัครต้นฉบับยังรอตรวจสอบ · ผลรับรองของ Coordinator จะแสดงแยกจากต้นฉบับ'));
   const tablist=el('div','coord-tabs');tablist.setAttribute('role','tablist');tablist.setAttribute('aria-label','รายละเอียดใบสมัคร');
   const panels=el('div','coord-panels'),prefix='coord-'+crypto.randomUUID();
   const content={summary:()=>summaryPanel(record),grades:()=>gradesPanel(record,{onAll:()=>dialog(host,'ผลการเรียนทั้งหมด',gradesPanel(record,{all:true}),{signal})}),
@@ -107,8 +108,11 @@ export function renderDetail(record,{activeTab='summary',onTab,onReturn,onForwar
     b.addEventListener('keydown',event=>{let index=TABS.findIndex(([id])=>id===activeTab);if(event.key==='ArrowRight')index=(index+1)%TABS.length;else if(event.key==='ArrowLeft')index=(index+TABS.length-1)%TABS.length;else if(event.key==='Home')index=0;else if(event.key==='End')index=TABS.length-1;else return;event.preventDefault();activate(TABS[index][0],true);});
     tablist.append(b);const panel=el('section','coord-tab-panel');panel.id=b.id+'-panel';panel.dataset.panel=key;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',b.id);panel.tabIndex=0;panel.append(content[key]());panels.append(panel);
   }activate(activeTab);root.append(tablist,panels);
+  if(record.academic_review)root.append(renderAcademicReview(record,{onConfirm:onConfirmAcademics,onDirty:onAcademicDirty,signal}));
   const footer=el('footer','coord-detail-actions');
-  if(record.can_review && onReturn && onForward){footer.append(button('ส่งกลับแก้ไข',onReturn,{icon:'return'}),button('รับเรื่องและส่งต่อกรรมการ',onForward,{primary:true,icon:'arrow'}),el('small','coord-action-note','การรับเรื่องยังไม่ใช่การประกาศผลคัดเลือก'));}
+  if(record.can_review && onReturn && onForward){const forward=button('รับเรื่องและส่งต่อกรรมการ',onForward,{primary:true,icon:'arrow'});forward.disabled=record.can_forward===false;
+    if(forward.disabled)forward.title='ต้องตรวจรับรองหลักฐานตามเกณฑ์ที่ยืนยันล่าสุดก่อน';
+    footer.append(button('ส่งกลับแก้ไข',onReturn,{icon:'return'}),forward,el('small','coord-action-note','การรับเรื่องยังไม่ใช่การประกาศผลคัดเลือก'));}
   else footer.append(note(record.access?.read_only?'ช่วงทดลองนี้เปิดให้อ่านใบสมัครเท่านั้น ยังไม่เปิดรับเรื่อง ส่งกลับ หรือส่งต่อกรรมการ':record.state==='RETURNED'?'รอนักศึกษาแก้ไขและส่งฉบับใหม่ ข้อมูลด้านบนเป็นฉบับที่ส่งล่าสุด':record.state==='FORWARDED'?'ส่งให้กรรมการแล้ว ติดตามข้อมูลได้ที่ “ติดตามการพิจารณา”':'รอบนี้ไม่เปิดให้ทำรายการ ตรวจสอบกำหนดการหรือโหลดข้อมูลล่าสุด'));
   root.append(footer);return root;
 }

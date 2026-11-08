@@ -2,7 +2,7 @@
 import form from '../../src/shared/application-form.js';
 const copy=value=>JSON.parse(JSON.stringify(value));
 const uuid=n=>'16500000-0000-4000-8000-'+String(n).padStart(12,'0');
-export const COORDINATOR_SCENARIOS=Object.freeze({pending:'ตรวจใบสมัคร · 3 สถานะ',ranking:'ติดตามผล · เรียงเกรดทั้งสองภาค',revision:'ใบสมัครที่ส่งกลับแก้ไข',complete:'กรรมการยืนยันรายชื่อแล้ว',
+export const COORDINATOR_SCENARIOS=Object.freeze({pending:'ตรวจใบสมัคร · 3 สถานะ','academic-review':'ตรวจรับรองหลักฐาน · เกณฑ์ครบ (จำลอง)','academic-policy-pending':'รอเกณฑ์หลักสูตร (จำลอง)',ranking:'ติดตามผล · เรียงเกรดทั้งสองภาค',revision:'ใบสมัครที่ส่งกลับแก้ไข',complete:'กรรมการยืนยันรายชื่อแล้ว',
   'missing-data':'ข้อมูล / เอกสารไม่ครบ','long-text':'ชื่อและทักษะยาว','failed-command':'บันทึกล้มเหลว · เก็บข้อมูลเดิม',conflict:'ข้อมูลเปลี่ยนระหว่างใช้งาน','readonly-schedule':'กำหนดการอ่านอย่างเดียว','intake-controls':'เปิด/ปิดรับสมัคร · ข้อมูลจำลอง',empty:'ยังไม่มีใบสมัคร',loading:'กำลังโหลด',error:'โหลดไม่สำเร็จ',forbidden:'ถูกถอนสิทธิ์',expired:'Session หมดอายุ'});
 export function coordinatorPreview(scenario='pending') {
   const cycle=uuid(100),receipts=new Map(),members=[uuid(201),uuid(202),uuid(203)];
@@ -22,6 +22,11 @@ export function coordinatorPreview(scenario='pending') {
       submitted_at:'2026-11-02T0'+(6-i)+':15:00Z',official,payload,
       documents:['resume','transcript','photo','conduct'].map((kind,j)=>({id:uuid(400+i*4+j),kind,filename:kind+(kind==='photo'?'.jpg':'.pdf'),content_type:kind==='photo'?'image/jpeg':'application/pdf',byte_size:[245,812,180,320][j]*1024}))};
   });
+  if(scenario.startsWith('academic-')){
+    const a=applications[0],pending=scenario==='academic-policy-pending';
+    a.assessment={eligibility:'UNKNOWN',group_gpa:null,review_required:true};a.academic_source='STUDENT_DECLARED';a.can_forward=false;a.can_confirm_academics=!pending;
+    a.academic_review={schema_ready:true,version:0,record:null,confirmed:false,preview:{can_confirm:!pending,eligibility:pending?'UNKNOWN':'PASS',group_gpa:pending?null:'3.0000',gpax:'3.65',policy:pending?null:{id:uuid(900),version:1,curriculum:'66',source:'เอกสารเกณฑ์จำลองสำหรับ Preview'},blockers:pending?[{code:'POLICY_PENDING',message:'ต้องมีเกณฑ์หลักสูตรที่ยืนยันแล้ว พร้อมแหล่งอ้างอิง'}]:[]}};
+  }
   if(scenario==='empty')applications=[];
   if(scenario==='missing-data'){applications[0].documents=applications[0].documents.slice(0,2);applications[0].core=null;applications[0].gpax=null;applications[0].payload.acknowledgements.conduct=false;}
   if(scenario==='long-text'){applications[0].full_name=applications[0].official.full_name='นักศึกษาข้อมูลชื่อยาวสำหรับทดสอบการตัดบรรทัดบนโทรศัพท์มือถือ';applications[0].payload.skills_detail='คำตอบปลายเปิดที่นักศึกษากรอกไว้ตามต้นฉบับ\n'.repeat(100);}
@@ -54,10 +59,16 @@ export function coordinatorPreview(scenario='pending') {
           schedule={...schedule,...body,version:schedule.version+1,window_version:schedule.window_version+1};receipts.set(body.operation_id,copy(schedule));
         }return copy(schedule);
       }
-      const match=/\/applications\/([^/]+)(?:\/(return|forward))?$/.exec(u.pathname);
+      const match=/\/applications\/([^/]+)(?:\/(return|forward|academic-review))?$/.exec(u.pathname);
       if(match){const record=applications.find(a=>a.id===match[1]);if(!record)throw new Error('ไม่พบใบสมัครจำลอง');
         if(options.method==='POST'){
           if(receipts.has(body.operation_id))return copy(receipts.get(body.operation_id));
+          if(match[2]==='academic-review'){
+            if(!record.can_confirm_academics || body.expected_version!==record.academic_review.version)throw Object.assign(new Error('ผลตรวจเปลี่ยนแล้ว (จำลอง)'),{status:409});
+            record.academic_review.confirmed=true;record.academic_review.version++;record.academic_review.record={created_at:'2026-11-08T14:00:00Z',checks:body.checks,note:body.note};record.can_forward=true;
+            receipts.set(body.operation_id,copy(record));return copy(record);
+          }
+          if(record.can_forward===false && match[2]==='forward')throw Object.assign(new Error('ต้องตรวจรับรองก่อน (จำลอง)'),{status:422});
           if(record.review_version!==body.expected_version || record.submission_id!==body.submission_id || record.state!=='PENDING')throw Object.assign(new Error('ใบสมัครเปลี่ยนแล้ว (จำลอง)'),{status:409});
           Object.assign(record,{state:match[2]==='return'?'RETURNED':'FORWARDED',reason:body.reason || null,can_review:false,review_version:record.review_version+1});receipts.set(body.operation_id,copy(record));
         }return copy(record);

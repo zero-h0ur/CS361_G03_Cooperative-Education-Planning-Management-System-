@@ -59,7 +59,7 @@ export function renderCommitteeWorkspace({ client, signal, onSessionExpired, onA
     }
   }
   async function persist(body, button) {
-    if (signal?.aborted) return;
+    if (signal?.aborted || model.can_decide===false) return;
     button.disabled = true;button.setAttribute("aria-busy","true");
     const signature = JSON.stringify(body);
     if (pendingCommand?.signature !== signature) pendingCommand = { signature, body: { ...body, operation_id: crypto.randomUUID(), expected_version: model.version } };
@@ -220,7 +220,7 @@ export function renderCommitteeWorkspace({ client, signal, onSessionExpired, onA
       const title = { applicants: ["พิจารณาผู้สมัคร", "ดูข้อมูลและจัดอันดับผู้สมัคร เพื่อประกอบมติคัดเลือกเข้าแผนสหกิจศึกษา"], capacity: ["พิจารณาจำนวนรับ", "เสนอจำนวนรับร่วมกัน และบันทึกความเห็นของกรรมการในรอบนี้"], results: ["สรุปผลการคัดเลือก", "ตรวจทานรายชื่อให้ครบ ก่อนส่งผลคัดเลือกให้ Coordinator ประกาศ"] };
       $("#pageTitle").textContent = title[currentView][0];
       $("#pageDescription").textContent = title[currentView][1];
-      $("#roundState").textContent = finalized ? "รอประกาศผล" : "อยู่ระหว่างคัดเลือก";
+      $("#roundState").textContent = model.can_decide===false?"รับข้อมูลจาก Coordinator · ยังไม่เปิดลงมติ":finalized ? "รอประกาศผล" : "อยู่ระหว่างคัดเลือก";
       $("#accountName").textContent = "Committee 0" + me;
       $("#accountAvatar").textContent = "0" + me;
       $("#navPending").textContent = proposal.status === "pending" && proposal.votes[me] === "pending" ? " · 1" : "";
@@ -231,6 +231,9 @@ export function renderCommitteeWorkspace({ client, signal, onSessionExpired, onA
       renderApplicants();
       renderCapacity();
       renderResults();
+      if(model.can_decide===false){
+        for(const b of document.querySelectorAll('#submitProposal,#submitVote,#sendResults,#confirmResults,#suggestSelection,[data-select],[data-propose],[data-review],[data-vote],[data-new-proposal]')){b.disabled=true;b.title='ยังไม่เปิดการลงมติกรรมการ';}
+      }
       document.querySelectorAll(".count").forEach((n) => {
         if (n.closest(".panel-head") && n.parentElement.tagName === "H2") n.textContent = students.length;
       });
@@ -295,7 +298,7 @@ export function renderCommitteeWorkspace({ client, signal, onSessionExpired, onA
     }
     function detailContent(s) {
       const p = s.payload || {};
-      if (detailTab === "grades") return `<h3>ผลการเรียนที่แจ้งในใบสมัคร</h3><dl class="data-grid"><div><dt>ค่าเฉลี่ยวิชาหลักที่แจ้ง</dt><dd>${score(s.core)}</dd></div><div><dt>GPAX</dt><dd>${score(s.gpax)}</dd></div></dl><p>ตรวจเทียบกับ Transcript ก่อนยืนยันผล</p>`;
+      if (detailTab === "grades") return `<h3>${s.academic_review_id?"ผลการเรียนที่ Coordinator ตรวจรับรองตามเกณฑ์แล้ว":"ผลการเรียนที่แจ้งในใบสมัคร"}</h3><dl class="data-grid"><div><dt>ค่าเฉลี่ยวิชาหลักที่แจ้ง</dt><dd>${score(s.core)}</dd></div><div><dt>GPAX</dt><dd>${score(s.gpax)}</dd></div></dl><p>ตรวจเทียบกับ Transcript ก่อนยืนยันผล${s.reviewed_assessment?.policy?" · เกณฑ์รุ่น "+esc(s.reviewed_assessment.policy.version)+" · "+esc(s.reviewed_assessment.policy.source):""}</p>`;
       if (detailTab === "documents") return (s.documents || []).length ? (s.documents || []).map((d) => `<div class="doc-card"><strong>${esc(d.filename || d.kind)}</strong><button class="row-action" data-live-document="${esc(d.id)}">เปิดเอกสาร</button></div>`).join("") : "<p>ยังไม่มีเอกสารในใบสมัครที่ตรวจรับแล้ว</p>";
       return `<dl class="data-grid"><div><dt>ชื่อ–นามสกุล</dt><dd>${esc(s.name)}</dd></div><div><dt>รหัสนักศึกษา</dt><dd>${esc(s.number)}</dd></div><div><dt>หลักสูตร</dt><dd>${esc(s.curriculum || "ยังไม่มีข้อมูล")}</dd></div><div><dt>ทักษะ</dt><dd>${esc(p.skills_detail || "ยังไม่มีข้อมูล")}</dd></div></dl>`;
     }
