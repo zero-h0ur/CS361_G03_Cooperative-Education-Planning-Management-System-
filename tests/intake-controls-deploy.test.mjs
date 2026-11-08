@@ -4,6 +4,9 @@ import {randomUUID} from 'node:crypto';
 import {stageEnvironment,promote,acknowledge,promotionProbe,assertControllerSource} from '../scripts/operations/intake-controls-deploy.mjs';
 import controls from '../src/api/services/intake-control-service.js';
 const scope={student_user_id:randomUUID(),coordinator_user_id:randomUUID(),cycle_id:randomUUID()};
+test('historical single-account C7 controller cannot promote a broader or unknown audience',()=>{
+ for(const audience of ['routed-tu-students','everyone',''])assert.throws(()=>stageEnvironment({COED_INTAKE_AUDIENCE:audience},scope,'intake-pilot'),/C7_AUDIENCE_DRIFT/);
+});
 const env={DB_USER:'coed_app',DB_NAME:'coed',CO_ED_APPLICATION_STORAGE:'s3',CO_ED_APPLICATION_BUCKET:'coed-v4-application-documents-130165494095-ap-southeast-2',
  TU_ONBOARDING_ENABLED:'true',COED_API_MAINTENANCE:'browse',AUTH_ISSUER:'preserved',DB_SECRET_ARN:'preserved'};
 test('C7 stages retain every unrelated setting and cannot turn maintenance off, widen audience or embed credentials',()=>{
