@@ -16,6 +16,8 @@
 
 Committee: any member proposes; exactly one pending proposal; proposer cannot vote; both other members accept; rejection permits a new proposal. An accepted capacity enables explicit finalization. Coordinator owns publication. Preserve a failed command's operation id when retrying an uncertain network result. Refresh on conflict; do not silently overwrite. Synthetic data stays in scripts/ui-preview.
 
+The proposal has one combined capacity for the assigned panel. The roster initially shows every assigned curriculum/program; filtering does not allocate new quotas or recalculate a separate cutoff. Ranking suggestions include ties at the combined cutoff. The server rejects contradictory combined/legacy counts; retained legacy normal/special records are displayed using their sum. Coordinator remembers the selected round only when it is still in the server-returned assigned options. A remembered round never grants scope. These UI consequences follow the integrated [Committee contract](docs/design/committee-workspace.md) and existing server panel/operation invariants.
+
 
 ## Coordinator academic evidence and Committee handoff
 

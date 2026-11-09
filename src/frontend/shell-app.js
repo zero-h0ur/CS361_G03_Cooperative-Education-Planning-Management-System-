@@ -571,10 +571,12 @@ function createStudentLayout({ role='STUDENT', route, onLogout, bodyNode }) {
   const navigation = createNavigation(role, route);
   const applications = navigation.querySelector('[href="#/student/application"]');
   if (applications) applications.lastChild.textContent = 'ใบสมัครสหกิจ';
-  const directory = element('a', 'shell-nav__link', 'สถานประกอบการ');
-  directory.href = 'company-directory.html';
-  directory.prepend(createWorkspaceIcon('building'));
-  navigation.append(directory);
+  if (role !== 'COMMITTEE') {
+    const directory = element('a', 'shell-nav__link', 'สถานประกอบการ');
+    directory.href = 'company-directory.html';
+    directory.prepend(createWorkspaceIcon('building'));
+    navigation.append(directory);
+  }
   const account = element('details', 'student-account');
   const summary = element('summary');
   const avatar = element('span', 'student-account__avatar', role==='COMMITTEE'?'กก':'นศ');

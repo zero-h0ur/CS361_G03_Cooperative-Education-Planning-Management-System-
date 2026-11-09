@@ -5,7 +5,7 @@
   display:flex;flex-direction:column;min-height:100dvh;color:var(--shell-ink);background:var(--coord-canvas);font-size:1rem;line-height:1.65;
 }
 .coordinator-portal *,.coordinator-portal *::before,.coordinator-portal *::after {box-sizing:border-box;}
-.coordinator-portal .shell-topbar {display:grid;grid-template-columns:190px minmax(0,1fr) auto;align-items:center;gap:24px;min-height:70px;padding:0 clamp(20px,3.8vw,56px);background:var(--coord-panel);border-bottom:1px solid var(--shell-line);}
+.coordinator-portal .shell-topbar {position:relative;z-index:50;display:grid;grid-template-columns:190px minmax(0,1fr) auto;align-items:center;gap:24px;min-height:70px;padding:0 clamp(20px,3.8vw,56px);background:var(--coord-panel);border-bottom:1px solid var(--shell-line);}
 .coordinator-portal .shell-brand {margin:0;gap:12px;}
 .coordinator-portal .shell-brand__mark {width:46px;height:46px;}
 .coordinator-portal .shell-brand__name {font-size:1.4rem;line-height:1.2;color:var(--shell-primary);}
@@ -14,16 +14,16 @@
 .coordinator-portal .shell-nav__link {display:flex;align-items:center;justify-content:center;padding:16px 0 13px;border:0;border-radius:0;border-bottom:3px solid transparent;color:var(--shell-ink);font-size:1rem;background:transparent;white-space:normal;line-height:1.5;text-decoration:none;}
 .coordinator-portal .shell-nav__link:hover {color:var(--shell-primary);background:transparent;}
 .coordinator-portal .shell-nav__link--active {border-bottom-color:var(--shell-primary);color:var(--shell-primary);font-weight:600;}
-.coordinator-portal .student-account {flex-shrink:0;}
+.coordinator-portal .student-account {position:relative;z-index:60;flex-shrink:0;}
 .coordinator-portal .student-account > summary {color:var(--shell-ink);font-size:.9rem;}
-.coordinator-portal .student-account__actions {z-index:12;}
+.coordinator-portal .student-account__actions {z-index:100;}
 .coordinator-portal .shell-content {flex:1;width:100%;max-width:none;min-width:0;margin:0;padding:0;}
-.coordinator-portal .student-page-header {background:#fbf7ef;border-color:var(--shell-line);}
+.coordinator-portal .student-page-header {position:relative;background:#fbf7ef;border-color:var(--shell-line);}
 .coordinator-portal .student-page-header__inner {min-height:148px;padding:18px clamp(20px,3.8vw,56px);}
 .coordinator-portal .student-page-header__title {max-width:75%;font-size:clamp(1.65rem,2.5vw,2.2rem);color:var(--shell-ink);font-weight:700;line-height:1.4;}
 .coordinator-portal .student-page-header__description {color:var(--shell-ink);margin:0;max-width:64%;line-height:1.5;}
 .coordinator-portal .student-page-header__meta {margin-top:8px;}
-.coordinator-portal .student-page-header__art {width:78%;opacity:1;filter:none;}
+.coordinator-portal .student-page-header__art {width:78%;opacity:1;filter:none;pointer-events:none;z-index:0;}
 .coord-cycle {max-width:100%;min-height:42px;min-width:270px;padding:6px 12px;border:1px solid var(--shell-line);border-radius:6px;background:var(--coord-panel);color:var(--shell-ink);font:inherit;}
 .coord-content {width:min(100%,1536px);margin-inline:auto;padding:18px clamp(16px,3.8vw,56px) 30px;min-width:0;}
 .coord-workspace h2,.coord-workspace h3 {margin:0;color:var(--shell-ink);font-weight:600;line-height:1.5;}

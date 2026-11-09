@@ -5,7 +5,7 @@ const {canRoleAccessRoute,getNavigationRoutesForRole}=require('../tmp/frontend-t
 const flush=()=>new Promise(r=>setTimeout(r,20));
 const find=(root,label)=>[...root.querySelectorAll('button')].find(b=>[...b.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('')===label || b.getAttribute('aria-label')===label);
 let controller;
-beforeEach(()=>{document.body.replaceChildren();controller=new AbortController();HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');this.dispatchEvent(new Event('close'));};});
+beforeEach(()=>{document.body.replaceChildren();window.sessionStorage.clear();controller=new AbortController();HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');this.dispatchEvent(new Event('close'));};});
 afterEach(()=>{controller.abort();jest.restoreAllMocks();});
 async function setup({page='review',scenario='pending',wrap,applicationClient}={}) {
   const clients=createWorkspacePreviewClients({role:'COORDINATOR',scenario});const request=jest.fn(clients.workflowClient.request);clients.workflowClient.request=wrap?wrap(request):request;
@@ -14,6 +14,14 @@ async function setup({page='review',scenario='pending',wrap,applicationClient}={
 test('three Coordinator routes are allowlisted only for Coordinator and replace the company menu',()=>{
   const routes=getNavigationRoutesForRole('COORDINATOR');expect(routes.map(r=>r.hash)).toEqual(['#/coordinator/applications','#/coordinator/tracking','#/coordinator/schedule']);
   for(const route of routes){expect(canRoleAccessRoute('COORDINATOR',route.hash)).toBe(true);for(const role of ['STUDENT','COMMITTEE','STAFF','ADVISOR','ADMIN'])expect(canRoleAccessRoute(role,route.hash)).toBe(false);}
+});
+test.each(['assigned-second','unassigned-stale'])('remembered round %s is used only when returned by assigned options',async saved=>{
+  window.sessionStorage.setItem('coed:coordinator:cycleId',saved);
+  const cycles=[{id:'assigned-first',name:'รอบ 1/2569'},{id:'assigned-second',name:'รอบ 2/2569'}];
+  const {root}=await setup({wrap:request=>async(path,options)=>path.endsWith('/options')?{cycles}:request(path,options)});
+  const expected=saved==='assigned-second'?saved:'assigned-first';
+  expect(root.querySelector('.coord-cycle').value).toBe(expected);
+  expect(window.sessionStorage.getItem('coed:coordinator:cycleId')).toBe(expected);
 });
 test('review has compact filters, consistent status shortcuts and five keyboard-accessible sections, no opinion counter',async()=>{
   const {root}=await setup();expect(root.querySelectorAll('.coord-filters .coord-field')).toHaveLength(5);expect(root.querySelectorAll('.coord-queue-item')).toHaveLength(3);
@@ -72,6 +80,18 @@ test('forward action requires explicit confirmation and exposes no publish/admit
   for(const id of modal.getAttribute('aria-describedby').split(' '))expect(document.getElementById(id)).not.toBeNull();
   find(modal,'รับเรื่องและส่งต่อกรรมการ').click();await flush();expect(request.mock.calls.filter(([,o])=>o?.method==='POST')).toHaveLength(1);
   expect(root.textContent).not.toContain('ประกาศผลการคัดเลือก');
+});
+test('pending academic evidence cannot be forwarded with a one-checkbox confirmation',async()=>{
+  const {root,request}=await setup({wrap:request=>async(path,options)=>{
+    const data=await request(path,options);
+    if(path.includes('/applications/') && !options?.method){
+      data.assessment={eligibility:'UNKNOWN',review_required:true};data.can_forward=false;
+    }
+    return data;
+  }});
+  const forward=find(root,'รับเรื่องและส่งต่อกรรมการ');expect(forward.disabled).toBe(true);forward.click();
+  expect(root.querySelector('dialog')).toBeNull();expect(root.querySelector('.coord-confirm-academic')).toBeNull();
+  expect(request.mock.calls.some(([,o])=>o?.method==='POST')).toBe(false);
 });
 test('tracking shows one three-member panel, plain sequential row positions, real secondary sorting, and read-only meeting summary',async()=>{
   const {root}=await setup({page:'tracking',scenario:'ranking'});expect(root.textContent).toContain('คณะกรรมการ 3 คน');

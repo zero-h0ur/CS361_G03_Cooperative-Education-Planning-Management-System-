@@ -1,5 +1,13 @@
 # Committee workspace (#142 / #143)
 
+## Current integration contract (2026-11-09)
+
+PR #172's combined-capacity and roster improvements are integrated with PR #171's confirmed academic-review source on a local review branch; this is not a deployment claim. Committee defaults to all assigned curricula/programs and labels each row. A new proposal sends integer `total` (1–999), not two new track quotas. Legacy `normal`/`special` inputs remain supported when complete and consistent with any supplied total; conflicting/malformed values fail validation. Old records are read using the sum when `total` is absent. The combined ranking cutoff includes ties and is independent of visible roster filters. Coordinator shows the same total and remembers only a still-assigned round.
+
+Forwarding still requires a separate retained six-check academic review, a complete latest verified policy and computed PASS where academic review is required. A legacy `confirm_academic_review` checkbox is not accepted as a substitute. Review start/end boundaries remain mandatory; manual intake opening does not create an unlimited review window. Committee handoff remains read-only when the backend denies decisions. Original submission/checksum and reviewed provenance remain separately visible. See [academic-review contract](../api/v4-academic-review.md) and [integration verification](../operations/committee-integration-verification.md).
+
+The sections below retain the original #142/#143 implementation and its historical verification/rollout scope. Do not use their fresh migration instructions against observed RDS.
+
 ## Change
 - Shared Student theme and shell, separate Committee roster/ranking, capacity proposal, voting and final review.
 - Preview has 16 synthetic applicants with opposite grade priorities and a tied cutoff. No synthetic records are inserted into AWS.

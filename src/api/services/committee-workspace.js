@@ -47,20 +47,22 @@ class CommitteeWorkspaceService {
     }));
     const hasReviews=await academicReview.ready(db);
     const phase1=(await db.query(`SELECT a.id,sub.snapshot,sub.application_version,sub.id AS submission_id,sub.checksum,
-      ${hasReviews?'ar.assessment AS reviewed_assessment,ar.id AS academic_review_id':'NULL::jsonb AS reviewed_assessment,NULL::uuid AS academic_review_id'},sub.snapshot->'official'->>'program' AS program
-      FROM phase1_reviews rv JOIN phase1_applications a ON a.id=rv.application_id
+      ${hasReviews?'ar.assessment AS reviewed_assessment,ar.id AS academic_review_id':'NULL::jsonb AS reviewed_assessment,NULL::uuid AS academic_review_id'},
+      COALESCE(sub.snapshot->'official'->>'program',sub.snapshot->'declared_academic'->>'program_type',sub.snapshot->'payload'->>'program_type',c.program) AS program
+      FROM phase1_reviews rv JOIN selection_cohorts c ON c.id=rv.cohort_id
+      JOIN phase1_applications a ON a.id=rv.application_id
       JOIN phase1_submissions sub ON sub.id=rv.submission_id JOIN students st ON st.id=a.student_id
       ${hasReviews?`LEFT JOIN LATERAL(SELECT * FROM phase1_academic_reviews x WHERE x.submission_id=sub.id AND x.submission_checksum=sub.checksum ORDER BY version DESC LIMIT 1) ar ON true`:''}
       WHERE rv.cohort_id=ANY($1::uuid[]) AND rv.state='FORWARDED' AND a.status='SUBMITTED'
       ORDER BY a.id`,[cohort.ids || [cohort.id]])).rows.map(s=>({
         id:s.id,name:s.snapshot.official?.full_name || s.snapshot.payload?.thai_full_name || null,
-        number:s.snapshot.official?.student_number || null,payload:s.snapshot.payload,
+        number:s.snapshot.official?.student_number || s.snapshot.declared_academic?.student_number || s.snapshot.payload?.student_number || null,payload:s.snapshot.payload,
         documents:(s.snapshot.documents || []).map(d=>({id:d.id,filename:d.filename,kind:d.kind})),
         core:s.reviewed_assessment?.eligibility==='PASS'?Number(s.reviewed_assessment.group_gpa):academic(s.snapshot,{allowSynthetic:this.allowSynthetic}).core,
         gpax:s.reviewed_assessment?.eligibility==='PASS'?Number(s.reviewed_assessment.gpax):academic(s.snapshot,{allowSynthetic:this.allowSynthetic}).gpax,
-        curriculum:s.reviewed_assessment?.curriculum || s.snapshot.official?.curriculum || s.snapshot.declared_academic?.curriculum || null,
+        curriculum:s.reviewed_assessment?.curriculum || s.snapshot.official?.curriculum || s.snapshot.declared_academic?.curriculum || s.snapshot.payload?.curriculum || null,
         academic_review_id:s.academic_review_id,reviewed_assessment:s.reviewed_assessment,original_assessment:s.snapshot.assessment || null,submission_id:s.submission_id,checksum:s.checksum,
-        program:s.reviewed_assessment?.program_type || s.snapshot.declared_academic?.program_type || (/พิเศษ|special/i.test(s.program)?'special':'regular'),
+        program:s.reviewed_assessment?.program_type || s.snapshot.declared_academic?.program_type || (/พิเศษ|special|\bACS\b/i.test(s.program)?'special':'regular'),
         plan_version:s.application_version,received_version:s.application_version,source:'PHASE1'
       }));
     return [...legacy,...phase1];
@@ -108,7 +110,7 @@ class CommitteeWorkspaceService {
   async mutate(actor, id, body) {
     if(process.env.COED_API_MAINTENANCE && process.env.COED_API_MAINTENANCE!=='off')throw new ServiceUnavailableError('ยังไม่เปิดการลงมติกรรมการ','COED_MAINTENANCE');
     v.uuid(id, "cohort_id");
-    v.fields(body, ["operation_id", "expected_version", "action", "normal", "special", "reason", "selected", "ranking"]);
+    v.fields(body, ["operation_id", "expected_version", "action", "total", "normal", "special", "reason", "selected", "ranking"]);
     v.command(body);
     const db = await this.db().connect();
     try {

@@ -19,6 +19,9 @@
 # macOS system files
 .DS_Store
 
+# Local deployment archives
+*.zip
+
 # Node.js
 data/raw-companies-*.csv
 data/form-responses-*.csv
