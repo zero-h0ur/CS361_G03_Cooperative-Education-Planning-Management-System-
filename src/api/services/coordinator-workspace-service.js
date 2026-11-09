@@ -65,7 +65,7 @@ class CoordinatorWorkspaceService {
     const record={id:row.id,cycle_id:row.cycle_id,cycle_name:row.cycle_name,cohort_id:row.cohort_id,
       application_version:row.application_version,submission_id:row.submission_id,submitted_version:row.submitted_version,
       review_version:row.review_version || 0,state,reason:row.reason || null,submitted_at:row.submitted_at,
-      cycle_status:row.cycle_status,student_number:official.student_number || null,full_name:official.full_name || p.thai_full_name || null,
+      cycle_status:row.cycle_status,student_number:official.student_number || s.declared_academic?.student_number || p.student_number || null,full_name:official.full_name || p.thai_full_name || null,
       curriculum:official.curriculum || s.declared_academic?.curriculum || null,academic_source:s.declared_academic?.source || 'CANONICAL',
       assessment:s.assessment || null,program:row.program,program_type:s.declared_academic?.program_type || track(row.program),major_group:p.major_group || null,
       positions:p.interested_position_codes || [],...domain.academic(s,{allowSynthetic:this.allowSynthetic})};

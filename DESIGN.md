@@ -55,6 +55,8 @@ Native selects and checkboxes preserve keyboard behavior. Native HTML dialog own
 
 Coordinator academic review reuses the existing field, feedback and confirmation dialog helpers. Keep the unconfirmed calculation, saved review and original submission provenance visibly distinct. Six evidence checks require deliberate input; saved checks/notes are read-only. Missing approved criteria explains the disabled confirmation/forward actions. Committee handoff displays a read-only stage label and disables decision controls until the server permits them. No new palette or competing review page is introduced.
 
+Committee lists default to all assigned curricula and program types, with each applicant's track/curriculum labeled. A capacity proposal uses one combined total. Filters change roster visibility only; the total and ranking cutoff remain panel-wide. Coordinator tracking uses the same combined-total wording, while legacy proposal records remain readable. Keep the existing institutional tokens and native controls.
+
 Student academic entry keeps the same native labeled selects, course sections and stepper. A fixed program course and highest-grade-only entry are business variants, not a new visual system. Show the C minimum and three-credit rule as help text; keep old submitted evidence readable in its original form.
 
 ## Motion

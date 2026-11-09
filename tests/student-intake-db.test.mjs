@@ -404,6 +404,22 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
     assert.notEqual(app.submission.id,original.id);detail=await staff.detail(coordinator,app.id);assert.equal(detail.can_forward,false);assert.equal(detail.academic_review.version,0);
     await assert.rejects(staff.confirmAcademics(coordinator,app.id,{...reviewBody(app),submission_id:original.id}),e=>e.statusCode===409);
     await staff.confirmAcademics(coordinator,app.id,reviewBody(app));
+    // Intake being manually open never makes the review interval optional.
+    const reviewWindow=(await owner.query('SELECT * FROM coordinator_round_schedules WHERE cycle_id=$1',[cycle])).rows[0];
+    const intakeWindow=(await owner.query('SELECT * FROM phase1_cycle_windows WHERE cycle_id=$1',[cycle])).rows[0];
+    try{
+     await owner.query("UPDATE coordinator_round_schedules SET review_opens_at=now()+interval '15 minutes',review_closes_at=now()+interval '30 minutes' WHERE cycle_id=$1",[cycle]);
+     assert.equal((await staff.detail(coordinator,app.id)).can_review,false);
+     await assert.rejects(staff.review(coordinator,app.id,{operation_id:id(),expected_version:2,submission_id:app.submission.id},'forward'),e=>e.code==='INVALID_STATE_TRANSITION');
+     await owner.query('DELETE FROM coordinator_round_schedules WHERE cycle_id=$1',[cycle]);
+     await owner.query('DELETE FROM phase1_cycle_windows WHERE cycle_id=$1',[cycle]);
+     assert.equal((await staff.detail(coordinator,app.id)).can_review,false);
+     await assert.rejects(staff.review(coordinator,app.id,{operation_id:id(),expected_version:2,submission_id:app.submission.id},'forward'),e=>e.code==='INVALID_STATE_TRANSITION');
+    }finally{
+     await owner.query('DELETE FROM coordinator_round_schedules WHERE cycle_id=$1',[cycle]);
+     await owner.query('INSERT INTO coordinator_round_schedules SELECT * FROM jsonb_populate_record(NULL::coordinator_round_schedules,$1::jsonb)',[JSON.stringify(reviewWindow)]);
+     if(intakeWindow)await owner.query('INSERT INTO phase1_cycle_windows SELECT * FROM jsonb_populate_record(NULL::phase1_cycle_windows,$1::jsonb)',[JSON.stringify(intakeWindow)]);
+    }
     await assert.rejects(board.read(member),e=>e.code==='COED_MAINTENANCE');process.env.COED_COMMITTEE_HANDOFF_ENABLED='true';
     assert.ok(!(await board.read(member)).students.some(s=>s.id===app.id));
     const forward={operation_id:id(),expected_version:2,submission_id:app.submission.id};

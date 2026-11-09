@@ -22,7 +22,7 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
     if(error.status===403||error.code==='ACCESS_DENIED'){onAccessDenied?.('ไม่มีสิทธิ์ทำรายการในขอบเขตนี้');return;}feedback(status,error.message || 'โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่',true);}
   function header(){const meta=el('div','student-page-header__meta'),picker=el('select','coord-cycle');picker.setAttribute('aria-label','รอบรับสมัคร');
     for(const cycle of cycles)picker.append(new Option(cycle.name,cycle.id));picker.value=cycleId;picker.disabled=!cycles.length || busy;
-    picker.addEventListener('change',()=>{if(busy){picker.value=cycleId;feedback(status,'กรุณารอทำรายการปัจจุบันให้เสร็จก่อนเปลี่ยนรอบ');return;}if(hasChanges()&&!canLeave()){picker.value=cycleId;return;}cycleId=picker.value;dirty=false;academicDirty=false;pageNo=1;selectedId=null;scheduleAttempt=null;attempts.clear();drawHeader();load();});
+    picker.addEventListener('change',()=>{if(busy){picker.value=cycleId;feedback(status,'กรุณารอทำรายการปัจจุบันให้เสร็จก่อนเปลี่ยนรอบ');return;}if(hasChanges()&&!canLeave()){picker.value=cycleId;return;}cycleId=picker.value;try{window.sessionStorage?.setItem('coed:coordinator:cycleId',cycleId);}catch{}dirty=false;academicDirty=false;pageNo=1;selectedId=null;scheduleAttempt=null;attempts.clear();drawHeader();load();});
     meta.append(picker);return renderStudentPageHeader({title:PAGE[page][0],description:PAGE[page][1],meta});}
   const intakeHost=el('div','coord-content');
   let heading=header();root.append(heading,intakeHost,content);
@@ -107,7 +107,7 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
       else{body.append(el('h3','','จำนวนรับนักศึกษาตามข้อเสนอ'),rowsForMeeting(p),el('p','',p.status==='accepted'?'ตกลงจำนวนรับแล้ว':p.status==='rejected'?'ข้อเสนอนี้ถูกส่งกลับเพื่อปรับปรุง':'อยู่ระหว่างตกลงจำนวนรับ'));}
       body.append(note(state?.finalized?`กรรมการยืนยันรายชื่อแล้ว ${state.selected?.length || 0} คน · ยังไม่ใช่การประกาศผล`:'ยังไม่มีการยืนยันรายชื่อคัดเลือก'),note('หน้านี้อ่านอย่างเดียว Coordinator ไม่แก้ผลคัดเลือกหรือข้อเสนอจำนวนรับ'));
     }if(!meetings.length)body.append(note('ยังไม่มีข้อมูลมติในขอบเขตที่ได้รับมอบหมาย'));dialog(root,'มติและจำนวนรับ',body,{signal});}
-    function rowsForMeeting(p){const dl=el('dl','coord-meeting-counts');for(const [label,value] of [['จำนวนรับภาคปกติ',p.normal],['จำนวนรับภาคพิเศษ',p.special],['เหตุผลที่เสนอ',p.reason]]){const item=el('div');item.append(el('dt','',label),el('dd','',text(value)));dl.append(item);}return dl;}
+    function rowsForMeeting(p){const dl=el('dl','coord-meeting-counts');const items=p.total!==undefined?[['จำนวนรับนักศึกษาที่เสนอ',p.total],['เหตุผลที่เสนอ',p.reason]]:[['จำนวนรับภาคปกติ',p.normal],['จำนวนรับภาคพิเศษ',p.special],['เหตุผลที่เสนอ',p.reason]];for(const [label,value] of items){const item=el('div');item.append(el('dt','',label),el('dd','',text(value)));dl.append(item);}return dl;}
     async function refresh(){const token=++queryToken;records.setAttribute('aria-busy','true');
       try{const data=await request('/tracking?'+query());if(stopped()||token!==queryToken)return;
         intro.replaceChildren(el('h2','',`รายชื่อที่ส่งให้กรรมการ · ${data.total} รายการ`));const one=data.meetings?.length===1 && !data.meetings[0].scope_limited;
@@ -149,7 +149,11 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
     try{const data=await request('/schedules/'+cycleId);if(stopped()||token!==queryToken)return;currentSchedule=data;schedulePage(data);}catch(error){failure(error);if(!stopped()&&token===queryToken)content.append(button('ลองโหลดกำหนดการอีกครั้ง',loadSchedule));}}
   function load(){if(page==='schedule')loadSchedule();else if(page==='tracking')trackingPage();else reviewPage();}
   async function start(){feedback(status,'กำลังโหลดรอบที่ได้รับมอบหมาย…');content.append(status);
-    try{const options=await request('/options');if(stopped())return;cycles=options.cycles || [];cycleId=cycles[0]?.id || '';drawHeader();feedback(status,'');if(!cycleId){content.append(note('ยังไม่มีรอบที่ได้รับมอบหมาย กรุณาติดต่อผู้ดูแลระบบ'));return;}load();}
+    try{const options=await request('/options');if(stopped())return;cycles=options.cycles || [];
+      let savedCycle=null;try{savedCycle=window.sessionStorage?.getItem('coed:coordinator:cycleId');}catch{}
+      const preferred=cycles.find(c=>c.id===savedCycle)||cycles.find(c=>/2569/.test(c.name || ''))||cycles.find(c=>!/จำลอง/.test(c.name || ''))||cycles[0];
+      cycleId=preferred?.id || '';try{if(cycleId)window.sessionStorage?.setItem('coed:coordinator:cycleId',cycleId);}catch{}
+      drawHeader();feedback(status,'');if(!cycleId){content.append(note('ยังไม่มีรอบที่ได้รับมอบหมาย กรุณาติดต่อผู้ดูแลระบบ'));return;}load();}
     catch(error){failure(error);if(!stopped())content.append(button('ลองโหลดรอบอีกครั้ง',start));}}
   start();return root;
 }

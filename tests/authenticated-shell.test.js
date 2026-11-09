@@ -368,7 +368,7 @@ describe('authenticated V3 shell and route guards', () => {
   it.each([
     ['STUDENT', '#/student/profile', ['ข้อมูลของฉัน', 'ใบสมัครสหกิจ', 'สถานประกอบการ'], 'ข้อมูลนักศึกษา'],
     ['COORDINATOR', '#/coordinator/applications', ['ตรวจใบสมัคร','ติดตามการพิจารณา','กำหนดการและช่วงเวลายืนยันสิทธิ์'], 'รับแผนสหกิจศึกษา'],
-    ['COMMITTEE', '#/committee/applications', ['การคัดเลือก','สถานประกอบการ'], 'การคัดเลือกนักศึกษา'],
+    ['COMMITTEE', '#/committee/applications', ['การคัดเลือก'], 'การคัดเลือกนักศึกษา'],
     ['STAFF', '#/staff/review', ['จัดการนักศึกษา', 'ค้นหาแผนสหกิจ', 'คิวตรวจแผน', 'เอกสารและอาจารย์ที่ปรึกษา'], 'คิวตรวจแผนสหกิจ'],
     ['ADVISOR', '#/advisor/students', ['นักศึกษาที่ดูแล'], 'นักศึกษาที่ได้รับมอบหมาย']
   ])('renders only %s navigation from the trusted session role', async (role, expectedHash, navLabels, title) => {

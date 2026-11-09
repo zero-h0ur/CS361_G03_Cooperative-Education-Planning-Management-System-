@@ -48,3 +48,34 @@ test('handoff-only workspace can read applicants but disables proposal, vote and
  for(const b of root.querySelectorAll('[data-propose],[data-review],[data-vote],#confirmResults,#suggestSelection'))expect(b.disabled).toBe(true);
  expect(client.request.mock.calls.every(([,options])=>!options || !options.method || options.method==='GET')).toBe(true);controller.abort();
 });
+
+test('combined capacity ranks all assigned tracks and keeps cutoff ties while filters only change visibility',async()=>{
+ const data=model();data.students=[
+   {id:'a',name:'Highest regular',number:'SYN01',core:3.9,gpax:3,program:'regular',curriculum:'61'},
+   {id:'b',name:'Special tie one',number:'SYN02',core:3.8,gpax:3.5,program:'special',curriculum:'66'},
+   {id:'c',name:'Below combined cutoff',number:'SYN03',core:3.7,gpax:3,program:'regular',curriculum:'66'},
+   {id:'d',name:'Special tie two',number:'SYN04',core:3.8,gpax:3.5,program:'special',curriculum:'61'}
+ ];data.state.proposal={...data.state.proposal,total:2,normal:2,special:0,status:'accepted'};
+ const host=renderCommitteeWorkspace({client:{request:async()=>data}});document.body.append(host);await flush();const root=host.shadowRoot;
+ expect(root.querySelector('#curriculum').value).toBe('all');expect(root.querySelector('#program').value).toBe('all');
+ expect(root.querySelectorAll('#applicantRows tr:not(.cutoff-label)')).toHaveLength(4);expect(root.querySelector('#applicantRows').textContent).toContain('ภาคพิเศษ');
+ const program=root.querySelector('#program');program.value='regular';program.dispatchEvent(new Event('change'));
+ const below=[...root.querySelectorAll('#applicantRows tr')].find(r=>r.textContent.includes('Below combined cutoff'));
+ expect(below.textContent).not.toContain('อยู่ในจำนวนเสนอ');
+ expect(below.querySelector('.rank').textContent).toBe('4');
+ program.value='special';program.dispatchEvent(new Event('change'));
+ const tied=[...root.querySelectorAll('#applicantRows tr')].find(r=>r.textContent.includes('Special tie two'));
+ expect(tied.classList.contains('tie')).toBe(true);expect(tied.querySelector('.rank').textContent).toBe('3');
+ root.querySelector('[data-view=results]').click();root.querySelector('#suggestSelection').click();
+ expect([...root.querySelectorAll('[data-select]:checked')].map(n=>n.dataset.select).sort()).toEqual(['a','b','d']);
+});
+
+test('new capacity proposal sends only the combined total and retains typed fields on failure',async()=>{
+ const data=model();data.state.proposal=null;const request=jest.fn(async(_path,options)=>{if(options?.method==='POST')throw new Error('offline');return data;});
+ const host=renderCommitteeWorkspace({client:{request}});document.body.append(host);await flush();const root=host.shadowRoot;
+ root.querySelector('[data-view=capacity]').click();root.querySelector('[data-propose]').click();
+ root.querySelector('#totalCount').value='5';root.querySelector('#proposalReason').value='Synthetic combined capacity';root.querySelector('#submitProposal').click();await flush();
+ expect(request.mock.calls.find(([,o])=>o?.method==='POST')[1].body).toMatchObject({action:'propose',total:5,reason:'Synthetic combined capacity'});
+ expect(request.mock.calls.find(([,o])=>o?.method==='POST')[1].body).not.toHaveProperty('normal');
+ expect(root.querySelector('#totalCount').value).toBe('5');expect(root.querySelector('#proposalReason').value).toBe('Synthetic combined capacity');
+});

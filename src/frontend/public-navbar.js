@@ -69,7 +69,11 @@ export function createPublicNavbar({ container, authClient, sessionClient, event
   function render(role, identity) {
     const config = MENU[role];
     if (!config) { anonymous(); return; }
-    const name = typeof identity?.name === 'string' ? identity.name : 'ผู้ใช้งาน';
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let name = typeof identity?.name === 'string' ? identity.name : 'ผู้ใช้งาน';
+    if (uuidRegex.test(name)) {
+      name = config.label || 'ผู้ใช้งาน';
+    }
     const email = typeof identity?.email === 'string' ? identity.email : '';
     const initial = [...name][0]?.toUpperCase() || 'U';
     const wrapper = node('div', 'user-nav-dropdown-wrapper');

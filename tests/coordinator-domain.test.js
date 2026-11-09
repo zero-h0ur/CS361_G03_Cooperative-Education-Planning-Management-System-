@@ -1,4 +1,6 @@
 const {schedule,academic,declarations}=require('../src/api/services/coordinator-domain');
+const {CoordinatorWorkspaceService}=require('../src/api/services/coordinator-workspace-service');
+const {randomUUID}=require('node:crypto');
 const windows={opens_at:'2026-11-02T09:00:00+07:00',closes_at:'2026-11-20T16:30:00+07:00',
   review_opens_at:'2026-11-23T09:00:00+07:00',review_closes_at:'2026-11-27T16:30:00+07:00',
   confirmation_opens_at:'2026-12-01T09:00:00+07:00',confirmation_closes_at:'2026-12-07T16:30:00+07:00'};
@@ -21,4 +23,9 @@ test('seven self-certifications are literal independent student answers, not com
   const result=declarations({payload:{acknowledgements:{program:true,gpax:true}}});
   expect(result).toHaveLength(7);expect(result.filter(x=>x.checked)).toHaveLength(2);
   expect(result.find(x=>x.key==='conduct').checked).toBe(false);
+});
+test('legacy confirmation checkbox cannot replace a retained academic review',async()=>{
+  const pool={connect:jest.fn()},service=new CoordinatorWorkspaceService({pool});
+  await expect(service.review({},randomUUID(),{operation_id:randomUUID(),expected_version:0,submission_id:randomUUID(),confirm_academic_review:true},'forward')).rejects.toMatchObject({statusCode:400});
+  expect(pool.connect).not.toHaveBeenCalled();
 });
