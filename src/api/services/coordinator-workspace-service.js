@@ -8,6 +8,8 @@ const academicReview=require('../../db/academic-review');
 const academicDomain=require('./academic-review-domain');
 const {randomUUID}=require('node:crypto');
 const {reviewStage}=require('../../shared/review-access');
+const reviewSchedule=require('../../db/review-schedule');
+const results=require('./coordinator-results');
 const domain=require('./coordinator-domain');
 const {assertDeliverySchema}=require('../../db/phase1-delivery');
 const {confirmationWindow}=require('./phase1-schedule-compat');
@@ -75,7 +77,7 @@ class CoordinatorWorkspaceService {
         state==='PENDING' && row.status==='SUBMITTED' && row.cycle_status==='OPEN' && row.review_open===true && !row.committee_state?.finalized:false});
     return record;
   }
-  async list(actor,filters={}) {
+  async list(actor,filters={},db=this.db()) {
     v.fields(filters,['cycle_id','search','state','curriculum','program_type','sort','page','pageSize']);
     for(const key of ['search','state','curriculum','program_type','sort'])if(filters[key]!==undefined)v.text(filters[key],key,200);
     if(filters.state && !domain.STATES.includes(filters.state))throw new ValidationError('สถานะไม่ถูกต้อง');
@@ -84,7 +86,7 @@ class CoordinatorWorkspaceService {
     if(filters.sort && !['newest','oldest','name','core','gpax'].includes(filters.sort))throw new ValidationError('การเรียงลำดับไม่ถูกต้อง');
     const page=Number(filters.page || 1),pageSize=Number(filters.pageSize || 10);
     if(!Number.isSafeInteger(page)||page<1||!Number.isInteger(pageSize)||pageSize<1||pageSize>100)throw new ValidationError('หน้าไม่ถูกต้อง');
-    let rows=(await this.rows(this.db(),actor,filters)).map(r=>this.present(r));
+    let rows=(await this.rows(db,actor,filters)).map(r=>this.present(r));
     if(filters.search){const q=filters.search.toLocaleLowerCase('th');rows=rows.filter(r=>`${r.student_number || ''} ${r.full_name || ''}`.toLocaleLowerCase('th').includes(q));}
     if(filters.curriculum)rows=rows.filter(r=>r.curriculum===filters.curriculum);
     if(filters.program_type)rows=rows.filter(r=>r.program_type===filters.program_type);
@@ -110,7 +112,7 @@ class CoordinatorWorkspaceService {
     return {...record,access:intake.access(actor,row.cycle_id),submission_history:history,review_history:reviews};
   }
   async command(actor,id,body,action,work) {
-    if(!reviewStage() || process.env.COED_API_MAINTENANCE && process.env.COED_API_MAINTENANCE!=='off' && !['academic-review','return','forward'].includes(action))throw new ServiceUnavailableError('ยังไม่เปิดการทำรายการพิจารณา','COED_MAINTENANCE');
+    if(!reviewStage() || process.env.COED_API_MAINTENANCE && process.env.COED_API_MAINTENANCE!=='off' && !['academic-review','return','forward','review-schedule'].includes(action))throw new ServiceUnavailableError('ยังไม่เปิดการทำรายการพิจารณา','COED_MAINTENANCE');
     roleGuard(actor,['COORDINATOR']);v.uuid(id,'resource_id');v.command(body);
     const db=await this.db().connect();
     try {
@@ -201,21 +203,45 @@ class CoordinatorWorkspaceService {
       return {id,state,review_version:version,submission_id:latest.id,reason,actor_id:actor.userId};
     });
   }
+  async resultRoster(db,cohortIds) {
+    // Same panel membership and retained Phase 1 submission used by Committee.
+    // Legacy plans remain explicitly labeled, never converted to applications.
+    const phase1=(await db.query(`SELECT a.id,sub.application_version AS version,
+      COALESCE(sub.snapshot->'official'->>'full_name',sub.snapshot->'payload'->>'thai_full_name') AS full_name,
+      COALESCE(sub.snapshot->'official'->>'student_number',sub.snapshot->'declared_academic'->>'student_number',sub.snapshot->'payload'->>'student_number') AS student_number,
+      COALESCE(sub.snapshot->'declared_academic'->>'program_type',c.program) AS program,
+      COALESCE(sub.snapshot->'official'->>'curriculum',sub.snapshot->'declared_academic'->>'curriculum',sub.snapshot->'payload'->>'curriculum') AS curriculum
+      FROM phase1_reviews rv JOIN selection_cohorts c ON c.id=rv.cohort_id
+      JOIN phase1_applications a ON a.id=rv.application_id JOIN phase1_submissions sub ON sub.id=rv.submission_id
+      WHERE rv.cohort_id=ANY($1::uuid[]) AND rv.state='FORWARDED' AND a.status='SUBMITTED'`,[cohortIds])).rows
+      .map(row=>({...row,program_type:track(row.program),source:'PHASE1'}));
+    const mode=process.env.COED_API_MAINTENANCE;
+    const legacy=mode&&mode!=='off'?[]:(await db.query(`SELECT p.id,p.version,s.full_name,s.student_number,s.program,NULL::text AS curriculum
+      FROM selection_receipts receipt JOIN plans p ON p.id=receipt.plan_id JOIN students s ON s.id=p.student_id
+      WHERE receipt.cohort_id=ANY($1::uuid[]) AND NOT p.legacy_compatibility AND p.status IN ('SUBMITTED','UNDER_REVIEW')`,[cohortIds])).rows
+      .map(row=>({...row,program_type:track(row.program),source:'LEGACY_PLAN'}));
+    return [...phase1,...legacy].map(({program,...row})=>row);
+  }
   async tracking(actor,filters={}) {
-    const {applications,...page}=await this.list(actor,{...filters,state:'FORWARDED'});
-    const cohorts=await this.scope(this.db(),actor,filters.cycle_id);
-    const panels=[...new Map(cohorts.map(c=>[panelKey(c),c])).values()];
-    const meetings=[];
-    for(const c of panels){const same=(await this.db().query(`SELECT id,coordinator_id FROM selection_cohorts
-      WHERE cycle_id=$1 AND department=$2 AND committee_one=$3 AND committee_two=$4 AND committee_three=$5 AND status='ACTIVE' ORDER BY id`,
-      [c.cycle_id,c.department,c.committee_one,c.committee_two,c.committee_three])).rows;
-      const scopeLimited=same.some(x=>x.coordinator_id!==actor.userId);
-      // A shared meeting can contain selected identities and history outside a
-      // partially assigned Coordinator's scope. Do not expose that raw state.
-      const saved=!scopeLimited && (await this.db().query('SELECT version,state FROM committee_workspaces WHERE cohort_id=$1',[same[0].id])).rows[0];
-      meetings.push({cycle_id:c.cycle_id,department:c.department,members:[c.committee_one,c.committee_two,c.committee_three],
-        version:saved?.version || 0,state:saved?.state || null,scope_limited:scopeLimited});}
-    return {applications,...page,meetings};
+    const db=await this.db().connect();
+    try{
+      await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+      const {applications,...page}=await this.list(actor,{...filters,state:'FORWARDED'},db);
+      const cohorts=await this.scope(db,actor,filters.cycle_id);
+      const panels=[...new Map(cohorts.map(c=>[panelKey(c),c])).values()],meetings=[];
+      for(const c of panels){const same=(await db.query(`SELECT id,coordinator_id FROM selection_cohorts
+        WHERE cycle_id=$1 AND department=$2 AND committee_one=$3 AND committee_two=$4 AND committee_three=$5 AND status='ACTIVE' ORDER BY id`,
+        [c.cycle_id,c.department,c.committee_one,c.committee_two,c.committee_three])).rows;
+        const scopeLimited=same.some(x=>x.coordinator_id!==actor.userId);
+        // Never resolve out-of-scope names or expose the shared raw decision.
+        const saved=!scopeLimited && (await db.query('SELECT version,state FROM committee_workspaces WHERE cohort_id=$1',[same[0].id])).rows[0];
+        const roster=scopeLimited?[]:await this.resultRoster(db,same.map(row=>row.id));
+        meetings.push({cohort_id:same[0].id,cycle_id:c.cycle_id,cycle_name:c.cycle_name,department:c.department,members:[c.committee_one,c.committee_two,c.committee_three],
+          version:saved?.version || 0,state:saved?.state || null,scope_limited:scopeLimited,result:results.result(saved?.state,roster,{scopeLimited})});
+      }
+      await db.query('COMMIT');
+      return {applications,...page,meetings,dashboard:results.summary(meetings)};
+    }catch(error){await db.query('ROLLBACK').catch(()=>{});throw error;}finally{db.release();}
   }
   async scheduleScope(db,actor,cycleId,lock=false) {
     const cohorts=await this.scope(db,actor,cycleId,lock);
@@ -230,8 +256,32 @@ class CoordinatorWorkspaceService {
       LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id LEFT JOIN coordinator_round_schedules s ON s.cycle_id=r.id WHERE r.id=$1`,[id])).rows[0];
     Object.assign(row,confirmationWindow({confirmation_opens_at:row.window_confirmation_opens_at,confirmation_closes_at:row.window_confirmation_closes_at},row));
     const intake=await require('../../db/intake-control').effective(db,id,null);
+    const reviewSchemaReady=await reviewSchedule.ready(db);
     return {cycle_id:id,cycle_name:scope.cohorts[0].cycle_name,...row,version:row.version || 0,window_version:row.window_version || 0,
+      review_schema_ready:reviewSchemaReady,can_edit_review:reviewSchemaReady && scope.can_edit && reviewStage(),
       intake:intake?.intake || null,can_edit:!intake && scope.can_edit && (!process.env.COED_API_MAINTENANCE || process.env.COED_API_MAINTENANCE==='off')};
+  }
+  async saveReviewSchedule(actor,id,body) {
+    v.fields(body,['operation_id','expected_version','review_opens_at','review_closes_at']);
+    const value=domain.reviewSchedule(body);
+    return this.command(actor,id,body,'review-schedule',async(db,replay)=>{
+      await db.query("SELECT pg_advisory_xact_lock(hashtextextended('phase1:cycle:' || $1::text,0))",[id]);
+      const scope=await this.scheduleScope(db,actor,id,true);
+      if(!scope.can_edit)throw new ForbiddenError('ต้องได้รับมอบหมายทั้งรอบ และรอบต้องยังเปิดอยู่');
+      if(!await reviewSchedule.ready(db))throw new ServiceUnavailableError('ต้องอัปเกรดระบบบันทึกช่วงพิจารณาใบสมัครก่อน','REVIEW_SCHEDULE_UPGRADE_REQUIRED');
+      if(replay)return;
+      const prior=(await db.query('SELECT * FROM coordinator_round_schedules WHERE cycle_id=$1 FOR UPDATE',[id])).rows[0];
+      const window=(await db.query('SELECT confirmation_opens_at,confirmation_closes_at FROM phase1_cycle_windows WHERE cycle_id=$1 FOR UPDATE',[id])).rows[0];
+      if(body.expected_version!==(prior?.version || 0))throw new ConflictError('ช่วงพิจารณาใบสมัครเปลี่ยนแล้ว กรุณาโหลดล่าสุดก่อนบันทึก');
+      const confirmation=confirmationWindow(window || {},prior || {});
+      if(confirmation.confirmation_opens_at && Date.parse(value.review_closes_at)>Date.parse(confirmation.confirmation_opens_at))
+        throw new ValidationError('วันสิ้นสุดช่วงพิจารณาต้องไม่เกินวันเริ่มยืนยันสิทธิ์ที่กำหนดไว้');
+      await db.query(`INSERT INTO coordinator_round_schedules(cycle_id,review_opens_at,review_closes_at,version,updated_by)
+        VALUES($1,$2,$3,$4,$5) ON CONFLICT(cycle_id) DO UPDATE SET review_opens_at=EXCLUDED.review_opens_at,
+        review_closes_at=EXCLUDED.review_closes_at,version=EXCLUDED.version,updated_by=EXCLUDED.updated_by,updated_at=clock_timestamp()`,
+      [id,value.review_opens_at,value.review_closes_at,body.expected_version+1,actor.userId]);
+      return {cycle_id:id,...value,version:body.expected_version+1};
+    });
   }
   async saveSchedule(actor,id,body) {
     v.fields(body,['operation_id','expected_version','expected_window_version','opens_at','closes_at','review_opens_at','review_closes_at','confirmation_opens_at','confirmation_closes_at']);

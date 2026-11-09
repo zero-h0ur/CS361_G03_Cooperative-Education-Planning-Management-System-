@@ -64,3 +64,7 @@ Respect reduced motion. Avoid entrance animation around dense review data.
 
 ## Accessibility
 Visible focus, localized labels, live status and alert regions. Do not replace missing grades with fabricated scores. Keep actor identity and permissions on the server.
+
+Coordinator schedule retains the teammate's existing three-window form: intake, application review and confirmation, with its original section legends, layout and save action. Review is not a separate workflow or form. When only review changes are permitted, keep all three sections visible and edit only the existing review fields; other dates remain reference-only. Reuse coordinator fields/buttons/feedback/dialog and schedule CSS, explicit Bangkok timestamps and the existing OS-owned date/time popups. No competing schedule renderer or new tokens.
+
+Coordinator tracking presents confirmed Committee results as a read-only roster variant: a single bordered four-count strip, neutral panel headings and the existing green/pink outcome badges with text. Keep summary totals independent of the filtered forwarded list. Reuse native pressed buttons, responsive table-to-card CSS, pagination, detail dialogs and the existing font/token owners. Pending/incomplete states use dashes and explanatory text; no charts, new palette, selection controls or publication action.

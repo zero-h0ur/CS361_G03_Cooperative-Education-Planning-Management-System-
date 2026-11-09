@@ -65,7 +65,7 @@
 | `src/frontend/` ระดับบน | Entry/shell/routes, authenticated styles, directory client และ shared navbar เช่น `app.js`, `shell-app.js`, `routes.js` |
 | `src/frontend/auth/` | Cognito client/session/error handling และ TU onboarding view |
 | `src/frontend/student/` | โปรไฟล์ ใบสมัคร Phase 1/editor/client/receipt/recovery และแผนบริษัท legacy; ระวังไม่ปน application กับ plan |
-| `src/frontend/coordinator/` | คิว/รายละเอียด/เอกสาร, intake controls และ `academic-review.js` ตรวจรับรองหลักฐานแยกจากต้นฉบับ |
+| `src/frontend/coordinator/` | คิว/รายละเอียด/เอกสาร, intake controls, ฟอร์มกำหนดการสามช่วงเดิมใน `workspace.js` และ `academic-review.js` ตรวจรับรองหลักฐานแยกจากต้นฉบับ |
 | `src/frontend/committee/`, `src/frontend/selection/` | Ranking/meeting workspace และ selection views; มีโค้ดไม่เท่ากับเปิดใช้/ตรวจรับครบ |
 | `src/frontend/staff/`, `src/frontend/advisor/` | หน้าจอ/clients ของ workflow แผนเดิมและการอ่านรายที่ได้รับมอบหมาย |
 | `src/frontend/workflow/` | Views/client ของ workflow และ Admin operations ที่ใช้ร่วมกับพื้นที่เดิม |
@@ -150,3 +150,13 @@ DB tests อาจ reset fixtures ต้องใช้ฐาน local ชื่
 | อัปเดตเอกสาร/ส่งต่อ | README, docs index และเอกสารที่ตอบคำถามนั้น | `npm run test:docs`, แยก code/deployed/verified และคง history |
 
 เมื่อเพิ่ม/ย้ายโฟลเดอร์ที่มีหน้าที่ใหม่ ให้อัปเดต map นี้กับ tree ย่อใน README ตามความเหมาะสม ไม่ต้องไล่ชื่อทุกไฟล์ ไม่ทำสำเนารายละเอียดทั้งหมดไว้ทั้ง README และ AGENTS
+
+การตั้งช่วงพิจารณาใช้ฟอร์มสามช่วงเดิมใน `src/frontend/coordinator/workspace.js`; เมื่อแก้ได้เฉพาะช่วงพิจารณาจะคงส่วนอื่นเป็นข้อมูลอ้างอิง,
+`src/db/review-schedule.js` ตรวจ capability และ `scripts/operations/review-schedule-contract.mjs`
+ตรวจ hash ของ fresh/observed 024 โดยไม่ Apply SQL; ดู [contract](api/v4-academic-review.md#independent-review-window-setup-local-source-2026-11-10)
+และ [verification](operations/review-window-verification.md)
+
+Dashboard ผล Committee ที่หน้า Coordinator ใช้ `src/api/services/coordinator-results.js`
+ตรวจ retained applicant/version และสรุปผลแบบอ่านอย่างเดียวผ่าน tracking API เดิม;
+`src/frontend/coordinator/results-dashboard.js` แสดงจำนวน/รายชื่อด้วย shared Coordinator components
+ดู [contract](api/v4-coordinator-results.md) และ [verification](operations/coordinator-results-verification.md)
