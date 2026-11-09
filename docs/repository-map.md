@@ -48,7 +48,7 @@
 | `src/auth/` | `identity-resolver.js`, `tu-broker-service.js`, `tu-registration-service.js`, `tu-bridge.js` | ตรวจ TU/Cognito/session, resolve internal identity, controlled onboarding และ whitelist Student proxy; ห้ามใส่ mock login bypass เพื่อแก้ production error |
 | `src/db/` | connection/migrate/seed, `phase1-delivery.js`, `phase1-intake.js`, `intake-control.js` | เชื่อม PostgreSQL และ data/locking helpers ที่ service ใช้; ไม่ใช่ให้ browser เชื่อม DB ตรง |
 | `src/db/repositories/` | `application-repository.js`, `student-profile-repository.js` | SQL/data access ของแต่ละ domain แยกจาก HTTP rendering |
-| `src/db/migrations/` | reviewed fresh/workspace SQL 001–014 และ 017 | สร้าง/พัฒนาฐานตาม lineage นี้; ไฟล์ประวัติ immutable ไม่ใช้แทน observed live 014/015 ที่หายไป |
+| `src/db/migrations/` | reviewed fresh/workspace SQL 001–014, 017 และส่วนขยายใหม่ 023 | สร้าง/พัฒนาฐานตาม lineage นี้; ไฟล์ประวัติ immutable ไม่ใช้แทน observed live 014/015 ที่หายไป; 023 ยังไม่ Deploy |
 | `src/db/upgrades/` | observed-schema SQL 018–022 | Forward upgrades สำหรับ baseline RDS ที่ตรวจไว้ มี catalog/history/checksum/approval gates แยกจาก migrator ทั่วไป |
 | `src/db/operations/` | `v3-runtime-grants.sql`, `018-observed-runtime-grants.sql` | SQL สำหรับสิทธิ์ runtime ของแต่ละ baseline ไม่ใช่คำสั่งให้ทุกคนรันซ้ำ |
 | `src/db/proposals/` | `phase1_intake_controls.sql` | SQL copy สำหรับทบทวน proposal ไม่ใช่ migration ที่ต้อง Apply เพิ่มอีกรอบ |
@@ -65,7 +65,7 @@
 | `src/frontend/` ระดับบน | Entry/shell/routes, authenticated styles, directory client และ shared navbar เช่น `app.js`, `shell-app.js`, `routes.js` |
 | `src/frontend/auth/` | Cognito client/session/error handling และ TU onboarding view |
 | `src/frontend/student/` | โปรไฟล์ ใบสมัคร Phase 1/editor/client/receipt/recovery และแผนบริษัท legacy; ระวังไม่ปน application กับ plan |
-| `src/frontend/coordinator/` | คิว/รายละเอียด/เอกสารและ intake controls ของ Coordinator |
+| `src/frontend/coordinator/` | คิว/รายละเอียด/เอกสาร, intake controls และ `academic-review.js` ตรวจรับรองหลักฐานแยกจากต้นฉบับ |
 | `src/frontend/committee/`, `src/frontend/selection/` | Ranking/meeting workspace และ selection views; มีโค้ดไม่เท่ากับเปิดใช้/ตรวจรับครบ |
 | `src/frontend/staff/`, `src/frontend/advisor/` | หน้าจอ/clients ของ workflow แผนเดิมและการอ่านรายที่ได้รับมอบหมาย |
 | `src/frontend/workflow/` | Views/client ของ workflow และ Admin operations ที่ใช้ร่วมกับพื้นที่เดิม |
@@ -74,6 +74,12 @@
 แก้ source แล้วทดสอบ/build ใหม่ อย่าแก้ `dist/assets/authenticated-shell.js` เพื่อให้ดูเหมือนแก้ source แล้ว การเปลี่ยน UI อย่างเดียวไม่ปลดข้อจำกัดฝั่ง API/DB/maintenance
 
 ## 3. scripts/ — เครื่องมือ ไม่ใช่ runtime ทุกไฟล์
+
+ส่วนขยายตรวจรับรองก่อนส่ง Committee ใช้ `src/api/services/academic-review-domain.js` คำนวณ,
+`src/db/academic-review.js` ตรวจผลบันทึก/เกณฑ์ล่าสุด และ `src/shared/review-access.js` จำกัด stage;
+`src/shared/faculty-criteria.js` เป็นแหล่งเกณฑ์ที่เจ้าของยืนยันและข้อมูลสำหรับเตรียม policy รุ่นใหม่ โดยไม่เขียน RDS;
+`scripts/operations/academic-review-contract.mjs` ตรวจ hash ของ fresh/observed 023 โดยไม่ Apply SQL
+ดู [contract](api/v4-academic-review.md) และ [local evidence](operations/academic-review-verification.md) ก่อนเตรียม release
 
 | ตำแหน่ง | เก็บอะไร / ใช้ทำอะไร |
 | --- | --- |

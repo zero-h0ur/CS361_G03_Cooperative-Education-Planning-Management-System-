@@ -22,6 +22,10 @@ import {readPendingIntakeSql} from '../scripts/operations/student-intake-contrac
 import {readIntakeControlsSql} from '../scripts/operations/intake-controls-contract.mjs';
 import controls from '../src/api/services/intake-control-service.js';
 import c7 from '../scripts/operations/intake-controls-owner/reader.js';
+import {readAcademicReviewUpgrade,UPGRADE_SHA256} from '../scripts/operations/academic-review-contract.mjs';
+import academicReviewDomain from '../src/api/services/academic-review-domain.js';
+import faculty from '../src/shared/faculty-criteria.js';
+import committee from '../src/api/services/committee-workspace.js';
 const url=process.env.STUDENT_INTAKE_TEST_DATABASE_URL;
 test('pending TU identity: actual019/020 database, real files, pilot gates and immutable Coordinator delivery',{skip:!url&&!process.env.CI},async t=>{
  const u=new URL(url);assert.equal(u.hostname,'127.0.0.1');assert.equal(u.pathname,'/coed_intake_test');assert.equal(process.env.NODE_ENV,'test');assert.equal(process.env.INTAKE_DISPOSABLE,'true');
@@ -141,10 +145,10 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
    assert.equal((await service.readiness(actor,app.id)).can_submit,false);
    await change('MANUAL_OPEN');assert.equal((await service.get(actor,app.id)).availability.can_edit,true);
   });
-  const payload={curriculum:'66',name_prefix:'Mr',thai_full_name:'Synthetic Student',english_full_name:'Synthetic Student',contact_address:'Synthetic address',contact_phone:'0800000000',
+  const payload={academic_criteria_acknowledgement:faculty.ID,curriculum:'66',name_prefix:'Mr',thai_full_name:'Synthetic Student',english_full_name:'Synthetic Student',contact_address:'Synthetic address',contact_phone:'0800000000',
    contact_email:'contact@example.invalid',major_group:'ACS',gpax:'3.2',declared_group_gpa:'3.0',gpax_reporting_term:'2/2568',interested_position_codes:['SOFTWARE'],skills_detail:'Synthetic skill',
    guardian_name:'Synthetic contact',guardian_relationship:'Parent',guardian_address:'Synthetic address',guardian_phone:'0800000001',
-   selected_courses:{alternative:'CS213'},course_attempts:form.GROUPS['66'].map(g=>({code:g[0],attempt:1,points:'3'})),
+   selected_courses:{alternative:'CS216'},course_attempts:form.GROUPS['66'].map(g=>({code:g.length>1?'CS216':g[0],attempt:1,points:'3'})),
    additional_studies:{CS180:'ENROLLED',CS262:'STUDIED'},acknowledgements:Object.fromEntries(form.ACKNOWLEDGEMENTS.map(k=>[k,true]))};
   await t.test('four real byte uploads finalize before policy exists; complete data is UNKNOWN not PASS',async()=>{
    app=await service.save(actor,app.id,{...command(),expected_policy_id:null,payload});
@@ -328,7 +332,7 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
     VALUES($1,$2,$3,$3,'Synthetic Student','canonical@example.invalid','CPE','CS','ACS',2567,'ACTIVE','synthetic','private','mock')`,[sid,uid,'S'+id()]);
    await owner.query("INSERT INTO phase1_academic_profiles(student_id,curriculum,entry_year,institution,source,verified_by) VALUES($1,'66',2567,'TU_CS','synthetic',$2)",[sid,coord]);
    await owner.query(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data) VALUES($1,$2,'66',2,2568,'synthetic',true,true,$3)`,[policyId,cycle,
-    {credits:Object.fromEntries(form.GROUPS['66'].flat().map(c=>[c,'3'])),repeat_rule:'LATEST',alternative_rule:'STUDENT_SELECTED'}]);
+    faculty.policyData('66')]);
    await owner.query(`INSERT INTO coordinator_round_schedules(cycle_id,review_opens_at,review_closes_at,confirmation_opens_at,confirmation_closes_at,version,updated_by)
     VALUES($1,now()-interval '1 hour',now()+interval '1 hour',now()+interval '2 hours',now()+interval '3 hours',1,$2)`,[cycle,coord]);
    await owner.query("INSERT INTO phase1_cycle_windows(cycle_id,opens_at,closes_at) VALUES($1,now()-interval '1 day',now()-interval '2 hours')",[cycle]);
@@ -354,6 +358,80 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
     await assert.rejects(canonicalService.save(student,draft.id,{operation_id:id(),expected_version:draft.version,expected_policy_id:policyId,payload:{skills_detail:'late'}}),e=>e.statusCode===422);
    }finally{restore('COED_API_MAINTENANCE',oldMode);restore('COED_INTAKE_PILOT',oldPilot);}
   });
+  await t.test('strict Coordinator academic review: observed023, audited receipt, policy changes, corrected submissions and scoped Committee handoff',async()=>{
+   const oldFlags=Object.fromEntries(['COED_COORDINATOR_REVIEW_ENABLED','COED_COMMITTEE_HANDOFF_ENABLED'].map(k=>[k,process.env[k]]));
+   const board=new committee.CommitteeWorkspaceService({pool:runtime,documentStore:store}),member={isAuthenticated:true,userId:members[0],role:'COMMITTEE',accountStatus:'ACTIVE'};
+   const checks=Object.fromEntries(academicReviewDomain.CHECKS.map(k=>[k,true]));
+   const publishPolicy=async version=>{const policy=id();await owner.query(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data)
+     VALUES($1,$2,'66',$3,2568,'Synthetic reviewed policy fixture',true,false,$4)`,[policy,cycle,version,faculty.policyData('66')]);return policy;};
+   let policyId=await publishPolicy(3);
+   const reviewBody=(record,version=0)=>({operation_id:id(),expected_version:version,submission_id:record.submission.id,expected_policy_id:policyId,checks,note:'Synthetic Transcript and four documents checked'});
+   const original=app.submission;
+   try{
+    await assert.rejects(staff.confirmAcademics(coordinator,app.id,reviewBody(app)),e=>e.code==='COED_MAINTENANCE');
+    process.env.COED_COORDINATOR_REVIEW_ENABLED='true';
+    await assert.rejects(staff.confirmAcademics(coordinator,app.id,reviewBody(app)),e=>e.code==='ACADEMIC_REVIEW_UPGRADE_REQUIRED');
+    await owner.query('INSERT INTO schema_migrations(version,checksum) VALUES($1,$2)',['022_coordinator_intake_controls.sql',createHash('sha256').update(readIntakeControlsSql()).digest('hex')]);
+    const sql=readAcademicReviewUpgrade().replace("current_database()<>'coed'", "current_database()<>'coed_intake_test'").replace("current_schema()<>'public'", "current_schema()<>'"+schema+"'");
+    await assert.rejects(owner.query(sql),/ACADEMIC_REVIEW_OWNER_GATE_REQUIRED/);
+    const connection=await owner.connect();try{
+     await connection.query('BEGIN');await connection.query("SET LOCAL coed.academic_review_upgrade='observed022-to023'");await connection.query(sql);await connection.query('ROLLBACK');
+     assert.equal((await connection.query("SELECT to_regclass(current_schema() || '.phase1_academic_reviews') AS t")).rows[0].t,null);
+     await connection.query('BEGIN');await connection.query("SET LOCAL coed.academic_review_upgrade='observed022-to023'");await connection.query(sql);
+     await connection.query('INSERT INTO schema_migrations(version,checksum) VALUES($1,$2)',['023_phase1_academic_review.sql',UPGRADE_SHA256]);await connection.query('COMMIT');
+    }finally{await connection.query('ROLLBACK');connection.release();}
+    await owner.query("UPDATE coordinator_round_schedules SET review_opens_at=now()-interval '1 hour',review_closes_at=now()+interval '1 hour',confirmation_opens_at=now()+interval '2 hours',confirmation_closes_at=now()+interval '3 hours',version=version+1 WHERE cycle_id=$1",[cycle]);
+    let detail=await staff.detail(coordinator,app.id);assert.equal(detail.can_confirm_academics,true,JSON.stringify(detail.academic_review));assert.equal(detail.can_forward,false);
+    await assert.rejects(staff.confirmAcademics(coordinator,app.id,{...reviewBody(app),checks:{...checks,grades:false}}),e=>e.statusCode===400);
+    await assert.rejects(staff.confirmAcademics({...coordinator,userId:id()},app.id,reviewBody(app)),e=>e.code==='COED_MAINTENANCE');
+    await assert.rejects(staff.confirmAcademics(coordinator,app.id,{...reviewBody(app),submission_id:id()}),e=>e.statusCode===409);
+    await assert.rejects(staff.confirmAcademics(coordinator,app.id,{...reviewBody(app),assessment:{eligibility:'PASS'}}),e=>e.statusCode===400);
+    await owner.query(`CREATE FUNCTION reject_academic_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='academic-review' THEN RAISE EXCEPTION 'synthetic audit failure' USING ERRCODE='23514';END IF;RETURN NEW;END $$;
+      CREATE TRIGGER reject_academic_audit BEFORE INSERT ON coordinator_operations FOR EACH ROW EXECUTE FUNCTION reject_academic_audit()`);
+    await assert.rejects(staff.confirmAcademics(coordinator,app.id,reviewBody(app)),e=>e.code==='23514');
+    assert.equal((await owner.query('SELECT count(*)::int n FROM phase1_academic_reviews WHERE submission_id=$1',[original.id])).rows[0].n,0);
+    await owner.query('DROP TRIGGER reject_academic_audit ON coordinator_operations;DROP FUNCTION reject_academic_audit()');
+    const body=reviewBody(app),[a,b]=await Promise.all([staff.confirmAcademics(coordinator,app.id,body),staff.confirmAcademics(coordinator,app.id,body)]);assert.equal(a.academic_review_id,b.academic_review_id);
+    await assert.rejects(staff.confirmAcademics(coordinator,app.id,reviewBody(app)),e=>e.statusCode===409);
+    detail=await staff.detail(coordinator,app.id);assert.equal(detail.can_forward,true);assert.equal(detail.academic_review.record.assessment.group_gpa,'3.0000');
+    policyId=await publishPolicy(4);assert.equal((await staff.detail(coordinator,app.id)).can_forward,false);
+    await assert.rejects(staff.review(coordinator,app.id,{operation_id:id(),expected_version:0,submission_id:original.id},'forward'),e=>e.code==='ACADEMIC_REVIEW_REQUIRED');
+    await staff.confirmAcademics(coordinator,app.id,reviewBody(app,1));
+    await staff.review(coordinator,app.id,{operation_id:id(),expected_version:0,submission_id:original.id,reason:'Synthetic correction'},'return');
+    app=await service.get(actor,app.id);
+    app=await service.save(actor,app.id,{...command(),expected_policy_id:policyId,payload:{skills_detail:'Synthetic corrected skill'}});
+    app=await service.submit(actor,app.id,{...command(),expected_policy_id:policyId});
+    assert.notEqual(app.submission.id,original.id);detail=await staff.detail(coordinator,app.id);assert.equal(detail.can_forward,false);assert.equal(detail.academic_review.version,0);
+    await assert.rejects(staff.confirmAcademics(coordinator,app.id,{...reviewBody(app),submission_id:original.id}),e=>e.statusCode===409);
+    await staff.confirmAcademics(coordinator,app.id,reviewBody(app));
+    await assert.rejects(board.read(member),e=>e.code==='COED_MAINTENANCE');process.env.COED_COMMITTEE_HANDOFF_ENABLED='true';
+    assert.ok(!(await board.read(member)).students.some(s=>s.id===app.id));
+    const forward={operation_id:id(),expected_version:2,submission_id:app.submission.id};
+    const outside=id(),shared=id();await owner.query("INSERT INTO users(id,role) VALUES($1,'COORDINATOR')",[outside]);
+    await owner.query("INSERT INTO selection_cohorts(id,cycle_id,department,program,coordinator_id,committee_one,committee_two,committee_three) VALUES($1,$2,'CPE','CIS',$3,$4,$5,$6)",[shared,cycle,outside,...members]);
+    try{
+      await assert.rejects(staff.review(coordinator,app.id,forward,'forward'),e=>e.code==='INVALID_STATE_TRANSITION');
+      assert.deepEqual((await board.read(member)).students,[]);
+      await assert.rejects(board.read(member,cohort),e=>e.statusCode===403);
+    }finally{await owner.query('DELETE FROM selection_cohorts WHERE id=$1',[shared]);}
+    const sent=await staff.review(coordinator,app.id,forward,'forward');assert.equal(sent.state,'FORWARDED');assert.deepEqual(await staff.review(coordinator,app.id,forward,'forward'),sent);
+    await assert.rejects(staff.confirmAcademics(coordinator,app.id,reviewBody(app,1)),e=>e.code==='INVALID_STATE_TRANSITION');
+    await assert.rejects(owner.query(`INSERT INTO phase1_academic_reviews(id,application_id,submission_id,submission_checksum,cohort_id,actor_id,policy_id,policy_version,version,checks,assessment,note,operation_id)
+      SELECT $1,application_id,submission_id,submission_checksum,cohort_id,actor_id,policy_id,policy_version,version+1,checks,assessment,note,$2
+      FROM phase1_academic_reviews WHERE submission_id=$3`,[id(),id(),app.submission.id]),e=>e.code==='23514');
+    const received=await board.read(member),student=received.students.find(s=>s.id===app.id);
+    assert.equal(received.can_decide,false);assert.equal(student.submission_id,app.submission.id);assert.equal(student.checksum,app.submission.checksum);assert.equal(student.core,3);assert.equal(student.program,'special');assert.equal(student.curriculum,'66');assert.equal(student.reviewed_assessment.eligibility,'PASS');assert.equal(student.original_assessment.eligibility,'UNKNOWN');
+    assert.equal(student.documents.length,4);assert.ok((await board.download(member,app.documents[0].id)).download);
+    await assert.rejects(board.download({...member,userId:id()},app.documents[0].id),e=>e.statusCode===403);
+    await assert.rejects(board.mutate(member,received.cohort_id,{operation_id:id(),expected_version:received.version,action:'propose',normal:1,special:1,reason:'Synthetic'}),e=>e.code==='COED_MAINTENANCE');
+    await assert.rejects(runtime.query('UPDATE phase1_academic_reviews SET note=note'),e=>e.code==='42501');
+    await assert.rejects(runtime.query('DELETE FROM phase1_academic_reviews'),e=>e.code==='42501');
+    await assert.rejects(runtime.query('TRUNCATE phase1_academic_reviews'),e=>e.code==='42501');
+    await assert.rejects(owner.query('UPDATE phase1_academic_reviews SET note=note'),e=>e.code==='55000');
+    const retained=(await owner.query('SELECT snapshot,checksum FROM phase1_submissions WHERE id=$1',[original.id])).rows[0];assert.equal(retained.checksum,original.checksum);assert.equal(retained.snapshot.policy,null);assert.equal(retained.snapshot.assessment.eligibility,'UNKNOWN');
+    history=(await owner.query('SELECT * FROM schema_migrations ORDER BY version')).rows;
+   }finally{for(const [key,value] of Object.entries(oldFlags))restore(key,value);}
+  });
   await t.test('C7 owner inventory is fixed SELECT-only, resolves only the given owner and emits no profile/credential values',async()=>{
    const c=await owner.connect(),adapt=sql=>sql.replaceAll('public.',q+'.').replaceAll("'public'","'"+schema+"'");
    try{await c.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -366,7 +444,7 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
   await t.test('compatible browse fallback retains pending evidence and closes all writes and staff reads',async()=>{
    process.env.COED_API_MAINTENANCE='browse';
    const retained=await service.get(actor,app.id);
-   assert.equal(retained.access.read_only,true);assert.equal(retained.policy,null);
+   assert.equal(retained.access.read_only,true);assert.deepEqual(retained.policy,app.submission.snapshot.policy);
    assert.equal(retained.submission.checksum,app.submission.checksum);assert.equal(retained.documents.length,4);
    await assert.rejects(service.submit(actor,app.id,{...command(),expected_policy_id:null}),e=>e.code==='COED_MAINTENANCE');
    await assert.rejects(staff.detail({isAuthenticated:true,userId:coord,role:'COORDINATOR',accountStatus:'ACTIVE'},app.id),e=>e.code==='COED_MAINTENANCE');

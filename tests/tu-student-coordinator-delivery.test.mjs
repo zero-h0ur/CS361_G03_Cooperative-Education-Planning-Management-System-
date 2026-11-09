@@ -1,3 +1,4 @@
+import faculty from '../src/shared/faculty-criteria.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID as id,generateKeyPairSync,createHash} from 'node:crypto';
@@ -11,6 +12,7 @@ import tu from '../src/auth/tu-auth-service.js';
 import relink from '../src/auth/tu-identity-relink.js';
 import application from '../src/api/services/application-service.js';
 import coordinator from '../src/api/services/coordinator-workspace-service.js';
+import academicReview from '../src/db/academic-review.js';
 import selection from '../src/api/services/selection-service.js';
 import schedules from '../src/api/services/phase1-schedule-service.js';
 import form from '../src/shared/application-form.js';
@@ -46,7 +48,28 @@ test('TU Student to Cognito Coordinator: real HTTP, isolated PostgreSQL and leas
     await admin.query(`CREATE ROLE ${role} NOLOGIN`);
     const grants=readFileSync(new URL('../src/db/operations/v3-runtime-grants.sql',import.meta.url),'utf8').replace(/^\\set[^\n]*\n/m,'')
       .replaceAll('public.',schema+'.').replaceAll('SCHEMA public','SCHEMA '+schema).replaceAll("'public'","'"+schema+"'").replaceAll('coed_app',role);
-    await db.query(grants);runtime=new pg.Pool({connectionString:url,options:`-c search_path=${schema},public -c role=${role}`});
+    await db.query(grants);
+    runtime=new pg.Pool({connectionString:url,options:`-c search_path=${schema},public -c role=${role}`});
+    await t.test('runtime schema and privileges match the selected migration lineage',async()=>{
+      assert.equal((await runtime.query('SELECT current_user AS role')).rows[0].role,role);
+      assert.equal((await db.query("SELECT to_regclass(current_schema() || '.phase1_academic_reviews') IS NOT NULL AS ready")).rows[0].ready,!observed);
+      const submission={id:id(),snapshot:{assessment:{review_required:true}}};
+      assert.deepEqual(await academicReview.read(runtime,submission),{schema_ready:!observed,version:0,record:null});
+      if(observed)await assert.rejects(academicReview.requireConfirmed(runtime,submission,id(),id(),{}),e=>e.code==='ACADEMIC_REVIEW_REQUIRED');
+      const rights=(await runtime.query(`SELECT
+        has_table_privilege(current_user,'phase1_submission_deliveries','SELECT') AS read_delivery,
+        has_column_privilege(current_user,'phase1_submission_deliveries','submission_id','INSERT') AS append_delivery,
+        has_table_privilege(current_user,'phase1_submission_deliveries','UPDATE,DELETE,TRUNCATE') AS mutate_delivery,
+        has_column_privilege(current_user,'users','role','UPDATE') AS change_role`)).rows[0];
+      assert.deepEqual(rights,{read_delivery:true,append_delivery:true,mutate_delivery:false,change_role:false});
+      if(!observed){
+        const academic=(await runtime.query(`SELECT
+          has_table_privilege(current_user,'phase1_academic_reviews','SELECT') AS read_review,
+          has_table_privilege(current_user,'phase1_academic_reviews','INSERT') AS append_review,
+          has_table_privilege(current_user,'phase1_academic_reviews','UPDATE,DELETE,TRUNCATE') AS mutate_review`)).rows[0];
+        assert.deepEqual(academic,{read_review:true,append_review:true,mutate_review:false});
+      }
+    });
     const studentUser=id(),sid=id(),otherUser=id(),otherSid=id(),coord=id(),outsider=id(),operator=id(),members=[id(),id(),id()],cycle=id(),cohort=id(),policy=id(),oldLink=id();
     const cognitoIssuer='https://cognito-idp.ap-southeast-2.amazonaws.com/synthetic_pool',tuIssuer='urn:coed:tu-auth',number='9900000001';
     for(const [uid,r] of [[studentUser,'STUDENT'],[otherUser,'STUDENT'],[coord,'COORDINATOR'],[outsider,'COORDINATOR'],[operator,'ADMIN'],...members.map(x=>[x,'COMMITTEE'])])await db.query('INSERT INTO users(id,role) VALUES($1,$2)',[uid,r]);
@@ -58,7 +81,7 @@ test('TU Student to Cognito Coordinator: real HTTP, isolated PostgreSQL and leas
     await db.query("INSERT INTO selection_cohorts(id,cycle_id,department,program,coordinator_id,committee_one,committee_two,committee_three) VALUES($1,$2,'CS','regular',$3,$4,$5,$6)",[cohort,cycle,coord,...members]);
     await db.query("INSERT INTO phase1_cycle_windows(cycle_id,opens_at,closes_at) VALUES($1,now()-interval '1 day',now()+interval '1 day')",[cycle]);
     await db.query("INSERT INTO phase1_academic_profiles(student_id,curriculum,entry_year,institution,source,verified_by) VALUES($1,'66',2567,'TU_CS','synthetic',$2)",[sid,operator]);
-    await db.query(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data) VALUES($1,$2,'66',1,2568,'synthetic',true,true,$3)`,[policy,cycle,JSON.stringify({credits:Object.fromEntries(form.GROUPS['66'].flat().map(c=>[c,'3'])),repeat_rule:'LATEST',alternative_rule:'STUDENT_SELECTED'})]);
+    await db.query(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data) VALUES($1,$2,'66',1,2568,'synthetic',true,true,$3)`,[policy,cycle,JSON.stringify(faculty.policyData('66'))]);
     const keys=generateKeyPairSync('rsa',{modulusLength:2048});
     const login=new tu.TuAuthService({pool:runtime,keyPair:keys,tuAppKey:'synthetic-only',tuSecretArn:'',issuer:tuIssuer,clientId:'coed-api',fetchImpl:async(_url,request)=>({ok:true,json:async()=>({status:true,type:'student',username:JSON.parse(request.body).UserName})})});
     connection=await db.connect();
@@ -145,7 +168,7 @@ test('TU Student to Cognito Coordinator: real HTTP, isolated PostgreSQL and leas
         assert.deepEqual((await db.query('SELECT * FROM phase1_operations ORDER BY operation_id')).rows,operations);
       }finally{if(previous===undefined)delete process.env.COED_API_MAINTENANCE;else process.env.COED_API_MAINTENANCE=previous;}
     });
-    const payload={curriculum:'66',gpax:'3.12',declared_group_gpa:'2.8',gpax_reporting_term:'2/2568',name_prefix:'Mx',thai_full_name:'นักศึกษาสมมติ',english_full_name:'Synthetic Student',institutional_email:'test@example.invalid',contact_email:'contact@example.invalid',contact_address:'Synthetic address',contact_phone:'0000000000',major_group:'CIS',guardian_name:'Synthetic parent',guardian_relationship:'Parent',guardian_phone:'0000000000',guardian_address:'Synthetic address',interested_position_codes:['FRONTEND'],skills_detail:'Free text\nTesting',selected_courses:{alternative:'CS213'},course_attempts:form.GROUPS['66'].map(g=>({code:g[0],attempt:1,points:'3'})),additional_studies:{CS180:'ENROLLED',CS262:'STUDIED'},acknowledgements:Object.fromEntries(form.ACKNOWLEDGEMENTS.map(k=>[k,true]))};
+    const payload={academic_criteria_acknowledgement:faculty.ID,curriculum:'66',gpax:'3.12',declared_group_gpa:'2.8',gpax_reporting_term:'2/2568',name_prefix:'Mx',thai_full_name:'นักศึกษาสมมติ',english_full_name:'Synthetic Student',institutional_email:'test@example.invalid',contact_email:'contact@example.invalid',contact_address:'Synthetic address',contact_phone:'0000000000',major_group:'CIS',guardian_name:'Synthetic parent',guardian_relationship:'Parent',guardian_phone:'0000000000',guardian_address:'Synthetic address',interested_position_codes:['FRONTEND'],skills_detail:'Free text\nTesting',selected_courses:{alternative:'CS213'},course_attempts:form.GROUPS['66'].map(g=>({code:g[0],attempt:1,points:'3'})),additional_studies:{CS180:'ENROLLED',CS262:'STUDIED'},acknowledgements:Object.fromEntries(form.ACKNOWLEDGEMENTS.map(k=>[k,true]))};
     app=await request(`${proxy}/${app.id}`,{method:'PATCH',token,body:{...cmd(app.version),expected_policy_id:policy,payload}});
     const pdf=Buffer.from('%PDF-1.4\n1 0 obj <<>> endobj\n%%EOF\n'),png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64');
     await t.test('all four actual uploads complete through the TU bridge',async()=>{

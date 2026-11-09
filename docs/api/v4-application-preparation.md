@@ -110,6 +110,8 @@ migration, old-migration edit, checksum rewrite or data backfill is required.
 
 ## Academic policy
 
+**Updated requirement, 2026-11-08:** the owner has now confirmed actual department credits/repeat/program-course rules. Current new-Draft/Submit and review behavior follows [confirmed criteria](v4-confirmed-academic-criteria.md). The paragraphs below describe the earlier baseline and missing-policy limitation; original submissions retain that history. This source update does not itself publish a verified policy to RDS.
+
 The supplied 2568 criteria are a team baseline for 1/69, not an official 2569
 announcement. Source year and policy version are preserved. Curricula 61/66 have
 different required/alternative groups. GPAX must be at least 2.75; group GPA at

@@ -1,4 +1,5 @@
--- Run as the table owner after all checked-in migrations. Changes ACLs only, never data.
+-- Run as the table owner after the reviewed migrations/upgrades for the target lineage.
+-- Changes ACLs only, never data. Optional023 capabilities require its existing table.
 -- No CASCADE or PUBLIC revocation: inherited/external grants require review.
 \set ON_ERROR_STOP on
 BEGIN;
@@ -74,6 +75,20 @@ REVOKE ALL PRIVILEGES ON public.phase1_submission_deliveries, public.tu_identity
 GRANT SELECT ON public.phase1_submission_deliveries TO coed_app;
 GRANT INSERT(submission_id,application_id,application_version,cohort_id,coordinator_id_at_send,department,program,snapshot_checksum)
   ON public.phase1_submission_deliveries TO coed_app;
+
+-- Pre023 observed schemas still support Student delivery. Academic review stays
+-- unavailable until its separately approved upgrade; never create its table here.
+DO $academic_acl$
+BEGIN
+  IF to_regclass('public.phase1_academic_reviews') IS NOT NULL THEN
+    REVOKE ALL ON public.phase1_academic_reviews FROM coed_app;
+    GRANT SELECT,INSERT ON public.phase1_academic_reviews TO coed_app;
+    IF has_table_privilege('coed_app','public.phase1_academic_reviews','UPDATE,DELETE,TRUNCATE') THEN
+      RAISE EXCEPTION 'Excess effective academic-review privileges remain; all ACL changes rolled back.';
+    END IF;
+  END IF;
+END
+$academic_acl$;
 
 DO $acl$
 BEGIN

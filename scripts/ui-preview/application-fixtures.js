@@ -1,10 +1,13 @@
 // This module is reachable only from Local UI Preview / tests, never production app.js.
 import policyModule from '../../src/api/services/application-policy.js';
 import form from '../../src/shared/application-form.js';
+import faculty from '../../src/shared/faculty-criteria.js';
 import inputModule from '../../src/api/services/application-input.js';
 const {GROUPS,readiness}=policyModule;
 const copy=v=>JSON.parse(JSON.stringify(v));
 export const APPLICATION_SCENARIOS=Object.freeze({
+  'application-confirmed-regular':'เกณฑ์ยืนยัน · ภาคปกติ CS213 · เกรดสูงสุด (จำลอง)',
+  'application-confirmed-special':'เกณฑ์ยืนยัน · ภาคพิเศษ CS216 · เกรดสูงสุด (จำลอง)',
   'application-pending':'ใบสมัคร · รอยืนยันเกณฑ์',
   'application-ready':'ใบสมัคร · พร้อมส่ง (เกณฑ์สมมติ)',
   'application-61':'ใบสมัคร · หลักสูตร 61 (ข้อมูลสมมติ)',
@@ -41,6 +44,12 @@ export function createApplicationPreview({scenario='application-pending'}={}) {
     id:`14100000-0000-4000-8000-00000000001${i}`,kind,filename,byte_size:2048,content_type:kind==='photo'?'image/png':'application/pdf',checksum:'a'.repeat(64)}));
   let apps=[{id:APPLICATION_PREVIEW_ID,cycle_id:cycle,student_id:official.student_id,cycle_name:'รอบ 1/2569 · ข้อมูลสมมติ',form_version:form.FORM_VERSION,status:scenario==='application-submitted'?'SUBMITTED':'DRAFT',version:1,payload:data,official,policy,
     documents:scenario==='application-pending'?[]:docs,submitted_at:scenario==='application-submitted'?new Date().toISOString():null,preview:true}];
+  if(scenario.startsWith('application-confirmed-')){
+    const program=scenario.endsWith('special')?'special':'regular',track=faculty.TRACKS[program];
+    apps[0].academic_criteria=faculty.snapshot(curriculum);data.academic_criteria_acknowledgement=faculty.ID;official.registration={program_type:program};data.major_group=track.major;
+    data.selected_courses.alternative=track.course;data.course_attempts=data.course_attempts.map(r=>r.code==='CS213'?{...r,code:track.course}:r);
+    policy.data=faculty.policyData(curriculum);policy.source='เกณฑ์ยืนยัน · ผู้สมัครและไฟล์จำลองสำหรับ Preview เท่านั้น';
+  }
   const cycles=[{id:cycle,name:'รอบ 1/2569 · ข้อมูลสมมติ',status:'OPEN',academic_year:2569,semester:1},
     {id:otherCycle,name:'รอบ 2/2569 · ข้อมูลสมมติ',status:'OPEN',academic_year:2569,semester:2}];
   if(['application-overview','application-multiple'].includes(scenario))apps.push({...copy(apps[0]),id:'14100000-0000-4000-8000-000000000020',cycle_id:otherCycle,cycle_name:'รอบ 2/2568 · ข้อมูลสมมติ',status:'SUBMITTED',submitted_at:'2026-08-10T03:00:00Z'});
@@ -62,7 +71,7 @@ export function createApplicationPreview({scenario='application-pending'}={}) {
     const app=get(id);if(app.status!=='DRAFT' || body.expected_version!==app.version)throw new Error('ไม่สามารถแก้ไขใบสมัครจำลองนี้');
     work(app);app.version++;receipt.set(body.operation_id,copy(app));return copy(app);
   }
-  const check=app=>readiness({app,official:app.official,policy:app.policy,documents:app.documents,window:{is_open:true},roundOpen:true,allowSynthetic:true});
+  const check=app=>readiness({app,official:app.official,policy:app.policy,documents:app.documents,window:{is_open:true},roundOpen:true,allowSynthetic:true,facultyConfirmed:app.academic_criteria?.id===faculty.ID,requireCriteriaAcknowledgement:app.academic_criteria?.id===faculty.ID});
   return {
     async options(){if(scenario==='application-options-error')throw new Error('โหลดข้อมูลรอบไม่สำเร็จ (จำลอง)');return copy({official,cycles,criteria:policyModule.templates(),storage_configured:false,preview:true});},
     async list(){if(scenario==='application-list-error')throw new Error('โหลดใบสมัครไม่สำเร็จ (จำลอง)');return copy(apps.map(a=>({id:a.id,cycle_id:a.cycle_id,status:a.status,version:a.version,submitted_at:a.submitted_at,updated_at:a.updated_at})));},async get(id){return copy(get(id));},

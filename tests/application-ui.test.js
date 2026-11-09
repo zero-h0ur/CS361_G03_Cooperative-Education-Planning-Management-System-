@@ -29,6 +29,35 @@ test('real criteria pending, official identity locked, no fabricated credits or 
   expect(root.querySelector('.application-error').textContent).toContain('รอยืนยันข้อมูลเกณฑ์');
   expect(button(root,'ส่งใบสมัคร').disabled).toBe(true);
 });
+test.each([['regular','CS213','CS216'],['special','CS216','CS213']])('confirmed %s form locks the course to its program and keeps only one highest-grade input',async(program,course,other)=>{
+ const {root,client}=await editor('application-confirmed-'+program);root.querySelector('[aria-controls="application-academic"]').click();
+ expect(root.textContent).toContain('กรอกเฉพาะเกรดสูงสุด');expect(root.textContent).not.toContain('เมื่อได้ C แล้วลงเรียนซ้ำไม่ได้');expect(root.textContent).not.toContain('ไม่ได้ลงเรียนซ้ำหลังได้ C');
+ expect(root.querySelector('#grade-'+course+'-1')).not.toBeNull();expect(root.querySelector('#grade-'+other+'-1')).toBeNull();
+ expect([...root.querySelectorAll('button')].some(b=>b.textContent.startsWith('เพิ่มครั้งที่เรียน'))).toBe(false);
+ expect(root.querySelector('#application-selected_courses')).toBeNull();
+ const grade=root.querySelector('#grade-CS100-1');grade.value='1.5';grade.dispatchEvent(new Event('change'));
+ button(root,'บันทึกฉบับร่าง').click();await flush();await flush();expect((await client.get(ID)).payload.course_attempts.find(r=>r.code==='CS100').points).toBe('1.5');
+ button(root,'ตรวจความพร้อม').click();await flush();await flush();expect(root.textContent).toContain('CS100 ต้องได้ C');expect(button(root,'ส่งใบสมัคร').disabled).toBe(true);
+});
+test('submitted historical form keeps its original attempt-based view instead of silently adopting new criteria',async()=>{
+ const {root}=await editor('application-submitted');root.querySelector('[aria-controls="application-academic"]').click();
+ expect(root.querySelector('#application-selected_courses')).not.toBeNull();expect(root.textContent).toContain('ระบุทุกครั้งที่เคยเรียน');expect(root.textContent).not.toContain('กรอกเฉพาะเกรดสูงสุด');
+});
+test('old Draft acknowledgement booleans cannot preselect the stronger statement; an explicit check stores the criteria version',async()=>{
+ const client=createApplicationPreview({scenario:'application-confirmed-regular'}),application=await client.get(ID);delete application.payload.academic_criteria_acknowledgement;
+ const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);root.querySelector('[aria-controls="application-interests"]').click();
+ const check=root.querySelector('#application-acknowledgements-required_courses');expect(check.checked).toBe(false);check.click();button(root,'บันทึกฉบับร่าง').click();await flush();await flush();
+ expect((await client.get(ID)).payload.academic_criteria_acknowledgement).toBe(require('../src/shared/faculty-criteria').ID);
+});
+test('a retained multi-attempt Draft is preserved until an explicit highest-grade edit',async()=>{
+ const client=createApplicationPreview({scenario:'application-confirmed-special'});let application=await client.get(ID);
+ const records=application.payload.course_attempts.map(r=>r.code==='CS100'?{...r,points:'0'}:r).concat({code:'CS100',attempt:2,points:'3.5'});
+ await client.save(ID,{operation_id:webcrypto.randomUUID(),expected_version:application.version,payload:{course_attempts:records}});application=await client.get(ID);
+ const root=renderApplicationEditor({client,application,signal:controller.signal});document.body.append(root);root.querySelector('[aria-controls="application-academic"]').click();
+ expect(root.textContent).toContain('ฉบับร่างเดิมมีหลายครั้ง');expect((await client.get(ID)).payload.course_attempts.filter(r=>r.code==='CS100')).toHaveLength(2);
+ button(root,'ใช้เกรดสูงสุด CS100: B+').click();button(root,'บันทึกฉบับร่าง').click();await flush();await flush();
+ const saved=await client.get(ID);expect(saved.payload.course_attempts.filter(r=>r.code==='CS100')).toEqual([{code:'CS100',attempt:2,points:'3.5'}]);expect(saved.payload.acknowledgements.required_courses).toBe(false);
+});
 test.each(['application-failed','application-conflict'])('failed save keeps typed personal fields and warns before navigation: %s',async scenario=>{
   const {root,guard}=await editor(scenario),input=root.querySelector('#application-contact_address');
   input.value='ยังไม่ได้บันทึก 141';input.dispatchEvent(new Event('input',{bubbles:true}));

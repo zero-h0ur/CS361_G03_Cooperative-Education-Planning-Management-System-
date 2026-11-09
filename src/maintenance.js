@@ -9,6 +9,7 @@ const APPLICATION_DETAIL=new RegExp('^/api/tu-proxy/api/v4/applications/'+UUID+'
 const PUBLIC_COMPANY_DETAIL=new RegExp('^/api/directory/companies/'+UUID+'$','i');
 const PUBLIC_FILTERS=new Set(['q','location','page','pageSize']);
 const {INTAKE_MODES}=require('./shared/application-access');
+const {handoffScope}=require('./shared/review-access');
 const STUDENT_APP='/api/tu-proxy/api/v4/applications';
 const INTAKE_APP=new RegExp('^'+STUDENT_APP+'/'+UUID+'$','i');
 const INTAKE_READY=new RegExp('^'+STUDENT_APP+'/'+UUID+'/readiness$','i');
@@ -37,12 +38,19 @@ function maintenanceResponse(event={},mode=process.env.COED_API_MAINTENANCE){
   if(method==='GET' && (mode==='verify' || mode==='browse' || intake) &&
     (READ_PATHS.has(path) && noQuery(event) || (mode==='browse' || intake) && browseRead(event,path)))return null;
   if(intake){
+    if(mode==='intake-pilot' && process.env.COED_COORDINATOR_REVIEW_ENABLED==='true' && noQuery(event) &&
+      (method==='POST' && new RegExp('^/api/v4/coordinator/applications/'+UUID+'/(?:academic-review|return|forward)$','i').test(path) ||
+       method==='GET' && path==='/api/v4/coordinator/tracking'))return null;
+    if(mode==='intake-pilot' && handoffScope() && method==='GET' &&
+      (path==='/api/v3/committee/workspace' && [...new URLSearchParams(event.rawQueryString || '').keys()].every(k=>k==='cohort_id') &&
+        Object.keys(event.queryStringParameters || {}).every(k=>k==='cohort_id') ||
+       noQuery(event) && new RegExp('^/api/v3/committee/documents/'+UUID+'/download$','i').test(path)))return null;
     if(noQuery(event) && ((method==='GET'||method==='POST') && COORDINATOR_INTAKE.test(path) || method==='GET' && COORDINATOR_SCHEDULE.test(path)))return null;
     if(noQuery(event) && (method==='GET' && (INTAKE_READY.test(path) || COORDINATOR_READ.test(path)) ||
       method==='POST' && path===STUDENT_APP || method==='PATCH' && INTAKE_APP.test(path) ||
       mode!=='intake-draft' && method==='POST' && (INTAKE_UPLOAD.test(path) || INTAKE_DOWNLOAD.test(path)) ||
       mode==='intake-pilot' && method==='POST' && INTAKE_SUBMIT.test(path)))return null;
-    if(method==='GET' && path==='/api/v4/coordinator/applications'){
+    if(method==='GET' && (path==='/api/v4/coordinator/applications' || mode==='intake-pilot' && process.env.COED_COORDINATOR_REVIEW_ENABLED==='true' && path==='/api/v4/coordinator/tracking')){
       const params=new URLSearchParams(event.rawQueryString || '');
       if([...params.keys()].every(k=>COORDINATOR_FILTERS.has(k) && params.getAll(k).length===1) &&
         Object.keys(event.queryStringParameters || {}).every(k=>COORDINATOR_FILTERS.has(k)))return null;

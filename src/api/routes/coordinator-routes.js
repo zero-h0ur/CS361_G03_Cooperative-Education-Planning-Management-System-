@@ -21,6 +21,7 @@ function registerCoordinatorRoutes(router,protect,options={}) {
   add('GET','/api/v4/coordinator/applications',(a,_id,_body,q)=>service.list(a,q),filters);
   add('GET','/api/v4/coordinator/tracking',(a,_id,_body,q)=>service.tracking(a,q),filters.filter(x=>x!=='state'));
   add('GET',/^\/api\/v4\/coordinator\/applications\/([^/]+)$/, (a,id)=>service.detail(a,id));
+  add('POST',/^\/api\/v4\/coordinator\/applications\/([^/]+)\/academic-review$/, (a,id,b)=>service.confirmAcademics(a,id,b));
   add('POST',/^\/api\/v4\/coordinator\/applications\/([^/]+)\/return$/, (a,id,b)=>service.review(a,id,b,'return'));
   add('POST',/^\/api\/v4\/coordinator\/applications\/([^/]+)\/forward$/, (a,id,b)=>service.review(a,id,b,'forward'));
   add('GET',/^\/api\/v4\/coordinator\/schedules\/([^/]+)$/, (a,id)=>service.getSchedule(a,id));

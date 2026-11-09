@@ -44,6 +44,8 @@
 - [V3 shared API](api/v3-shared-contract.md) และ [three-role workflow](api/three-role-workflow.md): โดเมนแผนเดิม ไม่ใช่ใบสมัคร Phase 1 ทั้งหมด
 - [Phase 1 preparation contract](api/v4-application-preparation.md): ฐาน contract เดิม; pending-academic intake และ controls เป็นส่วนขยายใน architecture/source ปัจจุบัน
 - [Coordinator workspace evidence](evidence/coordinator-workspace-redesign.md): ผล local ของช่วงนั้น ไม่ใช่การเปิด review/forward ใน pilot ปัจจุบัน
+- [Academic review and handoff](api/v4-academic-review.md) และ [local verification](operations/academic-review-verification.md): ส่วนขยาย source ที่ยังไม่ Deploy; ต้องมีเกณฑ์ยืนยันครบก่อนส่ง Committee
+- [Confirmed department criteria](api/v4-confirmed-academic-criteria.md): เกณฑ์ที่เจ้าของยืนยัน 2026-11-08 — 3 หน่วยกิต, เกรดสูงสุดขั้นต่ำ C และ CS213/CS216 ตามภาค; ยังไม่ได้เผยแพร่ลง RDS
 - [Partner directory operations](operations/partner-directory.md): ข้อมูลบริษัทและ privacy boundary
 - [Local release candidate](operations/v4-local-release-candidate.md): การแพ็กและ release gate ไม่ใช่คำสั่ง Deploy อัตโนมัติ
 

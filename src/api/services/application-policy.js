@@ -1,17 +1,20 @@
 // Source: user-supplied 2568 criteria, adopted by the team for 1/69.
 // These templates intentionally contain NO invented credits or repeat rules.
 const {GROUPS,MAJORS,POSITIONS,ACKNOWLEDGEMENTS,DECLARED_IDENTITY,EMAIL}=require('../../shared/application-form');
+const faculty=require('../../shared/faculty-criteria');
 const EXTRA={'61':[['CS384'],['CS266','CS322','CS348']],'66':[['CS180'],['CS262','CS331','CS240']]};
 const BASELINE=Object.freeze({id:'TU_CS_2568_TEAM_BASELINE_FOR_1_69',source_year:2568,gpax_min:'2.75',group_gpa_min:'2.50',entry_year_max:2567});
-function effectiveCriteria(curriculum){return {...BASELINE,required_groups:(GROUPS[curriculum] || []).map(g=>[...g]),
+function effectiveCriteria(curriculum,data){return {...(data?.criteria_id===faculty.ID?faculty.snapshot(curriculum):BASELINE),required_groups:(GROUPS[curriculum] || []).map(g=>[...g]),
   additional_groups:(EXTRA[curriculum] || []).map(g=>[...g]),future_course:curriculum==='61'?'CS302':'CS301'};}
-function templates() {return Object.keys(GROUPS).map(curriculum=>({curriculum,source_year:2568,verified:false,groups:GROUPS[curriculum],additional:EXTRA[curriculum],future_course:curriculum==='61'?'CS302':'CS301',effective_criteria:effectiveCriteria(curriculum)}));}
+function templates() {return Object.keys(GROUPS).map(curriculum=>({curriculum,source_year:2568,source:faculty.SOURCE,owner_confirmed:true,verified:false,
+ groups:GROUPS[curriculum],additional:EXTRA[curriculum],future_course:curriculum==='61'?'CS302':'CS301',
+ data:faculty.policyData(curriculum),effective_criteria:effectiveCriteria(curriculum,faculty.policyData(curriculum))}));}
 function scaled(value) {
   const s=String(value ?? '');
   if (!/^\d+(?:\.\d{1,4})?$/.test(s)) return null;
   const [a,b='']=s.split('.');return BigInt(a)*10000n+BigInt(b.padEnd(4,'0'));
 }
-function readiness({app,official,policy,documents=[],window,roundOpen,allowSynthetic=false,allowPendingAcademic=false}) {
+function readiness({app,official,policy,documents=[],window,roundOpen,allowSynthetic=false,allowPendingAcademic=false,facultyConfirmed=false,requireCriteriaAcknowledgement=false}) {
   const p=app.payload || {}, blockers=[],review_flags=[];
   const add=(field,code,message)=>blockers.push({field,code,message});
   const pending=(field,code,message)=>(allowPendingAcademic?review_flags:blockers).push({field,code,message});
@@ -21,7 +24,10 @@ function readiness({app,official,policy,documents=[],window,roundOpen,allowSynth
   else if (!window.is_open) add('cycle_id','WINDOW_CLOSED','ไม่อยู่ในช่วงเวลารับสมัคร');
   const data=policy?.data;
   const configured=policy?.verified && policy.source_year===BASELINE.source_year && (!policy.synthetic || allowSynthetic) && data && GROUPS[curr]
-    && ['LATEST','HIGHEST','SELECTED'].includes(data.repeat_rule) && data.alternative_rule==='STUDENT_SELECTED';
+    && (facultyConfirmed?faculty.policyMatches(policy,curr):['LATEST','HIGHEST','SELECTED'].includes(data.repeat_rule) && data.alternative_rule==='STUDENT_SELECTED');
+  const programType=faculty.programType(official,p),track=faculty.TRACKS[programType];
+  if(requireCriteriaAcknowledgement && p.academic_criteria_acknowledgement!==faculty.ID)add('acknowledgements.required_courses','CRITERIA_ACK_REQUIRED','กรุณารับรองเงื่อนไขรายวิชาตามเกณฑ์ที่ยืนยันล่าสุดด้วยตนเอง');
+  if(facultyConfirmed && (!track || p.major_group!==track.major))add('major_group','PROGRAM_MAJOR_MISMATCH','ภาคปกติต้องเป็น CIS ภาคพิเศษต้องเป็น ACS กรุณาตรวจข้อมูลตามหลักฐาน');
   if (!configured) pending('curriculum','POLICY_PENDING','รอยืนยันข้อมูลเกณฑ์');
   if (!official?.academic_verified) pending('curriculum','IDENTITY_PENDING','รอยืนยันหลักสูตรและปีที่เข้าศึกษา');
   if(allowPendingAcademic && !GROUPS[curr])add('curriculum','REQUIRED','กรุณาเลือกหลักสูตรตาม Transcript');
@@ -52,26 +58,29 @@ function readiness({app,official,policy,documents=[],window,roundOpen,allowSynth
   for (const group of GROUPS[curr] || []) {
     let code=group[0];
     if (group.length>1) {
-      code=p.selected_courses?.alternative;
+      code=facultyConfirmed?track?.course:p.selected_courses?.alternative;
       if (!group.includes(code)) {add('selected_courses','COURSE_CHOICE','กรุณาเลือกวิชาทางเลือกที่นำมาคำนวณ');valid=false;continue;}
+      if(facultyConfirmed && p.selected_courses?.alternative!==code)add('selected_courses','PROGRAM_COURSE_MISMATCH',`ภาค${programType==='regular'?'ปกติใช้ CS213':'พิเศษใช้ CS216'} กรุณายืนยันรายวิชาตามภาค`);
     }
     const credits=scaled(data?.credits?.[code]);
     if (credits===null || credits<=0n || credits>990000n) {if (configured) pending('course_attempts','CREDITS_PENDING',`รอยืนยันหน่วยกิต ${code}`);valid=false;}
     if(allowPendingAcademic && (p.course_attempts || []).some(x=>x.code===code && x.points===null))add('course_attempts','COURSE_REQUIRED',`กรุณากรอกเกรดทุกครั้งที่เรียน ${code}`);
     let attempts=(p.course_attempts || []).filter(x=>x.code===code && x.points!==null);
-    if(allowPendingAcademic && attempts.length>1 && (!configured || data.repeat_rule==='SELECTED')){
+    if(allowPendingAcademic && !facultyConfirmed && attempts.length>1 && (!configured || data.repeat_rule==='SELECTED')){
       pending('course_attempts','RETAKE_REVIEW','รอตรวจผลการเรียนซ้ำตามหลักฐาน');valid=false;
       if(attempts.some(x=>scaled(x.points)===null || scaled(x.points)>40000n))add('course_attempts','INVALID_GRADE','เกรดต้องอยู่ระหว่าง 0 ถึง 4');
       continue;
     }
-    if (attempts.length>1 && configured) {
-      if (data.repeat_rule==='LATEST') attempts=[attempts.reduce((a,b)=>a.attempt>b.attempt?a:b)];
-      else if (data.repeat_rule==='HIGHEST') attempts=[attempts.reduce((a,b)=>scaled(a.points)>scaled(b.points)?a:b)];
+    if (attempts.length>1 && (configured || facultyConfirmed)) {
+      if(attempts.some(x=>scaled(x.points)===null || scaled(x.points)>40000n)){add('course_attempts','INVALID_GRADE','เกรดต้องอยู่ระหว่าง 0 ถึง 4');valid=false;continue;}
+      if (!facultyConfirmed && data.repeat_rule==='LATEST') attempts=[attempts.reduce((a,b)=>a.attempt>b.attempt?a:b)];
+      else if (facultyConfirmed || data.repeat_rule==='HIGHEST') attempts=[attempts.reduce((a,b)=>scaled(a.points)>scaled(b.points)?a:b)];
       else {add('course_attempts','RETAKE_REVIEW','กรณีเรียนซ้ำต้องได้รับการยืนยันตามเกณฑ์');valid=false;continue;}
     }
     if (attempts.length!==1 || scaled(attempts[0]?.points)===null) {add('course_attempts','COURSE_REQUIRED',`กรุณาระบุผลการเรียน ${code}`);valid=false;continue;}
     const points=scaled(attempts[0].points);
     if (points<0n || points>40000n) {valid=false;add('course_attempts','INVALID_GRADE','เกรดต้องอยู่ระหว่าง 0 ถึง 4');continue;}
+    if(facultyConfirmed && points<20000n)add('course_attempts','COURSE_BELOW_C',`${code} ต้องได้ C (2.00) ขึ้นไป หากยังต่ำกว่า C ต้องเรียนใหม่ก่อน`);
     if (credits!==null && credits>0n) {numerator+=points*credits;denominator+=credits;}
   }
   const groupGpa=valid && denominator>0n ? (Number(numerator)/Number(denominator)/10000).toFixed(4) : null;

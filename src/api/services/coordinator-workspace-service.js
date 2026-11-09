@@ -4,6 +4,10 @@ const {hash}=require('./application-service');
 const v=require('./workflow-input');
 const {ValidationError,ForbiddenError,NotFoundError,ConflictError,InvalidStateTransitionError,ServiceUnavailableError}=require('../errors');
 const intake=require('../../db/phase1-intake');
+const academicReview=require('../../db/academic-review');
+const academicDomain=require('./academic-review-domain');
+const {randomUUID}=require('node:crypto');
+const {reviewStage}=require('../../shared/review-access');
 const domain=require('./coordinator-domain');
 const {assertDeliverySchema}=require('../../db/phase1-delivery');
 const {confirmationWindow}=require('./phase1-schedule-compat');
@@ -37,7 +41,7 @@ class CoordinatorWorkspaceService {
       sub.id AS submission_id,sub.application_version AS submitted_version,sub.snapshot,sub.checksum,sub.submitted_at,
       rv.state AS review_state,rv.version AS review_version,rv.reason,rv.updated_at AS reviewed_at,
       cw.state AS committee_state,cw.version AS committee_version,
-      clock_timestamp()<COALESCE(sched.review_closes_at,win.closes_at) AS review_open
+      clock_timestamp()>=COALESCE(sched.review_opens_at,win.opens_at) AND clock_timestamp()<COALESCE(sched.review_closes_at,win.closes_at) AS review_open
       FROM phase1_applications a JOIN students st ON st.id=a.student_id
       JOIN LATERAL(SELECT * FROM phase1_submissions s WHERE s.application_id=a.id ORDER BY s.application_version DESC LIMIT 1) sub ON true
       LEFT JOIN phase1_submission_deliveries delivery ON delivery.submission_id=sub.id
@@ -67,7 +71,7 @@ class CoordinatorWorkspaceService {
       positions:p.interested_position_codes || [],...domain.academic(s,{allowSynthetic:this.allowSynthetic})};
     if(detail)Object.assign(record,{official,payload:p,documents:s.documents || [],policy:s.policy || null,
       declarations:domain.declarations(s),checksum:row.checksum,reviewed_at:row.reviewed_at,
-      can_review:!process.env.COED_API_MAINTENANCE || process.env.COED_API_MAINTENANCE==='off'?
+      can_review:reviewStage()?
         state==='PENDING' && row.status==='SUBMITTED' && row.cycle_status==='OPEN' && row.review_open===true && !row.committee_state?.finalized:false});
     return record;
   }
@@ -96,10 +100,17 @@ class CoordinatorWorkspaceService {
     if(!row)throw new NotFoundError('ไม่พบใบสมัครที่คุณมีสิทธิ์ตรวจ');
     const history=(await db.query('SELECT id,application_version,submitted_at,checksum FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC',[id])).rows;
     const reviews=(await db.query("SELECT action,result,created_at FROM coordinator_operations WHERE resource_id=$1 AND action IN ('return','forward') ORDER BY created_at",[id])).rows;
-    return {...this.present(row,true),access:intake.access(actor,row.cycle_id),submission_history:history,review_history:reviews};
+    const record=this.present(row,true);
+    if(row.snapshot?.assessment?.review_required){
+      const state=await academicReview.gate(db,{id:row.submission_id,snapshot:row.snapshot,checksum:row.checksum},row.cycle_id,{allowSynthetic:this.allowSynthetic});
+      state.confirmed=state.confirmed && state.record?.actor_id===actor.userId && state.record?.cohort_id===row.cohort_id;
+      record.academic_review=state;record.can_confirm_academics=record.can_review && state.schema_ready && state.preview.can_confirm;
+      record.can_forward=record.can_review && state.confirmed && state.record?.actor_id===actor.userId;
+    }else record.can_forward=record.can_review;
+    return {...record,access:intake.access(actor,row.cycle_id),submission_history:history,review_history:reviews};
   }
   async command(actor,id,body,action,work) {
-    if(process.env.COED_API_MAINTENANCE && process.env.COED_API_MAINTENANCE!=='off')throw new ServiceUnavailableError('ยังไม่เปิดการทำรายการพิจารณา','COED_MAINTENANCE');
+    if(!reviewStage() || process.env.COED_API_MAINTENANCE && process.env.COED_API_MAINTENANCE!=='off' && !['academic-review','return','forward'].includes(action))throw new ServiceUnavailableError('ยังไม่เปิดการทำรายการพิจารณา','COED_MAINTENANCE');
     roleGuard(actor,['COORDINATOR']);v.uuid(id,'resource_id');v.command(body);
     const db=await this.db().connect();
     try {
@@ -116,6 +127,32 @@ class CoordinatorWorkspaceService {
       await db.query('COMMIT');return result;
     }catch(e){await db.query('ROLLBACK').catch(()=>{});throw e;}finally{db.release();}
   }
+  async confirmAcademics(actor,id,body){
+    v.fields(body,['operation_id','expected_version','submission_id','expected_policy_id','checks','note']);
+    v.uuid(body.submission_id,'submission_id');v.uuid(body.expected_policy_id,'expected_policy_id');
+    if(!body.checks || Object.keys(body.checks).sort().join(',')!==[...academicDomain.CHECKS].sort().join(',') || !academicDomain.CHECKS.every(k=>body.checks[k]===true))
+      throw new ValidationError('ต้องตรวจหลักฐานทุกหัวข้อด้วยตนเอง');
+    const note=typeof body.note==='string'?body.note.replace(/\r\n?/g,'\n').trim():'';
+    if(!note || note.length>2000 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(note))throw new ValidationError('กรุณาบันทึกแหล่งหลักฐานและผลตรวจ ไม่เกิน 2,000 ตัวอักษร');
+    return this.command(actor,id,body,'academic-review',async(db,replay)=>{
+      const app=(await db.query('SELECT * FROM phase1_applications WHERE id=$1 FOR UPDATE',[id])).rows[0];
+      if(!app)throw new NotFoundError();
+      const row=(await this.rows(db,actor,{cycle_id:app.cycle_id})).find(x=>x.id===id);if(!row)throw new ForbiddenError();if(replay)return;
+      await db.query("SELECT pg_advisory_xact_lock(hashtextextended('phase1:cycle:' || $1::text,0))",[app.cycle_id]);
+      const submission=(await db.query('SELECT id,snapshot,checksum FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC LIMIT 1',[id])).rows[0];
+      if(submission?.id!==body.submission_id)throw new ConflictError('ใบสมัครเปลี่ยนแล้ว กรุณาโหลดฉบับล่าสุด');
+      const state=await academicReview.gate(db,submission,app.cycle_id,{allowSynthetic:this.allowSynthetic});
+      if(!state.schema_ready)throw new ServiceUnavailableError('ต้องอัปเกรดระบบตรวจรับรองก่อน','ACADEMIC_REVIEW_UPGRADE_REQUIRED');
+      if(body.expected_version!==state.version || body.expected_policy_id!==state.preview.policy?.id)throw new ConflictError('ผลตรวจหรือเกณฑ์เปลี่ยนแล้ว กรุณาโหลดล่าสุด');
+      if(!this.present(row,true).can_review)throw new InvalidStateTransitionError('ใบสมัครหรือช่วงพิจารณาไม่เปิดให้ตรวจรับรอง');
+      if(!state.preview.can_confirm)throw new ValidationError('ยังรับรองไม่ได้ ต้องแก้ข้อมูลหรือยืนยันเกณฑ์ให้ครบ',state.preview.blockers,'ACADEMIC_REVIEW_NOT_READY');
+      const reviewId=randomUUID(),version=state.version+1;
+      await db.query(`INSERT INTO phase1_academic_reviews(id,application_id,submission_id,submission_checksum,cohort_id,actor_id,policy_id,policy_version,version,checks,assessment,note,operation_id)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,[reviewId,id,submission.id,submission.checksum,row.cohort_id,actor.userId,
+        state.preview.policy.id,state.preview.policy.version,version,JSON.stringify(body.checks),JSON.stringify(state.preview),note,body.operation_id]);
+      return {id,academic_review_id:reviewId,submission_id:submission.id,version,policy_id:state.preview.policy.id,eligibility:'PASS'};
+    });
+  }
   async review(actor,id,body,action) {
     if(!['return','forward'].includes(action))throw new ValidationError('คำสั่งไม่ถูกต้อง');
     v.fields(body,['operation_id','expected_version','submission_id',...(action==='return'?['reason']:[])]);
@@ -130,19 +167,22 @@ class CoordinatorWorkspaceService {
       const cohort=cohorts.find(c=>c.id===scoped?.cohort_id);
       if(!cohort)throw new ForbiddenError();if(replay)return;
       await db.query("SELECT pg_advisory_xact_lock(hashtextextended('phase1:cycle:' || $1::text,0))",[app.cycle_id]);
-      const latest=(await db.query('SELECT id,snapshot FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC LIMIT 1',[id])).rows[0];
-      if(action==='forward' && latest?.snapshot?.assessment?.review_required===true)
-        throw new InvalidStateTransitionError('ต้องตรวจและรับรองหลักฐานการศึกษาก่อนส่งต่อกรรมการ','ACADEMIC_REVIEW_REQUIRED');
+      const latest=(await db.query('SELECT id,snapshot,checksum FROM phase1_submissions WHERE application_id=$1 ORDER BY application_version DESC LIMIT 1',[id])).rows[0];
+      if(action==='forward')await academicReview.requireConfirmed(db,latest,app.cycle_id,cohort.id,{allowSynthetic:this.allowSynthetic,actorId:actor.userId});
       const current=(await db.query('SELECT * FROM phase1_reviews WHERE application_id=$1 FOR UPDATE',[id])).rows[0];
       if(body.expected_version!==(current?.version || 0) || latest?.id!==body.submission_id)throw new ConflictError('ใบสมัครเปลี่ยนแล้ว กรุณาโหลดฉบับล่าสุด');
       const window=(await db.query(`SELECT r.status,COALESCE(s.review_closes_at,w.closes_at) AS deadline,
-        clock_timestamp()<COALESCE(s.review_closes_at,w.closes_at) AS is_open FROM rounds r
+        clock_timestamp()>=COALESCE(s.review_opens_at,w.opens_at) AND clock_timestamp()<COALESCE(s.review_closes_at,w.closes_at) AS is_open FROM rounds r
         LEFT JOIN coordinator_round_schedules s ON s.cycle_id=r.id LEFT JOIN phase1_cycle_windows w ON w.cycle_id=r.id WHERE r.id=$1`,[app.cycle_id])).rows[0];
       if(app.status!=='SUBMITTED' || current && current.state!=='PENDING' || window?.status!=='OPEN' || !window?.is_open)
         throw new InvalidStateTransitionError('ใบสมัครหรือช่วงพิจารณาไม่เปิดให้ทำรายการแล้ว');
       const canonical=(await db.query(`SELECT id FROM selection_cohorts WHERE status='ACTIVE' AND cycle_id=$1 AND department=$2
         AND committee_one=$3 AND committee_two=$4 AND committee_three=$5 ORDER BY id LIMIT 1`,
       [cohort.cycle_id,cohort.department,cohort.committee_one,cohort.committee_two,cohort.committee_three])).rows[0];
+      if(action==='forward' && process.env.COED_API_MAINTENANCE==='intake-pilot' && (await db.query(`SELECT 1 FROM selection_cohorts outside WHERE outside.cycle_id=$1 AND outside.department=$2
+        AND outside.status='ACTIVE' AND outside.committee_one=$3 AND outside.committee_two=$4 AND outside.committee_three=$5 AND outside.coordinator_id<>$6 LIMIT 1`,
+        [cohort.cycle_id,cohort.department,cohort.committee_one,cohort.committee_two,cohort.committee_three,actor.userId])).rowCount)
+        throw new InvalidStateTransitionError('ชุดกรรมการมีข้อมูลนอกขอบเขตที่เปิดใช้งาน กรุณาตรวจการมอบหมายก่อนส่งต่อ');
       const activeMembers=(await db.query("SELECT count(*)::int AS n FROM users WHERE id=ANY($1::uuid[]) AND role='COMMITTEE' AND account_status='ACTIVE'",
         [[cohort.committee_one,cohort.committee_two,cohort.committee_three]])).rows[0].n;
       if(activeMembers!==3)throw new InvalidStateTransitionError('กรรมการที่ได้รับมอบหมายต้องพร้อมใช้งานครบ 3 คน');

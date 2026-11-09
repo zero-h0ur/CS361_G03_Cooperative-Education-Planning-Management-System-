@@ -1,6 +1,6 @@
 # Student intake verification
 
-Updated: 2026-11-06 (Asia/Bangkok). Source branch: `fix/student-application-intake`, latest tested CI fix `c63b238`. This file records prior checks and genuine owner confirmations; the documentation update itself reruns only documentation validation. AWS versions/feature gates are in [current deployment](current-deployment.md), not inferred from the latest source commit.
+Updated: 2026-11-08 (Asia/Bangkok). Historical intake evidence uses `fix/student-application-intake`/`c63b238`; the routed-audience source/CI/deployment evidence below uses merged commit `cdfdf7d`. Keep prior owner confirmations separate from the Nov 8 operational smoke and pending multi-account browser acceptance. AWS versions/feature gates are in [current deployment](current-deployment.md), not inferred from the latest source commit.
 
 ## Evidence matrix
 
@@ -83,11 +83,11 @@ npm run test:docs
 
 Some listed commands need additional dedicated DB variables; do not treat the example above as their complete setup. `verify:migrations` reads the 15 reviewed fresh/workspace files and does not connect to a DB. Observed 018–022 are separately gated upgrades, never implicitly applied by general packaging or API Deploy.
 
-## Routed TU audience — unreleased source extension (2026-11-08)
+## Routed TU audience — source and backend cutover (2026-11-08)
 
-The requested extension admits other TU-onboarded Students matching the approved intake route, instead of manually adding account UUIDs. This section describes source/configuration, **not a new live deployment snapshot**. Default behavior remains the existing single-account pilot.
+The requested extension admits other TU-onboarded Students matching the approved intake route, instead of manually adding account UUIDs. Default source behavior remains the single-account pilot. After explicit owner approval, backend version **9** enabled `routed-tu-students`; [current deployment](current-deployment.md) records the fresh operational evidence and unchanged boundaries. Genuine multi-account browser acceptance remains pending.
 
-Configuration and data needed for a future approved activation:
+Activation contract used for the approved backend release (route/data acceptance still needs verification):
 
 1. Release the updated `coed-api` backend containing `src/shared/application-access.js`, `src/db/phase1-intake.js` and `src/api/services/application-service.js`. Changing an environment variable on the old Lambda does not add this behavior. Existing frontend screens consume the returned access flags; no new page, broker Lambda, Gateway route or IAM grant is required by this source change.
 2. Set backend `COED_INTAKE_AUDIENCE=routed-tu-students`. Keep `COED_API_MAINTENANCE=intake-pilot`, `COED_INTAKE_CONTROLS_REQUIRED=true`, and the private three-UUID `COED_INTAKE_PILOT` binding for the approved round/Coordinator. The Student UUID remains part of the compatible fallback binding but is not the audience criterion in routed mode. Do not publish that binding in repository examples or browser configuration.
@@ -99,9 +99,11 @@ Rollback audience to `pilot` (or use the compatible `browse` stage to close writ
 
 Local verification this turn: Node **22.23.4**, `npm ci`, isolated PostgreSQL 16 on loopback port **54339**, fresh disposable `coed_v3_test`, `coed_selection_test`, `coed_intake_test`; existing local test databases were not reset. Intake: **41 Node + 7 DOM checks passed, zero skipped**, including a second synthetic TU Student's real local-byte upload/Submit/Coordinator receipt, unrelated department/curriculum/round denials, revoked link, ownership, Close and replay. Application: **18 Node + 56 DOM/API checks passed**; Coordinator: **8 DB + 34 DOM/API checks passed**; Committee: **1 DB + 9 DOM checks passed**, zero skips in these runs. Syntax lint passed **336 modules**. These are synthetic local/auth-modeled boundaries, not live Cognito/TU or S3 acceptance.
 
-Full `npm test` passed through the application/intake suites but **did not pass overall**: `test:release` had **31 passed, 1 failed**, at the unchanged ZIP Unicode filename round trip on macOS (`Unsafe archive entry name` after `unzip` output damaged the Thai filename). A focused rerun also reproduced it with `en_US.UTF-8`. No ZIP implementation/test was changed to conceal it. Committee was then run separately with its disposable DB configured. No AWS call/write, migration, deployment, commit or push was performed for this extension.
+Full `npm test` passed through the application/intake suites but **did not pass overall**: `test:release` had **31 passed, 1 failed**, at the unchanged ZIP Unicode filename round trip on macOS (`Unsafe archive entry name` after `unzip` output damaged the Thai filename). A focused rerun also reproduced it with `en_US.UTF-8`. No ZIP implementation/test was changed to conceal it. Committee was then run separately with its disposable DB configured. That initial local verification performed no AWS calls/writes, migration, deployment, commit or push. Subsequently the owner committed/merged PR #170; main CI run **42482561212** passed for `cdfdf7d`. The later explicitly approved backend deployment published/switched to **9**, passed **8 numeric-candidate + 5 Gateway checks**, and preserved Gateway/TU/frontend/binding hashes without SQL/data writes. This does not convert denied synthetic requests or directory reads into genuine TU Student submission acceptance. The local macOS ZIP test failure remains a recorded platform-specific result; the actual 19-entry backend ZIP packaged and verified successfully.
 
 ## Historical stages and lessons retained
+
+New local academic-review/Committee handoff evidence is maintained separately in [academic review verification](academic-review-verification.md). It requires complete approved criteria before forwarding and remains **unreleased**; the version-9 intake deployment above did not enable this extension.
 
 - A0 inventory (`9e92bf6`): 11 checks including READ ONLY transaction and denied writes; live temporary-tool cleanup verified. It found no ready real round, so no mock dates/recipient were silently extended.
 - Initial local intake (`286c64c`, `f3b074b`, `ad703f0`): 15 Node + 4 DOM intake checks at that time, followed by application/auth/Coordinator/release regressions. Later controls expanded coverage; these old counts are not the current total.
