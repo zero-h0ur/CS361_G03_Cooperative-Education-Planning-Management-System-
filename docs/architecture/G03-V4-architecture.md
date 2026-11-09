@@ -87,6 +87,8 @@ The owner subsequently confirmed actual criteria in [D10](../decisions/v4-tu-int
 
 Backend flags `COED_COORDINATOR_REVIEW_ENABLED` and `COED_COMMITTEE_HANDOFF_ENABLED` default disabled. In `intake-pilot`, they retain the private cycle/Coordinator binding and permit only the specified review/handoff paths. This extension needs separately approved observed 023, backend and frontend releases; AWS version 9 does not include it. Actual criteria, schedules and assigned staff must be ready first. See [contract](../api/v4-academic-review.md), [decision D9](../decisions/v4-tu-intake-boundaries.md#d9-complete-criteria-and-separate-coordinator-evidence-before-handoff) and [local evidence](../operations/academic-review-verification.md).
 
+Coordinator-managed review dates are now a local source extension ([D11](../decisions/v4-tu-intake-boundaries.md#d11-coordinator-configures-the-review-interval-independently)). A scoped review-only command reuses schedule version/locks/audit without changing intake or future confirmation. New 024 permits an absent confirmation pair while preserving review/order rules; it requires separate fresh versus observed entry points and approved release. The actual RDS read on 2026-11-09 found only 022, so neither 023 nor 024 is assumed applied. See [review-window contract](../api/v4-academic-review.md#independent-review-window-setup-local-source-2026-11-10).
+
 ## Documents
 
 Required pilot kinds are Resume/CV, Transcript, Student photo and Conduct certificate. Upload tickets, actual bytes/size/checksum verification, immutable document metadata and final attachment are separate steps. Local tests use actual local bytes; that alone does not prove S3/browser CORS.
@@ -119,3 +121,7 @@ Principal records: `users`, `students`, `external_identity_links`, `tu_student_r
 | Verification entry | [package scripts](../../package.json), [CI workflow](../../.github/workflows/v4-verification.yml), [current verification](../operations/student-intake-verification.md) |
 
 Historical [V3 architecture](G03-V3-architecture.md) and diagrams remain available; they do not include this complete TU/onboarding/intake path.
+
+## Coordinator result-read extension (local, 2026-11-10)
+
+The existing tracking GET now returns a separate panel-wide dashboard and minimal confirmed result roster. A read-only repeatable-read snapshot joins the saved Committee applicant/version set and selected IDs to the same authorized retained records; filters/pagination still apply only to the forwarded application list. Pending/inconsistent/shared-scope results never invent rejection counts. Existing Committee mutations and Student publication are unchanged; no new schema, grants, Gateway route or deployment stage is introduced. See [D12](../decisions/v4-tu-intake-boundaries.md#d12-read-the-committees-confirmed-result-without-repeating-its-decision-workflow), [contract](../api/v4-coordinator-results.md) and [local verification](../operations/coordinator-results-verification.md). This section does not refresh AWS evidence.

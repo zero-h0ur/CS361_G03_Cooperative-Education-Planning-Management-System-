@@ -72,3 +72,6 @@
 เปลี่ยนโครงสร้าง → แก้ architecture; เปลี่ยนเหตุผล/กติกา → เพิ่ม decision; Deploy จริง → แก้ snapshot พร้อมรุ่น/source/หลักฐาน; ทดสอบ → ลงผลและขอบเขตใน verification เอกสารย้อนหลังไม่ต้องลบหรือแก้ผลเดิมให้เหมือนสถานะใหม่
 
 ก่อนส่งงานรัน `npm run test:docs` และตรวจ diff ว่าไม่มี credentials, ข้อมูลนักศึกษาจริง, UUID ผูกบัญชี หรือ URL เอกสารส่วนตัว ตัวตรวจลิงก์นี้ตรวจ local link/anchor และรูปแบบ URL โดยไม่เข้าถึง AWS หรือรับประกันว่าเว็บไซต์ภายนอกยังออนไลน์
+
+- [Coordinator review-window verification](operations/review-window-verification.md): local independent date setup, migration trial and testing limits (2026-11-10).
+- [Coordinator Committee-results contract](api/v4-coordinator-results.md) และ [local verification](operations/coordinator-results-verification.md): Dashboard อ่านผลที่ยืนยันแล้ว แยกจากการตัดสิน/ประกาศผล (2026-11-10).
