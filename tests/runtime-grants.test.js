@@ -25,7 +25,7 @@ describe('V3 runtime ACL policy on isolated PostgreSQL', () => {
 
   test('removes excess grants and is repeatable without deleting data', async () => {
     const before = await pool.query('SELECT count(*)::int AS n FROM audit_events');
-    await pool.query('GRANT ALL ON audit_events, plan_operations, users, students TO coed_app');
+    await pool.query('GRANT ALL ON audit_events, plan_operations, users, students, phase1_academic_reviews TO coed_app');
     await pool.query(policy);
     await pool.query(policy);
     const { rows } = await pool.query(`SELECT
@@ -34,7 +34,32 @@ describe('V3 runtime ACL policy on isolated PostgreSQL', () => {
       has_column_privilege('coed_app','users','role','UPDATE') AS role_update,
       has_column_privilege('coed_app','students','full_name','UPDATE') AS official_update`);
     expect(rows[0]).toEqual({ append: true, delete: false, role_update: false, official_update: false });
+    expect((await pool.query(`SELECT
+      has_table_privilege('coed_app','phase1_academic_reviews','SELECT') AS read,
+      has_table_privilege('coed_app','phase1_academic_reviews','INSERT') AS append,
+      has_table_privilege('coed_app','phase1_academic_reviews','UPDATE,DELETE,TRUNCATE') AS mutate`)).rows[0])
+      .toEqual({ read: true, append: true, mutate: false });
     expect((await pool.query('SELECT count(*)::int AS n FROM audit_events')).rows).toEqual(before.rows);
+  });
+
+  test('inherited academic-review mutation rights abort and roll back the ACL transaction', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('GRANT UPDATE ON phase1_academic_reviews TO PUBLIC');
+      // This unrelated direct grant must survive a failed ACL transaction.
+      await client.query('GRANT DELETE ON audit_events TO coed_app');
+      await expect(client.query(policy)).rejects.toMatchObject({
+        code: 'P0001',
+        message: 'Excess effective academic-review privileges remain; all ACL changes rolled back.'
+      });
+      await client.query('ROLLBACK');
+      expect((await client.query("SELECT has_table_privilege('coed_app','audit_events','DELETE') AS retained")).rows[0].retained).toBe(true);
+    } finally {
+      await client.query('ROLLBACK');
+      await client.query('REVOKE UPDATE ON phase1_academic_reviews FROM PUBLIC');
+      await client.query('REVOKE DELETE ON audit_events FROM coed_app');
+      client.release();
+    }
   });
 
   test('allows audited contact-command columns including the trigger users FOR UPDATE lock', async () => {

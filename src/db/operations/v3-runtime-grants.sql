@@ -1,4 +1,5 @@
--- Run as the table owner after all checked-in migrations. Changes ACLs only, never data.
+-- Run as the table owner after the reviewed migrations/upgrades for the target lineage.
+-- Changes ACLs only, never data. Optional023 capabilities require its existing table.
 -- No CASCADE or PUBLIC revocation: inherited/external grants require review.
 \set ON_ERROR_STOP on
 BEGIN;
@@ -75,8 +76,19 @@ GRANT SELECT ON public.phase1_submission_deliveries TO coed_app;
 GRANT INSERT(submission_id,application_id,application_version,cohort_id,coordinator_id_at_send,department,program,snapshot_checksum)
   ON public.phase1_submission_deliveries TO coed_app;
 
-REVOKE ALL ON public.phase1_academic_reviews FROM coed_app;
-GRANT SELECT,INSERT ON public.phase1_academic_reviews TO coed_app;
+-- Pre023 observed schemas still support Student delivery. Academic review stays
+-- unavailable until its separately approved upgrade; never create its table here.
+DO $academic_acl$
+BEGIN
+  IF to_regclass('public.phase1_academic_reviews') IS NOT NULL THEN
+    REVOKE ALL ON public.phase1_academic_reviews FROM coed_app;
+    GRANT SELECT,INSERT ON public.phase1_academic_reviews TO coed_app;
+    IF has_table_privilege('coed_app','public.phase1_academic_reviews','UPDATE,DELETE,TRUNCATE') THEN
+      RAISE EXCEPTION 'Excess effective academic-review privileges remain; all ACL changes rolled back.';
+    END IF;
+  END IF;
+END
+$academic_acl$;
 
 DO $acl$
 BEGIN
@@ -85,8 +97,7 @@ BEGIN
       AND has_function_privilege('coed_app',p.oid,'EXECUTE')) THEN
     RAISE EXCEPTION 'Retired TU provisioning remains executable; review inherited grants before release.';
   END IF;
-  IF has_table_privilege('coed_app','public.phase1_academic_reviews','UPDATE,DELETE,TRUNCATE')
-     OR has_table_privilege('coed_app','public.audit_events','DELETE')
+  IF has_table_privilege('coed_app','public.audit_events','DELETE')
      OR has_table_privilege('coed_app','public.phase1_submission_deliveries','UPDATE,DELETE,TRUNCATE')
      OR has_any_column_privilege('coed_app','public.phase1_submission_deliveries','UPDATE')
      OR has_column_privilege('coed_app','public.phase1_submission_deliveries','provenance','INSERT')

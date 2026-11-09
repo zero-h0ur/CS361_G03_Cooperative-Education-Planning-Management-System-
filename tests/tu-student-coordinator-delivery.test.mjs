@@ -12,6 +12,7 @@ import tu from '../src/auth/tu-auth-service.js';
 import relink from '../src/auth/tu-identity-relink.js';
 import application from '../src/api/services/application-service.js';
 import coordinator from '../src/api/services/coordinator-workspace-service.js';
+import academicReview from '../src/db/academic-review.js';
 import selection from '../src/api/services/selection-service.js';
 import schedules from '../src/api/services/phase1-schedule-service.js';
 import form from '../src/shared/application-form.js';
@@ -47,7 +48,28 @@ test('TU Student to Cognito Coordinator: real HTTP, isolated PostgreSQL and leas
     await admin.query(`CREATE ROLE ${role} NOLOGIN`);
     const grants=readFileSync(new URL('../src/db/operations/v3-runtime-grants.sql',import.meta.url),'utf8').replace(/^\\set[^\n]*\n/m,'')
       .replaceAll('public.',schema+'.').replaceAll('SCHEMA public','SCHEMA '+schema).replaceAll("'public'","'"+schema+"'").replaceAll('coed_app',role);
-    await db.query(grants);runtime=new pg.Pool({connectionString:url,options:`-c search_path=${schema},public -c role=${role}`});
+    await db.query(grants);
+    runtime=new pg.Pool({connectionString:url,options:`-c search_path=${schema},public -c role=${role}`});
+    await t.test('runtime schema and privileges match the selected migration lineage',async()=>{
+      assert.equal((await runtime.query('SELECT current_user AS role')).rows[0].role,role);
+      assert.equal((await db.query("SELECT to_regclass(current_schema() || '.phase1_academic_reviews') IS NOT NULL AS ready")).rows[0].ready,!observed);
+      const submission={id:id(),snapshot:{assessment:{review_required:true}}};
+      assert.deepEqual(await academicReview.read(runtime,submission),{schema_ready:!observed,version:0,record:null});
+      if(observed)await assert.rejects(academicReview.requireConfirmed(runtime,submission,id(),id(),{}),e=>e.code==='ACADEMIC_REVIEW_REQUIRED');
+      const rights=(await runtime.query(`SELECT
+        has_table_privilege(current_user,'phase1_submission_deliveries','SELECT') AS read_delivery,
+        has_column_privilege(current_user,'phase1_submission_deliveries','submission_id','INSERT') AS append_delivery,
+        has_table_privilege(current_user,'phase1_submission_deliveries','UPDATE,DELETE,TRUNCATE') AS mutate_delivery,
+        has_column_privilege(current_user,'users','role','UPDATE') AS change_role`)).rows[0];
+      assert.deepEqual(rights,{read_delivery:true,append_delivery:true,mutate_delivery:false,change_role:false});
+      if(!observed){
+        const academic=(await runtime.query(`SELECT
+          has_table_privilege(current_user,'phase1_academic_reviews','SELECT') AS read_review,
+          has_table_privilege(current_user,'phase1_academic_reviews','INSERT') AS append_review,
+          has_table_privilege(current_user,'phase1_academic_reviews','UPDATE,DELETE,TRUNCATE') AS mutate_review`)).rows[0];
+        assert.deepEqual(academic,{read_review:true,append_review:true,mutate_review:false});
+      }
+    });
     const studentUser=id(),sid=id(),otherUser=id(),otherSid=id(),coord=id(),outsider=id(),operator=id(),members=[id(),id(),id()],cycle=id(),cohort=id(),policy=id(),oldLink=id();
     const cognitoIssuer='https://cognito-idp.ap-southeast-2.amazonaws.com/synthetic_pool',tuIssuer='urn:coed:tu-auth',number='9900000001';
     for(const [uid,r] of [[studentUser,'STUDENT'],[otherUser,'STUDENT'],[coord,'COORDINATOR'],[outsider,'COORDINATOR'],[operator,'ADMIN'],...members.map(x=>[x,'COMMITTEE'])])await db.query('INSERT INTO users(id,role) VALUES($1,$2)',[uid,r]);

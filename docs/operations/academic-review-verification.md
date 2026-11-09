@@ -4,6 +4,22 @@ Recorded 2026-11-08 against the uncommitted working extension on base `cdfdf7d4d
 
 This evidence snapshot precedes the owner's subsequent explicit credits/retake/program-course confirmation. The working source and new, still-uncommitted 023 were then refined; use [confirmed-criteria verification](confirmed-criteria-verification.md) for that later run. Earlier counts and policy assumptions below are retained as historical local evidence, not the latest results.
 
+## CI compatibility follow-up (2026-11-09)
+
+[CI run 42501577043](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/actions/runs/42501577043) tested committed source `6ca9f6f05bfe013f783732d94e8d12b5e9d92b4d`: `regression` passed, but `observed-schema-upgrade` failed because the observed018 HTTP fixture applied the current runtime ACL script, which unconditionally referenced the later `phase1_academic_reviews` table. The same missing-relation failure was reproduced locally before this fix.
+
+The runtime ACL script now applies its academic-review grant/check only when that table exists. All existing delivery, audit, identity and scope ACL checks remain active. It does not create the table or apply 023; a pre023 pending-academic submission still cannot be forwarded without the required review schema. Fresh023 still grants only SELECT/INSERT for academic reviews. An inherited mutation grant causes the complete ACL transaction to roll back. Historical SQL/checksums, observed catalog fingerprints and CI checks were not changed.
+
+Local verification of this fix uses Node.js **22.23.4**, `npm ci`, and a new task-owned PostgreSQL **16-alpine** tmpfs container at **127.0.0.1:55440**, with separate empty `coed_present_test`, `coed_v3_test` and `coed` fixture databases. The `coed` database here is a disposable local owner-tool fixture required by the test guard, not RDS. Reproduce observed checks with `NODE_ENV=test`, `PRESENT_SCHEMA_DISPOSABLE=true`, `PRESENT_SCHEMA_TEST_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55440/coed_present_test` and `DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55440/coed_unused`; then run `npm run test:observed-upgrade`. The second CI step uses `OWNER_TOOL_TEST_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55440/coed` and `npm run test:production-tooling`.
+
+- Observed upgrade preservation/rollback and Student-to-Coordinator HTTP: **33 passed, zero failed/skipped**.
+- Production tooling offline and real SELECT-only local credential: **23 passed, zero failed/skipped**. AWS transports are mocked; this is not live AWS verification.
+- Fresh-schema Student delivery: **13 passed, zero failed/skipped**, using `TU_DELIVERY_TEST_DATABASE_URL` pointing to the separate loopback `coed_v3_test` and no observed-baseline override.
+- Runtime ACL integration: **4 passed**, including repeat application, removal of excess direct review privileges, rollback on inherited review mutation rights and denied identity/audit writes. Uses the same disposable `coed_v3_test`, `TEST_DATABASE_URL`, `ALLOW_DB_RESET=true` and `NODE_ENV=test`.
+- Syntax lint: **344 modules**; migration verification: **16 unchanged pinned SQL files**; documentation: **9 tests, 75 documents / 416 local links**, no failures. `git diff --check` passed.
+
+These are local results on the fix, not a new GitHub CI success or live deployment. No AWS changes, RDS queries/migrations, commit or push were performed. Earlier feature evidence and full-regression limitations below retain their original dates.
+
 ## Environment and reproducible checks
 
 Node.js **22.23.4**, `npm ci --offline --no-audit --no-fund`, PostgreSQL **16-alpine** in a fresh ephemeral Docker container with tmpfs storage, loopback **54339**. Only `coed_v3_test`, `coed_selection_test` and `coed_intake_test` in this disposable container were used; no existing local retained database or RDS was reset.
