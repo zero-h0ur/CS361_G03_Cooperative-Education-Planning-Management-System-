@@ -26,6 +26,7 @@ import {readAcademicReviewUpgrade,UPGRADE_SHA256} from '../scripts/operations/ac
 import academicReviewDomain from '../src/api/services/academic-review-domain.js';
 import faculty from '../src/shared/faculty-criteria.js';
 import committee from '../src/api/services/committee-workspace.js';
+import {readReviewScheduleUpgrade,UPGRADE_SHA256 as reviewScheduleSha} from '../scripts/operations/review-schedule-contract.mjs';
 const url=process.env.STUDENT_INTAKE_TEST_DATABASE_URL;
 test('pending TU identity: actual019/020 database, real files, pilot gates and immutable Coordinator delivery',{skip:!url&&!process.env.CI},async t=>{
  const u=new URL(url);assert.equal(u.hostname,'127.0.0.1');assert.equal(u.pathname,'/coed_intake_test');assert.equal(process.env.NODE_ENV,'test');assert.equal(process.env.INTAKE_DISPOSABLE,'true');
@@ -380,7 +381,25 @@ test('pending TU identity: actual019/020 database, real files, pilot gates and i
      await connection.query('BEGIN');await connection.query("SET LOCAL coed.academic_review_upgrade='observed022-to023'");await connection.query(sql);
      await connection.query('INSERT INTO schema_migrations(version,checksum) VALUES($1,$2)',['023_phase1_academic_review.sql',UPGRADE_SHA256]);await connection.query('COMMIT');
     }finally{await connection.query('ROLLBACK');connection.release();}
+    const reviewDates={operation_id:id(),expected_version:0,review_opens_at:new Date(Date.now()-3600000).toISOString(),review_closes_at:new Date(Date.now()+3600000).toISOString()};
+    await assert.rejects(staff.saveReviewSchedule(coordinator,cycle,reviewDates),e=>e.code==='REVIEW_SCHEDULE_UPGRADE_REQUIRED');
+    const scheduleSql=readReviewScheduleUpgrade().replace("current_database()<>'coed'", "current_database()<>'coed_intake_test'").replace("current_schema()<>'public'", "current_schema()<>'"+schema+"'");
+    const retainedSchedule=(await owner.query('SELECT * FROM coordinator_round_schedules WHERE cycle_id=$1',[cycle])).rows;
+    await assert.rejects(owner.query(scheduleSql),/REVIEW_SCHEDULE_OWNER_GATE_REQUIRED/);
+    const scheduleConnection=await owner.connect();try{
+     await scheduleConnection.query('BEGIN');await scheduleConnection.query("SET LOCAL coed.review_schedule_upgrade='observed023-to024'");await scheduleConnection.query(scheduleSql);await scheduleConnection.query('ROLLBACK');
+     assert.equal((await scheduleConnection.query("SELECT attnotnull FROM pg_attribute WHERE attrelid='coordinator_round_schedules'::regclass AND attname='confirmation_opens_at'")).rows[0].attnotnull,true);
+     await scheduleConnection.query('BEGIN');await scheduleConnection.query("SET LOCAL coed.review_schedule_upgrade='observed023-to024'");await scheduleConnection.query(scheduleSql);
+     await scheduleConnection.query('INSERT INTO schema_migrations(version,checksum) VALUES($1,$2)',['024_coordinator_review_window.sql',reviewScheduleSha]);await scheduleConnection.query('COMMIT');
+    }finally{await scheduleConnection.query('ROLLBACK');scheduleConnection.release();}
+    assert.deepEqual((await owner.query('SELECT * FROM coordinator_round_schedules WHERE cycle_id=$1',[cycle])).rows,retainedSchedule);
     await owner.query("UPDATE coordinator_round_schedules SET review_opens_at=now()-interval '1 hour',review_closes_at=now()+interval '1 hour',confirmation_opens_at=now()+interval '2 hours',confirmation_closes_at=now()+interval '3 hours',version=version+1 WHERE cycle_id=$1",[cycle]);
+    const priorSchedule=await staff.getSchedule(coordinator,cycle),intakeBefore=(await owner.query('SELECT * FROM phase1_cycle_windows WHERE cycle_id=$1',[cycle])).rows;
+    const scheduleBody={...reviewDates,expected_version:priorSchedule.version};
+    const savedSchedule=await staff.saveReviewSchedule(coordinator,cycle,scheduleBody);assert.equal(savedSchedule.version,priorSchedule.version+1);
+    assert.deepEqual(await staff.saveReviewSchedule(coordinator,cycle,scheduleBody),savedSchedule);
+    assert.deepEqual((await owner.query('SELECT * FROM phase1_cycle_windows WHERE cycle_id=$1',[cycle])).rows,intakeBefore);
+    assert.equal((await staff.getSchedule(coordinator,cycle)).confirmation_opens_at.toISOString(),priorSchedule.confirmation_opens_at.toISOString());
     let detail=await staff.detail(coordinator,app.id);assert.equal(detail.can_confirm_academics,true,JSON.stringify(detail.academic_review));assert.equal(detail.can_forward,false);
     await assert.rejects(staff.confirmAcademics(coordinator,app.id,{...reviewBody(app),checks:{...checks,grades:false}}),e=>e.statusCode===400);
     await assert.rejects(staff.confirmAcademics({...coordinator,userId:id()},app.id,reviewBody(app)),e=>e.code==='COED_MAINTENANCE');

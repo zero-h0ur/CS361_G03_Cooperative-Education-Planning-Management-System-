@@ -4,7 +4,7 @@ const {randomUUID}=require('node:crypto');
 const issuer='https://issuer.example.invalid/coordinator',clientId='test-coordinator-client';
 function setup(role='COORDINATOR') {
   const userId=randomUUID(),pool={query:jest.fn(async()=>({rows:[{user_id:userId,role,account_status:'ACTIVE',link_status:'ACTIVE',active_link_count:1}]}))};
-  const service=Object.fromEntries(['options','list','detail','tracking','review','confirmAcademics','getSchedule','saveSchedule'].map(k=>[k,jest.fn(async()=>({ok:true}))]));
+  const service=Object.fromEntries(['options','list','detail','tracking','review','confirmAcademics','getSchedule','saveSchedule','saveReviewSchedule'].map(k=>[k,jest.fn(async()=>({ok:true}))]));
   const handler=createLambdaHandler({coordinatorWorkspaceService:service,authOptions:{pool,
     tokenValidator:new TokenValidator({expectedIssuer:issuer,expectedClientId:clientId}),identityResolver:new IdentityResolver({pool})}});
   const event=(path,method='GET',authenticated=true)=>({rawPath:path,rawQueryString:'',body:method==='POST'?'{}':undefined,
@@ -27,7 +27,7 @@ test('scoped filters and exact review submission identity reach the service',asy
 });
 test.each(['STUDENT','STAFF','ADVISOR','ADMIN','COMMITTEE'])('%s cannot read or mutate Coordinator resources with a forged role header',async role=>{
   const {handler,event,service}=setup(role),id=randomUUID();
-  for(const [path,method] of [['/api/v4/coordinator/applications','GET'],[`/api/v4/coordinator/applications/${id}/return`,'POST'],[`/api/v4/coordinator/schedules/${id}`,'POST']])
+  for(const [path,method] of [['/api/v4/coordinator/applications','GET'],[`/api/v4/coordinator/applications/${id}/return`,'POST'],[`/api/v4/coordinator/schedules/${id}`,'POST'],[`/api/v4/coordinator/schedules/${id}/review`,'POST']])
     expect((await handler(event(path,method))).statusCode).toBe(403);
   for(const fn of Object.values(service))expect(fn).not.toHaveBeenCalled();
 });
@@ -43,4 +43,14 @@ test('academic review route uses the trusted Coordinator and refuses forged stud
  post.body=JSON.stringify({operation_id:randomUUID(),expected_version:0,submission_id:randomUUID(),expected_policy_id:randomUUID(),checks:{grades:true},note:'Synthetic'});
  expect((await handler(post)).statusCode).toBe(200);expect(service.confirmAcademics).toHaveBeenCalledWith(expect.objectContaining({userId,role:'COORDINATOR'}),id,JSON.parse(post.body));
  const student=setup('COMMITTEE');expect((await student.handler(student.event(post.rawPath,'POST'))).statusCode).toBe(403);expect(student.service.confirmAcademics).not.toHaveBeenCalled();
+});
+
+test('review-only route authenticates before parsing and forwards only to its dedicated command',async()=>{
+ const {handler,event,service,userId}=setup(),id=randomUUID(),path=`/api/v4/coordinator/schedules/${id}/review`;
+ const post=event(path,'POST');post.body=JSON.stringify({operation_id:randomUUID(),expected_version:0,review_opens_at:'2026-11-10T09:00:00+07:00',review_closes_at:'2026-11-20T16:30:00+07:00'});
+ expect((await handler(post)).statusCode).toBe(200);
+ expect(service.saveReviewSchedule).toHaveBeenCalledWith(expect.objectContaining({userId,role:'COORDINATOR'}),id,JSON.parse(post.body));
+ expect(service.saveSchedule).not.toHaveBeenCalled();
+ const anonymous=event(path,'POST',false);anonymous.body='{';expect((await handler(anonymous)).statusCode).toBe(401);
+ const query=event(path,'POST');query.rawQueryString='role=ADMIN';expect((await handler(query)).statusCode).toBe(400);
 });

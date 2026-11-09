@@ -142,13 +142,39 @@ test('Coordinator Phase 1 review, retained corrections, schedule concurrency, sc
       await assert.rejects(review.review(coord,app.id,{...command(3),submission_id:app.submission.id,reason:'late'},'return'),e=>e.statusCode===422);
       await assert.rejects(board.mutate(actor(members[0],'COMMITTEE'),view.cohort_id,{...command(0),action:'propose',normal:1,special:0,reason:'stale'}),e=>e.statusCode===409);
     });
+    await t.test('real Committee finalization returns both outcome rosters to Coordinator, independent of filters/page, without read side effects',async()=>{
+      await pool.query("UPDATE phase1_cycle_windows SET closes_at=now()+interval '1 hour' WHERE cycle_id=$1",[cycle]);
+      await pool.query("INSERT INTO phase1_academic_profiles(student_id,curriculum,entry_year,institution,source,verified_by) VALUES($1,'66',2567,'TU_CS','synthetic',$2)",[draftStudent,coordId]);
+      let second=await appService.save(draftActor,draft.id,{...command(draft.version),expected_policy_id:policyId,payload:{...payload,thai_full_name:'นักศึกษาสมมติอีกคน'}});
+      for(const kind of ['resume','transcript','photo','conduct']){
+        const doc=ids(),ticket=ids();await pool.query(`INSERT INTO phase1_uploads(id,application_id,kind,filename,content_type,byte_size,checksum,staging_key,expected_version,status,expires_at)
+          VALUES($1,$2,$3,$3||CASE WHEN $3='photo' THEN '.png' ELSE '.pdf' END,CASE WHEN $3='photo' THEN 'image/png' ELSE 'application/pdf' END,10,$4,$5,$6,'ATTACHED',now()+interval '1 hour')`,[ticket,second.id,kind,'0'.repeat(64),'staging/'+ticket,second.version]);
+        await pool.query(`INSERT INTO phase1_documents(id,application_id,ticket_id,kind,filename,content_type,byte_size,checksum,object_key)
+          VALUES($1,$2,$3,$4,$4||CASE WHEN $4='photo' THEN '.png' ELSE '.pdf' END,CASE WHEN $4='photo' THEN 'image/png' ELSE 'application/pdf' END,10,$5,$6)`,[doc,second.id,ticket,kind,'0'.repeat(64),'final/'+doc]);
+        await pool.query('INSERT INTO phase1_attachments(application_id,kind,document_id) VALUES($1,$2,$3)',[second.id,kind,doc]);
+      }
+      second=await appService.submit(draftActor,second.id,{...command(second.version),expected_policy_id:policyId});
+      await review.review(coord,second.id,{...command(0),submission_id:second.submission.id},'forward');
+      let view=await board.read(actor(members[0],'COMMITTEE'));
+      await board.mutate(actor(members[0],'COMMITTEE'),view.cohort_id,{...command(view.version),action:'propose',total:1,reason:'Synthetic panel capacity'});
+      for(const member of members.slice(1)){view=await board.read(actor(member,'COMMITTEE'));await board.mutate(actor(member,'COMMITTEE'),view.cohort_id,{...command(view.version),action:'accept'});}
+      view=await board.read(actor(members[0],'COMMITTEE'));
+      await board.mutate(actor(members[0],'COMMITTEE'),view.cohort_id,{...command(view.version),action:'finalize',selected:[app.id],ranking:'core'});
+      const events=(await pool.query('SELECT count(*)::int n FROM committee_workspace_events')).rows[0].n;
+      const tracked=await review.tracking(coord,{cycle_id:cycle,search:'no matching synthetic student',page:'2',pageSize:'1'});
+      assert.equal(tracked.total,0);assert.equal(tracked.applications.length,0);assert.deepEqual(tracked.dashboard,{panels:1,confirmed_panels:1,forwarded:2,capacity:1,selected:1,not_selected:1});
+      const result=tracked.meetings[0].result;assert.equal(result.status,'CONFIRMED');assert.equal(result.applicants.find(r=>r.id===app.id).outcome,'SELECTED');assert.equal(result.applicants.find(r=>r.id===second.id).outcome,'NOT_SELECTED');
+      assert.equal(result.applicants.find(r=>r.id===second.id).full_name,'นักศึกษาสมมติ'); // Retained official identity, not a mutable form name.
+      assert.equal((await pool.query('SELECT count(*)::int n FROM committee_workspace_events')).rows[0].n,events);
+      const unrelated=await review.tracking(other);assert.equal(unrelated.meetings.length,0);assert.equal(JSON.stringify(unrelated).includes(app.id),false);
+    });
     await t.test('simultaneous schedule saves serialize, and a shared round does not grant cross-Coordinator write access',async()=>{
       const current=await review.getSchedule(coord,cycle);
       const body={...schedule,expected_version:current.version,expected_window_version:current.window_version};
       const results=await Promise.allSettled([review.saveSchedule(coord,cycle,{...body,operation_id:ids()}),review.saveSchedule(coord,cycle,{...body,operation_id:ids()})]);
       assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(results.filter(r=>r.status==='rejected'&&r.reason.statusCode===409).length,1);
       await pool.query('UPDATE selection_cohorts SET coordinator_id=$2 WHERE id=$1',[cohorts[1],outsiderId]);
-      const limited=(await review.tracking(coord,{cycle_id:cycle})).meetings[0];assert.equal(limited.scope_limited,true);assert.equal(limited.state,null);
+      const limited=(await review.tracking(coord,{cycle_id:cycle})).meetings[0];assert.equal(limited.scope_limited,true);assert.equal(limited.state,null);assert.equal(limited.result.status,'SCOPE_LIMITED');assert.deepEqual(limited.result.applicants,[]);assert.equal(limited.result.selected,null);
       assert.equal((await review.getSchedule(coord,cycle)).can_edit,false);
       const latest=await review.getSchedule(coord,cycle);
       await assert.rejects(review.saveSchedule(coord,cycle,{...body,...command(latest.version),expected_window_version:latest.window_version}),e=>e.statusCode===403);

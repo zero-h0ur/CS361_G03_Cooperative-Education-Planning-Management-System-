@@ -4,8 +4,7 @@ const {ACKNOWLEDGEMENTS}=require('../../shared/application-form');
 const faculty=require('../../shared/faculty-criteria');
 
 const STATES=Object.freeze(['PENDING','RETURNED','FORWARDED']);
-function schedule(input) {
-  const keys=['opens_at','closes_at','review_opens_at','review_closes_at','confirmation_opens_at','confirmation_closes_at'];
+function timeFields(input,keys) {
   const result={};
   for(const key of keys) {
     // Require an explicit UTC offset; never interpret a browser/host local datetime.
@@ -16,9 +15,18 @@ function schedule(input) {
       throw new ValidationError('กรุณาระบุวันเวลาและเขตเวลาให้ครบ',[{field:key,message:'วันเวลาไม่ถูกต้อง'}]);
     result[key]=new Date(input[key]).toISOString();
   }
-  const t=keys.map(key=>Date.parse(result[key]));
+  return result;
+}
+function schedule(input) {
+  const keys=['opens_at','closes_at','review_opens_at','review_closes_at','confirmation_opens_at','confirmation_closes_at'];
+  const result=timeFields(input,keys),t=keys.map(key=>Date.parse(result[key]));
   if(!(t[0]<t[1] && t[1]<=t[2] && t[2]<t[3] && t[3]<=t[4] && t[4]<t[5]))
     throw new ValidationError('ช่วงเวลาต้องเรียง รับสมัคร → พิจารณา → ยืนยันสิทธิ์ และวันสิ้นสุดต้องอยู่หลังวันเริ่ม');
+  return result;
+}
+function reviewSchedule(input) {
+  const result=timeFields(input,['review_opens_at','review_closes_at']);
+  if(Date.parse(result.review_opens_at)>=Date.parse(result.review_closes_at))throw new ValidationError('วันสิ้นสุดช่วงพิจารณาต้องอยู่หลังวันเริ่มพิจารณา');
   return result;
 }
 function academic(snapshot,{allowSynthetic=false}={}) {
@@ -33,4 +41,4 @@ function academic(snapshot,{allowSynthetic=false}={}) {
 function declarations(snapshot) {
   return ACKNOWLEDGEMENTS.map(key=>({key,checked:snapshot?.payload?.acknowledgements?.[key]===true}));
 }
-module.exports={STATES,schedule,academic,declarations};
+module.exports={STATES,schedule,reviewSchedule,academic,declarations};
