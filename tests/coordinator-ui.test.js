@@ -189,3 +189,67 @@ test('canceling a filter change preserves unsaved academic notes and restores th
  expect(confirm).toHaveBeenCalled();expect(request.mock.calls).toHaveLength(before);expect(filter.value).toBe('');expect(root.querySelector('.coord-academic-form textarea')).toBe(notes);expect(notes.value).toBe('Synthetic unsaved evidence');
  confirm.mockReturnValue(true);filter.value='FORWARDED';filter.dispatchEvent(new Event('change',{bubbles:true}));await flush();expect(request.mock.calls.length).toBeGreaterThan(before);
 });
+
+function setReviewDates(root,values=['2026-11-10','09:00','2026-11-20','16:30']){
+ const inputs=['review_opens_at','review_closes_at'].flatMap(key=>[...root.querySelectorAll('.coord-schedule-form [data-schedule-field='+key+']')]);inputs.forEach((input,i)=>{input.value=values[i];input.dispatchEvent(new Event('input',{bubbles:true}));});return inputs;
+}
+const submitReview=root=>root.querySelector('.coord-schedule-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+test('existing three-window form edits only review fields in restricted mode without touching intake or confirmation',async()=>{
+ const {root,request}=await setup({page:'schedule',scenario:'review-window'});expect(root.querySelectorAll('.coord-schedule-form input')).toHaveLength(12);expect(root.querySelectorAll('.coord-schedule-form input:not(:disabled)')).toHaveLength(4);expect([...root.querySelectorAll('.coord-schedule-section legend')].map(n=>n.textContent)).toEqual(['ช่วงรับสมัคร','ช่วงพิจารณาใบสมัคร','ช่วงยืนยันสิทธิ์']);expect(root.textContent).not.toContain('ตั้งช่วงตรวจรับใบสมัคร');
+ expect(root.textContent).toContain('ยังไม่กำหนดช่วงพิจารณาใบสมัคร');setReviewDates(root);submitReview(root);await flush();
+ const [path,{body}]=request.mock.calls.find(([,options])=>options?.method==='POST');expect(path).toMatch(/\/review$/);
+ expect(body).toEqual({expected_version:0,operation_id:expect.any(String),review_opens_at:'2026-11-10T09:00:00+07:00',review_closes_at:'2026-11-20T16:30:00+07:00'});
+ expect(root.textContent).toContain('บันทึกกำหนดการแล้ว');expect(root.querySelector('.coord-schedule-form [data-schedule-field=review_opens_at]').value).toBe('2026-11-10');
+});
+test('review-only validation focuses missing and reversed date without a POST; missing upgrade stays readonly',async()=>{
+ const {root,request}=await setup({page:'schedule',scenario:'review-window'});submitReview(root);expect(document.activeElement.type).toBe('date');expect(document.activeElement.getAttribute('aria-invalid')).toBe('true');
+ setReviewDates(root,['2026-11-20','09:00','2026-11-10','16:30']);submitReview(root);expect(root.textContent).toContain('วันสิ้นสุดช่วงพิจารณาต้องอยู่หลัง');expect(request.mock.calls.some(([,o])=>o?.method==='POST')).toBe(false);
+ controller.abort();controller=new AbortController();const readonly=await setup({page:'schedule',scenario:'review-window-upgrade'});expect(find(readonly.root,'บันทึกกำหนดการ').disabled).toBe(true);expect(readonly.root.textContent).toContain('ต้องอัปเกรด');
+});
+test.each(['review-window-failed','review-window-conflict'])('review-only %s retains values and operation id; reload cancel preserves dirty input',async scenario=>{
+ const {root,request}=await setup({page:'schedule',scenario});const inputs=setReviewDates(root);submitReview(root);await flush();submitReview(root);await flush();
+ const posts=request.mock.calls.filter(([,o])=>o?.method==='POST');expect(posts).toHaveLength(2);expect(posts[0][1].body).toEqual(posts[1][1].body);expect(inputs[0].value).toBe('2026-11-10');
+ find(root,'โหลดกำหนดการล่าสุด').click();expect(root.querySelector('dialog[open]')).not.toBeNull();find(root,'แก้ไขต่อ').click();expect(inputs[0].value).toBe('2026-11-10');
+ find(root,'โหลดกำหนดการล่าสุด').click();find(root,'ทิ้งการแก้ไข').click();await flush();expect(root.querySelector('.coord-schedule-form [data-schedule-field=review_opens_at]').value).toBe('');
+});
+test('review-only pending save disables intake controls and duplicate submits; late abort does not render success',async()=>{
+ let resolve;const {root,request}=await setup({page:'schedule',scenario:'review-window',wrap:req=>(path,options)=>options?.method==='POST'?new Promise(r=>{resolve=r;}):req(path,options)});
+ setReviewDates(root);submitReview(root);submitReview(root);expect(root.querySelector('.coord-schedule-form').getAttribute('aria-busy')).toBe('true');
+ expect([...root.querySelectorAll('.coord-intake-controls button')].every(b=>b.disabled)).toBe(true);
+ controller.abort();resolve({version:1});await flush();expect(root.textContent).not.toContain('บันทึกกำหนดการแล้ว');expect(request.mock.calls.some(([,o])=>o?.method==='POST')).toBe(false);
+});
+
+test('results dashboard shows saved winners/losers separately, independent of forwarded-list filters and without writes',async()=>{
+ const {root,request}=await setup({page:'tracking',scenario:'results-complete'}),dashboard=root.querySelector('.coord-results-dashboard');
+ expect([...dashboard.querySelectorAll('.coord-result-metrics dd')].map(n=>n.textContent)).toEqual(['3','2','2','1']);expect(dashboard.querySelectorAll('tbody tr')).toHaveLength(3);
+ find(dashboard,'ไม่ผ่านการคัดเลือก (1)').click();expect(dashboard.querySelectorAll('tbody tr')).toHaveLength(1);expect(dashboard.querySelector('tbody').textContent).toContain('นักศึกษาตัวอย่าง 02');
+ const curriculum=root.querySelector('.coord-filters select');curriculum.value='61';curriculum.dispatchEvent(new Event('change',{bubbles:true}));await flush();
+ const updated=root.querySelector('.coord-results-dashboard');expect([...updated.querySelectorAll('.coord-result-metrics dd')].map(n=>n.textContent)).toEqual(['3','2','2','1']);
+ expect(updated.querySelector('tbody').textContent).toContain('นักศึกษาตัวอย่าง 02');expect(updated.textContent).toContain('ยังแยกจากการประกาศผล');
+ find(updated,'ดูใบสมัคร').click();await flush();expect(root.querySelector('dialog').textContent).toContain('นักศึกษาตัวอย่าง 02');
+ expect(request.mock.calls.some(([,o])=>o?.method==='POST')).toBe(false);
+});
+test.each(['results-pending','results-incomplete','results-scoped'])('%s never labels current applicants as rejected or leaks a result roster',async scenario=>{
+ const {root}=await setup({page:'tracking',scenario}),dashboard=root.querySelector('.coord-results-dashboard');
+ expect(dashboard.querySelectorAll('tbody tr')).toHaveLength(0);expect([...dashboard.querySelectorAll('.coord-result-metrics dd')].slice(2).map(n=>n.textContent)).toEqual(['—','—']);
+ expect(dashboard.textContent).toContain(scenario==='results-pending'?'รอกรรมการยืนยันผล':scenario==='results-incomplete'?'ข้อมูลรายชื่อหรือฉบับใบสมัครไม่ตรง':'ตรวจสอบการมอบหมาย');
+ if(scenario==='results-incomplete'){expect(root.querySelector('.coord-tracking-actions').textContent).toContain('ตรวจสอบข้อมูลผลคัดเลือก');find(root,'ดูมติและจำนวนรับ').click();expect(root.querySelector('dialog').textContent).toContain('กรุณาตรวจสอบก่อนใช้ผล');}
+});
+test('result roster pagination remains separate and filters restore keyboard focus',async()=>{
+ const {root}=await setup({page:'tracking',scenario:'results-many'}),dashboard=root.querySelector('.coord-results-dashboard');
+ expect(dashboard.querySelectorAll('tbody tr')).toHaveLength(10);find(dashboard,'ถัดไป').click();expect(dashboard.querySelector('tbody tr td').textContent).toBe('11');
+ expect(document.activeElement.textContent).toContain('หน้า 2 / 3');find(dashboard,'ผ่านการคัดเลือก (13)').click();expect(dashboard.querySelector('tbody tr td').textContent).toBe('1');
+ expect(document.activeElement.getAttribute('aria-pressed')).toBe('true');expect(dashboard.textContent).toContain('หน้า 1 / 2');
+});
+test('result refresh failure clears stale dashboard, allows retry, and does not render after unmount',async()=>{
+ let failed=false;const {root}=await setup({page:'tracking',scenario:'results-complete',wrap:req=>(path,o)=>failed&&path.includes('/tracking?')?Promise.reject(new Error('Synthetic load failure')):req(path,o)});
+ failed=true;find(root,'โหลดผลล่าสุด').click();await flush();expect(root.querySelector('.coord-results-dashboard')).toBeNull();expect(root.textContent).toContain('โหลดผลการคัดเลือกไม่สำเร็จ');
+ failed=false;find(root,'ลองโหลดอีกครั้ง').click();await flush();expect(root.querySelector('.coord-results-dashboard')).not.toBeNull();
+ let done;controller.abort();controller=new AbortController();const next=await setup({page:'tracking',scenario:'results-complete',wrap:req=>(path,o)=>path.includes('/tracking?')?new Promise(r=>{done=()=>req(path,o).then(r);}):req(path,o)});
+ controller.abort();await done();await flush();expect(next.root.querySelector('.coord-results-dashboard')).toBeNull();
+});
+
+test('shared Coordinator table captions remain semantic without occupying the mobile card layout',()=>{
+ const css=require('node:fs').readFileSync(require('node:path').join(__dirname,'../src/frontend/coordinator/workspace.css'),'utf8');
+ expect(css).toMatch(/\.coord-table > caption\.shell-sr-only\s*\{[^}]*clip-path:inset\(50%\)/);
+});
