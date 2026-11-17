@@ -61,7 +61,7 @@ node scripts/loadtest/smoke.mjs --url "https://<loadtest-api-id>.execute-api.ap-
 ## 2. บทพูดนำเสนออาจารย์ (ซ้อมให้จบใน 2–3 นาที)
 
 ### ช่วงที่ 1: ประโยคเปิด & แผนภาพสถาปัตยกรรม (30 วินาที)
-- **ประโยคเปิด**: *"กลุ่ม G03 เลือกแนวทาง A คือไม่ยิงโหลดใส่ระบบจริงของโปรเจกต์ครับ เพราะข้อมูลทดสอบที่เขียนลงไปจะลบออกจากฐานจริงไม่ได้ และระบบจริงมีผู้ใช้รอบทดลองอยู่ เราจึงสร้างสำเนาระบบทดสอบแยกที่ใช้โค้ด Lambda เวอร์ชัน 15 ตัวเดียวกับของจริง Memory/Timeout/VPC เท่ากัน และ RDS PostgreSQL Instance Class เดียวกัน ใส่ข้อมูลสังเคราะห์ทั้งหมด แล้วยิง Locust ใส่ระบบทดสอบแทน จากนั้นลบทิ้งทั้งชุดหลังเรียนครับ"*
+- **ประโยคเปิด**: *"กลุ่ม G03 เลือกแนวทาง A คือไม่ยิงโหลดใส่ระบบจริงของโปรเจกต์ครับ เพราะข้อมูลทดสอบที่เขียนลงไปจะลบออกจากฐานจริงไม่ได้ และระบบจริงมีผู้ใช้รอบทดลองอยู่ เราจึงสร้างสำเนาระบบทดสอบแยกที่ใช้โค้ด Lambda เวอร์ชัน 16 ตัวเดียวกับของจริง Memory/Timeout/VPC เท่ากัน และ RDS PostgreSQL Instance Class เดียวกัน ใส่ข้อมูลสังเคราะห์ทั้งหมด แล้วยิง Locust ใส่ระบบทดสอบแทน จากนั้นลบทิ้งทั้งชุดหลังเรียนครับ"*
 - **ชี้แผนภาพประกอบ**:
   - แถวบน = ระบบจริง (`API Gateway` ➔ `Lambda coed-api` ➔ `RDS จริง`) **ไม่ถูกแตะเลย**
   - แถวล่าง = ระบบทดสอบ (`Locust` ➔ `HTTP API coed-loadtest-api` ➔ `Lambda coed-api-loadtest` ➔ `RDS coed-loadtest-db`)
@@ -79,10 +79,10 @@ node scripts/loadtest/smoke.mjs --url "https://<loadtest-api-id>.execute-api.ap-
 3. **20% Draft Plan Update (`GET /api/v3/plans` + `PATCH /api/v3/plans/{id}`)**: จำลองการบันทึกข้อมูลที่มี JWT Auth, DB Transaction, Row Lock (`FOR UPDATE`), Optimistic Locking (`expected_version`), Idempotency (`plan_operations`), และการเขียน Audit (`audit_events`)
 
 ### ช่วงที่ 4: ข้อจำกัดที่แจ้งอาจารย์อย่างตรงไปตรงมา (30 วินาที)
-- **โควตา Lambda Concurrency ใช้ร่วมกันทั้ง AWS Account**: เราจึงต้องเฝ้ากราฟ `Throttles` บน Dashboard ตลอด และหยุดยิงทันทีก่อนชนเพดานเพื่อไม่ให้กระทบระบบจริง
+- **โควตา Lambda Concurrency ระดับบัญชี**: โควตาทั้งบัญชี 400 ใช้ร่วมกัน แต่ `coed-api` ตัวจริงมี reserved concurrency 30 กันไว้แล้ว ระบบทดสอบจึงแย่งส่วนนั้นไม่ได้ เราจึงยังเฝ้ากราฟ `Throttles` บน Dashboard ระหว่างยิงเพื่อดูเพดานของระบบทดสอบ
 - **ใช้ Cognito Pool เดียวกัน**: เมื่อ Users เกิน 10 จะใช้ 10 บัญชีทดสอบวนซ้ำ ทำให้เกิด HTTP `409 Conflict` จาก `expected_version` ชนกันได้ ซึ่งไม่ใช่ Error ของระบบและเรานับแยกออกจาก Error % จริง
 - **ใช้การแก้ร่างแผน V3 แทนใบสมัคร Phase 1**: เพราะ Phase 1 ผูกกับการล็อกอิน TU REST API ของมหาวิทยาลัยและอัปโหลดไฟล์ลง S3 ซึ่งไม่สามารถสร้างบัญชี TU ปลอมมายิงได้
-- **ข้อมูลเป็นชุดสังเคราะห์**: ขนาด Distribution อาจต่างจาก Production และสร้างจาก Fresh migrations (ยืนยันแล้วว่าคอลัมน์ของทั้ง 3 Endpoint ตรงกัน)
+- **ข้อมูลเป็นชุดสังเคราะห์**: ขนาด Distribution อาจต่างจาก Production และสร้างจาก Fresh migrations (รอรณกฤตยืนยันหลังสร้างฐาน)
 
 ---
 
@@ -110,7 +110,7 @@ node scripts/loadtest/smoke.mjs --url "https://<loadtest-api-id>.execute-api.ap-
 
 | อาการที่เห็น (Locust + Dashboard) | คอขวด | วิธี Scale ที่เหมาะสม | ต้นทุนและข้อแลกเปลี่ยน |
 | :--- | :--- | :--- | :--- |
-| `Throttles > 0`, API ตอบ `5xx`, `ConcurrentExecutions` แบนติดเพดาน | **โควตา Lambda Concurrency ระดับบัญชี** | ขอเพิ่ม Service Quota; ตั้ง Reserved Concurrency กันพื้นที่ให้ `coed-api` ตัวจริง | ไม่มีค่าใช้จ่ายเพิ่ม แต่การขอเพิ่มโควตาต้องรอ AWS อนุมัติ |
+| `Throttles > 0`, API ตอบ `5xx`, `ConcurrentExecutions` แบนอยู่ที่ 30 | **reserved concurrency ของ Lambda** (ของจริงตั้งไว้ 30 ระบบทดสอบตั้งเท่ากัน) | เพิ่ม reserved concurrency (บัญชีเหลือ unreserved 368) ถ้าต้องเกินโควตาบัญชี 400 ค่อยขอเพิ่มใน Service Quotas | ไม่เสียเงินเพิ่ม แต่ Lambda มากขึ้น = connection ไป RDS มากขึ้น อาจย้ายคอขวดไปที่ DB |
 | `DatabaseConnections` พุ่งใกล้ `max_connections`, log ต่อ DB ไม่ได้ แต่ `RDS CPU` ยังต่ำ | **จำนวน DB Connections ของ RDS** | ใส่ RDS Proxy; คุม `DB_POOL_MAX=1`; จำกัด Reserved Concurrency ไม่ให้เกินที่ DB รับไหว | RDS Proxy มีค่าใช้จ่ายรายชั่วโมง; จำกัด Concurrency ทำให้ส่วนเกินถูก throttle |
 | `RDS CPU` สูงค้าง (>80%), `p95` ขึ้นทุก endpoint, `Lambda Duration` สูงตาม | **CPU ของ RDS PostgreSQL** | Scale up Instance Class; เพิ่ม Read Replica สำหรับ Read 80%; ใส่ Cache ให้ Directory List | ปรับ Class มี downtime สั้น ๆ; Replica ต้องปรับโค้ดแยก Read/Write |
 | `Lambda Duration` สูงตอนเพิ่ม users แล้วค่อยลง ขณะที่ `RDS CPU` และ connections ต่ำ | **CPU ของ Lambda หรือ Cold Start** | เพิ่ม Memory ให้ Lambda (ได้ vCPU เพิ่มตาม); เปิด Provisioned Concurrency | ค่า Compute ต่อ ms สูงขึ้น; Provisioned คิดเงินตลอดเวลา |
