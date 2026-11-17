@@ -178,9 +178,12 @@ class ApplicationService {
       if(data.institutional_email && official.institutional_email && data.institutional_email!==official.institutional_email)throw new ValidationError('อีเมลทางการแก้ไขไม่ได้');
       for(const field of DECLARED_IDENTITY)if(data[field] && official[field] && data[field]!==official[field])
         throw new ValidationError('ข้อมูลทางการแก้ไขไม่ได้',[{field,message:'กรุณาใช้ข้อมูลทางการที่ยืนยันแล้ว'}]);
-      const merged={...app.payload,...data};
-      const policy=await this.repository.policy(db,{...app,payload:merged},official);
+      // Guard the policy the caller loaded before applying a curriculum edit.
+      // The saved response returns the selected curriculum's latest policy;
+      // Submit checks that policy again before committing a submission.
+      const policy=await this.repository.policy(db,app,official);
       if((policy?.id || null)!==input.expected_policy_id)throw new ConflictError('เกณฑ์เปลี่ยน กรุณาโหลดเกณฑ์ล่าสุด โดยข้อมูลที่กรอกยังอยู่','POLICY_CHANGED');
+      const merged={...app.payload,...data};
       const updated=(await db.query(`UPDATE phase1_applications SET payload=$2,version=version+1,updated_at=clock_timestamp() WHERE id=$1 RETURNING *`,[id,JSON.stringify(merged)])).rows[0];
       return this.detail(db,actor,updated);
     });

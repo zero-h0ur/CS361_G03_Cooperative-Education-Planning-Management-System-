@@ -41,6 +41,20 @@ and `submitted_at`. Object keys and long-lived storage access never appear in
 Student JSON. Document metadata includes its ID, category, name, size, content
 type and checksum, never document bytes or public URLs.
 
+### Draft policy guard
+
+The local fix prepared on 2026-11-17 checks a Draft PATCH's `expected_policy_id`
+against the latest policy for the Draft's stored curriculum before applying its
+payload changes. Send the ID from the last loaded application, including `null`
+when that Draft has no curriculum or policy. Selecting a curriculum for the first
+time, or changing it, returns the newly selected curriculum's current policy in
+the saved application response. Form fields remain part of that same save.
+
+A genuinely newer policy for the stored curriculum still returns `POLICY_CHANGED`
+and rolls back the save. Submit independently checks the latest policy for the
+saved curriculum, readiness, documents and delivery. Saving a Draft creates no
+submission. Deployment of this fix requires a separate approved release.
+
 The handoff to #142 is `application_id`, `cycle_id`, `student_id`, `version`,
 `status`, `submitted_at`, `submission_id`, `policy_id` and immutable document IDs.
 No legacy `plan_id` is fabricated. Application-scoped operation/events are stored
