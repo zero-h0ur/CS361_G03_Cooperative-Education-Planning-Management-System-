@@ -1,5 +1,24 @@
 # Current deployment — last verified snapshot
 
+## Latest scoped readback — 2026-11-17
+
+At **22:25 Asia/Bangkok**, the approved Backend-only Draft-save fix was verified
+on `coed-api:live` **16**, source `38d5cd7f74d5dc937f83277598f9db52c6c335c2`.
+TU broker/issuer remain **5/4**; Amplify remains manual job **38** with auto-build
+disabled. The existing environment was preserved, including maintenance `off`,
+routed-TU audience and required intake controls. Gateway and TU configuration
+were unchanged. Operational smoke passed. A 22:47 follow-up observed the new
+persisted Student submission; Coordinator actions are blocked by the round's
+earlier Committee finalization, despite a valid review interval. See the
+[diagnostic](coordinator-finalized-round-diagnostic.md) and the
+[Nov 17 release record](application-policy-save-release.md) for
+artifact hashes, checks, recovery and limits. No RDS inspection or SQL was run.
+
+The Nov 8 snapshot below is retained as historical evidence. Its API9/frontend32
+versions and disabled-feature statements are not the current release baseline.
+
+## Historical snapshot — 2026-11-08
+
 Snapshot updated: **2026-11-08, Asia/Bangkok**. The explicitly owner-approved routed-TU audience cutover was verified at **20:09**. Lambda/Gateway/Amplify reads and deployment checks below are fresh evidence; RDS rows and genuine multi-account browser acceptance were not refreshed. Earlier C7/schema/owner evidence retains its original date. Treat this as last verified state, not a realtime monitor or standing operational approval.
 
 ## Released versions

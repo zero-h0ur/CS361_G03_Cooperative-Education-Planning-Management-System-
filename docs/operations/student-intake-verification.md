@@ -1,5 +1,18 @@
 # Student intake verification
 
+## Nov 17 Draft-save release follow-up
+
+The [Draft curriculum policy-save release](application-policy-save-release.md)
+records the exact patch's prior disposable PostgreSQL regression results and
+the fresh Backend 16 staging/Gateway smoke separately. The release was verified
+at 22:25 Asia/Bangkok on 2026-11-17. At 22:47, an owner report and scoped read-only
+follow-up established that the new submission persisted, but Coordinator review
+was blocked by the round's earlier Committee finalization. The
+[diagnostic record](coordinator-finalized-round-diagnostic.md) separates the
+modeled IAM/Gateway reads from genuine authentication. The complete role workflow
+remains unverified. This does not refresh unrelated earlier browser confirmations
+or RDS catalog evidence below. No Student write was performed by the operator.
+
 Updated: 2026-11-08 (Asia/Bangkok). Historical intake evidence uses `fix/student-application-intake`/`c63b238`; the routed-audience source/CI/deployment evidence below uses merged commit `cdfdf7d`. Keep prior owner confirmations separate from the Nov 8 operational smoke and pending multi-account browser acceptance. AWS versions/feature gates are in [current deployment](current-deployment.md), not inferred from the latest source commit.
 
 ## Evidence matrix
