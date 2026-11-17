@@ -86,6 +86,7 @@
 | `scripts/` ระดับบน | Build frontend/V4, bundle test modules, package Lambda/TU/candidate ZIP, lint และตรวจ dataset/docs เช่น `build-v4.mjs`, `package-v4-candidate.mjs`, `verify-doc-links.mjs` |
 | `scripts/local-dev/` | เตรียม local fixtures/Compose, API, synthetic signed tokens และ test wrapper; ไม่มีการสร้างผู้ใช้ Cognito จริง ดู [Team Dev/Test](operations/team-dev-test.md) |
 | `scripts/ui-preview/` | Preview server UI/scenarios/fixtures ใน memory สำหรับออกแบบและ interaction tests ไม่บันทึก RDS/S3 หรือพิสูจน์ Login จริง |
+| `scripts/loadtest/` | เครื่องมือเตรียมข้อมูลบริษัทสังเคราะห์, smoke test 3 endpoints และแนวทาง Load Test ระบบทดสอบแยก (ห้ามชี้ระบบจริง/commit tokens); ดู [scriptnotes.md](../scripts/loadtest/scriptnotes.md) |
 | `scripts/operations/` | Catalog/migration readers, reviewed release gates, diagnostic/upgrade/deploy/smoke controllers และ historical ops tools; บางไฟล์เขียน AWS/DB ได้ จึงต้องอ่าน scope/guards และได้รับอนุมัติก่อน |
 | `scripts/operations/baselines/` | Baseline metadata ที่เครื่องมือใช้เปรียบเทียบ schema ไม่ใช่ database backup หรือ snapshot สด |
 | `scripts/operations/intake-readiness/`, `tu-preflight/`, `tu-identity-diagnostic/` | เครื่องมือตรวจ readiness/schema/identity แบบมี contract และ cleanup; แม้ตรวจ DB อ่านอย่างเดียว การสร้าง Lambda/role ชั่วคราวยังเป็น AWS write |
