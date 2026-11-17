@@ -13,9 +13,13 @@ modeled IAM/Gateway reads from genuine authentication. The complete role workflo
 remains unverified. This does not refresh unrelated earlier browser confirmations
 or RDS catalog evidence below. No Student write was performed by the operator.
 
+**Earlier operational update: 2026-11-11 (Asia/Bangkok).** [PR #175 release evidence](coordinator-review-results-release.md) records API15/Amplify38 from `791ed1e`, the separately verified Nov 10 schema/policy operation, preserved normal Committee behavior and fresh anonymous/CORS/asset smoke. No genuine TU/Cognito browser flow was rerun in that application release. The Nov 8 results below retain their original dates and are historical, not fresh acceptance of API15.
+
+Documentation verification on **2026-11-17** used Node **22.23.4** against `791ed1e` with the working documentation changes. `npm run test:docs` passed all **9 tests**, zero skipped; the link checker traversed **80 documents**, **465 local links** and **167 external URL syntax checks** with zero failures. `git diff --check` passed. These local documentation checks made zero network requests. The Nov 11 AWS snapshot in the release evidence retains its original date; genuine browser acceptance remains pending.
+
 Updated: 2026-11-08 (Asia/Bangkok). Historical intake evidence uses `fix/student-application-intake`/`c63b238`; the routed-audience source/CI/deployment evidence below uses merged commit `cdfdf7d`. Keep prior owner confirmations separate from the Nov 8 operational smoke and pending multi-account browser acceptance. AWS versions/feature gates are in [current deployment](current-deployment.md), not inferred from the latest source commit.
 
-## Evidence matrix
+## Historical intake evidence through Nov 8
 
 | Layer | Verified result | Limits |
 | --- | --- | --- |
@@ -28,7 +32,7 @@ Updated: 2026-11-08 (Asia/Bangkok). Historical intake evidence uses `fix/student
 
 Do not publish the owner's identities, document names/contents, tokens or signed URLs as evidence.
 
-## Latest CI and focused results
+## Recorded CI and focused results through Nov 8
 
 [GitHub Actions run 42157086974](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/actions/runs/42157086974) tested exact commit `c63b23881498f360cf1c5a8375697b17688d7606` for [PR #168](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/pull/168). Recorded jobs: regression SUCCESS (2m20s), observed-schema-upgrade SUCCESS (38s). Successful checks do not replace independent PR review or imply Merge/Deploy.
 
@@ -94,7 +98,7 @@ npm run lint
 npm run test:docs
 ```
 
-Some listed commands need additional dedicated DB variables; do not treat the example above as their complete setup. `verify:migrations` reads the 15 reviewed fresh/workspace files and does not connect to a DB. Observed 018–022 are separately gated upgrades, never implicitly applied by general packaging or API Deploy.
+Some listed commands need additional dedicated DB variables; do not treat the example above as their complete setup. `verify:migrations` reads the 17 reviewed fresh/workspace files through 024 and does not connect to a DB. Observed 018–024 are separately gated upgrades, never implicitly applied by general packaging or API Deploy.
 
 ## Routed TU audience — source and backend cutover (2026-11-08)
 
@@ -110,13 +114,13 @@ Activation contract used for the approved backend release (route/data acceptance
 
 Rollback audience to `pilot` (or use the compatible `browse` stage to close writes), retaining the current compatible code and all records/files/receipts. Do not restore an old database or blindly deploy an old API. The historical C7 single-account controller now rejects non-pilot audience configuration; it is not a deployment path for this expansion. AWS writes/data changes/deployment still need explicit approval under [AGENTS](../../AGENTS.md).
 
-Local verification this turn: Node **22.23.4**, `npm ci`, isolated PostgreSQL 16 on loopback port **54339**, fresh disposable `coed_v3_test`, `coed_selection_test`, `coed_intake_test`; existing local test databases were not reset. Intake: **41 Node + 7 DOM checks passed, zero skipped**, including a second synthetic TU Student's real local-byte upload/Submit/Coordinator receipt, unrelated department/curriculum/round denials, revoked link, ownership, Close and replay. Application: **18 Node + 56 DOM/API checks passed**; Coordinator: **8 DB + 34 DOM/API checks passed**; Committee: **1 DB + 9 DOM checks passed**, zero skips in these runs. Syntax lint passed **336 modules**. These are synthetic local/auth-modeled boundaries, not live Cognito/TU or S3 acceptance.
+Local verification recorded for the Nov 8 cutover: Node **22.23.4**, `npm ci`, isolated PostgreSQL 16 on loopback port **54339**, fresh disposable `coed_v3_test`, `coed_selection_test`, `coed_intake_test`; existing local test databases were not reset. Intake: **41 Node + 7 DOM checks passed, zero skipped**, including a second synthetic TU Student's real local-byte upload/Submit/Coordinator receipt, unrelated department/curriculum/round denials, revoked link, ownership, Close and replay. Application: **18 Node + 56 DOM/API checks passed**; Coordinator: **8 DB + 34 DOM/API checks passed**; Committee: **1 DB + 9 DOM checks passed**, zero skips in these runs. Syntax lint passed **336 modules**. These are synthetic local/auth-modeled boundaries, not live Cognito/TU or S3 acceptance.
 
 Full `npm test` passed through the application/intake suites but **did not pass overall**: `test:release` had **31 passed, 1 failed**, at the unchanged ZIP Unicode filename round trip on macOS (`Unsafe archive entry name` after `unzip` output damaged the Thai filename). A focused rerun also reproduced it with `en_US.UTF-8`. No ZIP implementation/test was changed to conceal it. Committee was then run separately with its disposable DB configured. That initial local verification performed no AWS calls/writes, migration, deployment, commit or push. Subsequently the owner committed/merged PR #170; main CI run **42482561212** passed for `cdfdf7d`. The later explicitly approved backend deployment published/switched to **9**, passed **8 numeric-candidate + 5 Gateway checks**, and preserved Gateway/TU/frontend/binding hashes without SQL/data writes. This does not convert denied synthetic requests or directory reads into genuine TU Student submission acceptance. The local macOS ZIP test failure remains a recorded platform-specific result; the actual 19-entry backend ZIP packaged and verified successfully.
 
 ## Historical stages and lessons retained
 
-New local academic-review/Committee handoff evidence is maintained separately in [academic review verification](academic-review-verification.md). It requires complete approved criteria before forwarding and remains **unreleased**; the version-9 intake deployment above did not enable this extension.
+The version-9 intake deployment above preceded academic review and Committee handoff. Their original local results are in [academic review verification](academic-review-verification.md). The Nov 11 API15/Amplify38 release includes that extension; [PR #175 release evidence](coordinator-review-results-release.md#owner-browser-acceptance-still-needed) lists the genuine account checks still pending.
 
 - A0 inventory (`9e92bf6`): 11 checks including READ ONLY transaction and denied writes; live temporary-tool cleanup verified. It found no ready real round, so no mock dates/recipient were silently extended.
 - Initial local intake (`286c64c`, `f3b074b`, `ad703f0`): 15 Node + 4 DOM intake checks at that time, followed by application/auth/Coordinator/release regressions. Later controls expanded coverage; these old counts are not the current total.

@@ -1,6 +1,6 @@
 # Coordinator Committee-results dashboard
 
-Status: local source extension, 2026-11-10. Builds on PR #173 and the uncommitted independent review-window work. It adds read-only results to the existing tracking route, not a new decision, publication or deployment operation.
+Status: introduced locally on 2026-11-10, building on PR #173 and the independent review-window work. Merged in PR #175 at `791ed1e` and deployed as API15/Amplify38 on Nov 11. It reads saved results through the existing tracking route. Genuine role-by-role browser acceptance remains pending. See [release evidence](../operations/coordinator-review-results-release.md).
 
 ## Read contract
 
@@ -26,4 +26,4 @@ Phase 1 identities come from the forwarded immutable submission, identified by t
 
 The existing Coordinator tracking page contains a round-wide four-count summary, one panel section per Committee, saved confirmation time and outcome roster with All/Selected/Not-selected buttons and ten rows per page. Those buttons/page are local transient view state, separate from the forwarded-list filters below. Native buttons, existing table/card responsive behavior, badges, feedback and document/detail dialog are reused. Refresh loads current results; failure removes the stale dashboard and offers retry. Permission expiry and aborted/superseded reads keep their existing shell behavior.
 
-The dashboard cannot propose capacity, vote, finalize, change a selected ID or publish results to Students. “Committee confirmed” remains separate from publication. No new table, migration, runtime grant, route, Gateway setting or feature gate is added for this dashboard. The pending 024 migration belongs to review-window configuration, not results display. A future application release still needs the reviewed commit/CI/artifact evidence and explicit AWS deployment approval. See [local verification](../operations/coordinator-results-verification.md).
+The dashboard cannot propose capacity, vote, finalize, change a selected ID or publish results to Students. “Committee confirmed” remains separate from publication. No new table, migration, runtime grant, route, Gateway setting or feature gate is added for this dashboard. Migration 024 belongs to review-window configuration and was applied in the separate Nov 10 operation. The Nov 11 application release includes this dashboard under existing authorization rules. See [local verification](../operations/coordinator-results-verification.md) and [release evidence](../operations/coordinator-review-results-release.md).
