@@ -103,9 +103,11 @@
 .coord-skills {display:grid;grid-template-columns:.9fr 1.2fr;gap:20px;}.coord-skills > section + section {padding-left:24px;border-left:1px solid var(--shell-line);}.coord-skills > .coord-note {grid-column:1/-1;}
 .coord-position-list {padding-left:22px;margin:10px 0;}.coord-position-list li {margin:8px 0;}
 .coord-free-text {white-space:pre-wrap;overflow-wrap:anywhere;padding:12px 14px;line-height:1.8;border:1px solid var(--shell-line);border-radius:5px;background:#fcf7ee;}
+.shell-sr-only {position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;}
 .coord-declaration-count {font-weight:600;}.coord-declarations {padding:0;margin:8px 0 14px;list-style:none;counter-reset:declaration;}
 .coord-declarations li {padding:9px 0;border-top:1px solid var(--shell-line);counter-increment:declaration;}
-.coord-declarations label {display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;font-size:.92rem;}
+.coord-declarations label {display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;font-size:.92rem;align-items:start;}
+.coord-declarations .coord-declaration-text {line-height:1.6;}
 .coord-declarations .coord-declaration-text::before {content:counter(declaration) '. ';font-weight:600;}
 .coord-declaration-marker {display:grid;place-items:center;width:20px;height:20px;margin-top:3px;border:2px solid #706c65;border-radius:3px;background:var(--coord-panel);color:#fff;}
 .coord-declaration-marker .workspace-icon {width:16px;height:16px;visibility:hidden;stroke-width:3;}
