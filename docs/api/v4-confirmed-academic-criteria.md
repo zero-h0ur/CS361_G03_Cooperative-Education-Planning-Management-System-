@@ -1,6 +1,6 @@
 # Confirmed department criteria — 2568 / round 1/69
 
-Owner confirmation: 2026-11-08, in this project's conversation. The owner confirmed these are the department's actual criteria. Source authority here is that explicit confirmation; no additional official announcement was retrieved or invented. Status: local source, not RDS publication or deployment.
+Owner confirmation: 2026-11-08, in this project's conversation. The owner confirmed these are the department's actual criteria. Source authority here is that explicit confirmation; no additional official announcement was retrieved or invented. Status update: policies 61/66 version 1 were published only for the bound 2569/1 test round in the separately approved Nov 10 owner operation. Source `791ed1e` was deployed as API15/frontend job38 on Nov 11; genuine browser review remains pending. See [release evidence](../operations/coordinator-review-results-release.md).
 
 Canonical implementation: [shared criteria](../../src/shared/faculty-criteria.js), ID `TU_CS_2568_CONFIRMED_2026_11_08`. The existing eligibility baseline remains GPAX **2.75**, group GPA **2.50**, entry year **2567 or earlier**. All counted courses have **3 credits**; compare thresholds before rounding.
 
@@ -40,4 +40,4 @@ The credits object above is a schematic example, not an executable policy. The s
 
 Publish a **new version**, retain the original policy rows, and never update an old submission's pinned policy. Policy publishing needs separately approved owner access/data operation. The runtime gains no policy write privileges. New Draft readiness and new submission snapshots use/pin this criteria version. Historical submitted views retain their old criteria/attempt display; current corrections use the current contract and require re-acknowledgement as appropriate.
 
-The new academic-review 023 files are still uncommitted and unreleased. Their review guard now requires this exact contract and 3-credit metadata, and their hashes were updated together. No historical migration bytes/checksums were changed. Review/handoff operation IDs, scope, deadlines, locks, immutable evidence and maintenance gates remain as in the [handoff contract](v4-academic-review.md).
+Academic-review 023 is committed and applied with its reviewed observed checksum; review-window 024 is also applied. The guard requires this exact contract and 3-credit metadata. No historical migration bytes/checksums were changed. Publication for another round or a new policy version still requires its own approved data operation. Review/handoff operation IDs, scope, deadlines, locks, immutable evidence and maintenance gates remain as in the [handoff contract](v4-academic-review.md).
