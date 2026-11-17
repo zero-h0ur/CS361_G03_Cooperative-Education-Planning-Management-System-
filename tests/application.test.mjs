@@ -196,6 +196,54 @@ test('Phase 1 PostgreSQL + real private bytes: isolated application lifecycle an
       await assert.rejects(trustedService.save(actor,app.id,{...command(),payload:{english_full_name:'Forged name'},expected_policy_id:null}),e=>e.statusCode===400);
       assert.equal((await service.get(actor,app.id)).payload.english_full_name,undefined);
     });
+    await t.test('Draft curriculum selection keeps the loaded policy guard and returns the newly selected policy',async()=>{
+      const policyCycle=randomUUID();
+      await q(`INSERT INTO rounds(id,name,academic_year,semester,status,source,visibility,data_status)
+        VALUES($1,'Synthetic curriculum-policy regression',2569,1,'OPEN','synthetic test','public','mock')`,[policyCycle]);
+      let draft=await service.create(actor,{operation_id:randomUUID(),cycle_id:policyCycle});
+      const publish=async(curriculum,version)=>{
+        const policyId=randomUUID();
+        await q(`INSERT INTO phase1_policies(id,cycle_id,curriculum,version,source_year,source,verified,synthetic,data)
+          VALUES($1,$2,$3,$4,2568,'synthetic curriculum-change regression',true,true,$5)`,
+        [policyId,policyCycle,curriculum,version,JSON.stringify(faculty.policyData(curriculum))]);
+        return policyId;
+      };
+      const policy66=await publish('66',1),policy61=await publish('61',1);
+      assert.equal(draft.policy,null);
+      const selectCurriculum={operation_id:randomUUID(),expected_version:draft.version,expected_policy_id:null,
+        payload:{curriculum:'66',skills_detail:'Retained unsaved form input'}};
+      draft=await service.save(actor,draft.id,selectCurriculum);
+      assert.equal(draft.policy.id,policy66);
+      assert.equal(draft.payload.curriculum,'66');
+      assert.equal(draft.payload.skills_detail,'Retained unsaved form input');
+      const replay=await service.save(actor,draft.id,selectCurriculum);
+      assert.equal(replay.idempotent_replay,true);
+      assert.equal(replay.version,draft.version);
+
+      draft=await service.save(actor,draft.id,{operation_id:randomUUID(),expected_version:draft.version,
+        expected_policy_id:policy66,payload:{curriculum:'61'}});
+      assert.equal(draft.policy.id,policy61);
+      assert.equal(draft.payload.curriculum,'61');
+      assert.equal(draft.payload.skills_detail,'Retained unsaved form input');
+
+      const next61=await publish('61',2);
+      const stale={operation_id:randomUUID(),expected_version:draft.version,expected_policy_id:policy61,
+        payload:{curriculum:'66',skills_detail:'Must not commit with an outdated loaded policy'}};
+      await assert.rejects(service.save(actor,draft.id,stale),error=>error.code==='POLICY_CHANGED');
+      const retained=await service.get(actor,draft.id);
+      assert.equal(retained.version,draft.version);
+      assert.equal(retained.policy.id,next61);
+      assert.deepEqual(retained.payload,draft.payload);
+      assert.equal((await q('SELECT count(*)::int n FROM phase1_operations WHERE operation_id=$1',[stale.operation_id])).rows[0].n,0);
+
+      const next66=await publish('66',2);
+      draft=await service.save(actor,draft.id,{operation_id:randomUUID(),expected_version:retained.version,
+        expected_policy_id:next61,payload:{curriculum:'66'}});
+      assert.equal(draft.policy.id,next66);
+      assert.equal(draft.status,'DRAFT');
+      assert.equal(draft.submission,null);
+      assert.equal((await q('SELECT count(*)::int n FROM phase1_submissions WHERE application_id=$1',[draft.id])).rows[0].n,0);
+    });
     await t.test('real uploads work before criteria verification, replacement is atomic and stale writes fail',async()=>{
       app=await save();await attach('resume');const old=app.documents[0];
       const broken=await service.beginUpload(actor,app.id,{...command(),...metadata('resume')});
