@@ -1,0 +1,24 @@
+{
+  "contract": "coed-loadtest-db-v1",
+  "run_id": "lt-20261118-aaaaaaaa",
+  "synthetic_only": true,
+  "aws_intent": {
+    "account_id": "000000000000",
+    "region": "ap-southeast-2",
+    "rds_identifier": "coed-loadtest-db",
+    "secret_name": "coed/loadtest/postgres/app"
+  },
+  "issuer": "https://cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_LOADTEST",
+  "accounts": [
+    { "alias": "loadtest01", "subject": "99000000-0000-4000-8000-000000000001" },
+    { "alias": "loadtest02", "subject": "99000000-0000-4000-8000-000000000002" },
+    { "alias": "loadtest03", "subject": "99000000-0000-4000-8000-000000000003" },
+    { "alias": "loadtest04", "subject": "99000000-0000-4000-8000-000000000004" },
+    { "alias": "loadtest05", "subject": "99000000-0000-4000-8000-000000000005" },
+    { "alias": "loadtest06", "subject": "99000000-0000-4000-8000-000000000006" },
+    { "alias": "loadtest07", "subject": "99000000-0000-4000-8000-000000000007" },
+    { "alias": "loadtest08", "subject": "99000000-0000-4000-8000-000000000008" },
+    { "alias": "loadtest09", "subject": "99000000-0000-4000-8000-000000000009" },
+    { "alias": "loadtest10", "subject": "99000000-0000-4000-8000-000000000010" }
+  ]
+}
