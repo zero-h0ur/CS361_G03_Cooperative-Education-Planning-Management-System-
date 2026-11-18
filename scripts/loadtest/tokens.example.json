@@ -1,0 +1,4 @@
+[
+  {"username": "loadtest01", "refresh_token": "<refresh token ของ loadtest01>"},
+  {"username": "loadtest02", "refresh_token": "<refresh token ของ loadtest02>"}
+]
