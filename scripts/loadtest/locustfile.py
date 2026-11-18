@@ -1,15 +1,15 @@
 """Load test สำหรับระบบทดสอบของ CO-ED (ห้ามยิง API ตัวจริง)
 
 3 การกระทำ (สัดส่วนตาม request):
-  list   50%  GET   /api/directory/companies?page=&pageSize=20[&q=][&location=]
-  detail 30%  GET   /api/directory/companies/{id}
+  list   40%  GET   /api/directory/companies?page=&pageSize=20[&q=][&location=]
+  detail 40%  GET   /api/directory/companies/{id}
   write  20%  PATCH /api/v3/plans/{id}   (บันทึกร่างแผนด้วยบัญชีทดสอบ)
 
 ใช้งาน:
   locust -f scripts/loadtest/locustfile.py --host https://<api-id>.execute-api.ap-southeast-2.amazonaws.com
   แล้วเปิด http://localhost:8089
 
-token: tmp/loadtest/tokens.json  [{"username": "loadtest01", "refresh_token": "..."}, ...]
+token: scripts/loadtest/tokens.json จาก capture-tokens.py ({"accounts": [...]}) หรือ tmp/loadtest/tokens.json
 ถ้าไม่มีไฟล์ token จะยิงเฉพาะ list/detail (ใช้ทดสอบสคริปต์ก่อนบัญชีพร้อม)
 """
 import itertools
@@ -22,7 +22,7 @@ from pathlib import Path
 
 import requests
 from gevent.lock import Semaphore
-from locust import HttpUser, between, events, task
+from locust import HttpUser, LoadTestShape, between, events, task
 
 PROD_API_HOSTS = ("yhfevhqtoa",)
 TOKEN_URL = os.environ.get(
@@ -30,8 +30,11 @@ TOKEN_URL = os.environ.get(
     "https://coed-v4-130165494095.auth.ap-southeast-2.amazoncognito.com/oauth2/token")
 CLIENT_ID = os.environ.get("COGNITO_CLIENT_ID", "65b8bifg3860706esa1uns6cd8")
 CLIENT_SECRET = os.environ.get("COGNITO_CLIENT_SECRET")  # ปกติไม่มี (public client)
-TOKENS_FILE = Path(os.environ.get(
-    "LOADTEST_TOKENS", Path(__file__).resolve().parents[2] / "tmp" / "loadtest" / "tokens.json"))
+_HERE = Path(__file__).resolve().parent
+TOKEN_CANDIDATES = [Path(os.environ["LOADTEST_TOKENS"])] if os.environ.get("LOADTEST_TOKENS") else [
+    _HERE / "tokens.json",                          # ที่ capture-tokens.py เขียนไว้
+    _HERE.parents[1] / "tmp" / "loadtest" / "tokens.json",
+]
 SEARCH_WORDS = ["", "", "", "จำกัด", "ซอฟต์", "tech", "data", "LOADTEST", "ไทย", "digital"]
 PAGE_SIZE = 20
 
@@ -72,12 +75,14 @@ class Account:
 
 
 def load_accounts():
-    if not TOKENS_FILE.exists():
-        print(f"[loadtest] ไม่พบ {TOKENS_FILE} จะยิงเฉพาะ list/detail")
+    path = next((p for p in TOKEN_CANDIDATES if p.exists()), None)
+    if path is None:
+        print("[loadtest] ไม่พบ tokens.json จะยิงเฉพาะ list/detail")
         return []
-    rows = json.loads(TOKENS_FILE.read_text())
-    accounts = [Account(r["username"], r["refresh_token"]) for r in rows]
-    print(f"[loadtest] โหลดบัญชีทดสอบ {len(accounts)} บัญชี")
+    data = json.loads(path.read_text())
+    rows = data.get("accounts", []) if isinstance(data, dict) else data  # รองรับทั้ง {"accounts": [...]} และ [...]
+    accounts = [Account(r["username"], r["refresh_token"]) for r in rows if r.get("refresh_token")]
+    print(f"[loadtest] โหลดบัญชีทดสอบ {len(accounts)} บัญชีจาก {path}")
     return accounts
 
 
@@ -121,7 +126,7 @@ class Student(HttpUser):
     def auth_headers(self, force=False):
         return {"Authorization": f"Bearer {self.account.token(force)}"}
 
-    @task(5)
+    @task(4)
     def list_companies(self):
         params = {"page": random.randint(1, TOTAL_PAGES[0]), "pageSize": PAGE_SIZE}
         word = random.choice(SEARCH_WORDS)
@@ -133,7 +138,7 @@ class Student(HttpUser):
             params["page"] = 1
         self.client.get("/api/directory/companies", params=params, name="list")
 
-    @task(3)
+    @task(4)
     def company_detail(self):
         if not COMPANY_IDS:
             return
@@ -180,3 +185,17 @@ class Student(HttpUser):
             acc.plan_id, acc.version = plans[0]["id"], int(plans[0]["version"])
             r.success()
             return True
+
+
+# ขั้นบันไดตามแล็บ Module 10: 10 -> 20 -> 40 users ขั้นละ 2 นาที แล้ว 80 users อีก 6 นาที รวม 12 นาที
+# ปิดได้ด้วย LOADTEST_STEPS=off (ใช้ตอนวัด baseline 2 users)
+if os.environ.get("LOADTEST_STEPS", "on").lower() != "off":
+    class StepLoad(LoadTestShape):
+        steps = [(120, 10), (240, 20), (360, 40), (720, 80)]
+
+        def tick(self):
+            t = self.get_run_time()
+            for end, users in self.steps:
+                if t < end:
+                    return (users, 5)
+            return None
