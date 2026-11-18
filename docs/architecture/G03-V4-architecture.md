@@ -129,3 +129,18 @@ Historical [V3 architecture](G03-V3-architecture.md) and diagrams remain availab
 ## Coordinator result-read extension
 
 The existing tracking GET returns a separate panel-wide dashboard and minimal confirmed result roster. A read-only repeatable-read snapshot joins the saved Committee applicant/version set and selected IDs to the same authorized retained records; filters/pagination still apply only to the forwarded application list. Pending/inconsistent/shared-scope results remain unknown. This source extension was introduced on Nov 10 and deployed in API15/Amplify38 on Nov 11. See [D12](../decisions/v4-tu-intake-boundaries.md#d12-read-the-committees-confirmed-result-without-repeating-its-decision-workflow), [contract](../api/v4-coordinator-results.md), [local verification](../operations/coordinator-results-verification.md) and [release evidence](../operations/coordinator-review-results-release.md).
+
+## Isolated load-test infrastructure (B1, 2026-11-18)
+
+A separate private PostgreSQL16.15 `coed-loadtest-db` was created for synthetic load-test preparation, reusing the existing VPC/private subnet group but using two dedicated SGs and its own RDS-managed owner Secret. Only TCP5432 between those new groups is allowed; no test Lambda, schema, runtime identity, dataset or API is installed at B1. Production request/auth flows and endpoint policies are unchanged. Infrastructure availability is not end-to-end readiness or permission to send load. See the [dated B1 snapshot and limitations](../operations/loadtest-b1-infrastructure.md); later SQL/data/bootstrap/API phases require separate approval.
+
+The separately approved [B2a extension](../operations/loadtest-b2a-bootstrap.md) adds reviewed fresh schema, limited `coed_app`/app Secret and a test-only HTTPS path through the existing Secrets endpoint. Its bootstrap owner capability is temporary and must be removed; shared production policy/rules are preserved. Read B2a's dated acceptance/cleanup result, not B1 or local fixtures, for actual stage readiness. Company/identity data, test API and load are later distinct stages; production request/auth flows are unchanged.
+
+The approved [B2b data stage](../operations/loadtest-b2b-data.md), completed2026-11-18,
+adds400 synthetic catalog companies/800 positions and10 exact supplied Cognito
+test identities with synthetic Students and one DRAFT each in an OPEN legacy
+cycle, only in that separate RDS. It preserves the17-file schema/history/grants
+and uses bounded temporary data-only tooling, removed within the original1h
+window. Runtime DB/service PATCH checks rolled back; this is not a production
+Student policy change, test API deployment, genuine JWT smoke or load acceptance.
+Private identity/Plan mappings are handoff files, never published fixtures.

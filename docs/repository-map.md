@@ -85,6 +85,8 @@
 | --- | --- |
 | `scripts/` ระดับบน | Build frontend/V4, bundle test modules, package Lambda/TU/candidate ZIP, lint และตรวจ dataset/docs เช่น `build-v4.mjs`, `package-v4-candidate.mjs`, `verify-doc-links.mjs` |
 | `scripts/local-dev/` | เตรียม local fixtures/Compose, API, synthetic signed tokens และ test wrapper; ไม่มีการสร้างผู้ใช้ Cognito จริง ดู [Team Dev/Test](operations/team-dev-test.md) |
+| `scripts/loadtest/` | `database.mjs`/`prepare-db.mjs` ยังเป็น offline/loopback-only; `test-local.mjs` สร้าง/หยุด clusterใหม่ (`--b2` เลือก schema-only suite) ส่วน `b2-*` เป็น AWS operator/handler เฉพาะ B2a ที่ต้องมีอนุมัติ: fixed test target, policy backup, bounded schema/runtime bootstrap และถอนเครื่องมือ ไม่ใช่ generic seed หรือ teammate API/Locust ดู [runbook](operations/loadtest-rds-preparation.md) และ [B2a evidence](operations/loadtest-b2a-bootstrap.md) |
+| `scripts/loadtest/b2b-*`, `scripts/loadtest/vendor/` | ตัวนำเข้าข้อมูลบน schema เดิมแบบ test-only พร้อม operator/handler/runtime rollback check; vendor เก็บ generator PR178 ตรง commit ไม่รัน SQL seed อัตโนมัติ ส่วน `identity-input.mjs` แยก provider subject จาก UUID ภายใน และ `test-local.mjs --b2b` เลือก suite แยก ดู [B2b scope/evidence](operations/loadtest-b2b-data.md) |
 | `scripts/ui-preview/` | Preview server UI/scenarios/fixtures ใน memory สำหรับออกแบบและ interaction tests ไม่บันทึก RDS/S3 หรือพิสูจน์ Login จริง |
 | `scripts/loadtest/` | เครื่องมือเตรียมข้อมูลบริษัทสังเคราะห์, smoke test 3 endpoints และแนวทาง Load Test ระบบทดสอบแยก (ห้ามชี้ระบบจริง/commit tokens); ดู [scriptnotes.md](../scripts/loadtest/scriptnotes.md) |
 | `scripts/operations/` | Catalog/migration readers, reviewed release gates, diagnostic/upgrade/deploy/smoke controllers และ historical ops tools; บางไฟล์เขียน AWS/DB ได้ จึงต้องอ่าน scope/guards และได้รับอนุมัติก่อน |
@@ -99,6 +101,10 @@
 
 - ไฟล์ `.test.js`/`.test.mjs` ระดับบนครอบคลุม unit, DOM/UI, API contract, auth boundaries, DB integration, packaging และ deployment-tool safety จึงต้องดูแต่ละ suite ไม่อนุมานจากนามสกุลไฟล์อย่างเดียว
 - `tests/helpers/` เก็บ helper สร้าง observed-schema fixtures และอ่าน reviewed migrations เช่น `present-schema-fixture.mjs`; เป็นข้อมูลจำลองสำหรับฐานทดสอบ ไม่ใช่ไฟล์ repair RDS
+- `tests/loadtest-preparation.test.mjs`, `tests/loadtest-db.test.mjs` และ `tests/helpers/loadtest-fixture.mjs` ตรวจ guard/fixture/สิทธิ์และ API กับฐานใหม่เฉพาะงาน load-test preparation; ไม่ใช่ผลยิงโหลดหรือ genuine Cognito acceptance ดู [ผล local](operations/loadtest-preparation-verification.md)
+- `tests/loadtest-b2.test.mjs` และ `tests/loadtest-b2-db.test.mjs` ตรวจ B2a target/expiry/payload/Secret guards, additive policy/SG preservation, ZIP และ transaction/runtime rights ในฐาน local ใหม่ ไม่ใช่สิทธิ์ Apply AWS อัตโนมัติ
+- `tests/loadtest-b2b.test.mjs` และ `tests/loadtest-b2b-db.test.mjs` ตรวจ provider-sub validation, generator PR178, retained-schema data-only trial/apply/drift, OPEN-cycle DRAFTs, runtime PATCH/audit rollback, package privacy และ retry เฉพาะ preflight; ไม่ใช่ genuine Cognito/HTTP load acceptance
+- `tests/loadtest-ci.test.mjs` ตรวจ npm/CI wiring, cluster isolation และ private artifact exclusions; `tests/helpers/loadtest-b2b-fixture.mjs` เก็บ keys สังเคราะห์ที่ unit/DB ใช้ร่วมกัน ไม่ใช่ mapping จริง ดู [คำสั่งและ CI](operations/loadtest-rds-preparation.md#ci-และการแยกฐานทดสอบ)
 - `tests/operations/` เก็บ Python operator/smoke safety tests รวมถึงการจำกัด target/SQL/credentials ไม่ใช่บันทึกผลจาก production
 - [package.json](../package.json) กำหนดคำสั่งแต่ละชุด ส่วน [.github/workflows/v4-verification.yml](../.github/workflows/v4-verification.yml) เป็นตัวอย่าง CI ที่แยก PostgreSQL disposable
 

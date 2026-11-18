@@ -8,6 +8,11 @@
   },
   "scripts": {
     "lint": "node scripts/lint.mjs",
+    "test:loadtest": "node --test --test-concurrency=1 tests/loadtest-preparation.test.mjs tests/loadtest-b2.test.mjs tests/loadtest-b2b.test.mjs tests/loadtest-scripts.test.mjs tests/loadtest-ci.test.mjs",
+    "test:loadtest:db": "node --test --test-concurrency=1 tests/loadtest-db.test.mjs",
+    "test:loadtest:b2a:db": "node --test --test-concurrency=1 tests/loadtest-b2-db.test.mjs",
+    "test:loadtest:b2b:db": "node --test --test-concurrency=1 tests/loadtest-b2b-db.test.mjs",
+    "test:loadtest:local": "node scripts/loadtest/test-local.mjs",
     "start": "node src/server.js",
     "build": "node scripts/build-frontend.mjs",
     "dev:ui": "node scripts/dev-ui.mjs",

@@ -47,3 +47,4 @@ __pycache__/
 tokens.json
 scripts/loadtest/tokens.json
 .env.loadtest
+/tmp/loadtest/
