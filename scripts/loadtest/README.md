@@ -4,7 +4,7 @@
 ใช้โค้ดและค่าตั้งค่าเดียวกับ `coed-api:live` แต่ต่อฐานข้อมูลทดสอบ `coed-loadtest-db` เท่านั้น
 
 - **ผลการทดสอบในคาบ (18 พ.ย. 2569):** [issue #181](https://github.com/zero-h0ur/CS361_G03_Cooperative-Education-Planning-Management-System-/issues/181)
-- **สถานะ:** ลบ Lambda, API, dashboard และ IAM role ของชุดทดสอบแล้วหลังคาบ (`stack-down.sh`) ส่วน RDS และผู้ใช้ Cognito ทดสอบดูเช็กลิสต์ท้ายไฟล์
+- **สถานะ:** ลบชุดทดสอบครบแล้ว (18–20 พ.ย. 2569) ดูเช็กลิสต์ท้ายไฟล์ ถ้าจะทดสอบใหม่ต้องสร้าง RDS ทดสอบ, secret และผู้ใช้ Cognito ใหม่ก่อน
 
 ## ค่าของระบบจริง (17 พ.ย. 2569)
 
@@ -76,6 +76,8 @@ locust -f scripts/loadtest/locustfile.py --host <API_URL>
 
 - [x] `bash scripts/loadtest/stack-down.sh` (Lambda, API, dashboard, log group, IAM role)
 - [x] ลบ `scripts/loadtest/tokens.json`
-- [ ] ลบ RDS `coed-loadtest-db` (ไม่ทำ final snapshot), secret, security group และ ENI ที่ค้าง (รณกฤต)
-- [ ] ลบผู้ใช้ Cognito `loadtest01`–`loadtest10` (ณัษฐภาคย์)
-- [ ] เช็ก Billing ของบัญชีกลุ่ม
+- [x] ลบ RDS `coed-loadtest-db` แบบไม่มี final snapshot, owner secret, security group 2 ตัว และ ENI 3 ตัว และถอนเฉพาะสิทธิ์ Load Test ออกจาก VPC endpoint ที่ใช้ร่วมกับ production (รณกฤต)
+- [x] app secret ตั้งลบถาวรวันที่ 26 พ.ย. 2569 (ช่วงกู้คืน 7 วัน)
+- [x] ลบผู้ใช้ Cognito `loadtest01`–`loadtest10` และยืนยันด้วย `admin-get-user` ว่าเป็น NOT_FOUND ครบ (ณัษฐภาคย์)
+- [ ] ลบ log group `/aws/lambda/coed-loadtest-maxconn` (Lambda ชั่วคราวที่ใช้อ่าน `max_connections`)
+- [ ] เช็ก Billing ของบัญชีกลุ่มหลัง 26 พ.ย.
