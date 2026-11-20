@@ -2,6 +2,7 @@ import {renderStudentPageHeader} from '../student/workspace-components.js';
 import {el,text,score,date,button,badge,field,select,table,note,dialog,bangkokInput,feedback} from './components.js';
 import {renderDetail} from './detail.js';
 import {renderIntakeControls} from './intake-controls.js';
+import {renderResultsDashboard} from './results-dashboard.js';
 const ROOT='/api/v4/coordinator';
 const PAGE={review:['รับแผนสหกิจศึกษา','ตรวจใบสมัคร รับเรื่อง และส่งต่อกรรมการ'],tracking:['ติดตามการพิจารณา','ดูข้อมูลเรียงลำดับ และติดตามมติคณะกรรมการ'],schedule:['กำหนดการและช่วงเวลายืนยันสิทธิ์','ตั้งค่าวัน–เวลาของแต่ละช่วงในรอบสหกิจศึกษา']};
 const WINDOWS=[['ช่วงรับสมัคร','opens_at','เปิดรับสมัคร','closes_at','ปิดรับสมัคร'],['ช่วงพิจารณาใบสมัคร','review_opens_at','เริ่มพิจารณา','review_closes_at','สิ้นสุดการพิจารณา'],['ช่วงยืนยันสิทธิ์','confirmation_opens_at','เริ่มยืนยันสิทธิ์','confirmation_closes_at','หมดเขตยืนยันสิทธิ์']];
@@ -100,19 +101,22 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
       }catch(error){if(token!==queryToken)return;failure(error);queue.replaceChildren(button('ลองโหลดรายการอีกครั้ง',refresh));}
       finally{if(token===queryToken)queue.setAttribute('aria-busy','false');signal?.removeEventListener('abort',abort);}
     }refresh();}
-  function trackingPage(){content.replaceChildren(status);const heading=el('div','coord-section-heading'),intro=el('div'),actions=el('div','coord-tracking-actions');intro.append(el('h2','','รายชื่อที่ส่งให้กรรมการ'));heading.append(intro,actions);content.append(heading);
-    const host=el('div'),records=el('div');filterBar(host,refresh);content.append(host,records);
+  function trackingPage(){content.replaceChildren(status);const heading=el('div','coord-section-heading'),intro=el('div'),actions=el('div','coord-tracking-actions coord-tracking-actions--results');intro.append(el('h2','','ผลการพิจารณาจากกรรมการ'));heading.append(intro,actions);content.append(heading);
+    const dashboardHost=el('div'),host=el('div'),records=el('div'),forwardedTitle=el('h2','','รายชื่อที่ส่งให้กรรมการ'),resultState=new Map();
+    dashboardHost.append(el('p','coord-loading','กำลังโหลดผลการคัดเลือก…'));filterBar(host,refresh);content.append(dashboardHost,forwardedTitle,host,records);
+    const openResult=id=>{const body=el('div');dialog(root,'ใบสมัครฉบับที่ส่ง',body,{signal});showDetail(id,body,refresh,{modal:true});};
     function meetingSummary(meetings){const body=el('div');for(const meeting of meetings){body.append(el('h3','',meeting.department));if(meeting.scope_limited){body.append(note('มติชุดนี้มีข้อมูลนอกขอบเขตที่ได้รับมอบหมาย กรุณาตรวจสอบการมอบหมายกับผู้ดูแลระบบ'));continue;}const state=meeting.state,p=state?.proposal;body.append(el('p','','กรรมการชุดเดียว 3 คน พิจารณาทั้งภาคปกติและภาคพิเศษ'));
       if(!p)body.append(note('ยังไม่มีข้อเสนอจำนวนรับที่บันทึกไว้'));
       else{body.append(el('h3','','จำนวนรับนักศึกษาตามข้อเสนอ'),rowsForMeeting(p),el('p','',p.status==='accepted'?'ตกลงจำนวนรับแล้ว':p.status==='rejected'?'ข้อเสนอนี้ถูกส่งกลับเพื่อปรับปรุง':'อยู่ระหว่างตกลงจำนวนรับ'));}
-      body.append(note(state?.finalized?`กรรมการยืนยันรายชื่อแล้ว ${state.selected?.length || 0} คน · ยังไม่ใช่การประกาศผล`:'ยังไม่มีการยืนยันรายชื่อคัดเลือก'),note('หน้านี้อ่านอย่างเดียว Coordinator ไม่แก้ผลคัดเลือกหรือข้อเสนอจำนวนรับ'));
+      body.append(note(meeting.result?.status==='INCOMPLETE'?'ข้อมูลผลที่บันทึกไว้ไม่ตรงกับรายชื่อ กรุณาตรวจสอบก่อนใช้ผล':state?.finalized?`กรรมการยืนยันรายชื่อแล้ว ${state.selected?.length || 0} คน · ยังไม่ใช่การประกาศผล`:'ยังไม่มีการยืนยันรายชื่อคัดเลือก'),note('หน้านี้อ่านอย่างเดียว Coordinator ไม่แก้ผลคัดเลือกหรือข้อเสนอจำนวนรับ'));
     }if(!meetings.length)body.append(note('ยังไม่มีข้อมูลมติในขอบเขตที่ได้รับมอบหมาย'));dialog(root,'มติและจำนวนรับ',body,{signal});}
     function rowsForMeeting(p){const dl=el('dl','coord-meeting-counts');const items=p.total!==undefined?[['จำนวนรับนักศึกษาที่เสนอ',p.total],['เหตุผลที่เสนอ',p.reason]]:[['จำนวนรับภาคปกติ',p.normal],['จำนวนรับภาคพิเศษ',p.special],['เหตุผลที่เสนอ',p.reason]];for(const [label,value] of items){const item=el('div');item.append(el('dt','',label),el('dd','',text(value)));dl.append(item);}return dl;}
-    async function refresh(){const token=++queryToken;records.setAttribute('aria-busy','true');
+    async function refresh(){const token=++queryToken;records.setAttribute('aria-busy','true');dashboardHost.setAttribute('aria-busy','true');
       try{const data=await request('/tracking?'+query());if(stopped()||token!==queryToken)return;
-        intro.replaceChildren(el('h2','',`รายชื่อที่ส่งให้กรรมการ · ${data.total} รายการ`));const one=data.meetings?.length===1 && !data.meetings[0].scope_limited;
+        dashboardHost.replaceChildren(renderResultsDashboard({dashboard:data.dashboard,meetings:data.meetings,onOpen:openResult,state:resultState}));
+        forwardedTitle.textContent=`รายชื่อที่ส่งให้กรรมการ · ${data.total} รายการ`;intro.replaceChildren(el('h2','','ผลการพิจารณาจากกรรมการ'));const one=data.meetings?.length===1 && !data.meetings[0].scope_limited;
         intro.append(el('p','',one?'คณะกรรมการ 3 คน พิจารณาทั้งภาคปกติและภาคพิเศษ':'กรุณาตรวจการมอบหมายกรรมการของรอบนี้กับผู้ดูแลระบบ'));
-        actions.replaceChildren(button('ดูมติและจำนวนรับ',()=>meetingSummary(data.meetings || []),{primary:true,icon:'file'}),badge('PENDING',data.meetings?.some(m=>m.scope_limited)?'ตรวจสอบขอบเขตการมอบหมาย':data.meetings?.length && data.meetings.every(m=>m.state?.finalized)?'ยืนยันรายชื่อแล้ว · รอประกาศผล':'รอมติที่ประชุม'));
+        actions.replaceChildren(button('ดูมติและจำนวนรับ',()=>meetingSummary(data.meetings || []),{primary:true,icon:'file'}),button('โหลดผลล่าสุด',refresh,{icon:'refresh'}),badge('PENDING',data.meetings?.some(m=>m.scope_limited)?'ตรวจสอบขอบเขตการมอบหมาย':data.meetings?.some(m=>m.result?.status==='INCOMPLETE')?'ตรวจสอบข้อมูลผลคัดเลือก':data.meetings?.length && data.meetings.every(m=>m.state?.finalized)?'ยืนยันรายชื่อแล้ว · รอประกาศผล':'รอมติที่ประชุม'));
         records.replaceChildren();if(!data.applications.length){records.append(note('ยังไม่มีใบสมัครที่ส่งให้กรรมการตามตัวกรองนี้'));return;}
         const t=table(['ลำดับรายการ','นักศึกษา','ประเภทหลักสูตร','เฉลี่ยวิชาหลัก','GPAX','ดำเนินการ'],'รายชื่อที่ส่งให้กรรมการ เรียงตามตัวกรอง ไม่ใช่ผลคัดเลือก');
         data.applications.forEach((app,index)=>{const row=el('tr'),person=el('td');person.append(el('strong','',text(app.full_name)),el('small','coord-muted',text(app.student_number)));const action=el('td');
@@ -120,30 +124,64 @@ export function renderCoordinatorWorkspace({client,applicationClient,page='revie
           const cells=[el('td','coord-numeric',String((pageNo-1)*data.pageSize+index+1)),person,el('td','',app.program_type==='regular'?'ภาคปกติ':app.program_type==='special'?'ภาคพิเศษ':'รอยืนยันประเภท'),el('td','coord-numeric',score(app.core)),el('td','coord-numeric',score(app.gpax)),action];
           cells.forEach((cell,i)=>cell.dataset.label=['ลำดับรายการ','นักศึกษา','ประเภทหลักสูตร','เฉลี่ยวิชาหลัก','GPAX','ดำเนินการ'][i]);row.append(...cells);t.body.append(row);});records.append(t.table);paginate(records,data,refresh);
         records.append(note('การเรียงข้อมูลไม่เปลี่ยนสถานะใบสมัคร ผลคัดเลือกเป็นไปตามมติที่ประชุม · ข้อมูลที่ไม่ครบแสดง —'));
-      }catch(error){if(token!==queryToken)return;failure(error);records.replaceChildren(button('ลองโหลดอีกครั้ง',refresh));}finally{if(token===queryToken)records.setAttribute('aria-busy','false');}
+      }catch(error){if(stopped()||token!==queryToken)return;failure(error);actions.replaceChildren(button('โหลดผลล่าสุด',refresh,{icon:'refresh'}));dashboardHost.replaceChildren(note('โหลดผลการคัดเลือกไม่สำเร็จ กรุณาลองโหลดอีกครั้ง'));records.replaceChildren(button('ลองโหลดอีกครั้ง',refresh));}finally{if(token===queryToken){records.setAttribute('aria-busy','false');dashboardHost.setAttribute('aria-busy','false');}}
     }refresh();}
-  function schedulePage(data){content.replaceChildren(status);const intro=el('div','coord-section-heading'),copy=el('div');copy.append(el('h2','','ตั้งค่ากำหนดการของรอบ'),el('p','','การเปลี่ยนแปลงมีผลกับรอบที่เลือก หลังบันทึกกำหนดการ'));intro.append(copy,el('span','','เวลาประเทศไทย (UTC+7)'));content.append(intro);
-    const layout=el('div','coord-schedule-layout'),form=el('form','coord-schedule-form'),overview=el('aside','coord-schedule-overview'),fields={};layout.append(form,overview);content.append(layout);
+  function schedulePage(data){
+    content.replaceChildren(status);const intro=el('div','coord-section-heading'),copy=el('div');
+    copy.append(el('h2','','ตั้งค่ากำหนดการของรอบ'),el('p','','การเปลี่ยนแปลงมีผลกับรอบที่เลือก หลังบันทึกกำหนดการ'));intro.append(copy,el('span','','เวลาประเทศไทย (UTC+7)'));content.append(intro);
+    const reviewOnly=!data.can_edit && data.can_edit_review===true,canEdit=Boolean(data.can_edit || reviewOnly);
+    const layout=el('div','coord-schedule-layout'),form=el('form','coord-schedule-form'),overview=el('aside','coord-schedule-overview'),fields={};
+    form.noValidate=true;layout.append(form,overview);content.append(layout);
+    const editable=key=>Boolean(data.can_edit || reviewOnly && ['review_opens_at','review_closes_at'].includes(key));
     const value=key=>{const item=fields[key];return item?.date.value && item.time.value?`${item.date.value}T${item.time.value}:00+07:00`:null;};
-    const preview=()=>{overview.replaceChildren(el('h2','','ภาพรวมกำหนดการ'),el('p','',data.cycle_name));if(dirty)overview.append(badge('PENDING','ค่าที่กำลังแก้ไข · ยังไม่บันทึก'));
-      for(const [title,start,,end] of WINDOWS){const item=el('section');item.append(el('h3','',title),el('p','',start==='opens_at'&&data.intake?'ใช้สถานะรับสมัครจากแผงด้านบน':date(value(start),true)+' – '+date(value(end),true)));overview.append(item);}
-      const deadline=el('section','coord-deadline');deadline.append(el('h3','','หมดเขตยืนยันสิทธิ์'),el('strong','',date(value('confirmation_closes_at'))),el('p','',value('confirmation_closes_at')?new Intl.DateTimeFormat('th-TH',{timeStyle:'short',timeZone:'Asia/Bangkok'}).format(new Date(value('confirmation_closes_at')))+' น.':'—'));overview.append(deadline);};
-    const changed=()=>{dirty=true;scheduleAttempt=null;feedback(status,'มีข้อมูลที่แก้ไขและยังไม่บันทึก');preview();};
+    const preview=()=>{
+      overview.replaceChildren(el('h2','','ภาพรวมกำหนดการ'),el('p','',data.cycle_name));if(dirty)overview.append(badge('PENDING','ค่าที่กำลังแก้ไข · ยังไม่บันทึก'));
+      for(const [title,start,,end] of WINDOWS){const item=el('section');item.append(el('h3','',title),el('p','',start==='opens_at'&&data.intake?'ใช้สถานะรับสมัครจากแผงด้านบน':date(value(start),true)+' – '+date(value(end),true)));
+        if(start==='review_opens_at' && (!data[start] || !data[end]))item.append(note('ยังไม่กำหนดช่วงพิจารณาใบสมัคร'));overview.append(item);}
+      const deadline=el('section','coord-deadline');deadline.append(el('h3','','หมดเขตยืนยันสิทธิ์'),el('strong','',date(value('confirmation_closes_at'))),el('p','',value('confirmation_closes_at')?new Intl.DateTimeFormat('th-TH',{timeStyle:'short',timeZone:'Asia/Bangkok'}).format(new Date(value('confirmation_closes_at')))+' น.':'—'));overview.append(deadline);
+    };
     for(const [title,start,startLabel,end,endLabel] of WINDOWS){const section=el('fieldset','coord-schedule-section');section.append(el('legend','',title));const pair=el('div','coord-schedule-pair');
-      for(const [key,label] of [[start,startLabel],[end,endLabel]]){const values=bangkokInput(data[key]).split('T'),d=el('input'),time=el('input');d.type='date';time.type='time';d.value=values[0] || '';time.value=values[1] || '';d.required=true;time.required=true;d.disabled=!data.can_edit;time.disabled=!data.can_edit;d.addEventListener('input',changed);time.addEventListener('input',changed);fields[key]={date:d,time};
-        const group=el('div','coord-datetime');group.append(field(label+' · วันที่',d),field(label+' · เวลา',time));pair.append(group);}section.append(pair);form.append(section);}
-    form.append(note('วันสิ้นสุดต้องอยู่หลังวันเริ่มต้น และแต่ละช่วงต้องเรียงตามลำดับ · ใบสมัครที่ถูกส่งกลับแก้ได้ถึงสิ้นสุดช่วงพิจารณา'));
-    const actions=el('div','coord-schedule-actions'),cancel=button('ยกเลิกการแก้ไข',()=>{if(!dirty||window.confirm('ทิ้งการแก้กำหนดการที่ยังไม่บันทึกหรือไม่?')){dirty=false;scheduleAttempt=null;schedulePage(currentSchedule);feedback(status,'ยกเลิกการแก้ไขแล้ว');}}),save=button('บันทึกกำหนดการ',null,{primary:true,icon:'save'});save.type='submit';cancel.disabled=!data.can_edit;save.disabled=!data.can_edit;actions.append(cancel,save);form.append(actions);
-    if(!data.can_edit)form.prepend(note(data.intake?'เปิด/ปิดรับด้วยแผงด้านบน · วันรับสมัครเดิมเป็นข้อมูลอ้างอิง ไม่ใช้แทนสถานะใหม่ · ช่วงพิจารณาและยืนยันสิทธิ์ยังไม่เปิดให้เปลี่ยน':'อ่านอย่างเดียว: รอบปิด มีผู้ประสานงานอื่น หรือการบันทึกกำหนดการยังไม่เปิดใช้งาน'));
-    form.append(button('โหลดกำหนดการล่าสุด',()=>{if(!dirty||window.confirm('โหลดใหม่และทิ้งการแก้ไขที่ยังไม่บันทึกหรือไม่?')){dirty=false;scheduleAttempt=null;loadSchedule();}}));preview();
-    form.addEventListener('submit',async e=>{e.preventDefault();if(busy||!data.can_edit)return;
-      const body={expected_version:data.version,expected_window_version:data.window_version};for(const key of Object.keys(fields)){const v=value(key);if(!v){feedback(status,'กรุณาระบุวันและเวลาให้ครบทุกช่วง',true);fields[key].date.focus();return;}body[key]=v;}
-      const times=WINDOWS.flatMap(([,start,,end])=>[Date.parse(body[start]),Date.parse(body[end])]);if(!(times[0]<times[1]&&times[1]<=times[2]&&times[2]<times[3]&&times[3]<=times[4]&&times[4]<times[5])){feedback(status,'ตรวจลำดับช่วงเวลา: รับสมัคร → พิจารณา → ยืนยันสิทธิ์ โดยวันสิ้นสุดอยู่หลังวันเริ่ม',true);status.focus();return;}
-      scheduleAttempt ||= {...body,operation_id:crypto.randomUUID()};busy=true;for(const control of form.querySelectorAll('input,button'))control.disabled=true;feedback(status,'กำลังบันทึกกำหนดการ…');
-      try{const saved=await request('/schedules/'+cycleId,{method:'POST',body:scheduleAttempt});if(stopped())return;currentSchedule=saved;dirty=false;scheduleAttempt=null;schedulePage(saved);feedback(status,'บันทึกกำหนดการแล้ว');}
-      catch(error){failure(error);if(!stopped()){status.append(el('span','',' · วันเวลาที่กรอกยังอยู่ หากข้อมูลขัดแย้งให้โหลดล่าสุดก่อนบันทึกใหม่'));status.focus();}}
-      finally{busy=false;if(!stopped())for(const control of form.querySelectorAll('input,button'))control.disabled=false;}
-    });}
+      for(const [key,label] of [[start,startLabel],[end,endLabel]]){
+        const values=bangkokInput(data[key]).split('T'),d=el('input'),time=el('input'),error=el('p','coord-feedback coord-feedback--error');
+        error.id='schedule-error-'+crypto.randomUUID();error.hidden=true;d.type='date';time.type='time';d.value=values[0] || '';time.value=values[1] || '';
+        for(const input of [d,time]){input.required=editable(key);input.disabled=!editable(key);input.dataset.scheduleField=key;input.setAttribute('aria-describedby',error.id);
+          input.addEventListener('input',()=>{dirty=true;scheduleAttempt=null;error.hidden=true;d.removeAttribute('aria-invalid');time.removeAttribute('aria-invalid');feedback(status,'มีข้อมูลที่แก้ไขและยังไม่บันทึก');preview();});}
+        fields[key]={date:d,time,error};const group=el('div','coord-datetime');group.append(field(label+' · วันที่',d),field(label+' · เวลา',time),error);pair.append(group);
+      }section.append(pair);form.append(section);
+    }
+    if(reviewOnly)form.prepend(note('แก้ไขได้เฉพาะช่วงพิจารณาใบสมัคร · สถานะรับสมัครควบคุมจากแผงด้านบน วันรับสมัครเดิมเป็นข้อมูลอ้างอิง และช่วงยืนยันสิทธิ์แสดงตามข้อมูลที่บันทึกไว้'));
+    else if(!canEdit)form.prepend(note(data.intake && data.review_schema_ready===false?'ช่วงพิจารณาใบสมัครยังอ่านอย่างเดียว ต้องอัปเกรดระบบบันทึกกำหนดการก่อนใช้งาน':'อ่านอย่างเดียว: รอบปิด มีผู้ประสานงานอื่น หรือการบันทึกกำหนดการยังไม่เปิดใช้งาน'));
+    form.append(note(reviewOnly?'วันสิ้นสุดช่วงพิจารณาต้องอยู่หลังวันเริ่ม และไม่เกินวันเริ่มยืนยันสิทธิ์ที่บันทึกไว้ · ใบสมัครที่ส่งกลับแก้ได้ถึงสิ้นสุดช่วงพิจารณา':'วันสิ้นสุดต้องอยู่หลังวันเริ่มต้น และแต่ละช่วงต้องเรียงตามลำดับ · ใบสมัครที่ถูกส่งกลับแก้ได้ถึงสิ้นสุดช่วงพิจารณา'));
+    const discard=(title,proceed)=>{
+      if(busy)return;if(!dirty){proceed();return;}
+      const body=el('div');body.append(el('p','','วันเวลาที่ยังไม่บันทึกจะถูกทิ้ง'));
+      const keep=button('แก้ไขต่อ',()=>modal.close()),confirm=button('ทิ้งการแก้ไข',()=>{modal.close();proceed();});body.append(keep,confirm);
+      const modal=dialog(root,title,body,{signal});keep.focus();
+    };
+    const actions=el('div','coord-schedule-actions'),cancel=button('ยกเลิกการแก้ไข',()=>discard('ทิ้งการแก้กำหนดการ?',()=>{dirty=false;scheduleAttempt=null;schedulePage(currentSchedule);feedback(status,'ยกเลิกการแก้ไขแล้ว');})),save=button('บันทึกกำหนดการ',null,{primary:true,icon:'save'});
+    save.type='submit';cancel.disabled=save.disabled=!canEdit;actions.append(cancel,save);form.append(actions);
+    form.append(button('โหลดกำหนดการล่าสุด',()=>discard('โหลดกำหนดการล่าสุด?',()=>{dirty=false;scheduleAttempt=null;loadSchedule();})));preview();
+    function invalid(key,message,input=fields[key].date){const f=fields[key];f.error.textContent=message;f.error.hidden=false;input.setAttribute('aria-invalid','true');feedback(status,message,true);input.focus();}
+    form.addEventListener('submit',async e=>{
+      e.preventDefault();if(busy||!canEdit)return;
+      const body={expected_version:data.version};if(!reviewOnly)body.expected_window_version=data.window_version;
+      const keys=Object.keys(fields).filter(editable);
+      for(const key of keys){const f=fields[key];if(!f.date.value){invalid(key,'กรุณาระบุวันที่ให้ครบ');return;}if(!f.time.value){invalid(key,'กรุณาระบุเวลาให้ครบ',f.time);return;}
+        body[key]=value(key);if(!Number.isFinite(Date.parse(body[key]))){invalid(key,'วันเวลาไม่ถูกต้อง');return;}}
+      if(reviewOnly){
+        if(Date.parse(body.review_closes_at)<=Date.parse(body.review_opens_at)){invalid('review_closes_at','วันสิ้นสุดช่วงพิจารณาต้องอยู่หลังวันเริ่มพิจารณา');return;}
+        if(data.confirmation_opens_at && Date.parse(body.review_closes_at)>Date.parse(data.confirmation_opens_at)){invalid('review_closes_at','วันสิ้นสุดช่วงพิจารณาต้องไม่เกินวันเริ่มยืนยันสิทธิ์ที่กำหนดไว้');return;}
+      }else{
+        const times=keys.map(key=>Date.parse(body[key]));for(let i=0;i<times.length-1;i++)if(i%2?times[i]>times[i+1]:times[i]>=times[i+1]){invalid(keys[i+1],'ตรวจลำดับช่วงเวลา: รับสมัคร → พิจารณา → ยืนยันสิทธิ์ โดยวันสิ้นสุดอยู่หลังวันเริ่ม');return;}
+      }
+      scheduleAttempt ||= {...body,operation_id:crypto.randomUUID()};busy=true;form.setAttribute('aria-busy','true');
+      const disabled=new Map();for(const control of [...form.querySelectorAll('input,button'),...intakeHost.querySelectorAll('input,button,select')]){disabled.set(control,control.disabled);control.disabled=true;}
+      feedback(status,'กำลังบันทึกกำหนดการ…');
+      try{const saved=await request('/schedules/'+cycleId+(reviewOnly?'/review':''),{method:'POST',body:scheduleAttempt});if(stopped())return;currentSchedule={...data,...saved};dirty=false;scheduleAttempt=null;schedulePage(currentSchedule);feedback(status,'บันทึกกำหนดการแล้ว');status.focus();}
+      catch(error){if(!stopped()){failure(error);status.append(el('span','',' · วันเวลาที่กรอกยังอยู่ หากข้อมูลขัดแย้งให้โหลดล่าสุดก่อนบันทึกใหม่'));status.focus();}}
+      finally{busy=false;form.removeAttribute('aria-busy');if(!stopped())for(const [control,prior] of disabled)if(control.isConnected)control.disabled=prior;}
+    });
+  }
   async function loadSchedule(){const token=++queryToken;content.replaceChildren(status,el('p','coord-loading','กำลังโหลดกำหนดการ…'));
     if(intakePanel?.cycleId!==cycleId){intakePanel=renderIntakeControls({request,cycleId,signal,onBusy:value=>{busy=value;}});intakeHost.replaceChildren(intakePanel.element);}
     try{const data=await request('/schedules/'+cycleId);if(stopped()||token!==queryToken)return;currentSchedule=data;schedulePage(data);}catch(error){failure(error);if(!stopped()&&token===queryToken)content.append(button('ลองโหลดกำหนดการอีกครั้ง',loadSchedule));}}

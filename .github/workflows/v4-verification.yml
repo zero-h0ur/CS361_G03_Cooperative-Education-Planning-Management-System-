@@ -61,6 +61,8 @@ jobs:
           JS
       - name: Check JavaScript syntax
         run: npm run lint
+      - name: Verify loadtest preparation, B2a/B2b safety and packaging offline
+        run: npm run test:loadtest
       - name: Verify read-only browse allowlist and disabled Student actions
         run: npm run test:read-only-browse
       - name: Verify observed-schema tooling and immutable source contracts without AWS
@@ -110,6 +112,71 @@ jobs:
             docs-verification.log
           if-no-files-found: warn
           retention-days: 14
+
+  # Each matrix job owns a fresh PostgreSQL cluster, not merely another DB:
+  # the three suites each create the cluster-wide coed_app role.
+  loadtest-database:
+    name: Loadtest PostgreSQL 16 / ${{ matrix.suite }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [local, b2a, b2b]
+        include:
+          - suite: local
+            command: test:loadtest:db
+          - suite: b2a
+            command: test:loadtest:b2a:db
+          - suite: b2b
+            command: test:loadtest:b2b:db
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: coed_loadtest_test
+          # Synthetic fixtures connect as coed_app without a password.
+          # Trust is test-only, in this disposable container on host loopback.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 127.0.0.1:55442:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d coed_loadtest_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      LOADTEST_PREP_DISPOSABLE: 'true'
+      LOADTEST_PREP_TEST_DATABASE_URL: postgres://postgres@127.0.0.1:55442/coed_loadtest_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verify disposable loopback target and PostgreSQL major version
+        run: |
+          node --input-type=module - <<'JS'
+          import pg from 'pg';
+          import { localTarget } from './scripts/loadtest/database.mjs';
+          const url = process.env.LOADTEST_PREP_TEST_DATABASE_URL;
+          localTarget(url);
+          const client = new pg.Client({ connectionString: url });
+          try {
+            await client.connect();
+            const { rows } = await client.query('SHOW server_version_num');
+            if (Math.floor(Number(rows[0].server_version_num) / 10000) !== 16) {
+              throw new Error('CI_REQUIRES_POSTGRESQL_16');
+            }
+          } finally { await client.end(); }
+          JS
+      - name: Run isolated loadtest DB suite
+        run: npm run ${{ matrix.command }}
+      # Do not upload tmp/loadtest: it can contain private operator checkpoints.
+      # Service containers are discarded by Actions at the end of each job.
 
   observed-schema-upgrade:
     runs-on: ubuntu-latest

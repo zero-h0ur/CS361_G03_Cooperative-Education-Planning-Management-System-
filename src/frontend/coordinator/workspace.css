@@ -160,3 +160,20 @@
 .coord-academic-confirmed{font-weight:600;color:#08783e;}
 .coord-review-blockers{padding-inline-start:24px;}
 @media(max-width:600px){.coord-academic-review{padding:14px;}.coord-academic-form button{width:100%;}}
+
+/* Results are a read-only variant of the existing Coordinator roster. */
+.coord-results-dashboard {margin:0 0 28px;min-width:0;}
+.coord-result-metrics {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:16px 0;gap:0;border:1px solid var(--shell-line);border-radius:7px;background:var(--coord-panel);overflow:hidden;}
+.coord-result-metrics > div {min-width:0;padding:18px 20px;border-inline-start:1px solid var(--shell-line);}
+.coord-result-metrics > div:first-child {border-inline-start:0;}
+.coord-result-metrics dt {font-size:.9rem;color:var(--shell-muted);}
+.coord-result-metrics dd {margin:6px 0 0;font-size:2rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.4;}
+.coord-result-panel {padding:20px 0;border-bottom:1px solid var(--shell-line);min-width:0;}
+.coord-result-panel .coord-section-heading {margin-bottom:8px;}
+.coord-result-panel .coord-section-heading h3 {overflow-wrap:anywhere;}
+.coord-result-panel .coord-status-filters {margin:14px 0;}
+@media(max-width:700px) {.coord-result-metrics {grid-template-columns:repeat(2,minmax(0,1fr));}.coord-result-metrics > div {padding:14px;}.coord-result-metrics > div:nth-child(odd) {border-inline-start:0;}.coord-result-metrics > div:nth-child(n+3) {border-top:1px solid var(--shell-line);}.coord-result-metrics dd {font-size:1.7rem;}.coord-result-panel {padding:16px 0;}}
+@media(min-width:701px) {.coord-tracking-actions--results {flex-direction:row;flex-wrap:wrap;justify-content:flex-end;}.coord-tracking-actions--results .coord-button {min-width:0;font-size:.95rem;}}
+/* The shared table helper keeps captions available to assistive technology. */
+.coord-table > caption.shell-sr-only {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+.coord-datetime > .coord-feedback {grid-column:1/-1;}

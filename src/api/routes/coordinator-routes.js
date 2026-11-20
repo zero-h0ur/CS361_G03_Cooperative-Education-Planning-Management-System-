@@ -26,5 +26,6 @@ function registerCoordinatorRoutes(router,protect,options={}) {
   add('POST',/^\/api\/v4\/coordinator\/applications\/([^/]+)\/forward$/, (a,id,b)=>service.review(a,id,b,'forward'));
   add('GET',/^\/api\/v4\/coordinator\/schedules\/([^/]+)$/, (a,id)=>service.getSchedule(a,id));
   add('POST',/^\/api\/v4\/coordinator\/schedules\/([^/]+)$/, (a,id,b)=>service.saveSchedule(a,id,b),[],true);
+  add('POST',/^\/api\/v4\/coordinator\/schedules\/([^/]+)\/review$/, (a,id,b)=>service.saveReviewSchedule(a,id,b),[],true);
 }
 module.exports={registerCoordinatorRoutes};

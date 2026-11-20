@@ -43,12 +43,17 @@
 
 - [V3 shared API](api/v3-shared-contract.md) และ [three-role workflow](api/three-role-workflow.md): โดเมนแผนเดิม ไม่ใช่ใบสมัคร Phase 1 ทั้งหมด
 - [Phase 1 preparation contract](api/v4-application-preparation.md): ฐาน contract เดิม; pending-academic intake และ controls เป็นส่วนขยายใน architecture/source ปัจจุบัน
-- [Coordinator workspace evidence](evidence/coordinator-workspace-redesign.md): ผล local ของช่วงนั้น ไม่ใช่การเปิด review/forward ใน pilot ปัจจุบัน
-- [Academic review and handoff](api/v4-academic-review.md) และ [local verification](operations/academic-review-verification.md): ส่วนขยาย source ที่ยังไม่ Deploy; ต้องมีเกณฑ์ยืนยันครบก่อนส่ง Committee
+- [Coordinator workspace evidence](evidence/coordinator-workspace-redesign.md): ผล local ของช่วงออกแบบเดิม; สถานะ review/forward ที่เผยแพร่ล่าสุดอยู่ใน PR #175 release evidence
+- [Academic review and handoff](api/v4-academic-review.md) และ [local verification](operations/academic-review-verification.md): ส่วนขยายที่เผยแพร่ใน PR #175 แล้ว; ต้องมีเกณฑ์และหลักฐานครบก่อนส่ง Committee; การตรวจรับจริงแยกใน operations
 - [Committee integration verification](operations/committee-integration-verification.md): ผลผสาน PR #172 กับ academic review ของ PR #171 ในเครื่อง พร้อมข้อจำกัด regression และ release
-- [Confirmed department criteria](api/v4-confirmed-academic-criteria.md): เกณฑ์ที่เจ้าของยืนยัน 2026-11-08 — 3 หน่วยกิต, เกรดสูงสุดขั้นต่ำ C และ CS213/CS216 ตามภาค; ยังไม่ได้เผยแพร่ลง RDS
+- [Confirmed department criteria](api/v4-confirmed-academic-criteria.md): เกณฑ์ที่เจ้าของยืนยัน 2026-11-08 — 3 หน่วยกิต, เกรดสูงสุดขั้นต่ำ C และ CS213/CS216 ตามภาค; เผยแพร่ version 1 สำหรับ 61/66 ในรอบ 2569/1 เมื่อ Nov 10; สถานะล่าสุดดู current deployment
 - [Partner directory operations](operations/partner-directory.md): ข้อมูลบริษัทและ privacy boundary
+- [PR #175 release evidence](operations/coordinator-review-results-release.md): RDS 023/024, policy publication, API15/Amplify38 และข้อจำกัดการตรวจรับจริง
+- [Load-test DB preparation](operations/loadtest-rds-preparation.md) และ [local verification](operations/loadtest-preparation-verification.md): งานฐานจำลองของรณกฤต, input/handoff, monitoring และ CI; แยกผล local ออกจาก B1/B2a/B2b ตามวันที่ ไม่ใช่การอนุมัติ cloud/load test รอบใหม่
 - [Local release candidate](operations/v4-local-release-candidate.md): การแพ็กและ release gate ไม่ใช่คำสั่ง Deploy อัตโนมัติ
+- [Load-test B1 infrastructure](operations/loadtest-b1-infrastructure.md): snapshot ฐานว่างแยกที่ได้รับอนุมัติ ไม่ใช่ schema/API/auth readiness หรือการอนุมัติยิงโหลด
+- [Load-test B2a bootstrap](operations/loadtest-b2a-bootstrap.md): ขอบเขต schema/runtime แบบ test-only, endpoint backup/additive changes และผล trial/cleanup; ยังไม่ใช่ข้อมูล/API/Load Test acceptance
+- [Load-test B2b data](operations/loadtest-b2b-data.md): นำเข้าบริษัท/ตำแหน่งสมมติ ผูกบัญชีทดสอบกับ DRAFT ในรอบ OPEN และตรวจ PATCH แบบ rollback; แยกผลข้อมูลออกจาก API/JWT/load และรายงาน cleanup ชั่วคราว
 
 ## ประวัติและข้อเสนอ — ห้ามถือเป็นสถานะปัจจุบัน
 
@@ -72,3 +77,6 @@
 เปลี่ยนโครงสร้าง → แก้ architecture; เปลี่ยนเหตุผล/กติกา → เพิ่ม decision; Deploy จริง → แก้ snapshot พร้อมรุ่น/source/หลักฐาน; ทดสอบ → ลงผลและขอบเขตใน verification เอกสารย้อนหลังไม่ต้องลบหรือแก้ผลเดิมให้เหมือนสถานะใหม่
 
 ก่อนส่งงานรัน `npm run test:docs` และตรวจ diff ว่าไม่มี credentials, ข้อมูลนักศึกษาจริง, UUID ผูกบัญชี หรือ URL เอกสารส่วนตัว ตัวตรวจลิงก์นี้ตรวจ local link/anchor และรูปแบบ URL โดยไม่เข้าถึง AWS หรือรับประกันว่าเว็บไซต์ภายนอกยังออนไลน์
+
+- [Coordinator review-window verification](operations/review-window-verification.md): local independent date setup, migration trial and testing limits (2026-11-10).
+- [Coordinator Committee-results contract](api/v4-coordinator-results.md) และ [local verification](operations/coordinator-results-verification.md): Dashboard อ่านผลที่ยืนยันแล้ว แยกจากการตัดสิน/ประกาศผล (2026-11-10).

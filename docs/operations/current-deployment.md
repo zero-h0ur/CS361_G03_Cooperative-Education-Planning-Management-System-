@@ -1,5 +1,44 @@
 # Current deployment — last verified snapshot
 
+## Latest scoped readback — 2026-11-17
+
+At **22:25 Asia/Bangkok**, the approved Backend-only Draft-save fix was verified
+on `coed-api:live` **16**, source `38d5cd7f74d5dc937f83277598f9db52c6c335c2`.
+TU broker/issuer remain **5/4**; Amplify remains manual job **38** with auto-build
+disabled. The existing environment was preserved, including maintenance `off`,
+routed-TU audience and required intake controls. Gateway and TU configuration
+were unchanged. Operational smoke passed. A 22:47 follow-up observed the new
+persisted Student submission; Coordinator actions are blocked by the round's
+earlier Committee finalization, despite a valid review interval. See the
+[diagnostic](coordinator-finalized-round-diagnostic.md) and the
+[Nov 17 release record](application-policy-save-release.md) for
+artifact hashes, checks, recovery and limits. No RDS inspection or SQL was run.
+
+Historical release snapshot: **2026-11-11, Asia/Bangkok**. The owner approved deploying PR #175 and explicitly selected **keeping Committee decision/finalization available**. At that release, backend and frontend ran source `791ed1e32b96384843847f92c3b8b35959b5d41f`. Operational smoke and served-asset verification passed; genuine role-by-role browser acceptance remains pending. See [release evidence](coordinator-review-results-release.md). This snapshot is not standing approval for another AWS operation.
+
+## Previous verified release — 2026-11-11 (PR #175)
+
+| Resource | Verified state | Evidence / limit |
+| --- | --- | --- |
+| `coed-api:live` | **15** | Exact source `791ed1e`; code SHA-256 base64 `2qYyNNj5j3IZNS6Dsm+gOsmwAMB+ueivJsaXDapV8Vk=` |
+| Compatible API rollback | **14**, browse-only | Same source/code bytes with mutation gates closed; staged/probed but not routed live |
+| Amplify main | Manual job **38**, `SUCCEED` | Same source; deployed runtime config, shell JS and shell CSS hashes match the candidate; auto-build remains disabled |
+| TU broker / private issuer | **5 / 4** | Aliases/configuration unchanged; no new genuine TU login test in this release |
+| Observed RDS schema | **023 / 024 applied** | Separately approved Nov 10 owner operation: rollback trial, Apply, preservation and post-Apply verification passed |
+| Confirmed faculty policies | **61 / 66, version 1**, bound round **2569/1** | Published by the same separately approved owner operation; no Student profile/submission rewrite |
+
+The prior live baseline was API13/frontend37, not the older API9/frontend32 snapshot retained below. At that release, Gateway integrations targeted qualified `coed-api:live` and `coed-tu-auth:live`. No Gateway, TU, IAM, network, storage, account-binding or SQL change occurred during this application deployment.
+
+**Environment preserved:** `COED_API_MAINTENANCE=off`, `COED_INTAKE_AUDIENCE=routed-tu-students`, `COED_INTAKE_CONTROLS_REQUIRED=true`, existing private bindings and all other environment values were retained exactly from API13. The proposed switch to restricted `intake-pilot`/read-only Committee was **not executed**, following the owner's explicit choice. `off` is the pre-existing normal stage, not a new maintenance-disable workaround. Intake-pilot-only restrictions are not globally activated merely by retaining their configuration variables; normal identity, role, ownership, cohort, round and schedule checks remain relevant. Private binding values are omitted.
+
+Coordinator academic review/return/forward, Committee commands and the results dashboard are present in the released code under their existing authorization/state rules. This is not proof of successful authenticated use. **Review dates were absent at the Nov 10 DB inspection and were not set by either operation**; the assigned whole-round Coordinator must set them in the preserved three-section schedule form. Missing/incomplete academic evidence remains blocked; finalized Committee results are distinct from publication to Students.
+
+The retained backup is `coed-pr175-preupgrade-77894d95cdc5`. The Nov 10 temporary owner Lambda/role, endpoint grant and logs were removed with cleanup verified. This application release created no temporary IAM/owner resources. API14 is a retained rollback version, not a cleanup omission. Do not restore the database or use an old writable API over newer review/submission history without a separately reviewed recovery operation.
+
+## Historical Nov 8 snapshot — superseded for current versions and gates
+
+Everything below retains its original Nov 8 evidence and restrictions. It does **not** describe the Nov 11 release recorded above.
+
 Snapshot updated: **2026-11-08, Asia/Bangkok**. The explicitly owner-approved routed-TU audience cutover was verified at **20:09**. Lambda/Gateway/Amplify reads and deployment checks below are fresh evidence; RDS rows and genuine multi-account browser acceptance were not refreshed. Earlier C7/schema/owner evidence retains its original date. Treat this as last verified state, not a realtime monitor or standing operational approval.
 
 ## Released versions

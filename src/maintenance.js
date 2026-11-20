@@ -8,7 +8,7 @@ const UUID='[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{
 const APPLICATION_DETAIL=new RegExp('^/api/tu-proxy/api/v4/applications/'+UUID+'$','i');
 const PUBLIC_COMPANY_DETAIL=new RegExp('^/api/directory/companies/'+UUID+'$','i');
 const PUBLIC_FILTERS=new Set(['q','location','page','pageSize']);
-const {INTAKE_MODES}=require('./shared/application-access');
+const {INTAKE_MODES,pilotScope}=require('./shared/application-access');
 const {handoffScope}=require('./shared/review-access');
 const STUDENT_APP='/api/tu-proxy/api/v4/applications';
 const INTAKE_APP=new RegExp('^'+STUDENT_APP+'/'+UUID+'$','i');
@@ -38,6 +38,8 @@ function maintenanceResponse(event={},mode=process.env.COED_API_MAINTENANCE){
   if(method==='GET' && (mode==='verify' || mode==='browse' || intake) &&
     (READ_PATHS.has(path) && noQuery(event) || (mode==='browse' || intake) && browseRead(event,path)))return null;
   if(intake){
+    if(mode==='intake-pilot' && process.env.COED_COORDINATOR_REVIEW_ENABLED==='true' && pilotScope(process.env.COED_INTAKE_PILOT) &&
+      method==='POST' && noQuery(event) && new RegExp('^/api/v4/coordinator/schedules/'+UUID+'/review$','i').test(path))return null;
     if(mode==='intake-pilot' && process.env.COED_COORDINATOR_REVIEW_ENABLED==='true' && noQuery(event) &&
       (method==='POST' && new RegExp('^/api/v4/coordinator/applications/'+UUID+'/(?:academic-review|return|forward)$','i').test(path) ||
        method==='GET' && path==='/api/v4/coordinator/tracking'))return null;

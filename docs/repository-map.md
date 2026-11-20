@@ -65,7 +65,7 @@
 | `src/frontend/` ระดับบน | Entry/shell/routes, authenticated styles, directory client และ shared navbar เช่น `app.js`, `shell-app.js`, `routes.js` |
 | `src/frontend/auth/` | Cognito client/session/error handling และ TU onboarding view |
 | `src/frontend/student/` | โปรไฟล์ ใบสมัคร Phase 1/editor/client/receipt/recovery และแผนบริษัท legacy; ระวังไม่ปน application กับ plan |
-| `src/frontend/coordinator/` | คิว/รายละเอียด/เอกสาร, intake controls และ `academic-review.js` ตรวจรับรองหลักฐานแยกจากต้นฉบับ |
+| `src/frontend/coordinator/` | คิว/รายละเอียด/เอกสาร, intake controls, ฟอร์มกำหนดการสามช่วงเดิมใน `workspace.js` และ `academic-review.js` ตรวจรับรองหลักฐานแยกจากต้นฉบับ |
 | `src/frontend/committee/`, `src/frontend/selection/` | Ranking/meeting workspace และ selection views; มีโค้ดไม่เท่ากับเปิดใช้/ตรวจรับครบ |
 | `src/frontend/staff/`, `src/frontend/advisor/` | หน้าจอ/clients ของ workflow แผนเดิมและการอ่านรายที่ได้รับมอบหมาย |
 | `src/frontend/workflow/` | Views/client ของ workflow และ Admin operations ที่ใช้ร่วมกับพื้นที่เดิม |
@@ -85,7 +85,10 @@
 | --- | --- |
 | `scripts/` ระดับบน | Build frontend/V4, bundle test modules, package Lambda/TU/candidate ZIP, lint และตรวจ dataset/docs เช่น `build-v4.mjs`, `package-v4-candidate.mjs`, `verify-doc-links.mjs` |
 | `scripts/local-dev/` | เตรียม local fixtures/Compose, API, synthetic signed tokens และ test wrapper; ไม่มีการสร้างผู้ใช้ Cognito จริง ดู [Team Dev/Test](operations/team-dev-test.md) |
+| `scripts/loadtest/` | `database.mjs`/`prepare-db.mjs` ยังเป็น offline/loopback-only; `test-local.mjs` สร้าง/หยุด clusterใหม่ (`--b2` เลือก schema-only suite) ส่วน `b2-*` เป็น AWS operator/handler เฉพาะ B2a ที่ต้องมีอนุมัติ: fixed test target, policy backup, bounded schema/runtime bootstrap และถอนเครื่องมือ ไม่ใช่ generic seed หรือ teammate API/Locust ดู [runbook](operations/loadtest-rds-preparation.md) และ [B2a evidence](operations/loadtest-b2a-bootstrap.md) |
+| `scripts/loadtest/b2b-*`, `scripts/loadtest/vendor/` | ตัวนำเข้าข้อมูลบน schema เดิมแบบ test-only พร้อม operator/handler/runtime rollback check; vendor เก็บ generator PR178 ตรง commit ไม่รัน SQL seed อัตโนมัติ ส่วน `identity-input.mjs` แยก provider subject จาก UUID ภายใน และ `test-local.mjs --b2b` เลือก suite แยก ดู [B2b scope/evidence](operations/loadtest-b2b-data.md) |
 | `scripts/ui-preview/` | Preview server UI/scenarios/fixtures ใน memory สำหรับออกแบบและ interaction tests ไม่บันทึก RDS/S3 หรือพิสูจน์ Login จริง |
+| `scripts/loadtest/stack-*.sh`, `locustfile.py`, `smoke.mjs`, `generate-companies.mjs` | ชุดทดสอบแยก (Lambda/API/dashboard) สำหรับ Module 10, Locust แบบขั้นบันได 10/20/40/80, smoke test 3 endpoints และข้อมูลบริษัทสังเคราะห์ (ห้ามชี้ระบบจริง/commit tokens); ดู [README](../scripts/loadtest/README.md), [scriptnotes.md](../scripts/loadtest/scriptnotes.md) และผลใน issue #181 |
 | `scripts/operations/` | Catalog/migration readers, reviewed release gates, diagnostic/upgrade/deploy/smoke controllers และ historical ops tools; บางไฟล์เขียน AWS/DB ได้ จึงต้องอ่าน scope/guards และได้รับอนุมัติก่อน |
 | `scripts/operations/baselines/` | Baseline metadata ที่เครื่องมือใช้เปรียบเทียบ schema ไม่ใช่ database backup หรือ snapshot สด |
 | `scripts/operations/intake-readiness/`, `tu-preflight/`, `tu-identity-diagnostic/` | เครื่องมือตรวจ readiness/schema/identity แบบมี contract และ cleanup; แม้ตรวจ DB อ่านอย่างเดียว การสร้าง Lambda/role ชั่วคราวยังเป็น AWS write |
@@ -98,6 +101,10 @@
 
 - ไฟล์ `.test.js`/`.test.mjs` ระดับบนครอบคลุม unit, DOM/UI, API contract, auth boundaries, DB integration, packaging และ deployment-tool safety จึงต้องดูแต่ละ suite ไม่อนุมานจากนามสกุลไฟล์อย่างเดียว
 - `tests/helpers/` เก็บ helper สร้าง observed-schema fixtures และอ่าน reviewed migrations เช่น `present-schema-fixture.mjs`; เป็นข้อมูลจำลองสำหรับฐานทดสอบ ไม่ใช่ไฟล์ repair RDS
+- `tests/loadtest-preparation.test.mjs`, `tests/loadtest-db.test.mjs` และ `tests/helpers/loadtest-fixture.mjs` ตรวจ guard/fixture/สิทธิ์และ API กับฐานใหม่เฉพาะงาน load-test preparation; ไม่ใช่ผลยิงโหลดหรือ genuine Cognito acceptance ดู [ผล local](operations/loadtest-preparation-verification.md)
+- `tests/loadtest-b2.test.mjs` และ `tests/loadtest-b2-db.test.mjs` ตรวจ B2a target/expiry/payload/Secret guards, additive policy/SG preservation, ZIP และ transaction/runtime rights ในฐาน local ใหม่ ไม่ใช่สิทธิ์ Apply AWS อัตโนมัติ
+- `tests/loadtest-b2b.test.mjs` และ `tests/loadtest-b2b-db.test.mjs` ตรวจ provider-sub validation, generator PR178, retained-schema data-only trial/apply/drift, OPEN-cycle DRAFTs, runtime PATCH/audit rollback, package privacy และ retry เฉพาะ preflight; ไม่ใช่ genuine Cognito/HTTP load acceptance
+- `tests/loadtest-ci.test.mjs` ตรวจ npm/CI wiring, cluster isolation และ private artifact exclusions; `tests/helpers/loadtest-b2b-fixture.mjs` เก็บ keys สังเคราะห์ที่ unit/DB ใช้ร่วมกัน ไม่ใช่ mapping จริง ดู [คำสั่งและ CI](operations/loadtest-rds-preparation.md#ci-และการแยกฐานทดสอบ)
 - `tests/operations/` เก็บ Python operator/smoke safety tests รวมถึงการจำกัด target/SQL/credentials ไม่ใช่บันทึกผลจาก production
 - [package.json](../package.json) กำหนดคำสั่งแต่ละชุด ส่วน [.github/workflows/v4-verification.yml](../.github/workflows/v4-verification.yml) เป็นตัวอย่าง CI ที่แยก PostgreSQL disposable
 
@@ -150,3 +157,13 @@ DB tests อาจ reset fixtures ต้องใช้ฐาน local ชื่
 | อัปเดตเอกสาร/ส่งต่อ | README, docs index และเอกสารที่ตอบคำถามนั้น | `npm run test:docs`, แยก code/deployed/verified และคง history |
 
 เมื่อเพิ่ม/ย้ายโฟลเดอร์ที่มีหน้าที่ใหม่ ให้อัปเดต map นี้กับ tree ย่อใน README ตามความเหมาะสม ไม่ต้องไล่ชื่อทุกไฟล์ ไม่ทำสำเนารายละเอียดทั้งหมดไว้ทั้ง README และ AGENTS
+
+การตั้งช่วงพิจารณาใช้ฟอร์มสามช่วงเดิมใน `src/frontend/coordinator/workspace.js`; เมื่อแก้ได้เฉพาะช่วงพิจารณาจะคงส่วนอื่นเป็นข้อมูลอ้างอิง,
+`src/db/review-schedule.js` ตรวจ capability และ `scripts/operations/review-schedule-contract.mjs`
+ตรวจ hash ของ fresh/observed 024 โดยไม่ Apply SQL; ดู [contract](api/v4-academic-review.md#independent-review-window-setup-local-source-2026-11-10)
+และ [verification](operations/review-window-verification.md)
+
+Dashboard ผล Committee ที่หน้า Coordinator ใช้ `src/api/services/coordinator-results.js`
+ตรวจ retained applicant/version และสรุปผลแบบอ่านอย่างเดียวผ่าน tracking API เดิม;
+`src/frontend/coordinator/results-dashboard.js` แสดงจำนวน/รายชื่อด้วย shared Coordinator components
+ดู [contract](api/v4-coordinator-results.md) และ [verification](operations/coordinator-results-verification.md)

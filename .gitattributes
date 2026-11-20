@@ -3,3 +3,8 @@
 /src/db/upgrades/*.sql text eol=lf
 /src/db/proposals/*.sql text eol=lf
 /src/db/operations/018-observed-runtime-grants.sql text eol=lf
+
+# Generated SQL and the pinned PR178 source are compared byte-for-byte.
+/scripts/loadtest/companies-seed.sql text eol=lf
+/scripts/loadtest/generate-companies.mjs text eol=lf
+/scripts/loadtest/vendor/pr178-generate-companies.mjs text eol=lf

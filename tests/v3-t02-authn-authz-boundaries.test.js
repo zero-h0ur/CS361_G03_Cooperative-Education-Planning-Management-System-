@@ -634,6 +634,7 @@ describe('Issue #79 [V3-T02]: Verify authentication and authorization boundaries
     { method:'POST',path:`/api/v4/coordinator/applications/${PLANS.planA_Draft.id}/academic-review` },
     { method:'GET',path:`/api/v4/coordinator/schedules/${PLANS.planA_Draft.id}` },
     { method:'POST',path:`/api/v4/coordinator/schedules/${PLANS.planA_Draft.id}` },
+    { method:'POST',path:`/api/v4/coordinator/schedules/${PLANS.planA_Draft.id}/review` },
     { method:'GET',path:`/api/v4/coordinator/intake/${PLANS.planA_Draft.id}` },
     { method:'POST',path:`/api/v4/coordinator/intake/${PLANS.planA_Draft.id}` },
     { method:'GET',path:'/api/v4/application-options' },

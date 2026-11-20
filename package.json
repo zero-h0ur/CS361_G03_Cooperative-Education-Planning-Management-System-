@@ -8,6 +8,11 @@
   },
   "scripts": {
     "lint": "node scripts/lint.mjs",
+    "test:loadtest": "node --test --test-concurrency=1 tests/loadtest-preparation.test.mjs tests/loadtest-b2.test.mjs tests/loadtest-b2b.test.mjs tests/loadtest-scripts.test.mjs tests/loadtest-ci.test.mjs",
+    "test:loadtest:db": "node --test --test-concurrency=1 tests/loadtest-db.test.mjs",
+    "test:loadtest:b2a:db": "node --test --test-concurrency=1 tests/loadtest-b2-db.test.mjs",
+    "test:loadtest:b2b:db": "node --test --test-concurrency=1 tests/loadtest-b2b-db.test.mjs",
+    "test:loadtest:local": "node scripts/loadtest/test-local.mjs",
     "start": "node src/server.js",
     "build": "node scripts/build-frontend.mjs",
     "dev:ui": "node scripts/dev-ui.mjs",
@@ -76,7 +81,7 @@
     "test:local-dev": "node --test tests/local-dev.test.mjs",
     "test:application": "node --test tests/application.test.mjs && node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/application-ui.test.js tests/application-api.test.js",
     "test:committee": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/committee-workspace.test.js tests/committee-ui.test.js && node --test tests/committee-workspace-db.test.mjs",
-    "test:coordinator": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/coordinator-domain.test.js tests/coordinator-api.test.js tests/coordinator-ui.test.js && node --test tests/coordinator-workspace-db.test.mjs"
+    "test:coordinator": "node scripts/build-frontend-test-modules.mjs && jest --runInBand tests/coordinator-domain.test.js tests/coordinator-api.test.js tests/coordinator-ui.test.js && node --test --test-concurrency=1 tests/coordinator-workspace-db.test.mjs tests/review-schedule.test.mjs tests/review-schedule-db.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-lambda": "3.1152.0",

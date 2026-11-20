@@ -43,10 +43,11 @@ __pycache__/
 ## Local read-only recovery checkpoints and retained rollback artifacts
 /tmp/read-only-browse/
 
-# Load test credentials and captured tokens (never commit)
+# Load testing OAuth tokens and local secrets (never commit)
 tokens.json
 scripts/loadtest/tokens.json
 *.tokens.json
 scripts/loadtest/loadtest-subs.json
 .env.loadtest
 .venv-loadtest/
+/tmp/loadtest/

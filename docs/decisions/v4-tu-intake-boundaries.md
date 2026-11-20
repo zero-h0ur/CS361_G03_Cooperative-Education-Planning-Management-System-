@@ -101,3 +101,30 @@ Recorded: 2026-11-08, following the owner's explicit answers. Local source only;
 **Implementation:** one highest-grade field per course in the current Student form, fixed program course, server revalidation, versioned explicit course acknowledgement and pinned criteria in new submissions. Historical snapshots and their statement/attempt displays remain unchanged. Legacy attempt lists use the highest grade without a retake-chronology rejection. Coordinator compares highest grades/GPAX against Transcript; there is no extra no-retake-after-C review or Student declaration. A matching new versioned policy must still be published separately; old `LATEST`/`STUDENT_SELECTED` metadata cannot certify under the new contract.
 
 **Tradeoffs:** existing Drafts may need re-acknowledgement or explicit correction before Submit, and old pending records may need Return when evidence conflicts. This does not link accounts, edit real Student grades, grant runtime policy writes, rewrite deployed SQL or enable AWS features.
+
+## D11. Coordinator configures the review interval independently
+
+Recorded: 2026-11-10. The owner selected testing use, Coordinator-managed dates and the existing scoped round/accounts/read-only Committee handoff. This authorizes local implementation, not a new AWS Apply or deployment.
+
+**Decision:** add a review-only command and form on the existing Coordinator schedule page. The assigned active Coordinator responsible for the entire open round chooses two timezone-explicit boundaries; intake controls and future confirmation dates are independent. Reuse `coordinator_round_schedules`, its version and append-only operation audit, with the existing cycle lock. Fresh/observed 024 allows the future confirmation pair to be absent together; it preserves existing dates, review constraints and grants. When confirmation dates exist in either compatible schedule source, the review closing cannot exceed confirmation opening.
+
+**Tradeoffs:** a missing 024 capability is read-only and fails closed. The restricted exception requires the review flag and existing private cycle/Coordinator scope; it does not admit the legacy all-window command or Committee decisions. Initial review setup does not create a policy, certify an applicant or open intake. The form uses the maintained native date/time fields with explicit Bangkok timezone, accessible errors, retained retry values/operation ID and a shared discard dialog. No calendar library, new table or permanent permission is added. Apply 023/024, publish criteria and release both application artifacts only through separately approved operations.
+
+**UI correction, 2026-11-10:** the owner confirmed the teammate's existing “ช่วงพิจารณาใบสมัคร” is this same review interval and asked to retain the three-window form. The initially separate review-only renderer is removed. Use the original form/layout/labels/save action; review-only permissions enable only its existing review fields. This keeps the server capability for rounds controlled by intake gates without introducing another workflow or overwriting the teammate's schedule design. Dashboard work remains separate.
+
+## D12. Read the Committee's confirmed result without repeating its decision workflow
+
+Recorded: 2026-11-10. The owner requested the missing Coordinator dashboard after confirming the teammate's forward/finalization work. Local source only, not approval to enable decisions or change AWS.
+
+**Decision:** extend existing tracking reads with a separate complete-panel read model, preserving filtered/paginated forwarded applications. Resolve retained applicant IDs/versions to authorized identities only when the saved finalized selection is complete and consistent. Pending, mismatched and partial-scope results remain explicitly unknown. Read assignment/state/roster within a read-only repeatable-read transaction. Display counts, selected/not-selected rosters and a refresh action with the maintained Coordinator components; do not add another capacity/finalize/publication command or calculate a cutoff.
+
+**Tradeoffs:** full-panel identity rows are needed for a complete outcome list, independent of current list filters. Return minimal fields, paginate presentation and preserve existing scope/pilot checks. Normal-stage legacy results are explicitly labeled and not opened as Phase 1 applications; restricted stages exclude them. A shared panel outside scope exposes no raw result or names. New fields are additive to the existing GET contract. No new SQL, grant or cloud resource is needed. See [results contract](../api/v4-coordinator-results.md).
+
+
+## D13. Preserve existing Committee decisions in the PR175 application release
+
+Recorded: 2026-11-11. After approving Lambda/Amplify deployment, the owner explicitly chose keeping Committee decision/finalization available, rather than changing the already-running normal stage to the earlier restricted read-only proposal.
+
+**Decision:** preserve API13's environment exactly in the new API15, including its existing `COED_API_MAINTENANCE=off`. Do not activate the earlier proposed `intake-pilot`/read-only configuration or alter identities, assignments, routes, intake controls or dates. This supersedes the D11 deployment-stage choice for this release; it does not remove the restricted-mode contracts from source or authorize future activation changes.
+
+**Verification and tradeoff:** stage a compatible same-code browse-only version14 for recovery, probe both numeric versions before switching live, and deploy the exact frontend ZIP as job38. This preserves the previous normal-mode authorization behavior; retaining pilot variables does not mean intake-pilot restrictions are active globally. Academic certification still requires the latest verified policy, six evidence checks, correct assignment and review interval. Genuine role-by-role browser acceptance remains pending. See [current deployment](../operations/current-deployment.md) and [release evidence](../operations/coordinator-review-results-release.md).
