@@ -79,5 +79,5 @@ locust -f scripts/loadtest/locustfile.py --host <API_URL>
 - [x] ลบ RDS `coed-loadtest-db` แบบไม่มี final snapshot, owner secret, security group 2 ตัว และ ENI 3 ตัว และถอนเฉพาะสิทธิ์ Load Test ออกจาก VPC endpoint ที่ใช้ร่วมกับ production (รณกฤต)
 - [x] app secret ตั้งลบถาวรวันที่ 26 พ.ย. 2569 (ช่วงกู้คืน 7 วัน)
 - [x] ลบผู้ใช้ Cognito `loadtest01`–`loadtest10` และยืนยันด้วย `admin-get-user` ว่าเป็น NOT_FOUND ครบ (ณัษฐภาคย์)
-- [ ] ลบ log group `/aws/lambda/coed-loadtest-maxconn` (Lambda ชั่วคราวที่ใช้อ่าน `max_connections`)
+- [x] ลบ log group `/aws/lambda/coed-loadtest-maxconn` (Lambda ชั่วคราวที่ใช้อ่าน `max_connections`) และตรวจแล้วว่าไม่เหลือ Lambda, log group, API, dashboard, RDS หรือ IAM role ของ loadtest (20 พ.ย.)
 - [ ] เช็ก Billing ของบัญชีกลุ่มหลัง 26 พ.ย.
