@@ -46,5 +46,8 @@ __pycache__/
 # Load testing OAuth tokens and local secrets (never commit)
 tokens.json
 scripts/loadtest/tokens.json
+*.tokens.json
+scripts/loadtest/loadtest-subs.json
 .env.loadtest
+.venv-loadtest/
 /tmp/loadtest/
